@@ -1,5 +1,7 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { CheckCircle, Car, Calendar, MapPin, Clock, Phone, ArrowLeft, Home } from 'lucide-react';
 
 const SuccessPage = () => {
@@ -211,7 +213,7 @@ const SuccessPage = () => {
           </button>
 
           <Link
-            to="/"
+            href="/"
             className="inline-flex items-center justify-center px-8 py-4 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-all duration-300 transform hover:scale-105 shadow-lg"
           >
             <Home className="h-5 w-5 mr-2" />
