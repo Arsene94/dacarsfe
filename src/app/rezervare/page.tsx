@@ -1,10 +1,12 @@
+"use client";
+
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Calendar, Clock, MapPin, User, Phone, Mail, Plane, Gift } from 'lucide-react';
-import { validateDiscountCode, applyDiscountCode } from '../services/wheelApi';
+import { validateDiscountCode, applyDiscountCode } from '../../services/wheelApi';
 
 const ReservationPage = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -120,7 +122,7 @@ const ReservationPage = () => {
       reservationId: 'DC' + Math.random().toString(36).substr(2, 9).toUpperCase()
     }));
 
-    navigate('/succes');
+    router.push('/succes');
   };
 
   const selectedCar = carTypes.find(car => car.value === formData.carType);

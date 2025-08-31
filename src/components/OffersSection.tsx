@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Heart, Users, Gift, Calendar } from 'lucide-react';
 
 const OffersSection = () => {
@@ -72,7 +72,7 @@ const OffersSection = () => {
                 </div>
 
                 <Link
-                  to="/rezervare"
+                  href="/rezervare"
                   className="inline-flex items-center px-6 py-3 bg-white text-berkeley font-dm-sans font-semibold rounded-lg hover:bg-gray-100 transition-colors duration-300"
                 >
                   Profită acum
@@ -92,7 +92,7 @@ const OffersSection = () => {
             Rezervă acum pentru perioada sărbătorilor și beneficiezi de tarife preferențiale și servicii premium incluse.
           </p>
           <Link
-            to="/rezervare"
+            href="/rezervare"
             className="inline-flex items-center px-8 py-4 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
           >
             Rezervă cu reducere

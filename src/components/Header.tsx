@@ -1,5 +1,7 @@
+"use client";
+
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 
 const Header = () => {
@@ -29,7 +31,7 @@ const Header = () => {
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 lg:h-20">
-            <Link to="/" className="flex items-center space-x-2 group" aria-label="DaCars — închirieri auto rapide și oneste">
+            <Link href="/" className="flex items-center space-x-2 group" aria-label="DaCars — închirieri auto rapide și oneste">
                     {/* Eager + fetchpriority=high ajută LCP pe homepage */}
                     <img
                         src="/images/logo.svg"
@@ -47,7 +49,7 @@ const Header = () => {
             {menuItems.map((item) => (
               <Link
                 key={item.name}
-                to={item.href}
+                href={item.href}
                 className="text-eefie font-dm-sans font-medium hover:text-jade transition-colors duration-300 relative group"
               >
                 {item.name}
@@ -58,7 +60,7 @@ const Header = () => {
 
           {/* CTA Button */}
           <Link
-            to="/rezervare"
+            href="/rezervare"
             className="hidden lg:inline-flex items-center px-6 py-3 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
           >
             Rezervă acum
@@ -80,7 +82,7 @@ const Header = () => {
               {menuItems.map((item) => (
                 <Link
                   key={item.name}
-                  to={item.href}
+                  href={item.href}
                   className="block px-3 py-2 text-base font-dm-sans font-medium text-eefie hover:text-jade hover:bg-gray-50 rounded-md transition-colors duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
@@ -88,7 +90,7 @@ const Header = () => {
                 </Link>
               ))}
               <Link
-                to="/rezervare"
+                href="/rezervare"
                 className="block px-3 py-2 mt-4 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300 text-center"
                 onClick={() => setIsMobileMenuOpen(false)}
               >

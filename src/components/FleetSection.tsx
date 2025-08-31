@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Users, Fuel, Settings, Star } from 'lucide-react';
 
 const FleetSection = () => {
@@ -121,7 +121,7 @@ const FleetSection = () => {
                   </div>
                   
                   <Link
-                    to="/rezervare"
+                    href="/rezervare"
                     className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
                   >
                     Rezervă
@@ -134,7 +134,7 @@ const FleetSection = () => {
 
         <div className="text-center mt-12">
           <Link
-            to="/flota"
+            href="/flota"
             className="inline-flex items-center px-8 py-4 border-2 border-jade text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade hover:text-white transition-all duration-300"
           >
             Vezi toată flota

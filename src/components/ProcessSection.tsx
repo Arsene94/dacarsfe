@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { MousePointer, MapPin, Route } from 'lucide-react';
 
 const ProcessSection = () => {
@@ -88,7 +88,7 @@ const ProcessSection = () => {
             
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link
-                to="/rezervare"
+                href="/rezervare"
                 className="inline-flex items-center justify-center px-8 py-4 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transform hover:scale-105 transition-all duration-300 shadow-lg"
               >
                 Rezervă acum

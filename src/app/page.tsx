@@ -1,4 +1,6 @@
-import {useEffect, useState} from "react";
+"use client";
+
+import { useEffect, useState } from "react";
 import HeroSection from '../components/HeroSection';
 import BenefitsSection from '../components/BenefitsSection';
 import FleetSection from '../components/FleetSection';
