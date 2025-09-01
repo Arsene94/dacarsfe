@@ -6,6 +6,7 @@ import {ArrowRight, Calendar, Clock, MapPin, Shield, Star, Users} from 'lucide-r
 import apiClient from "@/lib/api";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 type CarCategory = {
     id: number;
@@ -166,17 +167,17 @@ const HeroSection = () => {
                       <label className="text-sm font-medium font-['DM_Sans']">Locația</label>
                       <div className="relative">
                           <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                          <select
+                          <Select
                               name="location"
                               value={formData.location}
                               onChange={handleInputChange}
-                              className="w-full pl-10 pr-4 py-3 text-[#191919] border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#38B275] focus:border-transparent font-['DM_Sans']"
+                              className="pl-10 pr-4"
                           >
                               <option value="">Alege locația</option>
                               <option value="otopeni">Aeroport Otopeni</option>
                               <option value="baneasa">Aeroport Băneasa</option>
                               <option value="bucuresti">București Centru</option>
-                          </select>
+                          </Select>
                       </div>
                   </div>
 
@@ -184,18 +185,18 @@ const HeroSection = () => {
                       <label className="text-sm font-medium font-['DM_Sans']">Tip mașină</label>
                       <div className="relative">
                           <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                          <select
+                          <Select
                               name="carType"
                               value={formData.carType}
                               onChange={handleInputChange}
-                              className="w-full pl-10 pr-4 py-3 text-[#191919] border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#38B275] focus:border-transparent font-['DM_Sans']"
+                              className="pl-10 pr-4"
                           >
                               <option value="">Toate tipurile</option>
                               <option value="economy">Economic</option>
                               <option value="compact">Compact</option>
                               <option value="suv">SUV</option>
                               <option value="premium">Premium</option>
-                          </select>
+                          </Select>
                       </div>
                   </div>
 

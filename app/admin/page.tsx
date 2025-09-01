@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Car, Users, BarChart3, Plus, Filter, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { Select } from '@/components/ui/select';
 
 interface Reservation {
   id: string;
@@ -285,16 +286,16 @@ const AdminDashboard = () => {
               </div>
 
               <div className="mb-4">
-                <select
+                <Select
                   value={selectedCar || ''}
                   onChange={(e) => setSelectedCar(e.target.value ? Number(e.target.value) : null)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
+                  className="px-3 py-2"
                 >
                   <option value="">Toate mașinile</option>
                   {cars.map(car => (
                     <option key={car.id} value={car.id}>{car.name}</option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="space-y-3">
@@ -337,6 +338,7 @@ const AdminDashboard = () => {
                   <button
                     onClick={() => setSelectedYear(selectedYear - 1)}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    aria-label="Anul precedent"
                   >
                     <ChevronLeft className="h-5 w-5 text-gray-600" />
                   </button>
@@ -344,6 +346,7 @@ const AdminDashboard = () => {
                   <button
                     onClick={() => setSelectedYear(selectedYear + 1)}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    aria-label="Anul următor"
                   >
                     <ChevronRight className="h-5 w-5 text-gray-600" />
                   </button>

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Search, Plus, Edit, Trash2, Car, Settings, Users, Fuel, Eye, AlertTriangle } from 'lucide-react';
 import { Star } from "lucide-react";
+import { Select } from '@/components/ui/select';
 
 interface Car {
   id: number;
@@ -329,28 +330,28 @@ const CarsPage = () => {
               />
             </div>
 
-            <select
+            <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
+              className="px-4 py-3"
             >
               <option value="all">Toate statusurile</option>
               <option value="available">Disponibile</option>
               <option value="rented">Închiriate</option>
               <option value="maintenance">În Service</option>
-            </select>
+            </Select>
 
-            <select
+            <Select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
+              className="px-4 py-3"
             >
               <option value="all">Toate tipurile</option>
               <option value="economic">Economic</option>
               <option value="comfort">Comfort</option>
               <option value="premium">Premium</option>
               <option value="van">Van</option>
-            </select>
+            </Select>
 
             <div className="flex items-center justify-between">
               <span className="font-dm-sans text-gray-600">
@@ -432,10 +433,16 @@ const CarsPage = () => {
                     <Eye className="h-4 w-4" />
                     <span>Vezi</span>
                   </button>
-                  <button className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                  <button
+                    className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    aria-label="Editează"
+                  >
                     <Edit className="h-4 w-4" />
                   </button>
-                  <button className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <button
+                    className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    aria-label="Șterge"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -467,6 +474,7 @@ const CarsPage = () => {
                 <button
                   onClick={() => setShowModal(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Închide detalii mașină"
                 >
                   <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

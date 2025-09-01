@@ -99,16 +99,18 @@ const TestimonialsSection = () => {
             </div>
 
             {/* Navigation buttons */}
-            <button 
+            <button
               onClick={prevTestimonial}
               className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white shadow-lg hover:bg-gray-50 transition-colors duration-300"
+              aria-label="Testimonial anterior"
             >
               <ChevronLeft className="h-6 w-6 text-berkeley" />
             </button>
-            
-            <button 
+
+            <button
               onClick={nextTestimonial}
               className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white shadow-lg hover:bg-gray-50 transition-colors duration-300"
+              aria-label="Testimonial următor"
             >
               <ChevronRight className="h-6 w-6 text-berkeley" />
             </button>
@@ -123,6 +125,7 @@ const TestimonialsSection = () => {
                 className={`w-3 h-3 rounded-full transition-colors duration-300 ${
                   index === currentTestimonial ? 'bg-jade' : 'bg-gray-300'
                 }`}
+                aria-label={`Selectează testimonialul ${index + 1}`}
               />
             ))}
           </div>
