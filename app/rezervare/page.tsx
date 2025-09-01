@@ -1,32 +1,38 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Calendar, Clock, MapPin, User, Phone, Mail, Plane, Gift } from 'lucide-react';
-import { validateDiscountCode, applyDiscountCode } from '../../services/wheelApi';
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  Phone,
+  Mail,
+  Plane,
+  Gift,
+} from "lucide-react";
+import {
+  validateDiscountCode,
+  applyDiscountCode,
+} from "../../services/wheelApi";
+import { Select } from "@/components/ui/select";
 
 const ReservationPage = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    flight: '',
-    pickupDate: '',
-    pickupTime: '',
-    dropoffDate: '',
-    dropoffTime: '',
-    location: 'aeroport',
-    carType: 'economic',
-    discountCode: ''
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    flight: "",
+    pickupDate: "",
+    pickupTime: "",
+    dropoffDate: "",
+    dropoffTime: "",
+    location: "aeroport",
+    carType: "economic",
+    discountCode: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,35 +44,37 @@ const ReservationPage = () => {
   const [isValidatingCode, setIsValidatingCode] = useState(false);
 
   const carTypes = [
-    { value: 'economic', label: 'Economic - Dacia Logan', price: 45 },
-    { value: 'comfort', label: 'Comfort - Volkswagen Golf', price: 65 },
-    { value: 'premium', label: 'Premium - BMW Seria 3', price: 95 },
-    { value: 'van', label: 'Van 9 locuri - Ford Transit', price: 85 }
+    { value: "economic", label: "Economic - Dacia Logan", price: 45 },
+    { value: "comfort", label: "Comfort - Volkswagen Golf", price: 65 },
+    { value: "premium", label: "Premium - BMW Seria 3", price: 95 },
+    { value: "van", label: "Van 9 locuri - Ford Transit", price: 85 },
   ];
 
   const locations = [
-    { value: 'aeroport', label: 'Aeroport Henri Coandă, Otopeni' },
-    { value: 'city', label: 'Centrul Bucureștiului' },
-    { value: 'other', label: 'Altă locație (se percepe taxă)' }
+    { value: "aeroport", label: "Aeroport Henri Coandă, Otopeni" },
+    { value: "city", label: "Centrul Bucureștiului" },
+    { value: "other", label: "Altă locație (se percepe taxă)" },
   ];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSelectChange = (name: string) => (value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
   const calculateTotal = () => {
-    const selectedCar = carTypes.find(car => car.value === formData.carType);
+    const selectedCar = carTypes.find((car) => car.value === formData.carType);
     if (!selectedCar || !formData.pickupDate || !formData.dropoffDate) return 0;
 
     const pickupDate = new Date(formData.pickupDate);
@@ -86,29 +94,29 @@ const ReservationPage = () => {
     setIsValidatingCode(true);
     try {
       const isValid = await validateDiscountCode(formData.discountCode);
-      
+
       if (isValid) {
         // Simulare extragere procent reducere din cod
         const discountMatch = formData.discountCode.match(/WHEEL(\d+)/);
         const discount = discountMatch ? parseInt(discountMatch[1]) : 10;
-        
+
         setDiscountStatus({
           isValid: true,
           message: `Cod valid! Reducere ${discount}% aplicată.`,
-          discount
+          discount,
         });
       } else {
         setDiscountStatus({
           isValid: false,
-          message: 'Cod invalid sau expirat.',
-          discount: 0
+          message: "Cod invalid sau expirat.",
+          discount: 0,
         });
       }
     } catch (error) {
       setDiscountStatus({
         isValid: false,
-        message: 'Eroare la validarea codului.',
-        discount: 0
+        message: "Eroare la validarea codului.",
+        discount: 0,
       });
     } finally {
       setIsValidatingCode(false);
@@ -119,31 +127,36 @@ const ReservationPage = () => {
     setIsSubmitting(true);
 
     let finalTotal = calculateTotal();
-    
+
     // Aplică reducerea dacă există cod valid
     if (discountStatus?.isValid && discountStatus.discount > 0) {
       finalTotal = finalTotal * (1 - discountStatus.discount / 100);
     }
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     // Store reservation data for success page
-    localStorage.setItem('reservationData', JSON.stringify({
-      ...formData,
-      total: Math.round(finalTotal),
-      originalTotal: calculateTotal(),
-      appliedDiscount: discountStatus?.isValid ? discountStatus.discount : 0,
-      reservationId: 'DC' + Math.random().toString(36).substr(2, 9).toUpperCase()
-    }));
+    localStorage.setItem(
+      "reservationData",
+      JSON.stringify({
+        ...formData,
+        total: Math.round(finalTotal),
+        originalTotal: calculateTotal(),
+        appliedDiscount: discountStatus?.isValid ? discountStatus.discount : 0,
+        reservationId:
+          "DC" + Math.random().toString(36).substr(2, 9).toUpperCase(),
+      }),
+    );
 
-    router.push('/succes');
+    router.push("/succes");
   };
 
-  const selectedCar = carTypes.find(car => car.value === formData.carType);
+  const selectedCar = carTypes.find((car) => car.value === formData.carType);
   const total = calculateTotal();
-  const finalTotal = discountStatus?.isValid && discountStatus.discount > 0 
-    ? total * (1 - discountStatus.discount / 100) 
-    : total;
+  const finalTotal =
+    discountStatus?.isValid && discountStatus.discount > 0
+      ? total * (1 - discountStatus.discount / 100)
+      : total;
 
   return (
     <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
@@ -168,7 +181,7 @@ const ReservationPage = () => {
                     <User className="h-6 w-6 text-jade mr-3" />
                     Informații personale
                   </h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
@@ -184,7 +197,7 @@ const ReservationPage = () => {
                         placeholder="Introducă numele"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                         Prenume *
@@ -199,7 +212,7 @@ const ReservationPage = () => {
                         placeholder="Introducă prenumele"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                         Email *
@@ -214,7 +227,7 @@ const ReservationPage = () => {
                         placeholder="nume@email.com"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                         Telefon *
@@ -265,21 +278,27 @@ const ReservationPage = () => {
                       <button
                         type="button"
                         onClick={handleDiscountCodeValidation}
-                        disabled={isValidatingCode || !formData.discountCode.trim()}
+                        disabled={
+                          isValidatingCode || !formData.discountCode.trim()
+                        }
                         className="px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                       >
                         {isValidatingCode ? (
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                         ) : (
-                          'Validează'
+                          "Validează"
                         )}
                       </button>
                     </div>
-                    
+
                     {discountStatus && (
-                      <div className={`mt-2 p-3 rounded-lg ${
-                        discountStatus.isValid ? 'bg-jade/10 text-jade' : 'bg-red-50 text-red-600'
-                      }`}>
+                      <div
+                        className={`mt-2 p-3 rounded-lg ${
+                          discountStatus.isValid
+                            ? "bg-jade/10 text-jade"
+                            : "bg-red-50 text-red-600"
+                        }`}
+                      >
                         <p className="text-sm font-dm-sans font-semibold">
                           {discountStatus.message}
                         </p>
@@ -306,7 +325,7 @@ const ReservationPage = () => {
                         value={formData.pickupDate}
                         onChange={handleInputChange}
                         required
-                        min={new Date().toISOString().split('T')[0]}
+                        min={new Date().toISOString().split("T")[0]}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
                       />
                     </div>
@@ -335,7 +354,10 @@ const ReservationPage = () => {
                         value={formData.dropoffDate}
                         onChange={handleInputChange}
                         required
-                        min={formData.pickupDate || new Date().toISOString().split('T')[0]}
+                        min={
+                          formData.pickupDate ||
+                          new Date().toISOString().split("T")[0]
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
                       />
                     </div>
@@ -361,19 +383,16 @@ const ReservationPage = () => {
                       Locația ridicării *
                     </label>
                     <Select
+                      className="transition-all duration-300"
                       value={formData.location}
-                      onValueChange={handleSelectChange('location')}
+                      onValueChange={handleSelectChange("location")}
+                      placeholder="Selectează locația"
                     >
-                      <SelectTrigger className="transition-all duration-300">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map(location => (
-                          <SelectItem key={location.value} value={location.value}>
-                            {location.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                      {locations.map((location) => (
+                        <option key={location.value} value={location.value}>
+                          {location.label}
+                        </option>
+                      ))}
                     </Select>
                   </div>
 
@@ -382,19 +401,16 @@ const ReservationPage = () => {
                       Tip mașină *
                     </label>
                     <Select
+                      className="transition-all duration-300"
                       value={formData.carType}
-                      onValueChange={handleSelectChange('carType')}
+                      onValueChange={handleSelectChange("carType")}
+                      placeholder="Selectează tipul"
                     >
-                      <SelectTrigger className="transition-all duration-300">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {carTypes.map(car => (
-                          <SelectItem key={car.value} value={car.value}>
-                            {car.label} - {car.price}€/zi
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                      {carTypes.map((car) => (
+                        <option key={car.value} value={car.value}>
+                          {car.label} - {car.price}€/zi
+                        </option>
+                      ))}
                     </Select>
                   </div>
                 </div>
@@ -428,7 +444,9 @@ const ReservationPage = () => {
                 {selectedCar && (
                   <div className="flex justify-between items-center">
                     <span className="font-dm-sans text-gray-600">Mașină:</span>
-                    <span className="font-dm-sans font-semibold text-berkeley">{selectedCar.label.split(' - ')[0]}</span>
+                    <span className="font-dm-sans font-semibold text-berkeley">
+                      {selectedCar.label.split(" - ")[0]}
+                    </span>
                   </div>
                 )}
 
@@ -436,7 +454,9 @@ const ReservationPage = () => {
                   <div className="flex justify-between items-center">
                     <span className="font-dm-sans text-gray-600">De la:</span>
                     <span className="font-dm-sans font-semibold text-berkeley">
-                      {new Date(formData.pickupDate).toLocaleDateString('ro-RO')}
+                      {new Date(formData.pickupDate).toLocaleDateString(
+                        "ro-RO",
+                      )}
                     </span>
                   </div>
                 )}
@@ -445,7 +465,9 @@ const ReservationPage = () => {
                   <div className="flex justify-between items-center">
                     <span className="font-dm-sans text-gray-600">Până la:</span>
                     <span className="font-dm-sans font-semibold text-berkeley">
-                      {new Date(formData.dropoffDate).toLocaleDateString('ro-RO')}
+                      {new Date(formData.dropoffDate).toLocaleDateString(
+                        "ro-RO",
+                      )}
                     </span>
                   </div>
                 )}
@@ -453,7 +475,9 @@ const ReservationPage = () => {
                 <div className="flex justify-between items-center">
                   <span className="font-dm-sans text-gray-600">Locație:</span>
                   <span className="font-dm-sans font-semibold text-berkeley">
-                    {locations.find(loc => loc.value === formData.location)?.label.split(',')[0] || 'Aeroport'}
+                    {locations
+                      .find((loc) => loc.value === formData.location)
+                      ?.label.split(",")[0] || "Aeroport"}
                   </span>
                 </div>
               </div>
@@ -462,18 +486,30 @@ const ReservationPage = () => {
                 {discountStatus?.isValid && discountStatus.discount > 0 && (
                   <>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-dm-sans text-gray-600">Subtotal:</span>
-                      <span className="font-dm-sans text-gray-600">{total}€</span>
+                      <span className="font-dm-sans text-gray-600">
+                        Subtotal:
+                      </span>
+                      <span className="font-dm-sans text-gray-600">
+                        {total}€
+                      </span>
                     </div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-dm-sans text-jade">Reducere ({discountStatus.discount}%):</span>
-                      <span className="font-dm-sans text-jade">-{Math.round(total * discountStatus.discount / 100)}€</span>
+                      <span className="font-dm-sans text-jade">
+                        Reducere ({discountStatus.discount}%):
+                      </span>
+                      <span className="font-dm-sans text-jade">
+                        -{Math.round((total * discountStatus.discount) / 100)}€
+                      </span>
                     </div>
                   </>
                 )}
                 <div className="flex justify-between items-center text-xl">
-                  <span className="font-poppins font-semibold text-berkeley">Total:</span>
-                  <span className="font-poppins font-bold text-jade">{Math.round(finalTotal)}€</span>
+                  <span className="font-poppins font-semibold text-berkeley">
+                    Total:
+                  </span>
+                  <span className="font-poppins font-bold text-jade">
+                    {Math.round(finalTotal)}€
+                  </span>
                 </div>
                 <p className="text-sm text-gray-600 font-dm-sans mt-2">
                   *Preț final, fără taxe ascunse
@@ -482,7 +518,9 @@ const ReservationPage = () => {
 
               {/* Benefits reminder */}
               <div className="mt-8 p-4 bg-jade/5 rounded-lg">
-                <h4 className="font-poppins font-semibold text-berkeley mb-2">Include:</h4>
+                <h4 className="font-poppins font-semibold text-berkeley mb-2">
+                  Include:
+                </h4>
                 <ul className="text-sm font-dm-sans text-gray-600 space-y-1">
                   <li>✓ Predare în sub 5 minute</li>
                   <li>✓ Disponibilitate 24/7</li>
