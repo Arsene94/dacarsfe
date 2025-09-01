@@ -189,7 +189,7 @@ const FleetSection = () => {
                     </p>
                 </div>
 
-                <div className="md:hidden relative" role="region" aria-label="Carousel">
+                <div className="md:hidden relative overflow-hidden" role="region" aria-label="Carousel">
                     <div
                         className="flex transition-transform duration-700 ease-out"
                         style={{ transform: `translateX(-${current * 100}%)` }}
