@@ -25,8 +25,8 @@ const HomePage = () => {
   return (
     <div className="pt-16 lg:pt-20">
       <HeroSection />
-      <BenefitsSection />
       <FleetSection />
+      <BenefitsSection />
       <OffersSection />
       <TestimonialsSection />
       <ProcessSection />

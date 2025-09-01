@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
+import Image from "next/image";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -33,12 +34,12 @@ const Header = () => {
         <div className="flex justify-between items-center h-16 lg:h-20">
             <Link href="/" className="flex items-center space-x-2 group" aria-label="DaCars — închirieri auto rapide și oneste">
                     {/* Eager + fetchpriority=high ajută LCP pe homepage */}
-                    <img
+                    <Image
                         src="/images/logo.svg"
                         className="block"
                         alt="DaCars logo"
-                        width="466"
-                        height="154"
+                        width={466}
+                        height={154}
                         loading="eager"
                         fetchPriority="high"
                     />

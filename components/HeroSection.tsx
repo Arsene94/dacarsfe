@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import Link from 'next/link';
 import {ArrowRight, Calendar, Clock, MapPin, Shield, Star, Users} from 'lucide-react';
+import apiClient from "@/lib/api";
+
+type CarCategory = {
+    id: number;
+    name: string;
+}
 
 const HeroSection = () => {
     const [formData, setFormData] = useState({
@@ -11,6 +17,17 @@ const HeroSection = () => {
         location: '',
         carType: ''
     });
+    const [categories, setCategories] = useState<CarCategory[]>([]);
+
+    useEffect(() => {
+        const getCategories = async () => {
+            const response = await apiClient.getCarCategories();
+
+            setCategories(response);
+        }
+
+        getCategories();
+    }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({
