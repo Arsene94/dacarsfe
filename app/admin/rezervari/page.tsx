@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Search, Filter, Download, Eye, Edit, Trash2, Phone, Mail, Calendar, Car, MapPin } from 'lucide-react';
-import { Select } from '@/components/ui/select';
+import { Select, Option } from '@/components/ui/select';
 
 interface Reservation {
   id: string;
@@ -240,11 +240,11 @@ const ReservationsPage = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-3"
             >
-              <option value="all">Toate statusurile</option>
-              <option value="confirmed">Confirmat</option>
-              <option value="pending">În așteptare</option>
-              <option value="cancelled">Anulat</option>
-              <option value="completed">Finalizat</option>
+              <Option value="all">Toate statusurile</Option>
+              <Option value="confirmed">Confirmat</Option>
+              <Option value="pending">În așteptare</Option>
+              <Option value="cancelled">Anulat</Option>
+              <Option value="completed">Finalizat</Option>
             </Select>
 
             <Select
@@ -252,10 +252,10 @@ const ReservationsPage = () => {
               onChange={(e) => setDateFilter(e.target.value)}
               className="px-4 py-3"
             >
-              <option value="all">Toate perioadele</option>
-              <option value="today">Astăzi</option>
-              <option value="week">Următoarea săptămână</option>
-              <option value="month">Următoarea lună</option>
+              <Option value="all">Toate perioadele</Option>
+              <Option value="today">Astăzi</Option>
+              <Option value="week">Următoarea săptămână</Option>
+              <Option value="month">Următoarea lună</Option>
             </Select>
 
             <div className="flex items-center justify-between">

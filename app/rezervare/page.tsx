@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar, Clock, MapPin, User, Phone, Mail, Plane, Gift } from 'lucide-react';
 import { validateDiscountCode, applyDiscountCode } from '../../services/wheelApi';
-import { Select } from '@/components/ui/select';
+import { Select, Option } from '@/components/ui/select';
 
 const ReservationPage = () => {
   const router = useRouter();
@@ -355,9 +355,9 @@ const ReservationPage = () => {
                       className="transition-all duration-300"
                     >
                       {locations.map(location => (
-                        <option key={location.value} value={location.value}>
+                        <Option key={location.value} value={location.value}>
                           {location.label}
-                        </option>
+                        </Option>
                       ))}
                     </Select>
                   </div>
@@ -374,9 +374,9 @@ const ReservationPage = () => {
                       className="transition-all duration-300"
                     >
                       {carTypes.map(car => (
-                        <option key={car.value} value={car.value}>
+                        <Option key={car.value} value={car.value}>
                           {car.label} - {car.price}€/zi
-                        </option>
+                        </Option>
                       ))}
                     </Select>
                   </div>
