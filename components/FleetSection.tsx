@@ -6,6 +6,11 @@ import { Users, Fuel, Settings, Star } from "lucide-react";
 import apiClient from "@/lib/api";
 import { Button } from '@/components/ui/button';
 
+type CarCategories = {
+    id: number;
+    name: string;
+}
+
 type Cars = {
     id: number;
     name: string;
@@ -15,6 +20,7 @@ type Cars = {
     number_of_seats: number;
     transmission: { name: string };
     fuel: { name: string };
+    categories: { id: number; name: string };
     rating?: number;
 };
 
@@ -30,6 +36,7 @@ type ApiCar = {
     type?: { name?: string | null; image?: string | null } | null;
     fuel?: { name?: string | null } | null;
     transmission?: { name?: string | null } | null;
+    categories: CarCategories[];
 };
 
 const STORAGE_BASE =
@@ -76,6 +83,7 @@ const FleetSection = () => {
                         : parsePrice(c.price_text),
                 transmission: { name: c.transmission?.name ?? "—" },
                 fuel: { name: c.fuel?.name ?? "—" },
+                categories: { id: c.categories?.[0].id, name: c.categories?.[0].name ?? "-"},
                 rating: typeof c.avg_review === "number" ? c.avg_review : undefined,
             }));
 
@@ -115,7 +123,7 @@ const FleetSection = () => {
                                     fetchPriority={index < 2 ? "high" : "auto"}
                                 />
                                 <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
-                                    {car.type}
+                                    {car.categories.name}
                                 </div>
                                 <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center space-x-1">
                                     <Star className="h-4 w-4 text-yellow-400 fill-current" />
