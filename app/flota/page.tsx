@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Users, Fuel, Settings, Star, Filter, Grid, List, Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 
 const FleetPage = () => {
   const [filters, setFilters] = useState({
@@ -352,6 +353,7 @@ const FleetPage = () => {
                   className={`p-2 rounded-lg transition-colors duration-300 ${
                     viewMode === 'grid' ? 'bg-jade text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
+                  aria-label="Afișare grilă"
                 >
                   <Grid className="h-5 w-5" />
                 </button>
@@ -360,22 +362,23 @@ const FleetPage = () => {
                   className={`p-2 rounded-lg transition-colors duration-300 ${
                     viewMode === 'list' ? 'bg-jade text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
+                  aria-label="Afișare listă"
                 >
                   <List className="h-5 w-5" />
                 </button>
               </div>
 
-              <select
+              <Select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                className="w-auto px-4 py-2 transition-all duration-300"
               >
                 <option value="price-asc">Preț crescător</option>
                 <option value="price-desc">Preț descrescător</option>
                 <option value="rating">Rating</option>
                 <option value="name">Nume A-Z</option>
                 <option value="passengers">Nr. pasageri</option>
-              </select>
+              </Select>
 
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -397,79 +400,79 @@ const FleetPage = () => {
                   <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                     Tip mașină
                   </label>
-                  <select
+                  <Select
                     value={filters.type}
                     onChange={(e) => handleFilterChange('type', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                    className="px-3 py-2 transition-all duration-300"
                   >
                     <option value="all">Toate</option>
                     <option value="economic">Economic</option>
                     <option value="comfort">Comfort</option>
                     <option value="premium">Premium</option>
                     <option value="van">Van</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                     Transmisie
                   </label>
-                  <select
+                  <Select
                     value={filters.transmission}
                     onChange={(e) => handleFilterChange('transmission', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                    className="px-3 py-2 transition-all duration-300"
                   >
                     <option value="all">Toate</option>
                     <option value="manual">Manual</option>
                     <option value="automat">Automat</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                     Combustibil
                   </label>
-                  <select
+                  <Select
                     value={filters.fuel}
                     onChange={(e) => handleFilterChange('fuel', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                    className="px-3 py-2 transition-all duration-300"
                   >
                     <option value="all">Toate</option>
                     <option value="benzină">Benzină</option>
                     <option value="diesel">Diesel</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                     Pasageri
                   </label>
-                  <select
+                  <Select
                     value={filters.passengers}
                     onChange={(e) => handleFilterChange('passengers', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                    className="px-3 py-2 transition-all duration-300"
                   >
                     <option value="all">Toți</option>
                     <option value="1-4">1-4 persoane</option>
                     <option value="5-7">5-7 persoane</option>
                     <option value="8+">8+ persoane</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                     Preț/zi
                   </label>
-                  <select
+                  <Select
                     value={filters.priceRange}
                     onChange={(e) => handleFilterChange('priceRange', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                    className="px-3 py-2 transition-all duration-300"
                   >
                     <option value="all">Toate</option>
                     <option value="0-50">0-50€</option>
                     <option value="51-80">51-80€</option>
                     <option value="81+">81€+</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
 

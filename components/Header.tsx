@@ -71,6 +71,8 @@ const Header = () => {
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="lg:hidden p-2 rounded-md text-berkeley hover:bg-gray-100 transition-colors duration-300"
+            aria-label={isMobileMenuOpen ? 'Închide meniul' : 'Deschide meniul'}
+            aria-expanded={isMobileMenuOpen}
           >
             {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>

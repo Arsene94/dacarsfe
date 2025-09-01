@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Search, Filter, Download, Eye, Edit, Trash2, Phone, Mail, Calendar, Car, MapPin } from 'lucide-react';
+import { Select } from '@/components/ui/select';
 
 interface Reservation {
   id: string;
@@ -234,28 +235,28 @@ const ReservationsPage = () => {
               />
             </div>
 
-            <select
+            <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
+              className="px-4 py-3"
             >
               <option value="all">Toate statusurile</option>
               <option value="confirmed">Confirmat</option>
               <option value="pending">În așteptare</option>
               <option value="cancelled">Anulat</option>
               <option value="completed">Finalizat</option>
-            </select>
+            </Select>
 
-            <select
+            <Select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
+              className="px-4 py-3"
             >
               <option value="all">Toate perioadele</option>
               <option value="today">Astăzi</option>
               <option value="week">Următoarea săptămână</option>
               <option value="month">Următoarea lună</option>
-            </select>
+            </Select>
 
             <div className="flex items-center justify-between">
               <span className="font-dm-sans text-gray-600">
@@ -326,19 +327,19 @@ const ReservationsPage = () => {
                         <button
                           onClick={() => handleViewReservation(reservation)}
                           className="p-2 text-gray-600 hover:text-jade hover:bg-jade/10 rounded-lg transition-colors"
-                          title="Vezi detalii"
-                        >
+                          aria-label="Vezi detalii"
+                          >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
                           className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Editează"
+                          aria-label="Editează"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
                           className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Șterge"
+                          aria-label="Șterge"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -374,6 +375,7 @@ const ReservationsPage = () => {
                 <button
                   onClick={() => setShowModal(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Închide detaliile rezervării"
                 >
                   <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

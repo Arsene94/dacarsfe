@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar, Clock, MapPin, User, Phone, Mail, Plane, Gift } from 'lucide-react';
 import { validateDiscountCode, applyDiscountCode } from '../../services/wheelApi';
+import { Select } from '@/components/ui/select';
 
 const ReservationPage = () => {
   const router = useRouter();
@@ -346,38 +347,38 @@ const ReservationPage = () => {
                       <MapPin className="h-4 w-4 inline text-jade mr-1" />
                       Locația ridicării *
                     </label>
-                    <select
+                    <Select
                       name="location"
                       value={formData.location}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                      className="transition-all duration-300"
                     >
                       {locations.map(location => (
                         <option key={location.value} value={location.value}>
                           {location.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   <div className="mt-6">
                     <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                       Tip mașină *
                     </label>
-                    <select
+                    <Select
                       name="carType"
                       value={formData.carType}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                      className="transition-all duration-300"
                     >
                       {carTypes.map(car => (
                         <option key={car.value} value={car.value}>
                           {car.label} - {car.price}€/zi
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                 </div>
 
