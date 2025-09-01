@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle, Car, Calendar, MapPin, Clock, Phone, ArrowLeft, Home } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const SuccessPage = () => {
   const [reservationData, setReservationData] = useState<any>(null);
@@ -204,20 +205,20 @@ const SuccessPage = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row justify-center gap-4 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-          <button
+          <Button
             onClick={() => window.print()}
-            className="inline-flex items-center justify-center px-8 py-4 border-2 border-berkeley text-berkeley font-dm-sans font-semibold rounded-lg hover:bg-berkeley hover:text-white transition-all duration-300"
+            variant="outline"
+            className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white"
           >
             <Calendar className="h-5 w-5 mr-2" />
             Printează detaliile
-          </button>
+          </Button>
 
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center px-8 py-4 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-all duration-300 transform hover:scale-105 shadow-lg"
-          >
-            <Home className="h-5 w-5 mr-2" />
-            Înapoi la Acasă
+          <Link href="/">
+            <Button className="transform hover:scale-105 shadow-lg">
+              <Home className="h-5 w-5 mr-2" />
+              Înapoi la Acasă
+            </Button>
           </Link>
         </div>
 

@@ -11,6 +11,7 @@ import {
     ChevronRight,
 } from "lucide-react";
 import apiClient from "@/lib/api";
+import { Button } from '@/components/ui/button';
 
 type Cars = {
     id: number;
@@ -234,11 +235,13 @@ const FleetSection = () => {
                 </div>
 
                 <div className="text-center mt-12">
-                    <Link
-                        href="/flota"
-                        className="inline-flex items-center px-8 py-4 border-2 border-jade text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade hover:text-white transition-all duration-300"
-                    >
-                        Vezi toată flota
+                    <Link href="/flota">
+                        <Button
+                            variant="outline"
+                            className="border-jade text-jade hover:bg-jade hover:text-white"
+                        >
+                            Vezi toată flota
+                        </Button>
                     </Link>
                 </div>
             </div>
