@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { MousePointer, MapPin, Route } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const ProcessSection = () => {
   const steps = [
@@ -87,18 +88,19 @@ const ProcessSection = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link
-                href="/rezervare"
-                className="inline-flex items-center justify-center px-8 py-4 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transform hover:scale-105 transition-all duration-300 shadow-lg"
-              >
-                Rezervă acum
+              <Link href="/rezervare">
+                <Button className="transform hover:scale-105 shadow-lg">
+                  Rezervă acum
+                </Button>
               </Link>
-              
-              <a
-                href="#flota"
-                className="inline-flex items-center justify-center px-8 py-4 border-2 border-berkeley text-berkeley font-dm-sans font-semibold rounded-lg hover:bg-berkeley hover:text-white transition-all duration-300"
-              >
-                Vezi flota
+
+              <a href="#flota">
+                <Button
+                  variant="outline"
+                  className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white"
+                >
+                  Vezi flota
+                </Button>
               </a>
             </div>
           </div>

@@ -4,6 +4,8 @@ import React, {useEffect, useState} from 'react';
 import Link from 'next/link';
 import {ArrowRight, Calendar, Clock, MapPin, Shield, Star, Users} from 'lucide-react';
 import apiClient from "@/lib/api";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type CarCategory = {
     id: number;
@@ -71,17 +73,16 @@ const HeroSection = () => {
             </p>
 
             <div className="hidden sm:flex flex-col sm:flex-row gap-4 mb-8">
-              <Link
-                href="/rezervare"
-                className="inline-flex items-center justify-center px-8 py-4 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transform hover:scale-105 transition-all duration-300 shadow-xl group"
-              >
-                Rezervă mașina
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+              <Link href="/rezervare">
+                <Button className="transform hover:scale-105 shadow-xl group">
+                  Rezervă mașina
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+                </Button>
               </Link>
 
-              <button className="inline-flex items-center justify-center px-8 py-4 border-2 border-white/30 text-white font-dm-sans font-semibold rounded-lg hover:bg-white/10 transition-all duration-300">
+              <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
                 Vezi flota
-              </button>
+              </Button>
             </div>
 
             {/* Features */}
@@ -137,12 +138,12 @@ const HeroSection = () => {
                       <label className="text-sm font-medium font-['DM_Sans']">Data ridicare</label>
                       <div className="relative">
                           <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                          <input
+                          <Input
                               type="date"
                               name="pickupDate"
                               value={formData.pickupDate}
                               onChange={handleInputChange}
-                              className="w-full pl-10 pr-4 py-3 text-[#191919] border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#38B275] focus:border-transparent font-['DM_Sans']"
+                              className="pl-10"
                           />
                       </div>
                   </div>
@@ -151,12 +152,12 @@ const HeroSection = () => {
                       <label className="text-sm font-medium font-['DM_Sans']">Data returnare</label>
                       <div className="relative">
                           <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                          <input
+                          <Input
                               type="date"
                               name="returnDate"
                               value={formData.returnDate}
                               onChange={handleInputChange}
-                              className="w-full pl-10 pr-4 py-3 text-[#191919] border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#38B275] focus:border-transparent font-['DM_Sans']"
+                              className="pl-10"
                           />
                       </div>
                   </div>
@@ -198,12 +199,12 @@ const HeroSection = () => {
                       </div>
                   </div>
 
-                  <button
-                      type="submit"
-                      className="bg-[#38B275] text-white px-6 py-3 rounded-lg font-semibold font-['DM_Sans'] hover:bg-[#32a066] transition-colors duration-200 self-end"
-                  >
-                      Caută mașini
-                  </button>
+                    <Button
+                        type="submit"
+                        className="bg-[#38B275] hover:bg-[#32a066] px-6 py-3 self-end"
+                    >
+                        Caută mașini
+                    </Button>
               </form>
           </div>
       </div>
