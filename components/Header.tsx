@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import Image from "next/image";
+import { Button } from '@/components/ui/button';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -59,13 +60,12 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* CTA Button */}
-          <Link
-            href="/rezervare"
-            className="hidden lg:inline-flex items-center px-6 py-3 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
-          >
-            Rezervă acum
-          </Link>
+            {/* CTA Button */}
+            <Link href="/rezervare">
+              <Button className="hidden lg:inline-flex px-6 py-3 bg-jade text-white hover:bg-jade/90 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                Rezervă acum
+              </Button>
+            </Link>
 
           {/* Mobile menu button */}
           <button
@@ -90,13 +90,11 @@ const Header = () => {
                   {item.name}
                 </Link>
               ))}
-              <Link
-                href="/rezervare"
-                className="block px-3 py-2 mt-4 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300 text-center"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Rezervă acum
-              </Link>
+                <Link href="/rezervare" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button className="w-full mt-4 px-3 py-2 bg-jade text-white hover:bg-jade/90">
+                    Rezervă acum
+                  </Button>
+                </Link>
             </div>
           </div>
         )}

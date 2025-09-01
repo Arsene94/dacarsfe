@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Users, Fuel, Settings, Star, Filter, Grid, List, Search, SlidersHorizontal } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const FleetPage = () => {
   const [filters, setFilters] = useState({
@@ -516,12 +517,12 @@ const FleetPage = () => {
             <p className="text-gray-600 font-dm-sans mb-6 max-w-md mx-auto">
               Încearcă să modifici filtrele sau să cauți altceva.
             </p>
-            <button
+            <Button
               onClick={clearFilters}
-              className="px-6 py-3 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+              className="px-6 py-3"
             >
               Resetează filtrele
-            </button>
+            </Button>
           </div>
         )}
 
@@ -535,18 +536,19 @@ const FleetPage = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              href="/rezervare"
-              className="inline-flex items-center justify-center px-8 py-4 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transform hover:scale-105 transition-all duration-300 shadow-lg"
-            >
-              Rezervă acum
+            <Link href="/rezervare">
+              <Button className="transform hover:scale-105 shadow-lg">
+                Rezervă acum
+              </Button>
             </Link>
-            
-            <a
-              href="#contact"
-              className="inline-flex items-center justify-center px-8 py-4 border-2 border-berkeley text-berkeley font-dm-sans font-semibold rounded-lg hover:bg-berkeley hover:text-white transition-all duration-300"
-            >
-              Contactează-ne
+
+            <a href="#contact">
+              <Button
+                variant="outline"
+                className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white"
+              >
+                Contactează-ne
+              </Button>
             </a>
           </div>
         </div>

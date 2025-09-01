@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Heart, Users, Gift, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const OffersSection = () => {
   const offers = [
@@ -71,11 +72,10 @@ const OffersSection = () => {
                   ))}
                 </div>
 
-                <Link
-                  href="/rezervare"
-                  className="inline-flex items-center px-6 py-3 bg-white text-berkeley font-dm-sans font-semibold rounded-lg hover:bg-gray-100 transition-colors duration-300"
-                >
-                  Profită acum
+                <Link href="/rezervare">
+                  <Button className="px-6 py-3 bg-white text-berkeley hover:bg-gray-100">
+                    Profită acum
+                  </Button>
                 </Link>
               </div>
             </div>
@@ -91,13 +91,12 @@ const OffersSection = () => {
           <p className="text-gray-300 font-dm-sans mb-6 max-w-2xl mx-auto">
             Rezervă acum pentru perioada sărbătorilor și beneficiezi de tarife preferențiale și servicii premium incluse.
           </p>
-          <Link
-            href="/rezervare"
-            className="inline-flex items-center px-8 py-4 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
-          >
-            Rezervă cu reducere
-          </Link>
-        </div>
+            <Link href="/rezervare">
+              <Button className="px-8 py-4">
+                Rezervă cu reducere
+              </Button>
+            </Link>
+          </div>
       </div>
     </section>
   );
