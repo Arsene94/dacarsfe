@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Search, Plus, Edit, Trash2, Car, Settings, Users, Fuel, Eye, AlertTriangle } from 'lucide-react';
 import { Star } from "lucide-react";
-import { Select } from '@/components/ui/select';
+import { Select, Option } from '@/components/ui/select';
 
 interface Car {
   id: number;
@@ -335,10 +335,10 @@ const CarsPage = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-3"
             >
-              <option value="all">Toate statusurile</option>
-              <option value="available">Disponibile</option>
-              <option value="rented">Închiriate</option>
-              <option value="maintenance">În Service</option>
+              <Option value="all">Toate statusurile</Option>
+              <Option value="available">Disponibile</Option>
+              <Option value="rented">Închiriate</Option>
+              <Option value="maintenance">În Service</Option>
             </Select>
 
             <Select
@@ -346,11 +346,11 @@ const CarsPage = () => {
               onChange={(e) => setTypeFilter(e.target.value)}
               className="px-4 py-3"
             >
-              <option value="all">Toate tipurile</option>
-              <option value="economic">Economic</option>
-              <option value="comfort">Comfort</option>
-              <option value="premium">Premium</option>
-              <option value="van">Van</option>
+              <Option value="all">Toate tipurile</Option>
+              <Option value="economic">Economic</Option>
+              <Option value="comfort">Comfort</Option>
+              <Option value="premium">Premium</Option>
+              <Option value="van">Van</Option>
             </Select>
 
             <div className="flex items-center justify-between">

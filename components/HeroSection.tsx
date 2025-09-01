@@ -6,7 +6,7 @@ import {ArrowRight, Calendar, Clock, MapPin, Shield, Star, Users} from 'lucide-r
 import apiClient from "@/lib/api";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { Select, Option } from '@/components/ui/select';
 
 type CarCategory = {
     id: number;
@@ -173,10 +173,10 @@ const HeroSection = () => {
                               onChange={handleInputChange}
                               className="pl-10 pr-4"
                           >
-                              <option value="">Alege locația</option>
-                              <option value="otopeni">Aeroport Otopeni</option>
-                              <option value="baneasa">Aeroport Băneasa</option>
-                              <option value="bucuresti">București Centru</option>
+                              <Option value="">Alege locația</Option>
+                              <Option value="otopeni">Aeroport Otopeni</Option>
+                              <Option value="baneasa">Aeroport Băneasa</Option>
+                              <Option value="bucuresti">București Centru</Option>
                           </Select>
                       </div>
                   </div>
@@ -191,11 +191,11 @@ const HeroSection = () => {
                               onChange={handleInputChange}
                               className="pl-10 pr-4"
                           >
-                              <option value="">Toate tipurile</option>
-                              <option value="economy">Economic</option>
-                              <option value="compact">Compact</option>
-                              <option value="suv">SUV</option>
-                              <option value="premium">Premium</option>
+                              <Option value="">Toate tipurile</Option>
+                              <Option value="economy">Economic</Option>
+                              <Option value="compact">Compact</Option>
+                              <Option value="suv">SUV</Option>
+                              <Option value="premium">Premium</Option>
                           </Select>
                       </div>
                   </div>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Car, Users, BarChart3, Plus, Filter, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { Select } from '@/components/ui/select';
+import { Select, Option } from '@/components/ui/select';
 
 interface Reservation {
   id: string;
@@ -291,9 +291,9 @@ const AdminDashboard = () => {
                   onChange={(e) => setSelectedCar(e.target.value ? Number(e.target.value) : null)}
                   className="px-3 py-2"
                 >
-                  <option value="">Toate mașinile</option>
+                  <Option value="">Toate mașinile</Option>
                   {cars.map(car => (
-                    <option key={car.id} value={car.id}>{car.name}</option>
+                    <Option key={car.id} value={car.id}>{car.name}</Option>
                   ))}
                 </Select>
               </div>

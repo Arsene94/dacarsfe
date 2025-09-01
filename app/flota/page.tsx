@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Users, Fuel, Settings, Star, Filter, Grid, List, Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
+import { Select, Option } from '@/components/ui/select';
 
 const FleetPage = () => {
   const [filters, setFilters] = useState({
@@ -373,11 +373,11 @@ const FleetPage = () => {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-auto px-4 py-2 transition-all duration-300"
               >
-                <option value="price-asc">Preț crescător</option>
-                <option value="price-desc">Preț descrescător</option>
-                <option value="rating">Rating</option>
-                <option value="name">Nume A-Z</option>
-                <option value="passengers">Nr. pasageri</option>
+                <Option value="price-asc">Preț crescător</Option>
+                <Option value="price-desc">Preț descrescător</Option>
+                <Option value="rating">Rating</Option>
+                <Option value="name">Nume A-Z</Option>
+                <Option value="passengers">Nr. pasageri</Option>
               </Select>
 
               <button
@@ -405,11 +405,11 @@ const FleetPage = () => {
                     onChange={(e) => handleFilterChange('type', e.target.value)}
                     className="px-3 py-2 transition-all duration-300"
                   >
-                    <option value="all">Toate</option>
-                    <option value="economic">Economic</option>
-                    <option value="comfort">Comfort</option>
-                    <option value="premium">Premium</option>
-                    <option value="van">Van</option>
+                    <Option value="all">Toate</Option>
+                    <Option value="economic">Economic</Option>
+                    <Option value="comfort">Comfort</Option>
+                    <Option value="premium">Premium</Option>
+                    <Option value="van">Van</Option>
                   </Select>
                 </div>
 
@@ -422,9 +422,9 @@ const FleetPage = () => {
                     onChange={(e) => handleFilterChange('transmission', e.target.value)}
                     className="px-3 py-2 transition-all duration-300"
                   >
-                    <option value="all">Toate</option>
-                    <option value="manual">Manual</option>
-                    <option value="automat">Automat</option>
+                    <Option value="all">Toate</Option>
+                    <Option value="manual">Manual</Option>
+                    <Option value="automat">Automat</Option>
                   </Select>
                 </div>
 
@@ -437,9 +437,9 @@ const FleetPage = () => {
                     onChange={(e) => handleFilterChange('fuel', e.target.value)}
                     className="px-3 py-2 transition-all duration-300"
                   >
-                    <option value="all">Toate</option>
-                    <option value="benzină">Benzină</option>
-                    <option value="diesel">Diesel</option>
+                    <Option value="all">Toate</Option>
+                    <Option value="benzină">Benzină</Option>
+                    <Option value="diesel">Diesel</Option>
                   </Select>
                 </div>
 
@@ -452,10 +452,10 @@ const FleetPage = () => {
                     onChange={(e) => handleFilterChange('passengers', e.target.value)}
                     className="px-3 py-2 transition-all duration-300"
                   >
-                    <option value="all">Toți</option>
-                    <option value="1-4">1-4 persoane</option>
-                    <option value="5-7">5-7 persoane</option>
-                    <option value="8+">8+ persoane</option>
+                    <Option value="all">Toți</Option>
+                    <Option value="1-4">1-4 persoane</Option>
+                    <Option value="5-7">5-7 persoane</Option>
+                    <Option value="8+">8+ persoane</Option>
                   </Select>
                 </div>
 
@@ -468,10 +468,10 @@ const FleetPage = () => {
                     onChange={(e) => handleFilterChange('priceRange', e.target.value)}
                     className="px-3 py-2 transition-all duration-300"
                   >
-                    <option value="all">Toate</option>
-                    <option value="0-50">0-50€</option>
-                    <option value="51-80">51-80€</option>
-                    <option value="81+">81€+</option>
+                    <Option value="all">Toate</Option>
+                    <Option value="0-50">0-50€</Option>
+                    <Option value="51-80">51-80€</Option>
+                    <Option value="81+">81€+</Option>
                   </Select>
                 </div>
               </div>
