@@ -3,7 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Car, Users, BarChart3, Plus, Filter, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { Select, Option } from '@/components/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
 interface Reservation {
   id: string;
@@ -287,14 +293,20 @@ const AdminDashboard = () => {
 
               <div className="mb-4">
                 <Select
-                  value={selectedCar || ''}
-                  onChange={(e) => setSelectedCar(e.target.value ? Number(e.target.value) : null)}
-                  className="px-3 py-2"
+                  value={selectedCar ? String(selectedCar) : ''}
+                  onValueChange={value => setSelectedCar(value ? Number(value) : null)}
                 >
-                  <Option value="">Toate mașinile</Option>
-                  {cars.map(car => (
-                    <Option key={car.id} value={car.id}>{car.name}</Option>
-                  ))}
+                  <SelectTrigger className="px-3 py-2">
+                    <SelectValue placeholder="Toate mașinile" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Toate mașinile</SelectItem>
+                    {cars.map(car => (
+                      <SelectItem key={car.id} value={car.id.toString()}>
+                        {car.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
 

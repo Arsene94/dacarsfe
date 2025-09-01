@@ -3,7 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Search, Filter, Download, Eye, Edit, Trash2, Phone, Mail, Calendar, Car, MapPin } from 'lucide-react';
-import { Select, Option } from '@/components/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
 interface Reservation {
   id: string;
@@ -235,27 +241,29 @@ const ReservationsPage = () => {
               />
             </div>
 
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-3"
-            >
-              <Option value="all">Toate statusurile</Option>
-              <Option value="confirmed">Confirmat</Option>
-              <Option value="pending">În așteptare</Option>
-              <Option value="cancelled">Anulat</Option>
-              <Option value="completed">Finalizat</Option>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="px-4 py-3">
+                <SelectValue placeholder="Toate statusurile" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toate statusurile</SelectItem>
+                <SelectItem value="confirmed">Confirmat</SelectItem>
+                <SelectItem value="pending">În așteptare</SelectItem>
+                <SelectItem value="cancelled">Anulat</SelectItem>
+                <SelectItem value="completed">Finalizat</SelectItem>
+              </SelectContent>
             </Select>
 
-            <Select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="px-4 py-3"
-            >
-              <Option value="all">Toate perioadele</Option>
-              <Option value="today">Astăzi</Option>
-              <Option value="week">Următoarea săptămână</Option>
-              <Option value="month">Următoarea lună</Option>
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="px-4 py-3">
+                <SelectValue placeholder="Toate perioadele" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toate perioadele</SelectItem>
+                <SelectItem value="today">Astăzi</SelectItem>
+                <SelectItem value="week">Următoarea săptămână</SelectItem>
+                <SelectItem value="month">Următoarea lună</SelectItem>
+              </SelectContent>
             </Select>
 
             <div className="flex items-center justify-between">

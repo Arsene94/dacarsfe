@@ -4,7 +4,13 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Users, Fuel, Settings, Star, Filter, Grid, List, Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, Option } from '@/components/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
 const FleetPage = () => {
   const [filters, setFilters] = useState({
@@ -368,16 +374,17 @@ const FleetPage = () => {
                 </button>
               </div>
 
-              <Select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-auto px-4 py-2 transition-all duration-300"
-              >
-                <Option value="price-asc">Preț crescător</Option>
-                <Option value="price-desc">Preț descrescător</Option>
-                <Option value="rating">Rating</Option>
-                <Option value="name">Nume A-Z</Option>
-                <Option value="passengers">Nr. pasageri</Option>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-auto px-4 py-2 transition-all duration-300">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="price-asc">Preț crescător</SelectItem>
+                  <SelectItem value="price-desc">Preț descrescător</SelectItem>
+                  <SelectItem value="rating">Rating</SelectItem>
+                  <SelectItem value="name">Nume A-Z</SelectItem>
+                  <SelectItem value="passengers">Nr. pasageri</SelectItem>
+                </SelectContent>
               </Select>
 
               <button
@@ -402,14 +409,18 @@ const FleetPage = () => {
                   </label>
                   <Select
                     value={filters.type}
-                    onChange={(e) => handleFilterChange('type', e.target.value)}
-                    className="px-3 py-2 transition-all duration-300"
+                    onValueChange={value => handleFilterChange('type', value)}
                   >
-                    <Option value="all">Toate</Option>
-                    <Option value="economic">Economic</Option>
-                    <Option value="comfort">Comfort</Option>
-                    <Option value="premium">Premium</Option>
-                    <Option value="van">Van</Option>
+                    <SelectTrigger className="px-3 py-2 transition-all duration-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toate</SelectItem>
+                      <SelectItem value="economic">Economic</SelectItem>
+                      <SelectItem value="comfort">Comfort</SelectItem>
+                      <SelectItem value="premium">Premium</SelectItem>
+                      <SelectItem value="van">Van</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
 
@@ -419,12 +430,16 @@ const FleetPage = () => {
                   </label>
                   <Select
                     value={filters.transmission}
-                    onChange={(e) => handleFilterChange('transmission', e.target.value)}
-                    className="px-3 py-2 transition-all duration-300"
+                    onValueChange={value => handleFilterChange('transmission', value)}
                   >
-                    <Option value="all">Toate</Option>
-                    <Option value="manual">Manual</Option>
-                    <Option value="automat">Automat</Option>
+                    <SelectTrigger className="px-3 py-2 transition-all duration-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toate</SelectItem>
+                      <SelectItem value="manual">Manual</SelectItem>
+                      <SelectItem value="automat">Automat</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
 
@@ -434,12 +449,16 @@ const FleetPage = () => {
                   </label>
                   <Select
                     value={filters.fuel}
-                    onChange={(e) => handleFilterChange('fuel', e.target.value)}
-                    className="px-3 py-2 transition-all duration-300"
+                    onValueChange={value => handleFilterChange('fuel', value)}
                   >
-                    <Option value="all">Toate</Option>
-                    <Option value="benzină">Benzină</Option>
-                    <Option value="diesel">Diesel</Option>
+                    <SelectTrigger className="px-3 py-2 transition-all duration-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toate</SelectItem>
+                      <SelectItem value="benzină">Benzină</SelectItem>
+                      <SelectItem value="diesel">Diesel</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
 
@@ -449,13 +468,17 @@ const FleetPage = () => {
                   </label>
                   <Select
                     value={filters.passengers}
-                    onChange={(e) => handleFilterChange('passengers', e.target.value)}
-                    className="px-3 py-2 transition-all duration-300"
+                    onValueChange={value => handleFilterChange('passengers', value)}
                   >
-                    <Option value="all">Toți</Option>
-                    <Option value="1-4">1-4 persoane</Option>
-                    <Option value="5-7">5-7 persoane</Option>
-                    <Option value="8+">8+ persoane</Option>
+                    <SelectTrigger className="px-3 py-2 transition-all duration-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toți</SelectItem>
+                      <SelectItem value="1-4">1-4 persoane</SelectItem>
+                      <SelectItem value="5-7">5-7 persoane</SelectItem>
+                      <SelectItem value="8+">8+ persoane</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
 
@@ -465,13 +488,17 @@ const FleetPage = () => {
                   </label>
                   <Select
                     value={filters.priceRange}
-                    onChange={(e) => handleFilterChange('priceRange', e.target.value)}
-                    className="px-3 py-2 transition-all duration-300"
+                    onValueChange={value => handleFilterChange('priceRange', value)}
                   >
-                    <Option value="all">Toate</Option>
-                    <Option value="0-50">0-50€</Option>
-                    <Option value="51-80">51-80€</Option>
-                    <Option value="81+">81€+</Option>
+                    <SelectTrigger className="px-3 py-2 transition-all duration-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toate</SelectItem>
+                      <SelectItem value="0-50">0-50€</SelectItem>
+                      <SelectItem value="51-80">51-80€</SelectItem>
+                      <SelectItem value="81+">81€+</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
               </div>

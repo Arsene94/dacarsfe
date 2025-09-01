@@ -4,7 +4,13 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Search, Plus, Edit, Trash2, Car, Settings, Users, Fuel, Eye, AlertTriangle } from 'lucide-react';
 import { Star } from "lucide-react";
-import { Select, Option } from '@/components/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
 interface Car {
   id: number;
@@ -330,27 +336,29 @@ const CarsPage = () => {
               />
             </div>
 
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-3"
-            >
-              <Option value="all">Toate statusurile</Option>
-              <Option value="available">Disponibile</Option>
-              <Option value="rented">Închiriate</Option>
-              <Option value="maintenance">În Service</Option>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="px-4 py-3">
+                <SelectValue placeholder="Toate statusurile" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toate statusurile</SelectItem>
+                <SelectItem value="available">Disponibile</SelectItem>
+                <SelectItem value="rented">Închiriate</SelectItem>
+                <SelectItem value="maintenance">În Service</SelectItem>
+              </SelectContent>
             </Select>
 
-            <Select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-4 py-3"
-            >
-              <Option value="all">Toate tipurile</Option>
-              <Option value="economic">Economic</Option>
-              <Option value="comfort">Comfort</Option>
-              <Option value="premium">Premium</Option>
-              <Option value="van">Van</Option>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="px-4 py-3">
+                <SelectValue placeholder="Toate tipurile" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toate tipurile</SelectItem>
+                <SelectItem value="economic">Economic</SelectItem>
+                <SelectItem value="comfort">Comfort</SelectItem>
+                <SelectItem value="premium">Premium</SelectItem>
+                <SelectItem value="van">Van</SelectItem>
+              </SelectContent>
             </Select>
 
             <div className="flex items-center justify-between">

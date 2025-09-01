@@ -6,7 +6,13 @@ import {ArrowRight, Calendar, Clock, MapPin, Shield, Star, Users} from 'lucide-r
 import apiClient from "@/lib/api";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, Option } from '@/components/ui/select';
+import {
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
+} from '@/components/ui/select';
 
 type CarCategory = {
     id: number;
@@ -37,6 +43,13 @@ const HeroSection = () => {
             ...formData,
             [e.target.name]: e.target.value
         });
+    };
+
+    const handleSelectChange = (name: string) => (value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            [name]: value,
+        }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -168,15 +181,17 @@ const HeroSection = () => {
                       <div className="relative">
                           <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                           <Select
-                              name="location"
                               value={formData.location}
-                              onChange={handleInputChange}
-                              className="pl-10 pr-4"
+                              onValueChange={handleSelectChange('location')}
                           >
-                              <Option value="">Alege locația</Option>
-                              <Option value="otopeni">Aeroport Otopeni</Option>
-                              <Option value="baneasa">Aeroport Băneasa</Option>
-                              <Option value="bucuresti">București Centru</Option>
+                              <SelectTrigger className="pl-10 pr-4">
+                                  <SelectValue placeholder="Alege locația" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="otopeni">Aeroport Otopeni</SelectItem>
+                                  <SelectItem value="baneasa">Aeroport Băneasa</SelectItem>
+                                  <SelectItem value="bucuresti">București Centru</SelectItem>
+                              </SelectContent>
                           </Select>
                       </div>
                   </div>
@@ -186,16 +201,18 @@ const HeroSection = () => {
                       <div className="relative">
                           <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                           <Select
-                              name="carType"
                               value={formData.carType}
-                              onChange={handleInputChange}
-                              className="pl-10 pr-4"
+                              onValueChange={handleSelectChange('carType')}
                           >
-                              <Option value="">Toate tipurile</Option>
-                              <Option value="economy">Economic</Option>
-                              <Option value="compact">Compact</Option>
-                              <Option value="suv">SUV</Option>
-                              <Option value="premium">Premium</Option>
+                              <SelectTrigger className="pl-10 pr-4">
+                                  <SelectValue placeholder="Toate tipurile" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="economy">Economic</SelectItem>
+                                  <SelectItem value="compact">Compact</SelectItem>
+                                  <SelectItem value="suv">SUV</SelectItem>
+                                  <SelectItem value="premium">Premium</SelectItem>
+                              </SelectContent>
                           </Select>
                       </div>
                   </div>

@@ -4,7 +4,13 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar, Clock, MapPin, User, Phone, Mail, Plane, Gift } from 'lucide-react';
 import { validateDiscountCode, applyDiscountCode } from '../../services/wheelApi';
-import { Select, Option } from '@/components/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
 const ReservationPage = () => {
   const router = useRouter();
@@ -49,6 +55,13 @@ const ReservationPage = () => {
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleSelectChange = (name: string) => (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
     }));
   };
 
@@ -348,17 +361,19 @@ const ReservationPage = () => {
                       Locația ridicării *
                     </label>
                     <Select
-                      name="location"
                       value={formData.location}
-                      onChange={handleInputChange}
-                      required
-                      className="transition-all duration-300"
+                      onValueChange={handleSelectChange('location')}
                     >
-                      {locations.map(location => (
-                        <Option key={location.value} value={location.value}>
-                          {location.label}
-                        </Option>
-                      ))}
+                      <SelectTrigger className="transition-all duration-300">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.map(location => (
+                          <SelectItem key={location.value} value={location.value}>
+                            {location.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
 
@@ -367,17 +382,19 @@ const ReservationPage = () => {
                       Tip mașină *
                     </label>
                     <Select
-                      name="carType"
                       value={formData.carType}
-                      onChange={handleInputChange}
-                      required
-                      className="transition-all duration-300"
+                      onValueChange={handleSelectChange('carType')}
                     >
-                      {carTypes.map(car => (
-                        <Option key={car.value} value={car.value}>
-                          {car.label} - {car.price}€/zi
-                        </Option>
-                      ))}
+                      <SelectTrigger className="transition-all duration-300">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {carTypes.map(car => (
+                          <SelectItem key={car.value} value={car.value}>
+                            {car.label} - {car.price}€/zi
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                 </div>
