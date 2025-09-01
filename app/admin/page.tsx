@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Select } from "@/components/ui/select";
+import { DataTable, Column } from "@/components/ui/table";
 
 interface Reservation {
   id: string;
@@ -34,6 +35,92 @@ interface Car {
   status: "available" | "rented" | "maintenance";
   price: number;
 }
+
+const reservationColumns: Column<Reservation>[] = [
+  {
+    id: "id",
+    header: "ID",
+    accessor: (r) => r.id,
+    sortable: true,
+    cell: (r) => (
+      <span className="font-dm-sans text-sm text-berkeley font-semibold">
+        {r.id}
+      </span>
+    ),
+  },
+  {
+    id: "customer",
+    header: "Client",
+    accessor: (r) => r.customerName,
+    sortable: true,
+    cell: (r) => (
+      <span className="font-dm-sans text-sm text-gray-900">
+        {r.customerName}
+      </span>
+    ),
+  },
+  {
+    id: "phone",
+    header: "Telefon",
+    accessor: (r) => r.phone,
+    cell: (r) => (
+      <span className="font-dm-sans text-sm text-gray-600">{r.phone}</span>
+    ),
+  },
+  {
+    id: "car",
+    header: "Mașină",
+    accessor: (r) => r.carName,
+    cell: (r) => (
+      <span className="font-dm-sans text-sm text-gray-900">{r.carName}</span>
+    ),
+  },
+  {
+    id: "period",
+    header: "Perioada",
+    accessor: (r) => new Date(r.startDate).getTime(),
+    cell: (r) => (
+      <span className="font-dm-sans text-sm text-gray-600">
+        {new Date(r.startDate).toLocaleDateString("ro-RO")} -
+        {" "}
+        {new Date(r.endDate).toLocaleDateString("ro-RO")}
+      </span>
+    ),
+  },
+  {
+    id: "status",
+    header: "Status",
+    accessor: (r) => r.status,
+    cell: (r) => (
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-dm-sans ${
+          r.status === "confirmed"
+            ? "bg-green-100 text-green-800"
+            : r.status === "pending"
+              ? "bg-yellow-100 text-yellow-800"
+              : "bg-red-100 text-red-800"
+        }`}
+      >
+        {r.status === "confirmed"
+          ? "Confirmat"
+          : r.status === "pending"
+            ? "În așteptare"
+            : "Anulat"}
+      </span>
+    ),
+  },
+  {
+    id: "total",
+    header: "Total",
+    accessor: (r) => r.total,
+    sortable: true,
+    cell: (r) => (
+      <span className="font-dm-sans text-sm font-semibold text-berkeley">
+        {r.total}€
+      </span>
+    ),
+  },
+];
 
 const AdminDashboard = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -525,85 +612,7 @@ const AdminDashboard = () => {
               </Link>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-dm-sans font-semibold text-gray-600">
-                      ID
-                    </th>
-                    <th className="text-left py-3 px-4 font-dm-sans font-semibold text-gray-600">
-                      Client
-                    </th>
-                    <th className="text-left py-3 px-4 font-dm-sans font-semibold text-gray-600">
-                      Telefon
-                    </th>
-                    <th className="text-left py-3 px-4 font-dm-sans font-semibold text-gray-600">
-                      Mașină
-                    </th>
-                    <th className="text-left py-3 px-4 font-dm-sans font-semibold text-gray-600">
-                      Perioada
-                    </th>
-                    <th className="text-left py-3 px-4 font-dm-sans font-semibold text-gray-600">
-                      Status
-                    </th>
-                    <th className="text-left py-3 px-4 font-dm-sans font-semibold text-gray-600">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reservations.slice(0, 5).map((reservation) => (
-                    <tr
-                      key={reservation.id}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="py-3 px-4 font-dm-sans text-sm text-berkeley font-semibold">
-                        {reservation.id}
-                      </td>
-                      <td className="py-3 px-4 font-dm-sans text-sm text-gray-900">
-                        {reservation.customerName}
-                      </td>
-                      <td className="py-3 px-4 font-dm-sans text-sm text-gray-600">
-                        {reservation.phone}
-                      </td>
-                      <td className="py-3 px-4 font-dm-sans text-sm text-gray-900">
-                        {reservation.carName}
-                      </td>
-                      <td className="py-3 px-4 font-dm-sans text-sm text-gray-600">
-                        {new Date(reservation.startDate).toLocaleDateString(
-                          "ro-RO",
-                        )}{" "}
-                        -{" "}
-                        {new Date(reservation.endDate).toLocaleDateString(
-                          "ro-RO",
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-dm-sans ${
-                            reservation.status === "confirmed"
-                              ? "bg-green-100 text-green-800"
-                              : reservation.status === "pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {reservation.status === "confirmed"
-                            ? "Confirmat"
-                            : reservation.status === "pending"
-                              ? "În așteptare"
-                              : "Anulat"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-dm-sans text-sm font-semibold text-berkeley">
-                        {reservation.total}€
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable data={reservations.slice(0, 5)} columns={reservationColumns} />
           </div>
         </div>
       </div>

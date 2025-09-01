@@ -17,6 +17,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import { DataTable, Column } from "@/components/ui/table";
 
 interface Reservation {
   id: string;
@@ -228,6 +229,127 @@ const ReservationsPage = () => {
     }
   };
 
+  const reservationColumns = React.useMemo<Column<Reservation>[]>(
+    () => [
+      {
+        id: "reservation",
+        header: "Rezervare",
+        accessor: (r) => r.id,
+        sortable: true,
+        cell: (r) => (
+          <div>
+            <div className="font-dm-sans font-semibold text-berkeley">
+              {r.id}
+            </div>
+            <div className="text-sm text-gray-500 font-dm-sans">
+              {new Date(r.createdAt).toLocaleDateString("ro-RO")}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "client",
+        header: "Client",
+        accessor: (r) => r.customerName,
+        sortable: true,
+        cell: (r) => (
+          <div>
+            <div className="font-dm-sans font-semibold text-gray-900">
+              {r.customerName}
+            </div>
+            <div className="text-sm text-gray-500 font-dm-sans">
+              {r.phone}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "car",
+        header: "Mașină",
+        accessor: (r) => r.carName,
+        cell: (r) => (
+          <div className="font-dm-sans text-gray-900">{r.carName}</div>
+        ),
+      },
+      {
+        id: "period",
+        header: "Perioada",
+        accessor: (r) => new Date(r.startDate).getTime(),
+        cell: (r) => (
+          <div>
+            <div className="font-dm-sans text-gray-900">
+              {new Date(r.startDate).toLocaleDateString("ro-RO")} -
+              {" "}
+              {new Date(r.endDate).toLocaleDateString("ro-RO")}
+            </div>
+            <div className="text-sm text-gray-500 font-dm-sans">
+              {r.pickupTime} - {r.dropoffTime}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "status",
+        header: "Status",
+        accessor: (r) => r.status,
+        cell: (r) => (
+          <span
+            className={`px-3 py-1 rounded-full text-sm font-dm-sans ${getStatusColor(
+              r.status,
+            )}`}
+          >
+            {getStatusText(r.status)}
+          </span>
+        ),
+      },
+      {
+        id: "total",
+        header: "Total",
+        accessor: (r) => r.total,
+        sortable: true,
+        cell: (r) => (
+          <div className="font-dm-sans font-semibold text-berkeley">
+            {r.total}€
+            {r.discountCode && (
+              <div className="text-sm text-jade font-dm-sans">
+                Cod: {r.discountCode}
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Acțiuni",
+        accessor: (r) => r.id,
+        cell: (r) => (
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => handleViewReservation(r)}
+              className="p-2 text-gray-600 hover:text-jade hover:bg-jade/10 rounded-lg transition-colors"
+              aria-label="Vezi detalii"
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+            <button
+              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              aria-label="Editează"
+            >
+              <Edit className="h-4 w-4" />
+            </button>
+            <button
+              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              aria-label="Șterge"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [handleViewReservation],
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -306,127 +428,11 @@ const ReservationsPage = () => {
 
         {/* Reservations Table */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left py-4 px-6 font-dm-sans font-semibold text-gray-600">
-                    Rezervare
-                  </th>
-                  <th className="text-left py-4 px-6 font-dm-sans font-semibold text-gray-600">
-                    Client
-                  </th>
-                  <th className="text-left py-4 px-6 font-dm-sans font-semibold text-gray-600">
-                    Mașină
-                  </th>
-                  <th className="text-left py-4 px-6 font-dm-sans font-semibold text-gray-600">
-                    Perioada
-                  </th>
-                  <th className="text-left py-4 px-6 font-dm-sans font-semibold text-gray-600">
-                    Status
-                  </th>
-                  <th className="text-left py-4 px-6 font-dm-sans font-semibold text-gray-600">
-                    Total
-                  </th>
-                  <th className="text-left py-4 px-6 font-dm-sans font-semibold text-gray-600">
-                    Acțiuni
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredReservations.map((reservation) => (
-                  <tr
-                    key={reservation.id}
-                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="py-4 px-6">
-                      <div>
-                        <div className="font-dm-sans font-semibold text-berkeley">
-                          {reservation.id}
-                        </div>
-                        <div className="text-sm text-gray-500 font-dm-sans">
-                          {new Date(reservation.createdAt).toLocaleDateString(
-                            "ro-RO",
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div>
-                        <div className="font-dm-sans font-semibold text-gray-900">
-                          {reservation.customerName}
-                        </div>
-                        <div className="text-sm text-gray-500 font-dm-sans">
-                          {reservation.phone}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="font-dm-sans text-gray-900">
-                        {reservation.carName}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div>
-                        <div className="font-dm-sans text-gray-900">
-                          {new Date(reservation.startDate).toLocaleDateString(
-                            "ro-RO",
-                          )}{" "}
-                          -{" "}
-                          {new Date(reservation.endDate).toLocaleDateString(
-                            "ro-RO",
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-500 font-dm-sans">
-                          {reservation.pickupTime} - {reservation.dropoffTime}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-dm-sans ${getStatusColor(reservation.status)}`}
-                      >
-                        {getStatusText(reservation.status)}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="font-dm-sans font-semibold text-berkeley">
-                        {reservation.total}€
-                      </div>
-                      {reservation.discountCode && (
-                        <div className="text-sm text-jade font-dm-sans">
-                          Cod: {reservation.discountCode}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleViewReservation(reservation)}
-                          className="p-2 text-gray-600 hover:text-jade hover:bg-jade/10 rounded-lg transition-colors"
-                          aria-label="Vezi detalii"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          aria-label="Editează"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          aria-label="Șterge"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            data={filteredReservations}
+            columns={reservationColumns}
+            pageSize={10}
+          />
 
           {filteredReservations.length === 0 && (
             <div className="text-center py-12">
