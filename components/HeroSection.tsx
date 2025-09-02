@@ -67,7 +67,7 @@ const HeroSection = () => {
     e.preventDefault();
     console.log("Rezervare:", formData);
   };
-  console.log(categories)
+
   return (
     <section className="relative bg-berkeley text-white overflow-hidden">
       {/* Background Image */}
@@ -91,7 +91,7 @@ const HeroSection = () => {
 
       {/* Content */}
       <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:pt-32">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-1 gap-12 items-center">
           <div className="animate-slide-in-left">
             <div className="inline-flex items-center px-4 py-2 bg-jade/40 rounded-full mb-6">
               <Star className="h-4 w-4 text-white mr-2" />
@@ -165,19 +165,19 @@ const HeroSection = () => {
             </div>
           </div>
 
-          <div className="hidden sm:block animate-slide-in-right">
-            <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-r from-jade/20 to-transparent rounded-2xl blur-2xl"></div>
-              <Image
-                src="https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=600"
-                alt="Mașină elegantă"
-                width={600}
-                height={400}
-                className="relative rounded-2xl shadow-2xl"
-                loading="lazy"
-              />
-            </div>
-          </div>
+          {/*<div className="hidden sm:block animate-slide-in-right">*/}
+          {/*  <div className="relative">*/}
+          {/*    <div className="absolute -inset-4 bg-gradient-to-r from-jade/20 to-transparent rounded-2xl blur-2xl"></div>*/}
+          {/*    <Image*/}
+          {/*      src="https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=600"*/}
+          {/*      alt="Mașină elegantă"*/}
+          {/*      width={600}*/}
+          {/*      height={400}*/}
+          {/*      className="relative rounded-2xl shadow-2xl"*/}
+          {/*      loading="lazy"*/}
+          {/*    />*/}
+          {/*  </div>*/}
+          {/*</div>*/}
         </div>
 
         <div className="mt-5">

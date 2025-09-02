@@ -41,6 +41,7 @@ const Header = () => {
                         alt="DaCars logo"
                         width={466}
                         height={154}
+                        priority
                         loading="eager"
                         fetchPriority="high"
                     />
