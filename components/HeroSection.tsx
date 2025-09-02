@@ -87,12 +87,12 @@ const HeroSection = () => {
             media="(min-width: 520px) and (orientation: landscape)"
           />
           <source
-            srcSet="/images/bg-hero-mobile.svg"
+            srcSet="/images/bg-hero-mobile.webp"
             media="(max-width: 519px)"
             type="image/svg+xml"
           />
           <img
-            src="/images/bg-hero-mobile.svg"
+            src="/images/bg-hero-mobile.webp"
             alt="Fundal aeroport"
             className="w-full h-full object-cover"
           />
