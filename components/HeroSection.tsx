@@ -26,7 +26,7 @@ const HeroSection = () => {
   const [formData, setFormData] = useState({
     pickupDate: "",
     returnDate: "",
-    location: "",
+    location: "otopeni",
     carType: "",
   });
   const [categories, setCategories] = useState<CarCategory[]>([]);
@@ -230,14 +230,14 @@ const HeroSection = () => {
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Select
                   id="hero-location"
-                  className="pl-10 pr-4"
+                  className="pl-10 pr-4 text-black"
                   value={formData.location}
                   onValueChange={handleSelectChange("location")}
                   placeholder="Alege locația"
                 >
                   <option value="otopeni">Aeroport Otopeni</option>
                   <option value="baneasa">Aeroport Băneasa</option>
-                  <option value="bucuresti">București Centru</option>
+                  <option value="bucuresti">București</option>
                 </Select>
               </div>
             </div>
@@ -253,7 +253,7 @@ const HeroSection = () => {
                 <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Select
                   id="hero-car-type"
-                  className="pl-10 pr-4"
+                  className="pl-10 pr-4 text-black"
                   value={formData.carType}
                   onValueChange={handleSelectChange("carType")}
                   placeholder="Toate tipurile"
