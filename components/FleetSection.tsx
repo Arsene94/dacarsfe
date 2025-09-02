@@ -47,7 +47,7 @@ type ApiCar = {
 };
 
 const STORAGE_BASE =
-    process.env.NEXT_PUBLIC_API_URL + '/storage' || "http://localhost:8000/storage";
+    'https://dacars.ro/storage' || "http://localhost:8000/storage";
 
 const toImageUrl = (p?: string | null): string => {
     if (!p) return "/images/placeholder-car.svg";
