@@ -65,7 +65,7 @@ const HeroSection = () => {
     <section className="relative bg-berkeley text-white overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
-        <picture className="block w-full h-full">
+        <picture className="relative block w-full h-full">
           <source
             media="(min-width: 640px)"
             srcSet="/images/bg-hero-1920x1080.webp"
