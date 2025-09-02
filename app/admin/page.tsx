@@ -365,7 +365,7 @@ const AdminDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <Link href="/" className="flex items-center space-x-2">
+              <Link href="/" className="flex items-center space-x-2" aria-label="DaCars Admin Acasă">
                 <div className="bg-jade p-2 rounded-lg">
                   <Car className="h-6 w-6 text-white" />
                 </div>
@@ -379,18 +379,21 @@ const AdminDashboard = () => {
               <Link
                 href="/admin"
                 className="text-berkeley font-dm-sans font-medium hover:text-jade transition-colors"
+                aria-label="Dashboard"
               >
                 Dashboard
               </Link>
               <Link
                 href="/admin/rezervari"
                 className="text-gray-600 font-dm-sans font-medium hover:text-jade transition-colors"
+                aria-label="Rezervări"
               >
                 Rezervări
               </Link>
               <Link
                 href="/admin/masini"
                 className="text-gray-600 font-dm-sans font-medium hover:text-jade transition-colors"
+                aria-label="Mașini"
               >
                 Mașini
               </Link>
@@ -470,6 +473,7 @@ const AdminDashboard = () => {
                 <Link
                   href="/admin/masini"
                   className="p-2 bg-jade text-white rounded-lg hover:bg-jade/90 transition-colors"
+                  aria-label="Adaugă mașină"
                 >
                   <Plus className="h-4 w-4" />
                 </Link>
@@ -608,6 +612,7 @@ const AdminDashboard = () => {
               <Link
                 href="/admin/rezervari"
                 className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors"
+                aria-label="Vezi toate rezervările"
               >
                 Vezi toate
               </Link>

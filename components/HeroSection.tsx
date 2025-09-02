@@ -96,7 +96,7 @@ const HeroSection = () => {
             </p>
 
             <div className="hidden sm:flex flex-col sm:flex-row gap-4 mb-8">
-              <Link href="/rezervare">
+              <Link href="/rezervare" aria-label="Rezervă mașina">
                 <Button
                   className="transform hover:scale-105 shadow-xl group"
                   aria-label="Rezervă mașina"

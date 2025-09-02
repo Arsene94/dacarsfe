@@ -177,6 +177,7 @@ const FleetSection = () => {
                     <Link
                         href="/rezervare"
                         className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+                        aria-label="Rezervă"
                     >
                         Rezervă
                     </Link>
@@ -243,7 +244,7 @@ const FleetSection = () => {
                 </div>
 
                 <div className="text-center mt-12">
-                    <Link href="/flota">
+                    <Link href="/flota" aria-label="Vezi toată flota">
                         <Button
                             aria-label="Vezi toată flota"
                             variant="outline"

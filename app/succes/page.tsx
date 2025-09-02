@@ -194,7 +194,11 @@ const SuccessPage = () => {
           <div className="text-center mt-8 p-6 bg-jade/20 rounded-2xl">
             <Phone className="h-8 w-8 text-jade mx-auto mb-3" />
             <p className="font-dm-sans text-lg mb-2">Contactează-ne oricând:</p>
-            <a href="tel:+40722123456" className="text-jade font-poppins font-bold text-2xl hover:text-jade/80 transition-colors duration-300">
+            <a
+              href="tel:+40722123456"
+              className="text-jade font-poppins font-bold text-2xl hover:text-jade/80 transition-colors duration-300"
+              aria-label="Sună la +40 722 123 456"
+            >
               +40 722 123 456
             </a>
             <p className="font-dm-sans text-sm text-gray-300 mt-2">
@@ -215,7 +219,7 @@ const SuccessPage = () => {
             Printează detaliile
           </Button>
 
-          <Link href="/">
+          <Link href="/" aria-label="Înapoi la Acasă">
             <Button
               className="transform hover:scale-105 shadow-lg"
               aria-label="Înapoi la Acasă"
