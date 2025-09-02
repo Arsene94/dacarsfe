@@ -65,11 +65,41 @@ const HeroSection = () => {
       {/* Background Image */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-r from-berkeley/90 to-berkeley/70 z-10"></div>
-        <img
-          src="https://images.pexels.com/photos/2816458/pexels-photo-2816458.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop"
-          alt="Aeroport background"
-          className="w-full h-full object-cover"
-        />
+        <picture>
+          <source
+            srcSet="/images/bg-hero-1920x1080.webp"
+            media="(min-width: 1920px)"
+          />
+          <source
+            srcSet="/images/bg-hero-820x380.webp"
+            media="(min-width: 820px)"
+          />
+          <source
+            srcSet="/images/bg-hero-800x800.webp"
+            media="(min-width: 800px)"
+          />
+          <source
+            srcSet="/images/bg-hero-520x520.webp"
+            media="(min-width: 520px) and (orientation: portrait)"
+          />
+          <source
+            srcSet="/images/bg-hero-520x380.webp"
+            media="(min-width: 520px) and (orientation: landscape)"
+          />
+          <source
+            srcSet="/images/bg-hero-320x240.webp"
+            media="(min-width: 320px)"
+          />
+          <source
+            srcSet="/images/bg-hero-240x320.webp"
+            media="(min-width: 240px)"
+          />
+          <img
+            src="/images/bg-hero-150x150.webp"
+            alt="Fundal aeroport"
+            className="w-full h-full object-cover"
+          />
+        </picture>
       </div>
 
       {/* Content */}
