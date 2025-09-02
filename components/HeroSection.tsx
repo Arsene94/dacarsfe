@@ -65,15 +65,21 @@ const HeroSection = () => {
     <section className="relative bg-berkeley text-white overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
+        <picture className="block w-full h-full">
+          <source
+            media="(min-width: 640px)"
+            srcSet="/images/bg-hero-1920x1080.webp"
+          />
+          <Image
+            src="/images/bg-hero-mobile.webp"
+            alt="Fundal aeroport"
+            fill
+            priority
+            sizes="100vw"
+            className="w-full h-full object-cover"
+          />
+        </picture>
         <div className="absolute inset-0 bg-gradient-to-r from-berkeley/90 to-berkeley/70 z-10"></div>
-        <Image
-          src="/images/bg-hero-1920x1080.webp"
-          alt="Fundal aeroport"
-          fill
-          priority
-          sizes="100vw"
-          className="w-full h-full object-cover"
-        />
       </div>
 
       {/* Content */}
