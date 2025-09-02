@@ -41,7 +41,7 @@ Response: {
       "description": "Reducere 10% la următoarea rezervare",
       "discount_percentage": 10,
       "probability": 25,
-      "color": "#38B275",
+      "color": "#1E7149",
       "icon": "gift",
       "is_active": true
     }

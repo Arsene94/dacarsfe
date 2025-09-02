@@ -255,7 +255,7 @@ const HeroSection = () => {
 
             <Button
               type="submit"
-              className="bg-[#38B275] hover:bg-[#32a066] px-6 py-3 self-end"
+              className="px-6 py-3 self-end"
               aria-label="Caută mașini"
             >
               Caută mașini
