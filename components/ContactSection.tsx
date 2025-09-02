@@ -25,7 +25,11 @@ const ContactSection = () => {
                 <div>
                   <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">Telefon</h3>
                   <p className="text-gray-600 font-dm-sans mb-3">Suntem disponibili 24/7 pentru urgențe</p>
-                  <a href="tel:+40722123456" className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300">
+                  <a
+                    href="tel:+40722123456"
+                    className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
+                    aria-label="Sună la +40 722 123 456"
+                  >
                     +40 722 123 456
                   </a>
                 </div>
@@ -40,7 +44,11 @@ const ContactSection = () => {
                 <div>
                   <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">WhatsApp</h3>
                   <p className="text-gray-600 font-dm-sans mb-3">Scrie-ne pentru răspuns rapid</p>
-                  <a href="https://wa.me/40722123456" className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300">
+                  <a
+                    href="https://wa.me/40722123456"
+                    className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
+                    aria-label="Contactează pe WhatsApp la +40 722 123 456"
+                  >
                     +40 722 123 456
                   </a>
                 </div>
@@ -55,7 +63,11 @@ const ContactSection = () => {
                 <div>
                   <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">Email</h3>
                   <p className="text-gray-600 font-dm-sans mb-3">Pentru întrebări generale</p>
-                  <a href="mailto:contact@dacars.ro" className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300">
+                  <a
+                    href="mailto:contact@dacars.ro"
+                    className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
+                    aria-label="Trimite email la contact@dacars.ro"
+                  >
                     contact@dacars.ro
                   </a>
                 </div>

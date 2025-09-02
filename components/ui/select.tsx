@@ -1,46 +1,44 @@
-import * as React from 'react';
-import { cn } from '@/lib/utils';
+"use client";
 
-type SelectOption = {
-  value: string;
-  label: string;
-};
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
-export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  options?: SelectOption[];
+interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  placeholder?: string;
+  onValueChange?: (value: string) => void;
 }
 
-const Option = React.forwardRef<HTMLOptionElement, React.OptionHTMLAttributes<HTMLOptionElement>>(
-  ({ className, children, ...props }, ref) => (
-    <option ref={ref} className={cn('text-[#191919]', className)} {...props}>
-      {children}
-    </option>
-  )
-);
-
-Option.displayName = 'Option';
-
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, children, options, ...props }, ref) => (
-    <select
-      ref={ref}
-      className={cn(
-        'w-full px-4 py-3 text-[#191919] border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#38B275] focus:border-transparent font-dm-sans bg-white',
-        className
-      )}
-      {...props}
-    >
-      {options
-        ? options.map((option) => (
-            <Option key={option.value} value={option.value}>
-              {option.label}
-            </Option>
-          ))
-        : children}
-    </select>
-  )
+  (
+    { className, children, placeholder, onValueChange, onChange, ...props },
+    ref,
+  ) => {
+    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      onChange?.(e);
+      onValueChange?.(e.target.value);
+    };
+
+    return (
+      <select
+        ref={ref}
+        className={cn(
+          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+        onChange={handleChange}
+        {...props}
+      >
+        {placeholder && (
+          <option value="" disabled hidden>
+            {placeholder}
+          </option>
+        )}
+        {children}
+      </select>
+    );
+  },
 );
 
-Select.displayName = 'Select';
+Select.displayName = "Select";
 
-export { Select, Option };
+export { Select };
