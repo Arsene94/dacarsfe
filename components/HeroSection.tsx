@@ -76,16 +76,16 @@ const HeroSection = () => {
       <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:pt-32">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="animate-slide-in-left">
-            <div className="inline-flex items-center px-4 py-2 bg-jade/20 rounded-full mb-6">
-              <Star className="h-4 w-4 text-jade mr-2" />
-              <span className="text-jade font-dm-sans font-medium">
+            <div className="inline-flex items-center px-4 py-2 bg-jade/40 rounded-full mb-6">
+              <Star className="h-4 w-4 text-white mr-2" />
+              <span className="text-white font-dm-sans font-medium">
                 Cel mai de încredere serviciu
               </span>
             </div>
 
             <h1 className="text-4xl lg:text-6xl font-poppins font-bold leading-tight mb-6">
               Mașini oneste, pentru{" "}
-              <span className="text-jade">români onești</span>
+              <span className="inline-flex items-center px-4 py-2 bg-white/40 rounded-full text-jade">români onești</span>
             </h1>
 
             <p className="text-xl lg:text-2xl font-dm-sans text-gray-200 mb-8 leading-relaxed">

@@ -30,7 +30,7 @@ const OffersSection = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 animate-fade-in">
           <h2 className="text-4xl lg:text-5xl font-poppins font-bold text-white mb-6">
-            Oferte <span className="text-jade">speciale</span>
+            Oferte <span className="text-jadeLight">speciale</span>
           </h2>
           <p className="text-xl font-dm-sans text-gray-300 max-w-3xl mx-auto leading-relaxed">
             Promoții exclusive pentru momentele importante din viața ta.
@@ -39,7 +39,7 @@ const OffersSection = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
           {offers.map((offer, index) => (
-            <div 
+            <div
               key={index}
               className={`${offer.color} rounded-3xl p-8 relative overflow-hidden group transform hover:scale-105 transition-all duration-300 animate-slide-up`}
               style={{ animationDelay: `${index * 0.2}s` }}

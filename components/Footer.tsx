@@ -78,7 +78,7 @@ const Footer = () => {
             <h3 className="text-lg font-poppins font-semibold mb-4">Program</h3>
             <div className="space-y-2 font-dm-sans text-gray-300">
               <p>Luni - Duminică</p>
-              <p className="text-jade font-semibold">24/7</p>
+              <p className="text-white font-semibold">24/7</p>
               <p className="text-sm mt-4">Predare și ridicare non-stop la aeroport</p>
             </div>
           </div>
