@@ -69,6 +69,9 @@ const nextConfig = {
 
         // Bundle optimization
         optimizeServerReact: true,
+
+        // Generate source maps for server bundles
+        serverSourceMaps: true,
     },
 
     env: {
@@ -88,8 +91,8 @@ const nextConfig = {
     // Static export optimization
     trailingSlash: false,
 
-    // Production source maps for debugging (optional)
-    productionBrowserSourceMaps: false,
+    // Generate source maps for client bundles in production
+    productionBrowserSourceMaps: true,
 
     // Modern headers with security optimizations
     async headers() {
