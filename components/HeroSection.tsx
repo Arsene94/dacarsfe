@@ -117,7 +117,7 @@ const HeroSection = () => {
 
             <p className="text-xl lg:text-2xl font-dm-sans text-gray-200 mb-8 leading-relaxed">
               Predare în aeroport în sub 5 minute. <br />
-              <span className="text-jade font-semibold">
+              <span className="text-jadeLight font-semibold">
                 Fără taxe ascunse.
               </span>
             </p>
