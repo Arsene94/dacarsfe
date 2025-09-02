@@ -37,7 +37,7 @@ const Header = () => {
                     {/* Eager + fetchpriority=high ajută LCP pe homepage */}
                     <Image
                         src="/images/logo.svg"
-                        className="block"
+                        className="block h-10 w-auto"
                         alt="DaCars logo"
                         width={466}
                         height={154}
