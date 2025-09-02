@@ -9,6 +9,7 @@ import TestimonialsSection from '../components/TestimonialsSection';
 import ProcessSection from '../components/ProcessSection';
 import ContactSection from '../components/ContactSection';
 import WheelOfFortune from '../components/WheelOfFortune';
+import ElfsightWidget from "@/components/ElfsightWidget";
 
 const HomePage = () => {
     const [showWheelPopup, setShowWheelPopup] = useState(false);
@@ -28,7 +29,8 @@ const HomePage = () => {
       <FleetSection />
       <BenefitsSection />
       <OffersSection />
-      <TestimonialsSection />
+      <ElfsightWidget />
+      {/*<TestimonialsSection />*/}
       <ProcessSection />
       <ContactSection />
 

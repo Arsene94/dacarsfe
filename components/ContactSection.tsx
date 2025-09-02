@@ -26,11 +26,11 @@ const ContactSection = () => {
                   <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">Telefon</h3>
                   <p className="text-gray-600 font-dm-sans mb-3">Suntem disponibili 24/7 pentru urgențe</p>
                   <a
-                    href="tel:+40722123456"
+                    href="tel:+40723817551"
                     className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
-                    aria-label="Sună la +40 722 123 456"
+                    aria-label="Sună la +40 723 817 551"
                   >
-                    +40 722 123 456
+                    +40 723 817 551
                   </a>
                 </div>
               </div>
@@ -45,11 +45,11 @@ const ContactSection = () => {
                   <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">WhatsApp</h3>
                   <p className="text-gray-600 font-dm-sans mb-3">Scrie-ne pentru răspuns rapid</p>
                   <a
-                    href="https://wa.me/40722123456"
+                    href="https://wa.me/40723817551"
                     className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
-                    aria-label="Contactează pe WhatsApp la +40 722 123 456"
+                    aria-label="Contactează pe WhatsApp la +40 723 817 551"
                   >
-                    +40 722 123 456
+                    +40 723 817 551
                   </a>
                 </div>
               </div>
@@ -83,7 +83,7 @@ const ContactSection = () => {
                   <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">Locație</h3>
                   <p className="text-gray-600 font-dm-sans mb-3">Punct de predare principal</p>
                   <p className="text-berkeley font-dm-sans font-semibold">
-                    Aeroportul Henri Coandă<br />
+                    Calea Bucurestilor 305<br />
                     Otopeni, Ilfov
                   </p>
                 </div>
@@ -115,7 +115,7 @@ const ContactSection = () => {
             <div className="bg-gray-200 rounded-xl h-96 flex items-center justify-center relative overflow-hidden">
               {/* Google Maps Embed would go here */}
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2846.4739945633546!2d26.075859776834645!3d44.571436871071816!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x40b20b4b1c9b9b9b%3A0x1c9b9b9b9b9b9b9b!2sHenri%20Coand%C4%83%20International%20Airport!5e0!3m2!1sen!2sro!4v1634567890123!5m2!1sen!2sro"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d815.3588428573492!2d26.0663427!3d44.5758331!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x678a7a998cb5b303%3A0x3591ace01367d55c!2sDaCars!5e0!3m2!1sen!2sro!4v1693793200000!5m2!1sen!2sro"
                 width="100%"
                 height="100%"
                 className="rounded-xl"
@@ -126,10 +126,10 @@ const ContactSection = () => {
                 title="Harta DaCars Otopeni"
               ></iframe>
             </div>
-            
+
             <div className="mt-6 p-4 bg-jade/5 rounded-xl">
               <p className="text-berkeley font-dm-sans">
-                <strong>Instrucțiuni de sosire:</strong> După ce ieși din terminal, sună-ne la numărul de telefon și te întâlnim în parcarea de scurtă durată în maximum 5 minute.
+                <strong>Instrucțiuni de sosire:</strong> Când aterizezi, sună-ne la numărul de telefon, iar apoi ne întâlnim în fața stației CFR, sub cupola verde de sticlă, la terminalul Sosiri.
               </p>
             </div>
           </div>

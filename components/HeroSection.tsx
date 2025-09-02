@@ -96,13 +96,12 @@ const HeroSection = () => {
             <div className="inline-flex items-center px-4 py-2 bg-jade/40 rounded-full mb-6">
               <Star className="h-4 w-4 text-white mr-2" />
               <span className="text-white font-dm-sans font-medium">
-                Cel mai de încredere serviciu
+                Te ținem aproape de casă
               </span>
             </div>
 
             <h1 className="text-4xl lg:text-6xl font-poppins font-bold leading-tight mb-6">
-              Mașini oneste, pentru{" "}
-              <span className="inline-flex items-center px-4 py-2 bg-white/40 rounded-full text-jade">români onești</span>
+                Închiriere auto București - Otopeni{" "}
             </h1>
 
             <p className="text-xl lg:text-2xl font-dm-sans text-gray-200 mb-8 leading-relaxed">
