@@ -26,7 +26,7 @@ const HeroSection = () => {
   const [formData, setFormData] = useState({
     pickupDate: "",
     returnDate: "",
-    location: "otopeni",
+    location: "",
     carType: "",
   });
   const [categories, setCategories] = useState<CarCategory[]>([]);
@@ -197,7 +197,7 @@ const HeroSection = () => {
                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   id="hero-pickup-date"
-                  type="date"
+                  type="datetime-local"
                   name="pickupDate"
                   value={formData.pickupDate}
                   onChange={handleInputChange}
@@ -217,7 +217,7 @@ const HeroSection = () => {
                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   id="hero-return-date"
-                  type="date"
+                  type="datetime-local"
                   name="returnDate"
                   value={formData.returnDate}
                   onChange={handleInputChange}
