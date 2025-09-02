@@ -88,7 +88,7 @@ const ProcessSection = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link href="/rezervare">
+              <Link href="/rezervare" aria-label="Rezervă acum">
                 <Button
                   className="transform hover:scale-105 shadow-lg"
                   aria-label="Rezervă acum"
@@ -97,7 +97,7 @@ const ProcessSection = () => {
                 </Button>
               </Link>
 
-              <a href="#flota">
+              <a href="#flota" aria-label="Vezi flota">
                 <Button
                   variant="outline"
                   className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white"

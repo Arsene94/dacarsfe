@@ -405,6 +405,7 @@ const FleetPage = () => {
           <Link
             href="/rezervare"
             className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+            aria-label="Rezervă"
           >
             Rezervă
           </Link>
@@ -680,7 +681,7 @@ const FleetPage = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link href="/rezervare">
+            <Link href="/rezervare" aria-label="Rezervă acum">
               <Button
                 className="transform hover:scale-105 shadow-lg"
                 aria-label="Rezervă acum"
@@ -689,7 +690,7 @@ const FleetPage = () => {
               </Button>
             </Link>
 
-            <a href="#contact">
+            <a href="#contact" aria-label="Contactează-ne">
               <Button
                 variant="outline"
                 className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white"

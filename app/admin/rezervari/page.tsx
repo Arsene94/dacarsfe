@@ -360,6 +360,7 @@ const ReservationsPage = () => {
               <Link
                 href="/admin"
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Înapoi la dashboard"
               >
                 <ArrowLeft className="h-5 w-5 text-gray-600" />
               </Link>

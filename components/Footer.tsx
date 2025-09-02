@@ -23,10 +23,30 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-poppins font-semibold mb-4">Linkuri Rapide</h3>
             <ul className="space-y-2 font-dm-sans">
-              <li><a href="/" className="text-gray-300 hover:text-jade transition-colors duration-300">Acasă</a></li>
-              <li><a href="#flota" className="text-gray-300 hover:text-jade transition-colors duration-300">Flota Auto</a></li>
-              <li><a href="#oferte" className="text-gray-300 hover:text-jade transition-colors duration-300">Oferte Speciale</a></li>
-              <li><a href="/rezervare" className="text-gray-300 hover:text-jade transition-colors duration-300">Rezervare</a></li>
+              <li>
+                <a href="/" className="text-gray-300 hover:text-jade transition-colors duration-300" aria-label="Acasă">
+                  Acasă
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#flota"
+                  className="text-gray-300 hover:text-jade transition-colors duration-300"
+                  aria-label="Flota Auto"
+                >
+                  Flota Auto
+                </a>
+              </li>
+              <li>
+                <a href="#oferte" className="text-gray-300 hover:text-jade transition-colors duration-300" aria-label="Oferte Speciale">
+                  Oferte Speciale
+                </a>
+              </li>
+              <li>
+                <a href="/rezervare" className="text-gray-300 hover:text-jade transition-colors duration-300" aria-label="Rezervare">
+                  Rezervare
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -69,10 +89,18 @@ const Footer = () => {
             © 2024 DaCars. Toate drepturile rezervate.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href="#" className="text-gray-300 hover:text-jade transition-colors duration-300 text-sm font-dm-sans">
+            <a
+              href="#"
+              className="text-gray-300 hover:text-jade transition-colors duration-300 text-sm font-dm-sans"
+              aria-label="Termeni și Condiții"
+            >
               Termeni și Condiții
             </a>
-            <a href="#" className="text-gray-300 hover:text-jade transition-colors duration-300 text-sm font-dm-sans">
+            <a
+              href="#"
+              className="text-gray-300 hover:text-jade transition-colors duration-300 text-sm font-dm-sans"
+              aria-label="Politica de Confidențialitate"
+            >
               Politica de Confidențialitate
             </a>
           </div>

@@ -53,6 +53,7 @@ const Header = () => {
                 key={item.name}
                 href={item.href}
                 className="text-eefie font-dm-sans font-medium hover:text-jade transition-colors duration-300 relative group"
+                aria-label={item.name}
               >
                 {item.name}
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-jade transition-all duration-300 group-hover:w-full"></span>
@@ -61,7 +62,7 @@ const Header = () => {
           </nav>
 
             {/* CTA Button */}
-            <Link href="/rezervare">
+            <Link href="/rezervare" aria-label="Rezervă acum">
               <Button
                 aria-label="Rezervă acum"
                 className="hidden lg:inline-flex px-6 py-3 bg-jade text-white hover:bg-jade/90 transform hover:scale-105 shadow-lg hover:shadow-xl"
@@ -91,11 +92,16 @@ const Header = () => {
                   href={item.href}
                   className="block px-3 py-2 text-base font-dm-sans font-medium text-eefie hover:text-jade hover:bg-gray-50 rounded-md transition-colors duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
+                  aria-label={item.name}
                 >
                   {item.name}
                 </Link>
               ))}
-                <Link href="/rezervare" onClick={() => setIsMobileMenuOpen(false)}>
+                <Link
+                  href="/rezervare"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  aria-label="Rezervă acum"
+                >
                   <Button
                     aria-label="Rezervă acum"
                     className="w-full mt-4 px-3 py-2 bg-jade text-white hover:bg-jade/90"
