@@ -122,11 +122,15 @@ const TestimonialsSection = () => {
               <button
                 key={index}
                 onClick={() => setCurrentTestimonial(index)}
-                className={`w-3 h-3 rounded-full transition-colors duration-300 ${
-                  index === currentTestimonial ? 'bg-jade' : 'bg-gray-300'
-                }`}
+                className="w-11 h-11 flex items-center justify-center rounded-full transition-colors duration-300 hover:bg-gray-100"
                 aria-label={`Selectează testimonialul ${index + 1}`}
-              />
+              >
+                <span
+                  className={`w-3 h-3 rounded-full transition-colors duration-300 ${
+                    index === currentTestimonial ? 'bg-jade' : 'bg-gray-300'
+                  }`}
+                />
+              </button>
             ))}
           </div>
         </div>

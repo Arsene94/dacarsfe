@@ -72,8 +72,11 @@ const OffersSection = () => {
                   ))}
                 </div>
 
-                <Link href="/rezervare">
-                  <Button className="px-6 py-3 bg-white text-berkeley hover:bg-gray-100">
+                <Link href="/rezervare" aria-label="Profită acum">
+                  <Button
+                    className="px-6 py-3 bg-white text-berkeley hover:bg-gray-100"
+                    aria-label="Profită acum"
+                  >
                     Profită acum
                   </Button>
                 </Link>
@@ -91,8 +94,8 @@ const OffersSection = () => {
           <p className="text-gray-300 font-dm-sans mb-6 max-w-2xl mx-auto">
             Rezervă acum pentru perioada sărbătorilor și beneficiezi de tarife preferențiale și servicii premium incluse.
           </p>
-            <Link href="/rezervare">
-              <Button className="px-8 py-4">
+            <Link href="/rezervare" aria-label="Rezervă cu reducere">
+              <Button className="px-8 py-4" aria-label="Rezervă cu reducere">
                 Rezervă cu reducere
               </Button>
             </Link>
