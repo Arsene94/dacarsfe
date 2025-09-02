@@ -33,9 +33,15 @@ const HeroSection = () => {
 
   useEffect(() => {
     const getCategories = async () => {
-      const response = await apiClient.getCarCategories();
+        const res = await apiClient.getCarCategories();
 
-      setCategories(response);
+        const obj: Record<string, string> = (res?.data ?? res) as Record<string, string>;
+
+        const cat: CarCategory[] = Object.entries(obj)
+            .map(([id, name]) => ({ id: Number(id), name: String(name) }))
+            .sort((a, b) => a.id - b.id);
+
+        setCategories(cat);
     };
 
     getCategories();
@@ -61,6 +67,7 @@ const HeroSection = () => {
     e.preventDefault();
     console.log("Rezervare:", formData);
   };
+  console.log(categories)
   return (
     <section className="relative bg-berkeley text-white overflow-hidden">
       {/* Background Image */}
@@ -230,7 +237,7 @@ const HeroSection = () => {
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Select
                   id="hero-location"
-                  className="pl-10 pr-4 text-black"
+                  className="pl-10 pr-4 text-black h-[3.3rem]"
                   value={formData.location}
                   onValueChange={handleSelectChange("location")}
                   placeholder="Alege locația"
@@ -253,15 +260,18 @@ const HeroSection = () => {
                 <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Select
                   id="hero-car-type"
-                  className="pl-10 pr-4 text-black"
+                  className="pl-10 pr-4 text-black h-[3.3rem]"
                   value={formData.carType}
                   onValueChange={handleSelectChange("carType")}
                   placeholder="Toate tipurile"
                 >
-                  <option value="economy">Economic</option>
-                  <option value="compact">Compact</option>
-                  <option value="suv">SUV</option>
-                  <option value="premium">Premium</option>
+                    {categories?.map((category) => {
+                        return (
+                            <option key={category.id} value={category.id}>
+                                {category.name}
+                            </option>
+                        );
+                    })}
                 </Select>
               </div>
             </div>

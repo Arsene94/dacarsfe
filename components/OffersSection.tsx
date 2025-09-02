@@ -74,7 +74,7 @@ const OffersSection = () => {
 
                 <Link href="/rezervare" aria-label="Profită acum">
                   <Button
-                    className="px-6 py-3 bg-white text-berkeley hover:bg-gray-100"
+                    className="px-6 py-3 bg-white !text-berkeley hover:!bg-gray-100"
                     aria-label="Profită acum"
                   >
                     Profită acum

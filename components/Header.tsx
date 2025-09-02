@@ -31,13 +31,13 @@ const Header = () => {
     <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${
       isScrolled ? 'bg-white shadow-lg' : 'bg-white/95 backdrop-blur-sm'
     }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16 lg:h-20">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center h-16 lg:h-20 overflow-hidden">
             <Link href="/" className="flex items-center space-x-2 group" aria-label="DaCars — închirieri auto rapide și oneste">
                     {/* Eager + fetchpriority=high ajută LCP pe homepage */}
                     <Image
-                        src="/images/logo.svg"
-                        className="block h-10 w-auto"
+                        src="/images/logo-308x154.webp"
+                        className="relative w-auto"
                         alt="DaCars logo"
                         width={466}
                         height={154}
