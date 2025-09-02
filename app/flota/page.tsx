@@ -436,6 +436,7 @@ const FleetPage = () => {
               <input
                 type="text"
                 placeholder="Caută mașină..."
+                aria-label="Caută mașină"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
@@ -473,6 +474,7 @@ const FleetPage = () => {
                 className="w-auto px-4 py-2 transition-all duration-300"
                 value={sortBy}
                 onValueChange={setSortBy}
+                aria-label="Sortează mașinile"
               >
                 <option value="price-asc">Preț crescător</option>
                 <option value="price-desc">Preț descrescător</option>
@@ -501,10 +503,14 @@ const FleetPage = () => {
             <div className="border-t border-gray-200 pt-6 animate-slide-up">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                  <label
+                    htmlFor="filter-type"
+                    className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                  >
                     Tip mașină
                   </label>
                   <Select
+                    id="filter-type"
                     className="px-3 py-2 transition-all duration-300"
                     value={filters.type}
                     onValueChange={(value) => handleFilterChange("type", value)}
@@ -518,10 +524,14 @@ const FleetPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                  <label
+                    htmlFor="filter-transmission"
+                    className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                  >
                     Transmisie
                   </label>
                   <Select
+                    id="filter-transmission"
                     className="px-3 py-2 transition-all duration-300"
                     value={filters.transmission}
                     onValueChange={(value) =>
@@ -535,10 +545,14 @@ const FleetPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                  <label
+                    htmlFor="filter-fuel"
+                    className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                  >
                     Combustibil
                   </label>
                   <Select
+                    id="filter-fuel"
                     className="px-3 py-2 transition-all duration-300"
                     value={filters.fuel}
                     onValueChange={(value) => handleFilterChange("fuel", value)}
@@ -550,10 +564,14 @@ const FleetPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                  <label
+                    htmlFor="filter-passengers"
+                    className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                  >
                     Pasageri
                   </label>
                   <Select
+                    id="filter-passengers"
                     className="px-3 py-2 transition-all duration-300"
                     value={filters.passengers}
                     onValueChange={(value) =>
@@ -568,10 +586,14 @@ const FleetPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                  <label
+                    htmlFor="filter-price"
+                    className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                  >
                     Preț/zi
                   </label>
                   <Select
+                    id="filter-price"
                     className="px-3 py-2 transition-all duration-300"
                     value={filters.priceRange}
                     onValueChange={(value) =>

@@ -390,6 +390,7 @@ const ReservationsPage = () => {
               <input
                 type="text"
                 placeholder="Caută rezervări..."
+                aria-label="Caută rezervări"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
@@ -401,6 +402,7 @@ const ReservationsPage = () => {
               value={statusFilter}
               onValueChange={setStatusFilter}
               placeholder="Toate statusurile"
+              aria-label="Filtrează după status"
             >
               <option value="all">Toate statusurile</option>
               <option value="confirmed">Confirmat</option>
@@ -414,6 +416,7 @@ const ReservationsPage = () => {
               value={dateFilter}
               onValueChange={setDateFilter}
               placeholder="Toate perioadele"
+              aria-label="Filtrează după perioadă"
             >
               <option value="all">Toate perioadele</option>
               <option value="today">Astăzi</option>

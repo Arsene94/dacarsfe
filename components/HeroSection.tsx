@@ -167,12 +167,16 @@ const HeroSection = () => {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
           >
             <div className="space-y-2">
-              <label className="text-sm font-medium font-['DM_Sans']">
+              <label
+                htmlFor="hero-pickup-date"
+                className="text-sm font-medium font-['DM_Sans']"
+              >
                 Data ridicare
               </label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
+                  id="hero-pickup-date"
                   type="date"
                   name="pickupDate"
                   value={formData.pickupDate}
@@ -183,12 +187,16 @@ const HeroSection = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium font-['DM_Sans']">
+              <label
+                htmlFor="hero-return-date"
+                className="text-sm font-medium font-['DM_Sans']"
+              >
                 Data returnare
               </label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
+                  id="hero-return-date"
                   type="date"
                   name="returnDate"
                   value={formData.returnDate}
@@ -199,12 +207,16 @@ const HeroSection = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium font-['DM_Sans']">
+              <label
+                htmlFor="hero-location"
+                className="text-sm font-medium font-['DM_Sans']"
+              >
                 Locația
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Select
+                  id="hero-location"
                   className="pl-10 pr-4"
                   value={formData.location}
                   onValueChange={handleSelectChange("location")}
@@ -218,12 +230,16 @@ const HeroSection = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium font-['DM_Sans']">
+              <label
+                htmlFor="hero-car-type"
+                className="text-sm font-medium font-['DM_Sans']"
+              >
                 Tip mașină
               </label>
               <div className="relative">
                 <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Select
+                  id="hero-car-type"
                   className="pl-10 pr-4"
                   value={formData.carType}
                   onValueChange={handleSelectChange("carType")}

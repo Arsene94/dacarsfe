@@ -405,6 +405,7 @@ const CarsPage = () => {
               <input
                 type="text"
                 placeholder="Caută mașini..."
+                aria-label="Caută mașini"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
@@ -416,6 +417,7 @@ const CarsPage = () => {
               value={statusFilter}
               onValueChange={setStatusFilter}
               placeholder="Toate statusurile"
+              aria-label="Filtrează după status"
             >
               <option value="all">Toate statusurile</option>
               <option value="available">Disponibile</option>
@@ -428,6 +430,7 @@ const CarsPage = () => {
               value={typeFilter}
               onValueChange={setTypeFilter}
               placeholder="Toate tipurile"
+              aria-label="Filtrează după tip"
             >
               <option value="all">Toate tipurile</option>
               <option value="economic">Economic</option>

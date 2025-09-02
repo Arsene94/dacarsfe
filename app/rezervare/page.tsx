@@ -184,10 +184,14 @@ const ReservationPage = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                      <label
+                        htmlFor="reservation-last-name"
+                        className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                      >
                         Nume *
                       </label>
                       <input
+                        id="reservation-last-name"
                         type="text"
                         name="lastName"
                         value={formData.lastName}
@@ -199,10 +203,14 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                      <label
+                        htmlFor="reservation-first-name"
+                        className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                      >
                         Prenume *
                       </label>
                       <input
+                        id="reservation-first-name"
                         type="text"
                         name="firstName"
                         value={formData.firstName}
@@ -214,10 +222,14 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                      <label
+                        htmlFor="reservation-email"
+                        className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                      >
                         Email *
                       </label>
                       <input
+                        id="reservation-email"
                         type="email"
                         name="email"
                         value={formData.email}
@@ -229,10 +241,14 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                      <label
+                        htmlFor="reservation-phone"
+                        className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                      >
                         Telefon *
                       </label>
                       <input
+                        id="reservation-phone"
                         type="tel"
                         name="phone"
                         value={formData.phone}
@@ -245,11 +261,15 @@ const ReservationPage = () => {
                   </div>
 
                   <div className="mt-6">
-                    <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                    <label
+                      htmlFor="reservation-flight"
+                      className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                    >
                       <Plane className="h-4 w-4 inline text-jade mr-1" />
                       Zbor (opțional)
                     </label>
                     <input
+                      id="reservation-flight"
                       type="text"
                       name="flight"
                       value={formData.flight}
@@ -261,12 +281,16 @@ const ReservationPage = () => {
 
                   {/* Discount Code */}
                   <div className="mt-6">
-                    <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                    <label
+                      htmlFor="reservation-discount"
+                      className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                    >
                       <Gift className="h-4 w-4 inline text-jade mr-1" />
                       Cod de reducere (opțional)
                     </label>
                     <div className="flex space-x-2">
                       <input
+                        id="reservation-discount"
                         type="text"
                         name="discountCode"
                         value={formData.discountCode}
@@ -317,10 +341,14 @@ const ReservationPage = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                      <label
+                        htmlFor="reservation-pickup-date"
+                        className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                      >
                         Dată ridicare *
                       </label>
                       <input
+                        id="reservation-pickup-date"
                         type="date"
                         name="pickupDate"
                         value={formData.pickupDate}
@@ -332,10 +360,14 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                      <label
+                        htmlFor="reservation-pickup-time"
+                        className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                      >
                         Oră ridicare *
                       </label>
                       <input
+                        id="reservation-pickup-time"
                         type="time"
                         name="pickupTime"
                         value={formData.pickupTime}
@@ -346,10 +378,14 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                      <label
+                        htmlFor="reservation-dropoff-date"
+                        className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                      >
                         Dată returnare *
                       </label>
                       <input
+                        id="reservation-dropoff-date"
                         type="date"
                         name="dropoffDate"
                         value={formData.dropoffDate}
@@ -364,10 +400,14 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                      <label
+                        htmlFor="reservation-dropoff-time"
+                        className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                      >
                         Oră returnare *
                       </label>
                       <input
+                        id="reservation-dropoff-time"
                         type="time"
                         name="dropoffTime"
                         value={formData.dropoffTime}
@@ -379,11 +419,15 @@ const ReservationPage = () => {
                   </div>
 
                   <div className="mt-6">
-                    <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                    <label
+                      htmlFor="reservation-location"
+                      className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                    >
                       <MapPin className="h-4 w-4 inline text-jade mr-1" />
                       Locația ridicării *
                     </label>
                     <Select
+                      id="reservation-location"
                       className="transition-all duration-300"
                       value={formData.location}
                       onValueChange={handleSelectChange("location")}
@@ -398,10 +442,14 @@ const ReservationPage = () => {
                   </div>
 
                   <div className="mt-6">
-                    <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                    <label
+                      htmlFor="reservation-car-type"
+                      className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                    >
                       Tip mașină *
                     </label>
                     <Select
+                      id="reservation-car-type"
                       className="transition-all duration-300"
                       value={formData.carType}
                       onValueChange={handleSelectChange("carType")}

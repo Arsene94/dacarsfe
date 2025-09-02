@@ -483,6 +483,7 @@ const AdminDashboard = () => {
                     setSelectedCar(value ? Number(value) : null)
                   }
                   placeholder="Toate mașinile"
+                  aria-label="Selectează mașina"
                 >
                   <option value="">Toate mașinile</option>
                   {cars.map((car) => (
