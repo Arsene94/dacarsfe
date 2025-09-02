@@ -126,6 +126,7 @@ export function DataTable<T extends Record<string, any>>({
             onClick={() => setPage((p) => Math.max(p - 1, 0))}
             disabled={page === 0}
             className="px-2 py-1 text-gray-600 disabled:opacity-50"
+            aria-label="Pagina anterioară"
           >
             Anterior
           </button>
@@ -136,6 +137,7 @@ export function DataTable<T extends Record<string, any>>({
             onClick={() => setPage((p) => Math.min(p + 1, pageCount - 1))}
             disabled={page + 1 >= pageCount}
             className="px-2 py-1 text-gray-600 disabled:opacity-50"
+            aria-label="Pagina următoare"
           >
             Următoarea
           </button>

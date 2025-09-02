@@ -324,7 +324,10 @@ const CarsPage = () => {
               </h1>
             </div>
 
-            <button className="flex items-center space-x-2 px-4 py-2 bg-jade text-white rounded-lg hover:bg-jade/90 transition-colors">
+            <button
+              className="flex items-center space-x-2 px-4 py-2 bg-jade text-white rounded-lg hover:bg-jade/90 transition-colors"
+              aria-label="Adaugă Mașină"
+            >
               <Plus className="h-4 w-4" />
               <span className="font-dm-sans font-semibold">Adaugă Mașină</span>
             </button>
@@ -519,6 +522,7 @@ const CarsPage = () => {
                   <button
                     onClick={() => handleViewCar(car)}
                     className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 border border-jade text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade hover:text-white transition-colors"
+                    aria-label="Vezi mașina"
                   >
                     <Eye className="h-4 w-4" />
                     <span>Vezi</span>
@@ -735,14 +739,23 @@ const CarsPage = () => {
 
               {/* Actions */}
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <button className="flex-1 bg-jade text-white py-3 rounded-lg font-semibold font-dm-sans hover:bg-jade/90 transition-colors">
+                <button
+                  className="flex-1 bg-jade text-white py-3 rounded-lg font-semibold font-dm-sans hover:bg-jade/90 transition-colors"
+                  aria-label="Editează Mașina"
+                >
                   Editează Mașina
                 </button>
-                <button className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-gray-50 transition-colors">
+                <button
+                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-gray-50 transition-colors"
+                  aria-label="Vezi Rezervări"
+                >
                   Vezi Rezervări
                 </button>
                 {selectedCar.status === "available" && (
-                  <button className="flex-1 border-2 border-yellow-300 text-yellow-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-yellow-50 transition-colors">
+                  <button
+                    className="flex-1 border-2 border-yellow-300 text-yellow-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-yellow-50 transition-colors"
+                    aria-label="Trimite la Service"
+                  >
                     Trimite la Service
                   </button>
                 )}

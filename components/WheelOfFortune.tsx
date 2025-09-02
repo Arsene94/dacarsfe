@@ -140,12 +140,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                             <>
                                 <button
                                     onClick={() => { setShowModal(false); setSelectedPrize(null); /* rămâne cu 1 încercare */ }}
+                                    aria-label="Încearcă din nou"
                                     className="flex-1 bg-[#38B275] text-white py-3 rounded-lg font-semibold font-['DM Sans'] hover:bg-[#32a066] transition-colors duration-200"
                                 >
                                     Încearcă din nou
                                 </button>
                                 <button
                                     onClick={() => { setShowModal(false); setSelectedPrize(null); }}
+                                    aria-label="Închide"
                                     className="flex-1 border-2 border-gray-300 text-[#191919] py-3 rounded-lg font-semibold font-['DM Sans'] hover:bg-gray-50 transition-colors duration-200"
                                 >
                                     Închide
@@ -155,12 +157,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                             <>
                                 <button
                                     onClick={() => { setShowModal(false); /* navigate('/rezervare') */ }}
+                                    aria-label="Rezervă acum"
                                     className="flex-1 bg-[#38B275] text-white py-3 rounded-lg font-semibold font-['DM Sans'] hover:bg-[#32a066] transition-colors duration-200"
                                 >
                                     Rezervă acum
                                 </button>
                                 <button
                                     onClick={() => { setShowModal(false); setSelectedPrize(null); }}
+                                    aria-label="Închide"
                                     className="flex-1 border-2 border-gray-300 text-[#191919] py-3 rounded-lg font-semibold font-['DM Sans'] hover:bg-gray-50 transition-colors duration-200"
                                 >
                                     Închide
@@ -305,6 +309,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 {spinsLeft <= 0 && (
                     <button
                         onClick={resetSpins}
+                        aria-label="Resetează numărul de încercări"
                         className="bg-white/20 text-white px-6 py-3 rounded-xl font-semibold font-['DM Sans'] hover:bg-white/30 transition-colors duration-200 flex items-center justify-center mx-auto lg:mx-0"
                     >
                         <RotateCcw className="h-5 w-5 mr-2" />

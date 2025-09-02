@@ -245,6 +245,7 @@ const FleetSection = () => {
                 <div className="text-center mt-12">
                     <Link href="/flota">
                         <Button
+                            aria-label="Vezi toată flota"
                             variant="outline"
                             className="border-jade text-jade hover:bg-jade hover:text-white"
                         >

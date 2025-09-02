@@ -209,13 +209,17 @@ const SuccessPage = () => {
             onClick={() => window.print()}
             variant="outline"
             className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white"
+            aria-label="Printează detaliile"
           >
             <Calendar className="h-5 w-5 mr-2" />
             Printează detaliile
           </Button>
 
           <Link href="/">
-            <Button className="transform hover:scale-105 shadow-lg">
+            <Button
+              className="transform hover:scale-105 shadow-lg"
+              aria-label="Înapoi la Acasă"
+            >
               <Home className="h-5 w-5 mr-2" />
               Înapoi la Acasă
             </Button>

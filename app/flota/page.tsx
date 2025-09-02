@@ -488,6 +488,7 @@ const FleetPage = () => {
                     ? "bg-jade text-white"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
+                aria-label="Comută filtrele"
               >
                 <SlidersHorizontal className="h-5 w-5" />
                 <span className="font-dm-sans">Filtre</span>
@@ -588,6 +589,7 @@ const FleetPage = () => {
               <button
                 onClick={clearFilters}
                 className="px-4 py-2 text-jade font-dm-sans font-semibold hover:bg-jade/10 rounded-lg transition-colors duration-300"
+                aria-label="Resetează filtrele"
               >
                 Resetează filtrele
               </button>
@@ -635,7 +637,11 @@ const FleetPage = () => {
             <p className="text-gray-600 font-dm-sans mb-6 max-w-md mx-auto">
               Încearcă să modifici filtrele sau să cauți altceva.
             </p>
-            <Button onClick={clearFilters} className="px-6 py-3">
+            <Button
+              onClick={clearFilters}
+              className="px-6 py-3"
+              aria-label="Resetează filtrele"
+            >
               Resetează filtrele
             </Button>
           </div>
@@ -653,7 +659,10 @@ const FleetPage = () => {
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/rezervare">
-              <Button className="transform hover:scale-105 shadow-lg">
+              <Button
+                className="transform hover:scale-105 shadow-lg"
+                aria-label="Rezervă acum"
+              >
                 Rezervă acum
               </Button>
             </Link>
@@ -662,6 +671,7 @@ const FleetPage = () => {
               <Button
                 variant="outline"
                 className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white"
+                aria-label="Contactează-ne"
               >
                 Contactează-ne
               </Button>

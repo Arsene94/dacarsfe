@@ -97,7 +97,10 @@ const HeroSection = () => {
 
             <div className="hidden sm:flex flex-col sm:flex-row gap-4 mb-8">
               <Link href="/rezervare">
-                <Button className="transform hover:scale-105 shadow-xl group">
+                <Button
+                  className="transform hover:scale-105 shadow-xl group"
+                  aria-label="Rezervă mașina"
+                >
                   Rezervă mașina
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
                 </Button>
@@ -106,6 +109,7 @@ const HeroSection = () => {
               <Button
                 variant="outline"
                 className="border-white/30 text-white hover:bg-white/10"
+                aria-label="Vezi flota"
               >
                 Vezi flota
               </Button>
@@ -236,6 +240,7 @@ const HeroSection = () => {
             <Button
               type="submit"
               className="bg-[#38B275] hover:bg-[#32a066] px-6 py-3 self-end"
+              aria-label="Caută mașini"
             >
               Caută mașini
             </Button>

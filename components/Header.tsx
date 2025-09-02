@@ -62,7 +62,10 @@ const Header = () => {
 
             {/* CTA Button */}
             <Link href="/rezervare">
-              <Button className="hidden lg:inline-flex px-6 py-3 bg-jade text-white hover:bg-jade/90 transform hover:scale-105 shadow-lg hover:shadow-xl">
+              <Button
+                aria-label="Rezervă acum"
+                className="hidden lg:inline-flex px-6 py-3 bg-jade text-white hover:bg-jade/90 transform hover:scale-105 shadow-lg hover:shadow-xl"
+              >
                 Rezervă acum
               </Button>
             </Link>
@@ -93,7 +96,10 @@ const Header = () => {
                 </Link>
               ))}
                 <Link href="/rezervare" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button className="w-full mt-4 px-3 py-2 bg-jade text-white hover:bg-jade/90">
+                  <Button
+                    aria-label="Rezervă acum"
+                    className="w-full mt-4 px-3 py-2 bg-jade text-white hover:bg-jade/90"
+                  >
                     Rezervă acum
                   </Button>
                 </Link>

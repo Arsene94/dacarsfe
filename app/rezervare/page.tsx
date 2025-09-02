@@ -282,6 +282,7 @@ const ReservationPage = () => {
                           isValidatingCode || !formData.discountCode.trim()
                         }
                         className="px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                        aria-label="Validează codul"
                       >
                         {isValidatingCode ? (
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -419,6 +420,7 @@ const ReservationPage = () => {
                   type="submit"
                   disabled={isSubmitting}
                   className="w-full py-4 bg-jade text-white font-dm-sans font-semibold text-lg rounded-lg hover:bg-jade/90 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg flex items-center justify-center space-x-2"
+                  aria-label="Finalizează rezervarea"
                 >
                   {isSubmitting ? (
                     <>

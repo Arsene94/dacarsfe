@@ -73,7 +73,10 @@ const OffersSection = () => {
                 </div>
 
                 <Link href="/rezervare">
-                  <Button className="px-6 py-3 bg-white text-berkeley hover:bg-gray-100">
+                  <Button
+                    className="px-6 py-3 bg-white text-berkeley hover:bg-gray-100"
+                    aria-label="Profită acum"
+                  >
                     Profită acum
                   </Button>
                 </Link>
@@ -92,7 +95,7 @@ const OffersSection = () => {
             Rezervă acum pentru perioada sărbătorilor și beneficiezi de tarife preferențiale și servicii premium incluse.
           </p>
             <Link href="/rezervare">
-              <Button className="px-8 py-4">
+              <Button className="px-8 py-4" aria-label="Rezervă cu reducere">
                 Rezervă cu reducere
               </Button>
             </Link>

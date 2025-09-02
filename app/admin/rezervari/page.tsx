@@ -369,7 +369,10 @@ const ReservationsPage = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              <button
+                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                aria-label="Exportă rezervări"
+              >
                 <Download className="h-4 w-4 text-gray-600" />
                 <span className="font-dm-sans text-gray-600">Export</span>
               </button>
@@ -630,13 +633,22 @@ const ReservationsPage = () => {
 
               {/* Actions */}
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <button className="flex-1 bg-jade text-white py-3 rounded-lg font-semibold font-dm-sans hover:bg-jade/90 transition-colors">
+                <button
+                  className="flex-1 bg-jade text-white py-3 rounded-lg font-semibold font-dm-sans hover:bg-jade/90 transition-colors"
+                  aria-label="Confirmă Rezervarea"
+                >
                   Confirmă Rezervarea
                 </button>
-                <button className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-gray-50 transition-colors">
+                <button
+                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-gray-50 transition-colors"
+                  aria-label="Editează rezervarea"
+                >
                   Editează
                 </button>
-                <button className="flex-1 border-2 border-red-300 text-red-600 py-3 rounded-lg font-semibold font-dm-sans hover:bg-red-50 transition-colors">
+                <button
+                  className="flex-1 border-2 border-red-300 text-red-600 py-3 rounded-lg font-semibold font-dm-sans hover:bg-red-50 transition-colors"
+                  aria-label="Anulează rezervarea"
+                >
                   Anulează
                 </button>
               </div>

@@ -6,11 +6,13 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'default', ...props }, ref) => {
+  ({ className, variant = 'default', children, ...props }, ref) => {
     const variantClasses =
       variant === 'outline'
         ? 'border-2'
         : 'bg-jade text-white hover:bg-jade/90';
+
+    const { ['aria-label']: ariaLabel, ...rest } = props as any;
 
     return (
       <button
@@ -20,8 +22,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           variantClasses,
           className
         )}
-        {...props}
-      />
+        aria-label={ariaLabel ?? (typeof children === 'string' ? children : undefined)}
+        {...rest}
+      >
+        {children}
+      </button>
     );
   }
 );
