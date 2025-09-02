@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   Calendar,
@@ -65,38 +66,14 @@ const HeroSection = () => {
       {/* Background Image */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-r from-berkeley/90 to-berkeley/70 z-10"></div>
-        <picture>
-          <source
-            srcSet="/images/bg-hero-1920x1080.webp"
-            media="(min-width: 1920px)"
-          />
-          <source
-            srcSet="/images/bg-hero-820x380.webp"
-            media="(min-width: 820px)"
-          />
-          <source
-            srcSet="/images/bg-hero-800x800.webp"
-            media="(min-width: 800px)"
-          />
-          <source
-            srcSet="/images/bg-hero-520x520.webp"
-            media="(min-width: 520px) and (orientation: portrait)"
-          />
-          <source
-            srcSet="/images/bg-hero-520x380.webp"
-            media="(min-width: 520px) and (orientation: landscape)"
-          />
-          <source
-            srcSet="/images/bg-hero-mobile.webp"
-            media="(max-width: 519px)"
-            type="image/svg+xml"
-          />
-          <img
-            src="/images/bg-hero-mobile.webp"
-            alt="Fundal aeroport"
-            className="w-full h-full object-cover"
-          />
-        </picture>
+        <Image
+          src="/images/bg-hero-1920x1080.webp"
+          alt="Fundal aeroport"
+          fill
+          priority
+          sizes="100vw"
+          className="w-full h-full object-cover"
+        />
       </div>
 
       {/* Content */}
@@ -179,10 +156,13 @@ const HeroSection = () => {
           <div className="hidden sm:block animate-slide-in-right">
             <div className="relative">
               <div className="absolute -inset-4 bg-gradient-to-r from-jade/20 to-transparent rounded-2xl blur-2xl"></div>
-              <img
+              <Image
                 src="https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=600"
                 alt="Mașină elegantă"
+                width={600}
+                height={400}
                 className="relative rounded-2xl shadow-2xl"
+                loading="lazy"
               />
             </div>
           </div>
