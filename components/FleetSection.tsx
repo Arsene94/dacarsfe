@@ -50,7 +50,7 @@ const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_BASE_URL || "http://localhost:8000/storage";
 
 const toImageUrl = (p?: string | null): string => {
-    if (!p) return "/images/placeholder-car.jpg";
+    if (!p) return "/images/placeholder-car.svg";
     if (/^https?:\/\//i.test(p)) return p;
     const base = STORAGE_BASE.replace(/\/$/, "");
     const path = p.replace(/^\//, "");
