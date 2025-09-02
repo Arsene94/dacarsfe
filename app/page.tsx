@@ -13,14 +13,14 @@ import WheelOfFortune from '../components/WheelOfFortune';
 const HomePage = () => {
     const [showWheelPopup, setShowWheelPopup] = useState(false);
 
-    useEffect(() => {
-        // Show wheel popup after 2 seconds when page loads
-        const timer = setTimeout(() => {
-            setShowWheelPopup(true);
-        }, 2000);
-
-        return () => clearTimeout(timer);
-    }, []);
+    // useEffect(() => {
+    //     // Show wheel popup after 2 seconds when page loads
+    //     const timer = setTimeout(() => {
+    //         setShowWheelPopup(true);
+    //     }, 2000);
+    //
+    //     return () => clearTimeout(timer);
+    // }, []);
 
   return (
     <div className="pt-16 lg:pt-20">
@@ -32,12 +32,12 @@ const HomePage = () => {
       <ProcessSection />
       <ContactSection />
 
-        {showWheelPopup && (
-            <WheelOfFortune
-                isPopup={true}
-                onClose={() => setShowWheelPopup(false)}
-            />
-        )}
+        {/*{showWheelPopup && (*/}
+        {/*    <WheelOfFortune*/}
+        {/*        isPopup={true}*/}
+        {/*        onClose={() => setShowWheelPopup(false)}*/}
+        {/*    />*/}
+        {/*)}*/}
     </div>
   );
 };
