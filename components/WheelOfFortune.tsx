@@ -26,13 +26,13 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
 
     // Prizes (weights can sum to anything; treated as relative probabilities)
     const prizes: Prize[] = [
-        { id: 1, title: '5% Reducere', description: 'Reducere 5% la următoarea rezervare', color: '#38B275', probability: 20, type: 'discount' },
+        { id: 1, title: '5% Reducere', description: 'Reducere 5% la următoarea rezervare', color: '#1E7149', probability: 20, type: 'discount' },
         { id: 2, title: 'Mai încearcă', description: 'Încearcă din nou! Ai o șansă în plus', color: '#FF6B6B', probability: 45, type: 'try_again' },
         { id: 3, title: '10% Reducere', description: 'Reducere 10% la orice rezervare', color: '#1A3661', probability: 15, type: 'discount' },
-        { id: 4, title: '1 Zi Gratis', description: 'O zi suplimentară gratuită', color: '#38B275', probability: 10, type: 'free_days' },
+        { id: 4, title: '1 Zi Gratis', description: 'O zi suplimentară gratuită', color: '#1E7149', probability: 10, type: 'free_days' },
         { id: 5, title: 'Upgrade Gratuit', description: 'Upgrade gratuit la categoria superioară', color: '#1A3661', probability: 8, type: 'upgrade' },
         { id: 6, title: 'Mai încearcă', description: 'Nu te descuraja! Încearcă din nou', color: '#FF6B6B', probability: 45, type: 'try_again' },
-        { id: 7, title: '15% Reducere', description: 'Reducere 15% pentru rezervări weekend', color: '#38B275', probability: 5, type: 'discount' },
+        { id: 7, title: '15% Reducere', description: 'Reducere 15% pentru rezervări weekend', color: '#1E7149', probability: 5, type: 'discount' },
         { id: 8, title: '2 Zile Gratis', description: 'Două zile suplimentare gratuite', color: '#1A3661', probability: 2, type: 'free_days' }
     ];
 
@@ -105,10 +105,10 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     const winnerModal = (showModal && selectedPrize) ? (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#38B275]/10 to-[#1A3661]/10" />
+                <div className="absolute inset-0 bg-gradient-to-br from-[#1E7149]/10 to-[#1A3661]/10" />
 
                 <div className="relative z-10">
-                    <div className={`${selectedPrize.type === 'try_again' ? 'bg-yellow-500' : 'bg-[#38B275]'} rounded-full p-6 inline-flex items-center justify-center mb-6`}>
+                    <div className={`${selectedPrize.type === 'try_again' ? 'bg-yellow-500' : 'bg-[#1E7149]'} rounded-full p-6 inline-flex items-center justify-center mb-6`}>
                         {selectedPrize.type === 'try_again' ? (
                             <RotateCcw className="h-12 w-12 text-white" />
                         ) : (
@@ -120,7 +120,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         {selectedPrize.type === 'try_again' ? 'Mai încearcă!' : 'Felicitări! 🎉'}
                     </h3>
 
-                    <div className={`${selectedPrize.type === 'try_again' ? 'bg-gradient-to-r from-yellow-500 to-orange-500' : 'bg-gradient-to-r from-[#38B275] to-[#32a066]'} text-white rounded-2xl p-6 mb-6`}>
+                    <div className={`${selectedPrize.type === 'try_again' ? 'bg-gradient-to-r from-yellow-500 to-orange-500' : 'bg-gradient-to-r from-[#1E7149] to-[#195C3B]'} text-white rounded-2xl p-6 mb-6`}>
                         <h4 className="text-xl font-bold font-['Poppins'] mb-2">
                             {selectedPrize.title}
                         </h4>
@@ -140,12 +140,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                             <>
                                 <button
                                     onClick={() => { setShowModal(false); setSelectedPrize(null); /* rămâne cu 1 încercare */ }}
-                                    className="flex-1 bg-[#38B275] text-white py-3 rounded-lg font-semibold font-['DM Sans'] hover:bg-[#32a066] transition-colors duration-200"
+                                    aria-label="Încearcă din nou"
+                                    className="flex-1 bg-[#1E7149] text-white py-3 rounded-lg font-semibold font-['DM Sans'] hover:bg-[#195C3B] transition-colors duration-200"
                                 >
                                     Încearcă din nou
                                 </button>
                                 <button
                                     onClick={() => { setShowModal(false); setSelectedPrize(null); }}
+                                    aria-label="Închide"
                                     className="flex-1 border-2 border-gray-300 text-[#191919] py-3 rounded-lg font-semibold font-['DM Sans'] hover:bg-gray-50 transition-colors duration-200"
                                 >
                                     Închide
@@ -155,12 +157,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                             <>
                                 <button
                                     onClick={() => { setShowModal(false); /* navigate('/rezervare') */ }}
-                                    className="flex-1 bg-[#38B275] text-white py-3 rounded-lg font-semibold font-['DM Sans'] hover:bg-[#32a066] transition-colors duration-200"
+                                    aria-label="Rezervă acum"
+                                    className="flex-1 bg-[#1E7149] text-white py-3 rounded-lg font-semibold font-['DM Sans'] hover:bg-[#195C3B] transition-colors duration-200"
                                 >
                                     Rezervă acum
                                 </button>
                                 <button
                                     onClick={() => { setShowModal(false); setSelectedPrize(null); }}
+                                    aria-label="Închide"
                                     className="flex-1 border-2 border-gray-300 text-[#191919] py-3 rounded-lg font-semibold font-['DM Sans'] hover:bg-gray-50 transition-colors duration-200"
                                 >
                                     Închide
@@ -244,8 +248,8 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         })}
 
                         {/* Buton central */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center border-4 border-[#38B275] z-10">
-                            <Gift className="h-8 w-8 text-[#38B275]" />
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center border-4 border-[#1E7149] z-10">
+                            <Gift className="h-8 w-8 text-[#1E7149]" />
                         </div>
                     </div>
 
@@ -269,7 +273,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 <div className="mb-6">
                     <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 mb-4">
                         <p className="text-white font-['DM Sans']">
-                            Încercări rămase: <span className="font-bold text-[#38B275]">{spinsLeft}</span>
+                            Încercări rămase: <span className="font-bold text-[#1E7149]">{spinsLeft}</span>
                         </p>
                     </div>
                 </div>
@@ -278,10 +282,10 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                     onClick={spinWheel}
                     disabled={isSpinning || spinsLeft <= 0}
                     aria-label="Învârte roata norocului"
-                    className={`bg-[#38B275] text-white px-8 py-4 rounded-2xl text-lg font-bold font-['DM Sans'] transition-all duration-200 flex items-center justify-center mx-auto lg:mx-0 mb-4 ${
+                    className={`bg-[#1E7149] text-white px-8 py-4 rounded-2xl text-lg font-bold font-['DM Sans'] transition-all duration-200 flex items-center justify-center mx-auto lg:mx-0 mb-4 ${
                         isSpinning || spinsLeft <= 0
                             ? 'opacity-50 cursor-not-allowed'
-                            : 'hover:bg-[#32a066] hover:shadow-xl hover:scale-105'
+                            : 'hover:bg-[#195C3B] hover:shadow-xl hover:scale-105'
                     }`}
                 >
                     {isSpinning ? (
@@ -305,6 +309,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 {spinsLeft <= 0 && (
                     <button
                         onClick={resetSpins}
+                        aria-label="Resetează numărul de încercări"
                         className="bg-white/20 text-white px-6 py-3 rounded-xl font-semibold font-['DM Sans'] hover:bg-white/30 transition-colors duration-200 flex items-center justify-center mx-auto lg:mx-0"
                     >
                         <RotateCcw className="h-5 w-5 mr-2" />
@@ -344,11 +349,11 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
 
                     <div className="text-center mb-8">
                         <div className="flex items-center justify-center mb-6">
-                            <Sparkles className="h-8 w-8 text-[#38B275] mr-3" />
+                            <Sparkles className="h-8 w-8 text-[#1E7149] mr-3" />
                             <h2 className="text-3xl lg:text-4xl font-bold text-white font-['Poppins']">
                                 Bun venit la DaCars!
                             </h2>
-                            <Sparkles className="h-8 w-8 text-[#38B275] ml-3" />
+                            <Sparkles className="h-8 w-8 text-[#1E7149] ml-3" />
                         </div>
                         <p className="text-xl text-white/80 font-['DM Sans'] max-w-3xl mx-auto">
                             Înainte să explorezi ofertele noastre, încearcă-ți norocul la Roata Norocului și câștigă reduceri exclusive!
@@ -367,11 +372,11 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
                     <div className="flex items-center justify-center mb-6">
-                        <Sparkles className="h-8 w-8 text-[#38B275] mr-3" />
+                        <Sparkles className="h-8 w-8 text-[#1E7149] mr-3" />
                         <h2 className="text-3xl lg:text-4xl font-bold text-white font-['Poppins']">
                             Roata Norocului DaCars
                         </h2>
-                        <Sparkles className="h-8 w-8 text-[#38B275] ml-3" />
+                        <Sparkles className="h-8 w-8 text-[#1E7149] ml-3" />
                     </div>
                     <p className="text-xl text-white/80 font-['DM Sans'] max-w-3xl mx-auto">
                         Încearcă-ți norocul și câștigă reduceri exclusive și beneficii speciale pentru următoarea ta rezervare!

@@ -9,7 +9,8 @@ export default {
     extend: {
       colors: {
         berkeley: '#1A3661',
-        jade: '#38B275',
+        jade: '#206442',
+        jadeLight: '#38B275',
         eefie: '#191919',
       },
       fontFamily: {
