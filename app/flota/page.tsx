@@ -93,6 +93,7 @@ const FleetPage = () => {
   const [totalCars, setTotalCars] = useState(0);
   const [from, setFrom] = useState(0);
   const [to, setTo] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const startDate = searchParams.get("start_date") || "";
   const endDate = searchParams.get("end_date") || "";
@@ -109,6 +110,7 @@ const FleetPage = () => {
         page: currentPage,
       };
       try {
+        setLoading(true);
         const response = await apiClient.getCarsByDateCriteria(payload);
         const list = Array.isArray(response?.data)
           ? (response.data as ApiCar[])
@@ -147,6 +149,8 @@ const FleetPage = () => {
         setTotalPages(1);
         setFrom(0);
         setTo(0);
+      } finally {
+        setLoading(false);
       }
     };
     fetchCars();
@@ -234,6 +238,7 @@ const FleetPage = () => {
 
   const handlePageChange = (page: number) => {
     const newPage = Math.max(1, Math.min(page, totalPages));
+    setLoading(true);
     setCurrentPage(newPage);
     const params = new URLSearchParams(searchParams.toString());
     if (newPage > 1) params.set("page", String(newPage));
@@ -402,8 +407,14 @@ const FleetPage = () => {
   );
 
   return (
-    <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <>
+      {loading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-white/80 z-50">
+          <div className="h-12 w-12 border-4 border-jade border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+      <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-12 animate-fade-in">
           <h1 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
@@ -755,6 +766,7 @@ const FleetPage = () => {
         </div>
       </div>
     </div>
+  </>
   );
 };
 
