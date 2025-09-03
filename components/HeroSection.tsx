@@ -32,6 +32,39 @@ const HeroSection = () => {
   });
   const [categories, setCategories] = useState<CarCategory[]>([]);
 
+  const formatDate = (date: Date) => {
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
+
+  const minPickupDate = formatDate(new Date());
+
+  useEffect(() => {
+    const now = new Date();
+    const pickup = formatDate(now);
+    const ret = formatDate(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+    setFormData((prev) => ({
+      ...prev,
+      pickupDate: pickup,
+      returnDate: ret,
+    }));
+  }, []);
+
+  const minReturnDate = formData.pickupDate
+    ? formatDate(new Date(new Date(formData.pickupDate).getTime() + 24 * 60 * 60 * 1000))
+    : formatDate(new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
+
+  useEffect(() => {
+    if (!formData.pickupDate) return;
+    const minReturn = new Date(new Date(formData.pickupDate).getTime() + 24 * 60 * 60 * 1000);
+    setFormData((prev) => {
+      if (!prev.returnDate || new Date(prev.returnDate) < minReturn) {
+        return { ...prev, returnDate: formatDate(minReturn) };
+      }
+      return prev;
+    });
+  }, [formData.pickupDate]);
+
   useEffect(() => {
     const getCategories = async () => {
         const res = await apiClient.getCarCategories();
@@ -202,6 +235,7 @@ const HeroSection = () => {
                   value={formData.pickupDate}
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
+                  min={minPickupDate}
                   className="pl-10"
                 />
               </div>
@@ -223,6 +257,7 @@ const HeroSection = () => {
                   value={formData.returnDate}
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
+                  min={minReturnDate}
                   className="pl-10"
                 />
               </div>
