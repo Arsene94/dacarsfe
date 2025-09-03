@@ -370,8 +370,9 @@ const FleetPage = () => {
 
         <div className="flex items-center justify-between">
           <div>
+              <span className="text-gray-600 font-dm-sans">{!startDate && !endDate ? 'de la ' : ''}</span>
             <span className="text-2xl font-poppins font-bold text-berkeley">
-              {car.price}€
+               {car.rental_rate}€
             </span>
             <span className="text-gray-600 font-dm-sans">/zi</span>
           </div>
@@ -457,7 +458,6 @@ const FleetPage = () => {
                 onValueChange={setSortBy}
                 aria-label="Sortează mașinile"
               >
-                <option value="recently-added">Adăugate recent</option>
                 <option value="cheapest">Preț crescător</option>
                 <option value="most_expensive">Preț descrescător</option>
               </Select>
@@ -628,7 +628,7 @@ const FleetPage = () => {
           >
             {filteredAndSortedCars.map((car, index) => (
               <div
-                key={car.id}
+                key={index}
                 className="animate-slide-up"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
