@@ -28,7 +28,7 @@ const HeroSection = () => {
     start_date: "",
     end_date: "",
     location: "otopeni",
-    carType: "",
+    car_type: "",
   });
   const [categories, setCategories] = useState<CarCategory[]>([]);
 
@@ -316,10 +316,10 @@ const HeroSection = () => {
                 <Select
                   id="hero-car-type"
                   className="pl-10 pr-4 text-black h-[3.3rem]"
-                  value={formData.carType}
-                  onValueChange={handleSelectChange("carType")}
-                  placeholder="Toate tipurile"
+                  value={formData.car_type}
+                  onValueChange={handleSelectChange("car_type")}
                 >
+                    <option value="">Toate tipurile</option>
                     {categories?.map((category) => {
                         return (
                             <option key={category.id} value={category.id}>
