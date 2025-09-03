@@ -1,30 +1,20 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Users,
-  Fuel,
-  Settings,
-  Star,
-  Filter,
-  Grid,
-  List,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import {useRouter, useSearchParams} from "next/navigation";
+import {Filter, Fuel, Search, Settings, SlidersHorizontal, Star, Users,} from "lucide-react";
+import {Button} from "@/components/ui/button";
+import {Select} from "@/components/ui/select";
+import {Label} from "@/components/ui/label";
 import apiClient from "@/lib/api";
 
 type ApiCar = {
   id: number;
   name?: string;
-  price_per_day_deposit?: string;
-  price_per_day_without_deposit?: string;
+  rental_rate:  number | string;
+  rental_rate_casco:  number | string;
   image_preview?: string | null;
   images?: Record<string, string>;
   avg_review?: number;
@@ -41,6 +31,8 @@ type Car = {
   type: string;
   image: string;
   price: number;
+  rental_rate: string;
+  rental_rate_casco: string;
   features: {
     passengers: number;
     transmission: string;
@@ -63,12 +55,21 @@ const toImageUrl = (p?: string | null): string => {
   return `${base}/${path}`;
 };
 
-const parsePrice = (priceText?: string): number => {
-  if (!priceText) return 0;
-  const m = priceText.match(/([\d.,]+)/);
-  if (!m) return 0;
-  const n = parseFloat(m[1].replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(n) ? n : 0;
+const parsePrice = (raw: unknown): number => {
+    if (raw == null) return 0;
+    if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
+    if (typeof raw === "string") {
+        const m = raw.match(/[\d.,]+/);
+        if (!m) return 0;
+        const n = parseFloat(m[0].replace(/\./g, "").replace(",", "."));
+        return Number.isFinite(n) ? n : 0;
+    }
+    // fallback: încearcă să-l stringify-uiască
+    try {
+        return parsePrice(String(raw));
+    } catch {
+        return 0;
+    }
 };
 
 const FleetPage = () => {
@@ -108,6 +109,7 @@ const FleetPage = () => {
         car_type: carTypeParam,
         location,
         page: currentPage,
+        sortBy: sortBy
       };
       try {
         setLoading(true);
@@ -115,27 +117,27 @@ const FleetPage = () => {
         const list = Array.isArray(response?.data)
           ? (response.data as ApiCar[])
           : [];
-        const mapped: Car[] = list.map((c) => ({
-          id: c.id,
-          name: c.name ?? "Autovehicul",
-          type: (c.type?.name ?? "—").trim(),
-          image: toImageUrl(
-            c.image_preview || (c.images ? c.images[1] : null) || null,
-          ),
-          price: parsePrice(
-            c.price_per_day_deposit ?? c.price_per_day_without_deposit,
-          ),
-          features: {
-            passengers: c.number_of_seats,
-            transmission: c.transmission?.name ?? "—",
-            fuel: c.fuel?.name ?? "—",
-            doors: 4,
-            luggage: 2,
-          },
-          rating: typeof c.avg_review === "number" ? c.avg_review : 0,
-          description: c.content ?? "",
-          specs: [],
-        }));
+          const mapped: Car[] = list.map((c) => ({
+              id: c.id,
+              name: c.name ?? "Autovehicul",
+              type: (c.type?.name ?? "—").trim(),
+              image: toImageUrl(
+                  c.image_preview || Object.values(c.images ?? {})[0] || null
+              ),
+              price: parsePrice(c.rental_rate ?? c.rental_rate_casco),
+              rental_rate: String(c.rental_rate ?? ""),
+              rental_rate_casco: String(c.rental_rate_casco ?? ""),
+              features: {
+                  passengers: Number(c.number_of_seats) || 0,
+                  transmission: c.transmission?.name ?? "—",
+                  fuel: c.fuel?.name ?? "—",
+                  doors: 4,
+                  luggage: 2,
+              },
+              rating: Number(c.avg_review ?? 0) || 0,
+              description: c.content ?? "",
+              specs: [],
+          }));
         setCars(mapped);
         setTotalCars(response?.total ?? mapped.length);
         setTotalPages(response?.last_page ?? 1);
@@ -154,68 +156,48 @@ const FleetPage = () => {
       }
     };
     fetchCars();
-  }, [startDate, endDate, carTypeParam, location, currentPage]);
+  }, [startDate, endDate, carTypeParam, location, currentPage, sortBy]);
 
   const filteredAndSortedCars = useMemo(() => {
-    let filtered = cars.filter((car) => {
-      const matchesSearch =
-        car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        car.type.toLowerCase().includes(searchTerm.toLowerCase());
+      return cars.filter((car) => {
+        const matchesSearch =
+            car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            car.type.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesType =
-        filters.type === "all" ||
-        car.type.toLowerCase() === filters.type.toLowerCase();
-      const matchesTransmission =
-        filters.transmission === "all" ||
-        car.features.transmission.toLowerCase() ===
-          filters.transmission.toLowerCase();
-      const matchesFuel =
-        filters.fuel === "all" ||
-        car.features.fuel.toLowerCase() === filters.fuel.toLowerCase();
+        const matchesType =
+            filters.type === "all" ||
+            car.type.toLowerCase() === filters.type.toLowerCase();
+        const matchesTransmission =
+            filters.transmission === "all" ||
+            car.features.transmission.toLowerCase() ===
+            filters.transmission.toLowerCase();
+        const matchesFuel =
+            filters.fuel === "all" ||
+            car.features.fuel.toLowerCase() === filters.fuel.toLowerCase();
 
-      const matchesPassengers =
-        filters.passengers === "all" ||
-        (filters.passengers === "1-4" && car.features.passengers <= 4) ||
-        (filters.passengers === "5-7" &&
-          car.features.passengers >= 5 &&
-          car.features.passengers <= 7) ||
-        (filters.passengers === "8+" && car.features.passengers >= 8);
+        const matchesPassengers =
+            filters.passengers === "all" ||
+            (filters.passengers === "1-4" && car.features.passengers <= 4) ||
+            (filters.passengers === "5-7" &&
+                car.features.passengers >= 5 &&
+                car.features.passengers <= 7) ||
+            (filters.passengers === "8+" && car.features.passengers >= 8);
 
-      const matchesPrice =
-        filters.priceRange === "all" ||
-        (filters.priceRange === "0-50" && car.price <= 50) ||
-        (filters.priceRange === "51-80" && car.price > 50 && car.price <= 80) ||
-        (filters.priceRange === "81+" && car.price > 80);
+        const matchesPrice =
+            filters.priceRange === "all" ||
+            (filters.priceRange === "0-50" && car.price <= 50) ||
+            (filters.priceRange === "51-80" && car.price > 50 && car.price <= 80) ||
+            (filters.priceRange === "81+" && car.price > 80);
 
-      return (
-        matchesSearch &&
-        matchesType &&
-        matchesTransmission &&
-        matchesFuel &&
-        matchesPassengers &&
-        matchesPrice
-      );
+        return (
+            matchesSearch &&
+            matchesType &&
+            matchesTransmission &&
+            matchesFuel &&
+            matchesPassengers &&
+            matchesPrice
+        );
     });
-
-    // Sort cars
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "price-asc":
-          return a.price - b.price;
-        case "price-desc":
-          return b.price - a.price;
-        case "rating":
-          return b.rating - a.rating;
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "passengers":
-          return b.features.passengers - a.features.passengers;
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
   }, [cars, filters, sortBy, searchTerm]);
 
   const handleFilterChange = (filterType: string, value: string) => {
@@ -444,30 +426,30 @@ const FleetPage = () => {
 
             {/* View Mode and Sort */}
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`p-2 rounded-lg transition-colors duration-300 ${
-                    viewMode === "grid"
-                      ? "bg-jade text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                  aria-label="Afișare grilă"
-                >
-                  <Grid className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`p-2 rounded-lg transition-colors duration-300 ${
-                    viewMode === "list"
-                      ? "bg-jade text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                  aria-label="Afișare listă"
-                >
-                  <List className="h-5 w-5" />
-                </button>
-              </div>
+              {/*<div className="flex items-center space-x-2">*/}
+              {/*  <button*/}
+              {/*    onClick={() => setViewMode("grid")}*/}
+              {/*    className={`p-2 rounded-lg transition-colors duration-300 ${*/}
+              {/*      viewMode === "grid"*/}
+              {/*        ? "bg-jade text-white"*/}
+              {/*        : "bg-gray-100 text-gray-600 hover:bg-gray-200"*/}
+              {/*    }`}*/}
+              {/*    aria-label="Afișare grilă"*/}
+              {/*  >*/}
+              {/*    <Grid className="h-5 w-5" />*/}
+              {/*  </button>*/}
+              {/*  <button*/}
+              {/*    onClick={() => setViewMode("list")}*/}
+              {/*    className={`p-2 rounded-lg transition-colors duration-300 ${*/}
+              {/*      viewMode === "list"*/}
+              {/*        ? "bg-jade text-white"*/}
+              {/*        : "bg-gray-100 text-gray-600 hover:bg-gray-200"*/}
+              {/*    }`}*/}
+              {/*    aria-label="Afișare listă"*/}
+              {/*  >*/}
+              {/*    <List className="h-5 w-5" />*/}
+              {/*  </button>*/}
+              {/*</div>*/}
 
               <Select
                 className="w-auto px-4 py-2 transition-all duration-300"
@@ -475,11 +457,9 @@ const FleetPage = () => {
                 onValueChange={setSortBy}
                 aria-label="Sortează mașinile"
               >
-                <option value="price-asc">Preț crescător</option>
-                <option value="price-desc">Preț descrescător</option>
-                <option value="rating">Rating</option>
-                <option value="name">Nume A-Z</option>
-                <option value="passengers">Nr. pasageri</option>
+                <option value="recently-added">Adăugate recent</option>
+                <option value="cheapest">Preț crescător</option>
+                <option value="most_expensive">Preț descrescător</option>
               </Select>
 
               <button
