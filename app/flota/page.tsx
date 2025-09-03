@@ -473,7 +473,7 @@ const FleetPage = () => {
           {/* Filters */}
           {showFilters && (
             <div className="border-t border-gray-200 pt-6 animate-slide-up">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                 <div>
                   <Label
                     htmlFor="filter-type"
@@ -539,52 +539,6 @@ const FleetPage = () => {
                         {f.name}
                       </option>
                     ))}
-                  </Select>
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="filter-passengers"
-                    className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
-                  >
-                    Pasageri
-                  </Label>
-                  <Select
-                    id="filter-passengers"
-                    className="px-3 py-2 transition-all duration-300"
-                    value={filters.passengers}
-                    onValueChange={(value) =>
-                      handleFilterChange("passengers", value)
-                    }
-                  >
-                    <option value="all">Toți</option>
-                    {filterOptions.passengers.map((p) => (
-                      <option key={p} value={String(p)}>
-                        {p} persoane
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="filter-price"
-                    className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
-                  >
-                    Preț/zi
-                  </Label>
-                  <Select
-                    id="filter-price"
-                    className="px-3 py-2 transition-all duration-300"
-                    value={filters.priceRange}
-                    onValueChange={(value) =>
-                      handleFilterChange("priceRange", value)
-                    }
-                  >
-                    <option value="all">Toate</option>
-                    <option value="0-50">0-50€</option>
-                    <option value="51-80">51-80€</option>
-                    <option value="81+">81€+</option>
                   </Select>
                 </div>
               </div>
