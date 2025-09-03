@@ -249,7 +249,7 @@ const HeroSection = () => {
             <div className="space-y-2">
               <Label
                 htmlFor="hero-pickup-date"
-                className="text-sm font-medium font-['DM_Sans']"
+                className="text-sm text-white font-medium font-['DM_Sans']"
               >
                 Data ridicare
               </Label>
@@ -271,7 +271,7 @@ const HeroSection = () => {
             <div className="space-y-2">
               <Label
                 htmlFor="hero-return-date"
-                className="text-sm font-medium font-['DM_Sans']"
+                className="text-sm text-white font-medium font-['DM_Sans']"
               >
                 Data returnare
               </Label>
@@ -293,7 +293,7 @@ const HeroSection = () => {
             <div className="space-y-2">
               <Label
                 htmlFor="hero-location"
-                className="text-sm font-medium font-['DM_Sans']"
+                className="text-sm text-white font-medium font-['DM_Sans']"
               >
                 Locația
               </Label>
@@ -314,7 +314,7 @@ const HeroSection = () => {
             <div className="space-y-2">
               <Label
                 htmlFor="hero-car-type"
-                className="text-sm font-medium font-['DM_Sans']"
+                className="text-sm text-white font-medium font-['DM_Sans']"
               >
                 Tip mașină
               </Label>
