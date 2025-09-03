@@ -39,7 +39,7 @@ const BenefitsSection = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {benefits.map((benefit, index) => (
-            <div 
+            <div
               key={index}
               className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 group animate-slide-up"
               style={{ animationDelay: `${index * 0.1}s` }}
@@ -47,11 +47,11 @@ const BenefitsSection = () => {
               <div className="bg-jade/10 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-jade/20 transition-colors duration-300">
                 <benefit.icon className="h-8 w-8 text-jade" />
               </div>
-              
+
               <h3 className="text-xl font-poppins font-semibold text-berkeley mb-4">
                 {benefit.title}
               </h3>
-              
+
               <p className="text-gray-600 font-dm-sans leading-relaxed">
                 {benefit.description}
               </p>
@@ -65,7 +65,7 @@ const BenefitsSection = () => {
         <div className="mt-20 grid grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="text-center">
             <div className="text-4xl font-poppins font-bold text-jade mb-2">500+</div>
-            <div className="text-gray-600 font-dm-sans">Clienți mulțumiți</div>
+            <div className="text-gray-600 font-dm-sans">Clienți fericiți</div>
           </div>
           <div className="text-center">
             <div className="text-4xl font-poppins font-bold text-jade mb-2">24/7</div>

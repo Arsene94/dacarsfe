@@ -13,7 +13,7 @@ import apiClient from "@/lib/api";
 type ApiCar = {
   id: number;
   name?: string;
-  rental_rate:  number | string;
+  rental_rate: number | string;
   rental_rate_casco:  number | string;
   image_preview?: string | null;
   images?: Record<string, string>;
@@ -23,6 +23,9 @@ type ApiCar = {
   type?: { id?: number; name?: string | null } | null;
   transmission?: { id?: number; name?: string | null } | null;
   content?: string | null;
+  days: number;
+  total_deposit: number | string;
+  total_without_deposit: number | string;
 };
 
 type Car = {
@@ -34,6 +37,9 @@ type Car = {
   price: number;
   rental_rate: string;
   rental_rate_casco: string;
+  days: number;
+  total_deposit: number | string;
+  total_without_deposit: number | string;
   features: {
     passengers: number;
     transmission: string;
@@ -159,6 +165,9 @@ const FleetPage = () => {
           price: parsePrice(Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco))),
           rental_rate: String(Math.round(Number(c.rental_rate)) ?? ""),
           rental_rate_casco: String(Math.round(Number(c.rental_rate_casco)) ?? ""),
+          days: c.days,
+          total_deposit: String(c.total_deposit),
+          total_without_deposit: String(c.total_without_deposit),
           features: {
             passengers: Number(c.number_of_seats) || 0,
             transmission: c.transmission?.name ?? "—",
@@ -332,16 +341,22 @@ const FleetPage = () => {
             </div>
           )}
         </div>
-
-
               <>
                   <div className="flex items-center justify-between mb-5">
                       <div className="me-1">
                           <span className="text-jade font-bold font-dm-sans">Fără garanție{" "}</span>
                           <span className="text-2xl font-poppins font-bold text-jade">
-               {car.rental_rate_casco}€
-            </span>
+                           {car.rental_rate_casco}€
+                          </span>
                           <span className="text-jade font-bold font-dm-sans">/zi</span>
+                          {startDate && endDate && (
+                            <div>
+                              <span className="text-jade font-bold font-dm-sans">x {car.days} zile = </span>
+                              <span className="text-2xl font-poppins font-bold text-jade">
+                                {car.total_without_deposit}€
+                              </span>
+                            </div>
+                          )}
                       </div>
 
                       <Link
@@ -360,6 +375,14 @@ const FleetPage = () => {
                {car.rental_rate}€
             </span>
                           <span className="text-gray-600 font-dm-sans">/zi</span>
+                          {startDate && endDate && (
+                              <div>
+                                  <span className="text-gray-600 font-bold font-dm-sans">x {car.days} zile = </span>
+                                  <span className="text-2xl font-poppins font-bold text-berkeley">
+                                {car.total_deposit}€
+                              </span>
+                              </div>
+                          )}
                       </div>
 
                       <Link
