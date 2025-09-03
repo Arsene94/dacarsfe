@@ -200,6 +200,7 @@ const HeroSection = () => {
                   name="pickupDate"
                   value={formData.pickupDate}
                   onChange={handleInputChange}
+                  onClick={(e) => e.currentTarget.showPicker?.()}
                   className="pl-10"
                 />
               </div>
@@ -220,6 +221,7 @@ const HeroSection = () => {
                   name="returnDate"
                   value={formData.returnDate}
                   onChange={handleInputChange}
+                  onClick={(e) => e.currentTarget.showPicker?.()}
                   className="pl-10"
                 />
               </div>
