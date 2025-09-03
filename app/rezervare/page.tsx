@@ -17,6 +17,7 @@ import {
   applyDiscountCode,
 } from "../../services/wheelApi";
 import { Select } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const ReservationPage = () => {
   const router = useRouter();
@@ -184,12 +185,12 @@ const ReservationPage = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label
+                      <Label
                         htmlFor="reservation-last-name"
                         className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                       >
                         Nume *
-                      </label>
+                      </Label>
                       <input
                         id="reservation-last-name"
                         type="text"
@@ -203,12 +204,12 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label
+                      <Label
                         htmlFor="reservation-first-name"
                         className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                       >
                         Prenume *
-                      </label>
+                      </Label>
                       <input
                         id="reservation-first-name"
                         type="text"
@@ -222,12 +223,12 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label
+                      <Label
                         htmlFor="reservation-email"
                         className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                       >
                         Email *
-                      </label>
+                      </Label>
                       <input
                         id="reservation-email"
                         type="email"
@@ -241,12 +242,12 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label
+                      <Label
                         htmlFor="reservation-phone"
                         className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                       >
                         Telefon *
-                      </label>
+                      </Label>
                       <input
                         id="reservation-phone"
                         type="tel"
@@ -261,13 +262,13 @@ const ReservationPage = () => {
                   </div>
 
                   <div className="mt-6">
-                    <label
+                    <Label
                       htmlFor="reservation-flight"
                       className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                     >
                       <Plane className="h-4 w-4 inline text-jade mr-1" />
                       Zbor (opțional)
-                    </label>
+                    </Label>
                     <input
                       id="reservation-flight"
                       type="text"
@@ -281,13 +282,13 @@ const ReservationPage = () => {
 
                   {/* Discount Code */}
                   <div className="mt-6">
-                    <label
+                    <Label
                       htmlFor="reservation-discount"
                       className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                     >
                       <Gift className="h-4 w-4 inline text-jade mr-1" />
                       Cod de reducere (opțional)
-                    </label>
+                    </Label>
                     <div className="flex space-x-2">
                       <input
                         id="reservation-discount"
@@ -341,12 +342,12 @@ const ReservationPage = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label
+                      <Label
                         htmlFor="reservation-pickup-date"
                         className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                       >
                         Dată ridicare *
-                      </label>
+                      </Label>
                       <input
                         id="reservation-pickup-date"
                         type="date"
@@ -360,12 +361,12 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label
+                      <Label
                         htmlFor="reservation-pickup-time"
                         className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                       >
                         Oră ridicare *
-                      </label>
+                      </Label>
                       <input
                         id="reservation-pickup-time"
                         type="time"
@@ -378,12 +379,12 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label
+                      <Label
                         htmlFor="reservation-dropoff-date"
                         className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                       >
                         Dată returnare *
-                      </label>
+                      </Label>
                       <input
                         id="reservation-dropoff-date"
                         type="date"
@@ -400,12 +401,12 @@ const ReservationPage = () => {
                     </div>
 
                     <div>
-                      <label
+                      <Label
                         htmlFor="reservation-dropoff-time"
                         className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                       >
                         Oră returnare *
-                      </label>
+                      </Label>
                       <input
                         id="reservation-dropoff-time"
                         type="time"
@@ -419,13 +420,13 @@ const ReservationPage = () => {
                   </div>
 
                   <div className="mt-6">
-                    <label
+                    <Label
                       htmlFor="reservation-location"
                       className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                     >
                       <MapPin className="h-4 w-4 inline text-jade mr-1" />
                       Locația ridicării *
-                    </label>
+                    </Label>
                     <Select
                       id="reservation-location"
                       className="transition-all duration-300"
@@ -442,12 +443,12 @@ const ReservationPage = () => {
                   </div>
 
                   <div className="mt-6">
-                    <label
+                    <Label
                       htmlFor="reservation-car-type"
                       className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                     >
                       Tip mașină *
-                    </label>
+                    </Label>
                     <Select
                       id="reservation-car-type"
                       className="transition-all duration-300"

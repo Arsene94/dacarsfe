@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const FleetPage = () => {
   const [filters, setFilters] = useState({
@@ -507,12 +508,12 @@ const FleetPage = () => {
             <div className="border-t border-gray-200 pt-6 animate-slide-up">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                 <div>
-                  <label
+                  <Label
                     htmlFor="filter-type"
                     className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                   >
                     Tip mașină
-                  </label>
+                  </Label>
                   <Select
                     id="filter-type"
                     className="px-3 py-2 transition-all duration-300"
@@ -528,12 +529,12 @@ const FleetPage = () => {
                 </div>
 
                 <div>
-                  <label
+                  <Label
                     htmlFor="filter-transmission"
                     className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                   >
                     Transmisie
-                  </label>
+                  </Label>
                   <Select
                     id="filter-transmission"
                     className="px-3 py-2 transition-all duration-300"
@@ -549,12 +550,12 @@ const FleetPage = () => {
                 </div>
 
                 <div>
-                  <label
+                  <Label
                     htmlFor="filter-fuel"
                     className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                   >
                     Combustibil
-                  </label>
+                  </Label>
                   <Select
                     id="filter-fuel"
                     className="px-3 py-2 transition-all duration-300"
@@ -568,12 +569,12 @@ const FleetPage = () => {
                 </div>
 
                 <div>
-                  <label
+                  <Label
                     htmlFor="filter-passengers"
                     className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                   >
                     Pasageri
-                  </label>
+                  </Label>
                   <Select
                     id="filter-passengers"
                     className="px-3 py-2 transition-all duration-300"
@@ -590,12 +591,12 @@ const FleetPage = () => {
                 </div>
 
                 <div>
-                  <label
+                  <Label
                     htmlFor="filter-price"
                     className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                   >
                     Preț/zi
-                  </label>
+                  </Label>
                   <Select
                     id="filter-price"
                     className="px-3 py-2 transition-all duration-300"
