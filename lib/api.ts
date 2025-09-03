@@ -86,6 +86,13 @@ class ApiClient {
 
     }
 
+    async getCarsByDateCriteria(payload: any){
+        return this.request<any>(`/front/cars/paginate`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        })
+    }
+
     async getCarCategories() {
         return this.request<any>(`/front/cars/categories`);
     }

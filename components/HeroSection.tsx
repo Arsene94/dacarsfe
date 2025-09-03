@@ -25,12 +25,63 @@ type CarCategory = {
 
 const HeroSection = () => {
   const [formData, setFormData] = useState({
-    pickupDate: "",
-    returnDate: "",
+    start_date: "",
+    end_date: "",
     location: "otopeni",
     carType: "",
   });
   const [categories, setCategories] = useState<CarCategory[]>([]);
+
+  const formatDate = (date: Date) => {
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
+
+  const addDays = (date: Date, days: number) => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  };
+
+  const startOfDay = (date: Date) => {
+    const result = new Date(date);
+    result.setHours(0, 0, 0, 0);
+    return result;
+  };
+
+  const minstart_date = formatDate(new Date());
+
+  useEffect(() => {
+    const now = new Date();
+    const pickup = formatDate(now);
+    const ret = formatDate(addDays(now, 1));
+    setFormData((prev) => ({
+      ...prev,
+      start_date: pickup,
+      end_date: ret,
+    }));
+  }, []);
+
+  const minend_date = formData.start_date
+    ? formatDate(startOfDay(addDays(new Date(formData.start_date), 1)))
+    : formatDate(startOfDay(addDays(new Date(), 1)));
+
+  useEffect(() => {
+    if (!formData.start_date) return;
+    const minReturn = startOfDay(addDays(new Date(formData.start_date), 1));
+    setFormData((prev) => {
+      if (
+        !prev.end_date ||
+        startOfDay(new Date(prev.end_date)) < minReturn
+      ) {
+        const current = prev.end_date ? new Date(prev.end_date) : new Date();
+        const adjusted = new Date(minReturn);
+        adjusted.setHours(current.getHours(), current.getMinutes());
+        return { ...prev, end_date: formatDate(adjusted) };
+      }
+      return prev;
+    });
+  }, [formData.start_date]);
 
   useEffect(() => {
     const getCategories = async () => {
@@ -64,9 +115,11 @@ const HeroSection = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Rezervare:", formData);
+
+    const response = await apiClient.getCarsByDateCriteria(formData);
+    console.log(response);
   };
 
   return (
@@ -198,10 +251,11 @@ const HeroSection = () => {
                 <Input
                   id="hero-pickup-date"
                   type="datetime-local"
-                  name="pickupDate"
-                  value={formData.pickupDate}
+                  name="start_date"
+                  value={formData.start_date}
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
+                  min={minstart_date}
                   className="pl-10"
                 />
               </div>
@@ -219,10 +273,11 @@ const HeroSection = () => {
                 <Input
                   id="hero-return-date"
                   type="datetime-local"
-                  name="returnDate"
-                  value={formData.returnDate}
+                  name="end_date"
+                  value={formData.end_date}
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
+                  min={minend_date}
                   className="pl-10"
                 />
               </div>
