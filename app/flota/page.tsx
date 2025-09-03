@@ -19,9 +19,9 @@ type ApiCar = {
   images?: Record<string, string>;
   avg_review?: number;
   number_of_seats: number;
-  fuel?: { name?: string | null } | null;
-  type?: { name?: string | null } | null;
-  transmission?: { name?: string | null } | null;
+  fuel?: { id?: number; name?: string | null } | null;
+  type?: { id?: number; name?: string | null } | null;
+  transmission?: { id?: number; name?: string | null } | null;
   content?: string | null;
 };
 
@@ -29,6 +29,7 @@ type Car = {
   id: number;
   name: string;
   type: string;
+  typeId: number | null;
   image: string;
   price: number;
   rental_rate: string;
@@ -36,7 +37,9 @@ type Car = {
   features: {
     passengers: number;
     transmission: string;
+    transmissionId: number | null;
     fuel: string;
+    fuelId: number | null;
     doors: number;
     luggage: number;
   };
@@ -81,7 +84,7 @@ const FleetPage = () => {
     priceRange: "all",
   });
 
-  const [sortBy, setSortBy] = useState("price-asc");
+  const [sortBy, setSortBy] = useState("cheapest");
   const [viewMode, setViewMode] = useState("grid");
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -93,6 +96,29 @@ const FleetPage = () => {
   const [totalCars, setTotalCars] = useState(0);
   const [loading, setLoading] = useState(true);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const filterOptions = useMemo(() => {
+    const types = new Map<number, string>();
+    const transmissions = new Map<number, string>();
+    const fuels = new Map<number, string>();
+    const passengers = new Set<number>();
+
+    cars.forEach((car) => {
+      if (car.typeId && car.type && car.type !== "—") types.set(car.typeId, car.type);
+      if (car.features.transmissionId && car.features.transmission && car.features.transmission !== "—")
+        transmissions.set(car.features.transmissionId, car.features.transmission);
+      if (car.features.fuelId && car.features.fuel && car.features.fuel !== "—")
+        fuels.set(car.features.fuelId, car.features.fuel);
+      if (car.features.passengers) passengers.add(car.features.passengers);
+    });
+
+    return {
+      types: Array.from(types, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+      transmissions: Array.from(transmissions, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+      fuels: Array.from(fuels, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+      passengers: Array.from(passengers).sort((a, b) => a - b),
+    };
+  }, [cars]);
 
   const startDate = searchParams.get("start_date") || "";
   const endDate = searchParams.get("end_date") || "";
@@ -107,35 +133,46 @@ const FleetPage = () => {
         car_type: carTypeParam,
         location,
         page: currentPage,
-        sortBy: sortBy
+        sort_by: sortBy,
       };
+      if (filters.type !== "all") payload.vehicle_type = Number(filters.type);
+      if (filters.transmission !== "all") payload.transmission = Number(filters.transmission);
+      if (filters.fuel !== "all") payload.fuel_type = Number(filters.fuel);
+      if (filters.passengers !== "all") payload.seats = Number(filters.passengers);
+      if (filters.priceRange !== "all") payload.price_range = filters.priceRange;
+      if (searchTerm) payload.search = searchTerm;
       try {
         setLoading(true);
         const response = await apiClient.getCarsByDateCriteria(payload);
         const list = Array.isArray(response?.data)
           ? (response.data as ApiCar[])
           : [];
-          const mapped: Car[] = list.map((c) => ({
-              id: c.id,
-              name: c.name ?? "Autovehicul",
-              type: (c.type?.name ?? "—").trim(),
-              image: toImageUrl(
-                  c.image_preview || Object.values(c.images ?? {})[0] || null
-              ),
-              price: parsePrice(Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco))),
-              rental_rate: String(Math.round(Number(c.rental_rate)) ?? ""),
-              rental_rate_casco: String(Math.round(Number(c.rental_rate_casco)) ?? ""),
-              features: {
-                  passengers: Number(c.number_of_seats) || 0,
-                  transmission: c.transmission?.name ?? "—",
-                  fuel: c.fuel?.name ?? "—",
-                  doors: 4,
-                  luggage: 2,
-              },
-              rating: Number(c.avg_review ?? 0) || 0,
-              description: c.content ?? "",
-              specs: [],
-          }));
+
+        const mapped: Car[] = list.map((c) => ({
+          id: c.id,
+          name: c.name ?? "Autovehicul",
+          type: (c.type?.name ?? "—").trim(),
+          typeId: c.type?.id ?? null,
+          image: toImageUrl(
+            c.image_preview || Object.values(c.images ?? {})[0] || null
+          ),
+          price: parsePrice(Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco))),
+          rental_rate: String(Math.round(Number(c.rental_rate)) ?? ""),
+          rental_rate_casco: String(Math.round(Number(c.rental_rate_casco)) ?? ""),
+          features: {
+            passengers: Number(c.number_of_seats) || 0,
+            transmission: c.transmission?.name ?? "—",
+            transmissionId: c.transmission?.id ?? null,
+            fuel: c.fuel?.name ?? "—",
+            fuelId: c.fuel?.id ?? null,
+            doors: 4,
+            luggage: 2,
+          },
+          rating: Number(c.avg_review ?? 0) || 0,
+          description: c.content ?? "",
+          specs: [],
+        }));
+
         setCars((prev) => (currentPage === 1 ? mapped : [...prev, ...mapped]));
         setTotalCars(response?.total ?? mapped.length);
         setTotalPages(response?.last_page ?? 1);
@@ -149,55 +186,14 @@ const FleetPage = () => {
       }
     };
     fetchCars();
-  }, [startDate, endDate, carTypeParam, location, currentPage, sortBy]);
-
-  const filteredAndSortedCars = useMemo(() => {
-      return cars.filter((car) => {
-        const matchesSearch =
-            car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            car.type.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesType =
-            filters.type === "all" ||
-            car.type.toLowerCase() === filters.type.toLowerCase();
-        const matchesTransmission =
-            filters.transmission === "all" ||
-            car.features.transmission.toLowerCase() ===
-            filters.transmission.toLowerCase();
-        const matchesFuel =
-            filters.fuel === "all" ||
-            car.features.fuel.toLowerCase() === filters.fuel.toLowerCase();
-
-        const matchesPassengers =
-            filters.passengers === "all" ||
-            (filters.passengers === "1-4" && car.features.passengers <= 4) ||
-            (filters.passengers === "5-7" &&
-                car.features.passengers >= 5 &&
-                car.features.passengers <= 7) ||
-            (filters.passengers === "8+" && car.features.passengers >= 8);
-
-        const matchesPrice =
-            filters.priceRange === "all" ||
-            (filters.priceRange === "0-50" && car.price <= 50) ||
-            (filters.priceRange === "51-80" && car.price > 50 && car.price <= 80) ||
-            (filters.priceRange === "81+" && car.price > 80);
-
-        return (
-            matchesSearch &&
-            matchesType &&
-            matchesTransmission &&
-            matchesFuel &&
-            matchesPassengers &&
-            matchesPrice
-        );
-    });
-  }, [cars, filters, sortBy, searchTerm]);
+  }, [startDate, endDate, carTypeParam, location, currentPage, sortBy, filters, searchTerm]);
 
   const handleFilterChange = (filterType: string, value: string) => {
     setFilters((prev) => ({
       ...prev,
       [filterType]: value,
     }));
+    setCurrentPage(1);
   };
 
   const clearFilters = () => {
@@ -209,6 +205,7 @@ const FleetPage = () => {
       priceRange: "all",
     });
     setSearchTerm("");
+    setCurrentPage(1);
   };
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -349,7 +346,7 @@ const FleetPage = () => {
 
                       <Link
                           href="/rezervare"
-                          className="px-2 py-2 h-8 text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+                          className="px-2 py-2 h-8 w-[150px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
                           aria-label="Rezervă"
                       >
                           Rezervă fără garanție
@@ -367,7 +364,7 @@ const FleetPage = () => {
 
                       <Link
                           href="/rezervare"
-                          className="px-4 py-2 h-8 text-xs border border-jade  text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade/90 hover:text-white transition-colors duration-300"
+                          className="px-4 py-2 h-8 w-[150px] text-center text-xs border border-jade  text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade/90 hover:text-white transition-colors duration-300"
                           aria-label="Rezervă"
                       >
                           Rezervă cu garanție
@@ -410,7 +407,10 @@ const FleetPage = () => {
                 placeholder="Caută mașină..."
                 aria-label="Caută mașină"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
               />
             </div>
@@ -445,7 +445,10 @@ const FleetPage = () => {
               <Select
                 className="w-auto px-4 py-2 transition-all duration-300"
                 value={sortBy}
-                onValueChange={setSortBy}
+                onValueChange={(value) => {
+                  setSortBy(value);
+                  setCurrentPage(1);
+                }}
                 aria-label="Sortează mașinile"
               >
                 <option value="cheapest">Preț crescător</option>
@@ -470,7 +473,7 @@ const FleetPage = () => {
           {/* Filters */}
           {showFilters && (
             <div className="border-t border-gray-200 pt-6 animate-slide-up">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                 <div>
                   <Label
                     htmlFor="filter-type"
@@ -485,10 +488,11 @@ const FleetPage = () => {
                     onValueChange={(value) => handleFilterChange("type", value)}
                   >
                     <option value="all">Toate</option>
-                    <option value="economic">Economic</option>
-                    <option value="comfort">Comfort</option>
-                    <option value="premium">Premium</option>
-                    <option value="van">Van</option>
+                    {filterOptions.types.map((t) => (
+                      <option key={t.id} value={String(t.id)}>
+                        {t.name}
+                      </option>
+                    ))}
                   </Select>
                 </div>
 
@@ -508,8 +512,11 @@ const FleetPage = () => {
                     }
                   >
                     <option value="all">Toate</option>
-                    <option value="manual">Manual</option>
-                    <option value="automat">Automat</option>
+                    {filterOptions.transmissions.map((t) => (
+                      <option key={t.id} value={String(t.id)}>
+                        {t.name}
+                      </option>
+                    ))}
                   </Select>
                 </div>
 
@@ -527,52 +534,11 @@ const FleetPage = () => {
                     onValueChange={(value) => handleFilterChange("fuel", value)}
                   >
                     <option value="all">Toate</option>
-                    <option value="benzină">Benzină</option>
-                    <option value="diesel">Diesel</option>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="filter-passengers"
-                    className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
-                  >
-                    Pasageri
-                  </Label>
-                  <Select
-                    id="filter-passengers"
-                    className="px-3 py-2 transition-all duration-300"
-                    value={filters.passengers}
-                    onValueChange={(value) =>
-                      handleFilterChange("passengers", value)
-                    }
-                  >
-                    <option value="all">Toți</option>
-                    <option value="1-4">1-4 persoane</option>
-                    <option value="5-7">5-7 persoane</option>
-                    <option value="8+">8+ persoane</option>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="filter-price"
-                    className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
-                  >
-                    Preț/zi
-                  </Label>
-                  <Select
-                    id="filter-price"
-                    className="px-3 py-2 transition-all duration-300"
-                    value={filters.priceRange}
-                    onValueChange={(value) =>
-                      handleFilterChange("priceRange", value)
-                    }
-                  >
-                    <option value="all">Toate</option>
-                    <option value="0-50">0-50€</option>
-                    <option value="51-80">51-80€</option>
-                    <option value="81+">81€+</option>
+                    {filterOptions.fuels.map((f) => (
+                      <option key={f.id} value={String(f.id)}>
+                        {f.name}
+                      </option>
+                    ))}
                   </Select>
                 </div>
               </div>
@@ -600,7 +566,7 @@ const FleetPage = () => {
         </div>
 
         {/* Cars Grid/List */}
-        {filteredAndSortedCars.length > 0 ? (
+        {cars.length > 0 ? (
           <div
             className={
               viewMode === "grid"
@@ -608,7 +574,7 @@ const FleetPage = () => {
                 : "space-y-6"
             }
           >
-            {filteredAndSortedCars.map((car, index) => (
+            {cars.map((car, index) => (
               <div
                 key={index}
                 className="animate-slide-up"
