@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Users,
   Fuel,
@@ -302,14 +303,16 @@ const FleetPage = () => {
       }`}
     >
       <div
-        className={`relative overflow-hidden ${isListView ? "md:w-1/3" : ""}`}
+        className={`relative overflow-hidden ${
+          isListView ? "md:w-1/3 h-48 md:h-full" : "h-48"
+        }`}
       >
-        <img
+        <Image
           src={car.image}
           alt={car.name}
-          className={`object-cover group-hover:scale-110 transition-transform duration-500 ${
-            isListView ? "w-full h-48 md:h-full" : "w-full h-48"
-          }`}
+          fill
+          className="object-cover group-hover:scale-110 transition-transform duration-500"
+          sizes={isListView ? "(max-width: 768px) 100vw, 33vw" : "100vw"}
         />
         <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
           {car.type}

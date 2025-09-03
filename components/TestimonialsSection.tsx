@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 
 const TestimonialsSection = () => {
@@ -82,10 +83,12 @@ const TestimonialsSection = () => {
               </blockquote>
 
               <div className="flex items-center justify-center space-x-4">
-                <img 
+                <Image
                   src={testimonials[currentTestimonial].avatar}
                   alt={testimonials[currentTestimonial].name}
-                  className="w-16 h-16 rounded-full object-cover ring-4 ring-jade/20"
+                  width={64}
+                  height={64}
+                  className="rounded-full object-cover ring-4 ring-jade/20"
                 />
                 <div className="text-center">
                   <div className="font-poppins font-semibold text-berkeley text-lg">
@@ -146,10 +149,12 @@ const TestimonialsSection = () => {
               onClick={() => setCurrentTestimonial(index)}
             >
               <div className="flex items-center space-x-3 mb-4">
-                <img 
+                <Image
                   src={testimonial.avatar}
                   alt={testimonial.name}
-                  className="w-12 h-12 rounded-full object-cover"
+                  width={48}
+                  height={48}
+                  className="rounded-full object-cover"
                 />
                 <div>
                   <div className="font-poppins font-semibold text-berkeley">
