@@ -156,9 +156,9 @@ const FleetPage = () => {
           image: toImageUrl(
             c.image_preview || Object.values(c.images ?? {})[0] || null
           ),
-          price: parsePrice(c.rental_rate ?? c.rental_rate_casco),
-          rental_rate: String(c.rental_rate ?? ""),
-          rental_rate_casco: String(c.rental_rate_casco ?? ""),
+          price: parsePrice(Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco))),
+          rental_rate: String(Math.round(Number(c.rental_rate)) ?? ""),
+          rental_rate_casco: String(Math.round(Number(c.rental_rate_casco)) ?? ""),
           features: {
             passengers: Number(c.number_of_seats) || 0,
             transmission: c.transmission?.name ?? "—",
