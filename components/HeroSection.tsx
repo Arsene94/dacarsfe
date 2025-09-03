@@ -32,6 +32,57 @@ const HeroSection = () => {
   });
   const [categories, setCategories] = useState<CarCategory[]>([]);
 
+  const formatDate = (date: Date) => {
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
+
+  const addDays = (date: Date, days: number) => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  };
+
+  const startOfDay = (date: Date) => {
+    const result = new Date(date);
+    result.setHours(0, 0, 0, 0);
+    return result;
+  };
+
+  const minPickupDate = formatDate(new Date());
+
+  useEffect(() => {
+    const now = new Date();
+    const pickup = formatDate(now);
+    const ret = formatDate(addDays(now, 1));
+    setFormData((prev) => ({
+      ...prev,
+      pickupDate: pickup,
+      returnDate: ret,
+    }));
+  }, []);
+
+  const minReturnDate = formData.pickupDate
+    ? formatDate(startOfDay(addDays(new Date(formData.pickupDate), 1)))
+    : formatDate(startOfDay(addDays(new Date(), 1)));
+
+  useEffect(() => {
+    if (!formData.pickupDate) return;
+    const minReturn = startOfDay(addDays(new Date(formData.pickupDate), 1));
+    setFormData((prev) => {
+      if (
+        !prev.returnDate ||
+        startOfDay(new Date(prev.returnDate)) < minReturn
+      ) {
+        const current = prev.returnDate ? new Date(prev.returnDate) : new Date();
+        const adjusted = new Date(minReturn);
+        adjusted.setHours(current.getHours(), current.getMinutes());
+        return { ...prev, returnDate: formatDate(adjusted) };
+      }
+      return prev;
+    });
+  }, [formData.pickupDate]);
+
   useEffect(() => {
     const getCategories = async () => {
         const res = await apiClient.getCarCategories();
@@ -202,6 +253,7 @@ const HeroSection = () => {
                   value={formData.pickupDate}
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
+                  min={minPickupDate}
                   className="pl-10"
                 />
               </div>
@@ -223,6 +275,7 @@ const HeroSection = () => {
                   value={formData.returnDate}
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
+                  min={minReturnDate}
                   className="pl-10"
                 />
               </div>
