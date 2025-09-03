@@ -145,9 +145,9 @@ const FleetPage = () => {
               image: toImageUrl(
                   c.image_preview || Object.values(c.images ?? {})[0] || null
               ),
-              price: parsePrice(c.rental_rate ?? c.rental_rate_casco),
-              rental_rate: String(c.rental_rate ?? ""),
-              rental_rate_casco: String(c.rental_rate_casco ?? ""),
+              price: parsePrice(Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco))),
+              rental_rate: String(Math.round(Number(c.rental_rate)) ?? ""),
+              rental_rate_casco: String(Math.round(Number(c.rental_rate_casco)) ?? ""),
               features: {
                   passengers: Number(c.number_of_seats) || 0,
                   transmission: c.transmission?.name ?? "—",
@@ -368,7 +368,7 @@ const FleetPage = () => {
 
                       <Link
                           href="/rezervare"
-                          className="px-2 py-2 text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+                          className="px-2 py-2 h-8 text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
                           aria-label="Rezervă"
                       >
                           Rezervă fără garanție
@@ -386,7 +386,7 @@ const FleetPage = () => {
 
                       <Link
                           href="/rezervare"
-                          className="px-4 py-2 text-xs border border-jade  text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade/90 hover:text-white transition-colors duration-300"
+                          className="px-4 py-2 h-8 text-xs border border-jade  text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade/90 hover:text-white transition-colors duration-300"
                           aria-label="Rezervă"
                       >
                           Rezervă cu garanție
