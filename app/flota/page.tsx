@@ -256,12 +256,12 @@ const FleetPage = () => {
         <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
           {car.type}
         </div>
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center space-x-1">
-          <Star className="h-4 w-4 text-yellow-400 fill-current" />
-          <span className="text-sm font-dm-sans font-semibold text-berkeley">
-            {car.rating}
-          </span>
-        </div>
+        {/*<div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center space-x-1">*/}
+        {/*  <Star className="h-4 w-4 text-yellow-400 fill-current" />*/}
+        {/*  <span className="text-sm font-dm-sans font-semibold text-berkeley">*/}
+        {/*    {car.rating}*/}
+        {/*  </span>*/}
+        {/*</div>*/}
       </div>
 
       <div
@@ -336,23 +336,66 @@ const FleetPage = () => {
           )}
         </div>
 
-        <div className="flex items-center justify-between">
-          <div>
-              <span className="text-gray-600 font-dm-sans">{!startDate && !endDate ? 'de la ' : ''}</span>
-            <span className="text-2xl font-poppins font-bold text-berkeley">
+          {!startDate && !endDate ? (
+              <div className="flex items-center justify-between">
+                  <div>
+                      <span className="text-gray-600 font-dm-sans">de la </span>
+                      <span className="text-2xl font-poppins font-bold text-berkeley">
                {car.rental_rate}€
             </span>
-            <span className="text-gray-600 font-dm-sans">/zi</span>
-          </div>
+                      <span className="text-gray-600 font-dm-sans">/zi</span>
+                  </div>
 
-          <Link
-            href="/rezervare"
-            className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
-            aria-label="Rezervă"
-          >
-            Rezervă
-          </Link>
-        </div>
+                  <Link
+                      href="/rezervare"
+                      className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+                      aria-label="Rezervă"
+                  >
+                      Rezervă
+                  </Link>
+              </div>
+          ) : (
+              <>
+                  <div className="flex items-center justify-between mb-5">
+                      <div>
+                          <span className="text-gray-600 font-dm-sans">Fără garanție {" "}</span>
+                          <span className="text-2xl font-poppins font-bold text-berkeley">
+               {car.rental_rate}€
+            </span>
+                          <span className="text-gray-600 font-dm-sans">/zi</span>
+                      </div>
+
+                      <div>
+                          <span className="text-gray-600 font-dm-sans">Cu garanție{" "}</span>
+                          <span className="text-2xl font-poppins font-bold text-berkeley">
+               {car.rental_rate}€
+            </span>
+                          <span className="text-gray-600 font-dm-sans">/zi</span>
+                      </div>
+
+
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                      <Link
+                          href="/rezervare"
+                          className="px-4 py-2 text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+                          aria-label="Rezervă"
+                      >
+                          Rezervă fără garanție
+                      </Link>
+
+                      <Link
+                          href="/rezervare"
+                          className="px-4 py-2 text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+                          aria-label="Rezervă"
+                      >
+                          Rezervă cu garanție
+                      </Link>
+                  </div>
+              </>
+          )}
+
       </div>
     </div>
   );
@@ -379,7 +422,7 @@ const FleetPage = () => {
 
         {/* Search and Controls */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between mb-6">
+          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
             {/* Search */}
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
