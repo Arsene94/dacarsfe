@@ -129,7 +129,7 @@ const ContactSection = () => {
 
             <div className="mt-6 p-4 bg-jade/5 rounded-xl">
               <p className="text-berkeley font-dm-sans">
-                <strong>Instrucțiuni de sosire:</strong> Când aterizezi, sună-ne la numărul de telefon, iar apoi ne întâlnim în fața stației CFR, sub cupola verde de sticlă, la terminalul Sosiri.
+                <strong>Instrucțiuni de sosire:</strong> Când aterizezi, sună-ne la numărul de telefon, iar apoi ne întâlnim în fața stației CFR, în fața cupolei verde de sticlă, la terminalul Sosiri.
               </p>
             </div>
           </div>
