@@ -37,12 +37,24 @@ const HeroSection = () => {
     return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
   };
 
+  const addDays = (date: Date, days: number) => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  };
+
+  const startOfDay = (date: Date) => {
+    const result = new Date(date);
+    result.setHours(0, 0, 0, 0);
+    return result;
+  };
+
   const minPickupDate = formatDate(new Date());
 
   useEffect(() => {
     const now = new Date();
     const pickup = formatDate(now);
-    const ret = formatDate(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+    const ret = formatDate(addDays(now, 1));
     setFormData((prev) => ({
       ...prev,
       pickupDate: pickup,
@@ -51,15 +63,21 @@ const HeroSection = () => {
   }, []);
 
   const minReturnDate = formData.pickupDate
-    ? formatDate(new Date(new Date(formData.pickupDate).getTime() + 24 * 60 * 60 * 1000))
-    : formatDate(new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
+    ? formatDate(startOfDay(addDays(new Date(formData.pickupDate), 1)))
+    : formatDate(startOfDay(addDays(new Date(), 1)));
 
   useEffect(() => {
     if (!formData.pickupDate) return;
-    const minReturn = new Date(new Date(formData.pickupDate).getTime() + 24 * 60 * 60 * 1000);
+    const minReturn = startOfDay(addDays(new Date(formData.pickupDate), 1));
     setFormData((prev) => {
-      if (!prev.returnDate || new Date(prev.returnDate) < minReturn) {
-        return { ...prev, returnDate: formatDate(minReturn) };
+      if (
+        !prev.returnDate ||
+        startOfDay(new Date(prev.returnDate)) < minReturn
+      ) {
+        const current = prev.returnDate ? new Date(prev.returnDate) : new Date();
+        const adjusted = new Date(minReturn);
+        adjusted.setHours(current.getHours(), current.getMinutes());
+        return { ...prev, returnDate: formatDate(adjusted) };
       }
       return prev;
     });
