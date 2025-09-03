@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -31,6 +31,7 @@ const HeroSection = () => {
     carType: "",
   });
   const [categories, setCategories] = useState<CarCategory[]>([]);
+  const returnDateRef = useRef<HTMLInputElement>(null);
 
   const formatDate = (date: Date) => {
     const tzOffset = date.getTimezoneOffset() * 60000;
@@ -106,6 +107,11 @@ const HeroSection = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    if (e.target.name === "pickupDate") {
+      setTimeout(() => {
+        returnDateRef.current?.showPicker?.();
+      }, 0);
+    }
   };
 
   const handleSelectChange = (name: string) => (value: string) => {
@@ -276,6 +282,7 @@ const HeroSection = () => {
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   min={minReturnDate}
+                  ref={returnDateRef}
                   className="pl-10"
                 />
               </div>
