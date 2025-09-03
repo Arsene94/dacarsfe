@@ -368,7 +368,7 @@ const FleetPage = () => {
 
                       <Link
                           href="/rezervare"
-                          className="px-2 py-2 h-8 text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+                          className="px-2 py-2 h-8 w-[150px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
                           aria-label="Rezervă"
                       >
                           Rezervă fără garanție
@@ -386,7 +386,7 @@ const FleetPage = () => {
 
                       <Link
                           href="/rezervare"
-                          className="px-4 py-2 h-8 text-xs border border-jade  text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade/90 hover:text-white transition-colors duration-300"
+                          className="px-4 py-2 h-8 w-[150px] text-center text-xs border border-jade  text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade/90 hover:text-white transition-colors duration-300"
                           aria-label="Rezervă"
                       >
                           Rezervă cu garanție
