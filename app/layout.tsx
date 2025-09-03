@@ -1,7 +1,8 @@
-import './globals.css';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import type { ReactNode } from 'react';
+import "./globals.css";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+import PageTransition from "../components/PageTransition";
+import type { ReactNode } from "react";
 
 export const metadata = {
   title: 'DaCars',
@@ -13,7 +14,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="ro">
       <body className="min-h-screen bg-white">
         <Header />
-        <main>{children}</main>
+        <main>
+          <PageTransition>{children}</PageTransition>
+        </main>
         <Footer />
       </body>
     </html>
