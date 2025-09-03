@@ -27,7 +27,7 @@ const HeroSection = () => {
   const [formData, setFormData] = useState({
     pickupDate: "",
     returnDate: "",
-    location: "",
+    location: "otopeni",
     carType: "",
   });
   const [categories, setCategories] = useState<CarCategory[]>([]);
@@ -245,8 +245,6 @@ const HeroSection = () => {
                   placeholder="Alege locația"
                 >
                   <option value="otopeni">Aeroport Otopeni</option>
-                  <option value="baneasa">Aeroport Băneasa</option>
-                  <option value="bucuresti">București</option>
                 </Select>
               </div>
             </div>
