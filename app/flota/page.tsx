@@ -94,6 +94,29 @@ const FleetPage = () => {
   const [loading, setLoading] = useState(true);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
+  const filterOptions = useMemo(() => {
+    const types = new Set<string>();
+    const transmissions = new Set<string>();
+    const fuels = new Set<string>();
+    const passengers = new Set<number>();
+
+    cars.forEach((car) => {
+      if (car.type && car.type !== "—") types.add(car.type);
+      if (car.features.transmission && car.features.transmission !== "—")
+        transmissions.add(car.features.transmission);
+      if (car.features.fuel && car.features.fuel !== "—")
+        fuels.add(car.features.fuel);
+      if (car.features.passengers) passengers.add(car.features.passengers);
+    });
+
+    return {
+      types: Array.from(types).sort(),
+      transmissions: Array.from(transmissions).sort(),
+      fuels: Array.from(fuels).sort(),
+      passengers: Array.from(passengers).sort((a, b) => a - b),
+    };
+  }, [cars]);
+
   const startDate = searchParams.get("start_date") || "";
   const endDate = searchParams.get("end_date") || "";
   const carTypeParam = searchParams.get("car_type") || "";
@@ -170,11 +193,7 @@ const FleetPage = () => {
 
         const matchesPassengers =
             filters.passengers === "all" ||
-            (filters.passengers === "1-4" && car.features.passengers <= 4) ||
-            (filters.passengers === "5-7" &&
-                car.features.passengers >= 5 &&
-                car.features.passengers <= 7) ||
-            (filters.passengers === "8+" && car.features.passengers >= 8);
+            car.features.passengers === Number(filters.passengers);
 
         const matchesPrice =
             filters.priceRange === "all" ||
@@ -485,10 +504,11 @@ const FleetPage = () => {
                     onValueChange={(value) => handleFilterChange("type", value)}
                   >
                     <option value="all">Toate</option>
-                    <option value="economic">Economic</option>
-                    <option value="comfort">Comfort</option>
-                    <option value="premium">Premium</option>
-                    <option value="van">Van</option>
+                    {filterOptions.types.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
                   </Select>
                 </div>
 
@@ -508,8 +528,11 @@ const FleetPage = () => {
                     }
                   >
                     <option value="all">Toate</option>
-                    <option value="manual">Manual</option>
-                    <option value="automat">Automat</option>
+                    {filterOptions.transmissions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
                   </Select>
                 </div>
 
@@ -527,8 +550,11 @@ const FleetPage = () => {
                     onValueChange={(value) => handleFilterChange("fuel", value)}
                   >
                     <option value="all">Toate</option>
-                    <option value="benzină">Benzină</option>
-                    <option value="diesel">Diesel</option>
+                    {filterOptions.fuels.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
                   </Select>
                 </div>
 
@@ -548,9 +574,11 @@ const FleetPage = () => {
                     }
                   >
                     <option value="all">Toți</option>
-                    <option value="1-4">1-4 persoane</option>
-                    <option value="5-7">5-7 persoane</option>
-                    <option value="8+">8+ persoane</option>
+                    {filterOptions.passengers.map((p) => (
+                      <option key={p} value={String(p)}>
+                        {p} persoane
+                      </option>
+                    ))}
                   </Select>
                 </div>
 
