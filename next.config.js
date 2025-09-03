@@ -124,8 +124,8 @@ const nextConfig = {
                 ],
             },
             {
-                // Long-term caching for static assets
-                source: '/(.*).(jpg|jpeg|png|gif|ico|svg|webp|avif)',
+                // Long-term caching for static images
+                source: '/:all*(jpg|jpeg|png|gif|ico|svg|webp|avif)',
                 headers: [
                     {
                         key: 'Cache-Control',
@@ -134,8 +134,28 @@ const nextConfig = {
                 ],
             },
             {
-                // Long-term caching for Next.js static files
-                source: '/_next/static/(.*)',
+                // Long-term caching for fonts
+                source: '/:all*(woff|woff2|ttf|eot)',
+                headers: [
+                    {
+                        key: 'Cache-Control',
+                        value: 'public, max-age=31536000, immutable',
+                    },
+                ],
+            },
+            {
+                // Long-term caching for Next.js generated static files
+                source: '/_next/static/:path*',
+                headers: [
+                    {
+                        key: 'Cache-Control',
+                        value: 'public, max-age=31536000, immutable',
+                    },
+                ],
+            },
+            {
+                // Cache optimized images served by Next.js
+                source: '/_next/image(.*)',
                 headers: [
                     {
                         key: 'Cache-Control',
