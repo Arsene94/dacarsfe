@@ -43,6 +43,22 @@ const nextConfig = {
             {
                 protocol: 'http',
                 hostname: 'localhost',
+            },
+            {
+                protocol: 'https',
+                hostname: 'dacars.ro',
+            },
+            {
+                protocol: 'https',
+                hostname: '**.dacars.ro',
+            },
+            {
+                protocol: 'http',
+                hostname: 'dacars.ro',
+            },
+            {
+                protocol: 'http',
+                hostname: '**.dacars.ro',
             }
         ],
         formats: ['image/avif', 'image/webp'],

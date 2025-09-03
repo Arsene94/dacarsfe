@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
     Users,
     Fuel,
@@ -125,13 +126,14 @@ const FleetSection = () => {
             className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group border border-gray-100 animate-slide-up"
             style={{ animationDelay: `${index * 0.1}s` }}
         >
-            <div className="relative overflow-hidden">
-                <img
+            <div className="relative overflow-hidden h-48">
+                <Image
                     src={car.icon}
                     alt={car.name}
-                    className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                    fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-500"
                     loading={index < 2 ? "eager" : "lazy"}
-                    fetchPriority={index < 2 ? "high" : "auto"}
+                    priority={index < 2}
                 />
                 <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
                     {car.categories.name}

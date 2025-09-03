@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowLeft,
   Search,
@@ -455,11 +456,12 @@ const CarsPage = () => {
               key={car.id}
               className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300"
             >
-              <div className="relative">
-                <img
+              <div className="relative w-full h-48">
+                <Image
                   src={car.image}
                   alt={car.name}
-                  className="w-full h-48 object-cover"
+                  fill
+                  className="object-cover"
                 />
                 <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
                   {car.type}
@@ -593,11 +595,14 @@ const CarsPage = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Car Image and Basic Info */}
                 <div>
-                  <img
-                    src={selectedCar.image}
-                    alt={selectedCar.name}
-                    className="w-full h-64 object-cover rounded-xl mb-6"
-                  />
+                  <div className="relative w-full h-64 mb-6">
+                    <Image
+                      src={selectedCar.image}
+                      alt={selectedCar.name}
+                      fill
+                      className="object-cover rounded-xl"
+                    />
+                  </div>
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
