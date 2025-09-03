@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Calendar,
@@ -31,6 +32,7 @@ const HeroSection = () => {
     car_type: "",
   });
   const [categories, setCategories] = useState<CarCategory[]>([]);
+  const router = useRouter();
 
   const formatDate = (date: Date) => {
     const tzOffset = date.getTimezoneOffset() * 60000;
@@ -118,8 +120,13 @@ const HeroSection = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const response = await apiClient.getCarsByDateCriteria(formData);
-    console.log(response);
+    const params = new URLSearchParams();
+    params.set("start_date", formData.start_date);
+    params.set("end_date", formData.end_date);
+    if (formData.car_type) params.set("car_type", formData.car_type);
+    if (formData.location) params.set("location", formData.location);
+
+    router.push(`/flota?${params.toString()}`);
   };
 
   return (

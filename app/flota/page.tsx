@@ -1,22 +1,76 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  Users,
-  Fuel,
-  Settings,
-  Star,
-  Filter,
-  Grid,
-  List,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import {useRouter, useSearchParams} from "next/navigation";
+import {Filter, Fuel, Search, Settings, SlidersHorizontal, Star, Users,} from "lucide-react";
+import {Button} from "@/components/ui/button";
+import {Select} from "@/components/ui/select";
+import {Label} from "@/components/ui/label";
+import apiClient from "@/lib/api";
+
+type ApiCar = {
+  id: number;
+  name?: string;
+  rental_rate:  number | string;
+  rental_rate_casco:  number | string;
+  image_preview?: string | null;
+  images?: Record<string, string>;
+  avg_review?: number;
+  number_of_seats: number;
+  fuel?: { name?: string | null } | null;
+  type?: { name?: string | null } | null;
+  transmission?: { name?: string | null } | null;
+  content?: string | null;
+};
+
+type Car = {
+  id: number;
+  name: string;
+  type: string;
+  image: string;
+  price: number;
+  rental_rate: string;
+  rental_rate_casco: string;
+  features: {
+    passengers: number;
+    transmission: string;
+    fuel: string;
+    doors: number;
+    luggage: number;
+  };
+  rating: number;
+  description: string;
+  specs: string[];
+};
+
+const STORAGE_BASE = "https://dacars.ro/storage";
+
+const toImageUrl = (p?: string | null): string => {
+  if (!p) return "/images/placeholder-car.svg";
+  if (/^https?:\/\//i.test(p)) return p;
+  const base = STORAGE_BASE.replace(/\/$/, "");
+  const path = p.replace(/^\//, "");
+  return `${base}/${path}`;
+};
+
+const parsePrice = (raw: unknown): number => {
+    if (raw == null) return 0;
+    if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
+    if (typeof raw === "string") {
+        const m = raw.match(/[\d.,]+/);
+        if (!m) return 0;
+        const n = parseFloat(m[0].replace(/\./g, "").replace(",", "."));
+        return Number.isFinite(n) ? n : 0;
+    }
+    // fallback: încearcă să-l stringify-uiască
+    try {
+        return parsePrice(String(raw));
+    } catch {
+        return 0;
+    }
+};
 
 const FleetPage = () => {
   const [filters, setFilters] = useState({
@@ -31,247 +85,120 @@ const FleetPage = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialPage = Number(searchParams.get("page")) || 1;
+  const [cars, setCars] = useState<Car[]>([]);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCars, setTotalCars] = useState(0);
+  const [from, setFrom] = useState(0);
+  const [to, setTo] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  const allCars = [
-    {
-      id: 1,
-      name: "Dacia Logan",
-      type: "Economic",
-      image:
-        "https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg?auto=compress&cs=tinysrgb&w=600",
-      price: 45,
-      features: {
-        passengers: 5,
-        transmission: "Manual",
-        fuel: "Benzină",
-        doors: 4,
-        luggage: 2,
-      },
-      rating: 4.8,
-      description:
-        "Mașină economică și fiabilă, perfectă pentru călătoriile în oraș și pe distanțe medii.",
-      specs: [
-        "Aer condiționat",
-        "Radio/USB",
-        "Geamuri electrice",
-        "Servo direcție",
-      ],
-    },
-    {
-      id: 2,
-      name: "Dacia Sandero",
-      type: "Economic",
-      image:
-        "https://images.pexels.com/photos/1592384/pexels-photo-1592384.jpeg?auto=compress&cs=tinysrgb&w=600",
-      price: 48,
-      features: {
-        passengers: 5,
-        transmission: "Manual",
-        fuel: "Benzină",
-        doors: 5,
-        luggage: 2,
-      },
-      rating: 4.7,
-      description:
-        "Hatchback spațios cu consum redus, ideal pentru familii mici.",
-      specs: ["Aer condiționat", "Bluetooth", "Geamuri electrice", "ESP"],
-    },
-    {
-      id: 3,
-      name: "Volkswagen Golf",
-      type: "Comfort",
-      image:
-        "https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=600",
-      price: 65,
-      features: {
-        passengers: 5,
-        transmission: "Automat",
-        fuel: "Benzină",
-        doors: 5,
-        luggage: 3,
-      },
-      rating: 4.9,
-      description:
-        "Mașină de clasă medie cu tehnologie avansată și confort superior.",
-      specs: [
-        "Climatronic",
-        "Navigație GPS",
-        "Senzori parcare",
-        "Cruise control",
-      ],
-    },
-    {
-      id: 4,
-      name: "Skoda Octavia",
-      type: "Comfort",
-      image:
-        "https://images.pexels.com/photos/1719648/pexels-photo-1719648.jpeg?auto=compress&cs=tinysrgb&w=600",
-      price: 68,
-      features: {
-        passengers: 5,
-        transmission: "Automat",
-        fuel: "Diesel",
-        doors: 4,
-        luggage: 4,
-      },
-      rating: 4.8,
-      description:
-        "Sedan spațios cu portbagaj generos, perfect pentru călătorii lungi.",
-      specs: [
-        "Climatronic",
-        "Navigație",
-        "Scaune încălzite",
-        "Senzori parcare",
-      ],
-    },
-    {
-      id: 5,
-      name: "BMW Seria 3",
-      type: "Premium",
-      image:
-        "https://images.pexels.com/photos/358070/pexels-photo-358070.jpeg?auto=compress&cs=tinysrgb&w=600",
-      price: 95,
-      features: {
-        passengers: 5,
-        transmission: "Automat",
-        fuel: "Diesel",
-        doors: 4,
-        luggage: 3,
-      },
-      rating: 4.9,
-      description:
-        "Sedan premium cu performanțe excepționale și tehnologie de vârf.",
-      specs: [
-        "Piele",
-        "Navigație premium",
-        "Scaune sport",
-        "Sistem audio premium",
-      ],
-    },
-    {
-      id: 6,
-      name: "Audi A4",
-      type: "Premium",
-      image:
-        "https://images.pexels.com/photos/1719648/pexels-photo-1719648.jpeg?auto=compress&cs=tinysrgb&w=600",
-      price: 98,
-      features: {
-        passengers: 5,
-        transmission: "Automat",
-        fuel: "Diesel",
-        doors: 4,
-        luggage: 3,
-      },
-      rating: 4.9,
-      description:
-        "Luxul german la cel mai înalt nivel, cu tehnologie inovatoare.",
-      specs: [
-        "Quattro",
-        "Virtual Cockpit",
-        "Scaune ventilate",
-        "Bang & Olufsen",
-      ],
-    },
-    {
-      id: 7,
-      name: "Ford Transit",
-      type: "Van",
-      image:
-        "https://images.pexels.com/photos/1007410/pexels-photo-1007410.jpeg?auto=compress&cs=tinysrgb&w=600",
-      price: 85,
-      features: {
-        passengers: 9,
-        transmission: "Manual",
-        fuel: "Diesel",
-        doors: 4,
-        luggage: 5,
-      },
-      rating: 4.7,
-      description:
-        "Van spațios pentru grupuri mari, ideal pentru excursii și evenimente.",
-      specs: ["9 locuri", "Aer condiționat", "Radio", "Spațiu generos bagaje"],
-    },
-    {
-      id: 8,
-      name: "Mercedes Vito",
-      type: "Van",
-      image:
-        "https://images.pexels.com/photos/1007410/pexels-photo-1007410.jpeg?auto=compress&cs=tinysrgb&w=600",
-      price: 95,
-      features: {
-        passengers: 8,
-        transmission: "Automat",
-        fuel: "Diesel",
-        doors: 4,
-        luggage: 4,
-      },
-      rating: 4.8,
-      description: "Van premium cu confort superior pentru călătorii de grup.",
-      specs: ["8 locuri", "Climatronic", "Navigație", "Scaune confortabile"],
-    },
-  ];
+  const startDate = searchParams.get("start_date") || "";
+  const endDate = searchParams.get("end_date") || "";
+  const carTypeParam = searchParams.get("car_type") || "";
+  const location = searchParams.get("location") || "";
+
+  useEffect(() => {
+    const fetchCars = async () => {
+      const payload: any = {
+        start_date: startDate,
+        end_date: endDate,
+        car_type: carTypeParam,
+        location,
+        page: currentPage,
+        sortBy: sortBy
+      };
+      try {
+        setLoading(true);
+        const response = await apiClient.getCarsByDateCriteria(payload);
+        const list = Array.isArray(response?.data)
+          ? (response.data as ApiCar[])
+          : [];
+          const mapped: Car[] = list.map((c) => ({
+              id: c.id,
+              name: c.name ?? "Autovehicul",
+              type: (c.type?.name ?? "—").trim(),
+              image: toImageUrl(
+                  c.image_preview || Object.values(c.images ?? {})[0] || null
+              ),
+              price: parsePrice(c.rental_rate ?? c.rental_rate_casco),
+              rental_rate: String(c.rental_rate ?? ""),
+              rental_rate_casco: String(c.rental_rate_casco ?? ""),
+              features: {
+                  passengers: Number(c.number_of_seats) || 0,
+                  transmission: c.transmission?.name ?? "—",
+                  fuel: c.fuel?.name ?? "—",
+                  doors: 4,
+                  luggage: 2,
+              },
+              rating: Number(c.avg_review ?? 0) || 0,
+              description: c.content ?? "",
+              specs: [],
+          }));
+        setCars(mapped);
+        setTotalCars(response?.total ?? mapped.length);
+        setTotalPages(response?.last_page ?? 1);
+        setFrom(response?.from ?? 0);
+        setTo(response?.to ?? (response?.from ?? 0) + mapped.length - 1);
+        setCurrentPage(response?.current_page ?? currentPage);
+      } catch (error) {
+        console.error(error);
+        setCars([]);
+        setTotalCars(0);
+        setTotalPages(1);
+        setFrom(0);
+        setTo(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCars();
+  }, [startDate, endDate, carTypeParam, location, currentPage, sortBy]);
 
   const filteredAndSortedCars = useMemo(() => {
-    let filtered = allCars.filter((car) => {
-      const matchesSearch =
-        car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        car.type.toLowerCase().includes(searchTerm.toLowerCase());
+      return cars.filter((car) => {
+        const matchesSearch =
+            car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            car.type.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesType =
-        filters.type === "all" ||
-        car.type.toLowerCase() === filters.type.toLowerCase();
-      const matchesTransmission =
-        filters.transmission === "all" ||
-        car.features.transmission.toLowerCase() ===
-          filters.transmission.toLowerCase();
-      const matchesFuel =
-        filters.fuel === "all" ||
-        car.features.fuel.toLowerCase() === filters.fuel.toLowerCase();
+        const matchesType =
+            filters.type === "all" ||
+            car.type.toLowerCase() === filters.type.toLowerCase();
+        const matchesTransmission =
+            filters.transmission === "all" ||
+            car.features.transmission.toLowerCase() ===
+            filters.transmission.toLowerCase();
+        const matchesFuel =
+            filters.fuel === "all" ||
+            car.features.fuel.toLowerCase() === filters.fuel.toLowerCase();
 
-      const matchesPassengers =
-        filters.passengers === "all" ||
-        (filters.passengers === "1-4" && car.features.passengers <= 4) ||
-        (filters.passengers === "5-7" &&
-          car.features.passengers >= 5 &&
-          car.features.passengers <= 7) ||
-        (filters.passengers === "8+" && car.features.passengers >= 8);
+        const matchesPassengers =
+            filters.passengers === "all" ||
+            (filters.passengers === "1-4" && car.features.passengers <= 4) ||
+            (filters.passengers === "5-7" &&
+                car.features.passengers >= 5 &&
+                car.features.passengers <= 7) ||
+            (filters.passengers === "8+" && car.features.passengers >= 8);
 
-      const matchesPrice =
-        filters.priceRange === "all" ||
-        (filters.priceRange === "0-50" && car.price <= 50) ||
-        (filters.priceRange === "51-80" && car.price > 50 && car.price <= 80) ||
-        (filters.priceRange === "81+" && car.price > 80);
+        const matchesPrice =
+            filters.priceRange === "all" ||
+            (filters.priceRange === "0-50" && car.price <= 50) ||
+            (filters.priceRange === "51-80" && car.price > 50 && car.price <= 80) ||
+            (filters.priceRange === "81+" && car.price > 80);
 
-      return (
-        matchesSearch &&
-        matchesType &&
-        matchesTransmission &&
-        matchesFuel &&
-        matchesPassengers &&
-        matchesPrice
-      );
+        return (
+            matchesSearch &&
+            matchesType &&
+            matchesTransmission &&
+            matchesFuel &&
+            matchesPassengers &&
+            matchesPrice
+        );
     });
-
-    // Sort cars
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "price-asc":
-          return a.price - b.price;
-        case "price-desc":
-          return b.price - a.price;
-        case "rating":
-          return b.rating - a.rating;
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "passengers":
-          return b.features.passengers - a.features.passengers;
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [allCars, filters, sortBy, searchTerm]);
+  }, [cars, filters, sortBy, searchTerm]);
 
   const handleFilterChange = (filterType: string, value: string) => {
     setFilters((prev) => ({
@@ -291,11 +218,54 @@ const FleetPage = () => {
     setSearchTerm("");
   };
 
+  const handlePageChange = (page: number) => {
+    const newPage = Math.max(1, Math.min(page, totalPages));
+    setLoading(true);
+    setCurrentPage(newPage);
+    const params = new URLSearchParams(searchParams.toString());
+    if (newPage > 1) params.set("page", String(newPage));
+    else params.delete("page");
+    router.push(`/flota?${params.toString()}`);
+    const resultsSection = document.getElementById("results-section");
+    if (resultsSection) {
+      resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const generatePageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
   const CarCard = ({
     car,
     isListView = false,
   }: {
-    car: any;
+    car: Car;
     isListView?: boolean;
   }) => (
     <div
@@ -400,8 +370,9 @@ const FleetPage = () => {
 
         <div className="flex items-center justify-between">
           <div>
+              <span className="text-gray-600 font-dm-sans">{!startDate && !endDate ? 'de la ' : ''}</span>
             <span className="text-2xl font-poppins font-bold text-berkeley">
-              {car.price}€
+               {car.rental_rate}€
             </span>
             <span className="text-gray-600 font-dm-sans">/zi</span>
           </div>
@@ -419,8 +390,14 @@ const FleetPage = () => {
   );
 
   return (
-    <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <>
+      {loading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-white/80 z-50">
+          <div className="h-12 w-12 border-4 border-jade border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+      <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-12 animate-fade-in">
           <h1 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
@@ -450,30 +427,30 @@ const FleetPage = () => {
 
             {/* View Mode and Sort */}
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`p-2 rounded-lg transition-colors duration-300 ${
-                    viewMode === "grid"
-                      ? "bg-jade text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                  aria-label="Afișare grilă"
-                >
-                  <Grid className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`p-2 rounded-lg transition-colors duration-300 ${
-                    viewMode === "list"
-                      ? "bg-jade text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                  aria-label="Afișare listă"
-                >
-                  <List className="h-5 w-5" />
-                </button>
-              </div>
+              {/*<div className="flex items-center space-x-2">*/}
+              {/*  <button*/}
+              {/*    onClick={() => setViewMode("grid")}*/}
+              {/*    className={`p-2 rounded-lg transition-colors duration-300 ${*/}
+              {/*      viewMode === "grid"*/}
+              {/*        ? "bg-jade text-white"*/}
+              {/*        : "bg-gray-100 text-gray-600 hover:bg-gray-200"*/}
+              {/*    }`}*/}
+              {/*    aria-label="Afișare grilă"*/}
+              {/*  >*/}
+              {/*    <Grid className="h-5 w-5" />*/}
+              {/*  </button>*/}
+              {/*  <button*/}
+              {/*    onClick={() => setViewMode("list")}*/}
+              {/*    className={`p-2 rounded-lg transition-colors duration-300 ${*/}
+              {/*      viewMode === "list"*/}
+              {/*        ? "bg-jade text-white"*/}
+              {/*        : "bg-gray-100 text-gray-600 hover:bg-gray-200"*/}
+              {/*    }`}*/}
+              {/*    aria-label="Afișare listă"*/}
+              {/*  >*/}
+              {/*    <List className="h-5 w-5" />*/}
+              {/*  </button>*/}
+              {/*</div>*/}
 
               <Select
                 className="w-auto px-4 py-2 transition-all duration-300"
@@ -481,11 +458,8 @@ const FleetPage = () => {
                 onValueChange={setSortBy}
                 aria-label="Sortează mașinile"
               >
-                <option value="price-asc">Preț crescător</option>
-                <option value="price-desc">Preț descrescător</option>
-                <option value="rating">Rating</option>
-                <option value="name">Nume A-Z</option>
-                <option value="passengers">Nr. pasageri</option>
+                <option value="cheapest">Preț crescător</option>
+                <option value="most_expensive">Preț descrescător</option>
               </Select>
 
               <button
@@ -625,13 +599,22 @@ const FleetPage = () => {
         </div>
 
         {/* Results Count */}
-        <div className="flex items-center justify-between mb-8">
+        <div
+          id="results-section"
+          className="flex items-center justify-between mb-8"
+        >
           <p className="text-gray-600 font-dm-sans">
-            <span className="font-semibold text-berkeley">
-              {filteredAndSortedCars.length}
-            </span>{" "}
+            <span className="font-semibold text-berkeley">{totalCars}</span>{" "}
             mașini găsite
           </p>
+          {totalPages > 1 && (
+            <p className="text-gray-600 font-dm-sans">
+              Pagina{" "}
+              <span className="font-semibold text-berkeley">{currentPage}</span>{" "}
+              din{" "}
+              <span className="font-semibold text-berkeley">{totalPages}</span>
+            </p>
+          )}
         </div>
 
         {/* Cars Grid/List */}
@@ -645,7 +628,7 @@ const FleetPage = () => {
           >
             {filteredAndSortedCars.map((car, index) => (
               <div
-                key={car.id}
+                key={index}
                 className="animate-slide-up"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
@@ -671,6 +654,62 @@ const FleetPage = () => {
             >
               Resetează filtrele
             </Button>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-gray-600 font-dm-sans">
+              Afișez {from}-{to} din {totalCars} mașini
+            </div>
+
+            <div className="flex items-center space-x-2">
+              {/* Previous button */}
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-sm font-dm-sans font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+                aria-label="Pagina anterioară"
+              >
+                Anterior
+              </button>
+
+              {/* Page numbers */}
+              <div className="flex items-center space-x-1">
+                {generatePageNumbers().map((page, index) => (
+                  <React.Fragment key={index}>
+                    {page === "..." ? (
+                      <span className="px-3 py-2 text-gray-500 font-dm-sans">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handlePageChange(page as number)}
+                        className={`px-3 py-2 text-sm font-dm-sans font-medium rounded-lg transition-colors duration-300 ${
+                          currentPage === page
+                            ? "bg-jade text-white shadow-md"
+                            : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:text-berkeley"
+                        }`}
+                        aria-label={`Pagina ${page}`}
+                        aria-current={currentPage === page ? "page" : undefined}
+                      >
+                        {page}
+                      </button>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+
+              {/* Next button */}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 text-sm font-dm-sans font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+                aria-label="Pagina următoare"
+              >
+                Următoarea
+              </button>
+            </div>
           </div>
         )}
 
@@ -707,6 +746,7 @@ const FleetPage = () => {
         </div>
       </div>
     </div>
+  </>
   );
 };
 
