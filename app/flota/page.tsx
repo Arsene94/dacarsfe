@@ -91,6 +91,8 @@ const FleetPage = () => {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCars, setTotalCars] = useState(0);
+  const [from, setFrom] = useState(0);
+  const [to, setTo] = useState(0);
 
   const startDate = searchParams.get("start_date") || "";
   const endDate = searchParams.get("end_date") || "";
@@ -108,10 +110,9 @@ const FleetPage = () => {
       };
       try {
         const response = await apiClient.getCarsByDateCriteria(payload);
-        const items = Array.isArray(response)
-          ? response
-          : (response as any)?.data;
-        const list = Array.isArray(items) ? (items as ApiCar[]) : [];
+        const list = Array.isArray(response?.data)
+          ? (response.data as ApiCar[])
+          : [];
         const mapped: Car[] = list.map((c) => ({
           id: c.id,
           name: c.name ?? "Autovehicul",
@@ -134,14 +135,18 @@ const FleetPage = () => {
           specs: [],
         }));
         setCars(mapped);
-        const meta = (response as any)?.meta;
-        setTotalCars(meta?.total ?? mapped.length);
-        setTotalPages(meta?.last_page ?? 1);
+        setTotalCars(response?.total ?? mapped.length);
+        setTotalPages(response?.last_page ?? 1);
+        setFrom(response?.from ?? 0);
+        setTo(response?.to ?? (response?.from ?? 0) + mapped.length - 1);
+        setCurrentPage(response?.current_page ?? currentPage);
       } catch (error) {
         console.error(error);
         setCars([]);
         setTotalCars(0);
         setTotalPages(1);
+        setFrom(0);
+        setTo(0);
       }
     };
     fetchCars();
@@ -234,6 +239,39 @@ const FleetPage = () => {
     if (newPage > 1) params.set("page", String(newPage));
     else params.delete("page");
     router.push(`/flota?${params.toString()}`);
+    const resultsSection = document.getElementById("results-section");
+    if (resultsSection) {
+      resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const generatePageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
   };
 
   const CarCard = ({
@@ -570,11 +608,22 @@ const FleetPage = () => {
         </div>
 
         {/* Results Count */}
-        <div className="flex items-center justify-between mb-8">
+        <div
+          id="results-section"
+          className="flex items-center justify-between mb-8"
+        >
           <p className="text-gray-600 font-dm-sans">
             <span className="font-semibold text-berkeley">{totalCars}</span>{" "}
             mașini găsite
           </p>
+          {totalPages > 1 && (
+            <p className="text-gray-600 font-dm-sans">
+              Pagina{" "}
+              <span className="font-semibold text-berkeley">{currentPage}</span>{" "}
+              din{" "}
+              <span className="font-semibold text-berkeley">{totalPages}</span>
+            </p>
+          )}
         </div>
 
         {/* Cars Grid/List */}
@@ -618,33 +667,58 @@ const FleetPage = () => {
         )}
 
         {totalPages > 1 && (
-          <div className="flex justify-center mt-8 gap-2">
-            <Button
-              variant="outline"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage <= 1}
-              aria-label="Pagina anterioară"
-            >
-              Înapoi
-            </Button>
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <Button
-                key={i}
-                variant={currentPage === i + 1 ? "default" : "outline"}
-                onClick={() => handlePageChange(i + 1)}
-                aria-label={`Pagina ${i + 1}`}
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-gray-600 font-dm-sans">
+              Afișez {from}-{to} din {totalCars} mașini
+            </div>
+
+            <div className="flex items-center space-x-2">
+              {/* Previous button */}
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-sm font-dm-sans font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+                aria-label="Pagina anterioară"
               >
-                {i + 1}
-              </Button>
-            ))}
-            <Button
-              variant="outline"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages}
-              aria-label="Pagina următoare"
-            >
-              Înainte
-            </Button>
+                Anterior
+              </button>
+
+              {/* Page numbers */}
+              <div className="flex items-center space-x-1">
+                {generatePageNumbers().map((page, index) => (
+                  <React.Fragment key={index}>
+                    {page === "..." ? (
+                      <span className="px-3 py-2 text-gray-500 font-dm-sans">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handlePageChange(page as number)}
+                        className={`px-3 py-2 text-sm font-dm-sans font-medium rounded-lg transition-colors duration-300 ${
+                          currentPage === page
+                            ? "bg-jade text-white shadow-md"
+                            : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:text-berkeley"
+                        }`}
+                        aria-label={`Pagina ${page}`}
+                        aria-current={currentPage === page ? "page" : undefined}
+                      >
+                        {page}
+                      </button>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+
+              {/* Next button */}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 text-sm font-dm-sans font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+                aria-label="Pagina următoare"
+              >
+                Următoarea
+              </button>
+            </div>
           </div>
         )}
 
