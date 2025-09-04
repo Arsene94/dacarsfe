@@ -18,6 +18,7 @@ import {
 import { Label } from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import { useBooking } from "@/context/BookingContext";
+import apiClient from "@/lib/api";
 
 interface ReservationFormData {
   name: string;
@@ -33,9 +34,81 @@ interface ReservationFormData {
   discountCode: string;
 }
 
+type ApiCar = {
+  id: number;
+  name?: string;
+  rental_rate: number | string;
+  rental_rate_casco: number | string;
+  image_preview?: string | null;
+  images?: Record<string, string>;
+  avg_review?: number;
+  number_of_seats: number;
+  fuel?: { id?: number; name?: string | null } | null;
+  type?: { id?: number; name?: string | null } | null;
+  transmission?: { id?: number; name?: string | null } | null;
+  content?: string | null;
+  days: number;
+  deposit: number;
+  total_deposit: number | string;
+  total_without_deposit: number | string;
+};
+
+type Car = {
+  id: number;
+  name: string;
+  type: string;
+  typeId: number | null;
+  image: string;
+  price: number;
+  rental_rate: string;
+  rental_rate_casco: string;
+  days: number;
+  deposit: number;
+  total_deposit: number | string;
+  total_without_deposit: number | string;
+  features: {
+    passengers: number;
+    transmission: string;
+    transmissionId: number | null;
+    fuel: string;
+    fuelId: number | null;
+    doors: number;
+    luggage: number;
+  };
+  rating: number;
+  description: string;
+  specs: string[];
+};
+
+const STORAGE_BASE = "https://dacars.ro/storage";
+
+const toImageUrl = (p?: string | null): string => {
+  if (!p) return "/images/placeholder-car.svg";
+  if (/^https?:\/\//i.test(p)) return p;
+  const base = STORAGE_BASE.replace(/\/$/, "");
+  const path = p.replace(/^\//, "");
+  return `${base}/${path}`;
+};
+
+const parsePrice = (raw: unknown): number => {
+  if (raw == null) return 0;
+  if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
+  if (typeof raw === "string") {
+    const m = raw.match(/[\d.,]+/);
+    if (!m) return 0;
+    const n = parseFloat(m[0].replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+  }
+  try {
+    return parsePrice(String(raw));
+  } catch {
+    return 0;
+  }
+};
+
 const ReservationPage = () => {
   const router = useRouter();
-  const { booking } = useBooking();
+  const { booking, setBooking } = useBooking();
   const [formData, setFormData] = useState<ReservationFormData>({
     name: "",
     email: "",
@@ -92,6 +165,84 @@ const ReservationPage = () => {
       [name]: value,
     }));
   };
+
+  useEffect(() => {
+    const fetchUpdatedCar = async () => {
+      if (
+        !booking.selectedCar ||
+        !formData.pickupDate ||
+        !formData.pickupTime ||
+        !formData.dropoffDate ||
+        !formData.dropoffTime
+      ) {
+        return;
+      }
+
+      const start = `${formData.pickupDate}T${formData.pickupTime}`;
+      const end = `${formData.dropoffDate}T${formData.dropoffTime}`;
+
+      try {
+        const res = await apiClient.getCarForBooking({
+          carId: booking.selectedCar.id,
+          startDate: start,
+          endDate: end,
+        });
+        const apiCar: ApiCar = Array.isArray(res?.data) ? res.data[0] : res.data;
+        if (!apiCar) return;
+        const mapped: Car = {
+          id: apiCar.id,
+          name: apiCar.name ?? "Autovehicul",
+          type: (apiCar.type?.name ?? "—").trim(),
+          typeId: apiCar.type?.id ?? null,
+          image: toImageUrl(
+            apiCar.image_preview || Object.values(apiCar.images ?? {})[0] || null,
+          ),
+          price: parsePrice(
+            Math.round(Number(apiCar.rental_rate)) ??
+              Math.round(Number(apiCar.rental_rate_casco)),
+          ),
+          rental_rate: String(Math.round(Number(apiCar.rental_rate)) ?? ""),
+          rental_rate_casco: String(
+            Math.round(Number(apiCar.rental_rate_casco)) ?? "",
+          ),
+          days: apiCar.days,
+          deposit: apiCar.deposit,
+          total_deposit: String(apiCar.total_deposit),
+          total_without_deposit: String(apiCar.total_without_deposit),
+          features: {
+            passengers: Number(apiCar.number_of_seats) || 0,
+            transmission: apiCar.transmission?.name ?? "—",
+            transmissionId: apiCar.transmission?.id ?? null,
+            fuel: apiCar.fuel?.name ?? "—",
+            fuelId: apiCar.fuel?.id ?? null,
+            doors: 4,
+            luggage: 2,
+          },
+          rating: Number(apiCar.avg_review ?? 0) || 0,
+          description: apiCar.content ?? "",
+          specs: [],
+        };
+
+        setBooking({
+          ...booking,
+          startDate: start,
+          endDate: end,
+          selectedCar: mapped,
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchUpdatedCar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    formData.pickupDate,
+    formData.pickupTime,
+    formData.dropoffDate,
+    formData.dropoffTime,
+    booking.selectedCar,
+  ]);
 
   const calculateTotal = () => {
     const selectedCar = booking.selectedCar;
