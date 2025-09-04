@@ -48,7 +48,10 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     if (country || countries.length === 0) return;
     const detect = async () => {
       try {
-        const res = await fetch("https://ipapi.co/json/");
+        const res = await fetch(
+          "https://ipapi.co/json/?fields=country_code",
+        );
+        if (!res.ok) return;
         const data = await res.json();
         if (data && data.country_code) {
           const found = countries.find((c) => c.code === data.country_code);

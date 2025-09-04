@@ -8,7 +8,12 @@ let cache: Country[] | null = null;
 
 export const loadCountries = async (): Promise<Country[]> => {
   if (cache) return cache;
-  const res = await fetch("https://restcountries.com/v3.1/all");
+  const res = await fetch(
+    "https://restcountries.com/v3.1/all?fields=cca2,name,idd",
+  );
+  if (!res.ok) {
+    throw new Error("failed to load countries");
+  }
   const data = await res.json();
   cache = (data as any[])
     .filter((c) => c.cca2 && c.idd && c.idd.root)
