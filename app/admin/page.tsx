@@ -15,28 +15,9 @@ import {
 import Link from "next/link";
 import { Select } from "@/components/ui/select";
 import { DataTable, Column } from "@/components/ui/table";
+import { AdminReservation, AdminCar } from "@/types/admin";
 
-interface Reservation {
-  id: string;
-  customerName: string;
-  phone: string;
-  carId: number;
-  carName: string;
-  startDate: string;
-  endDate: string;
-  status: "confirmed" | "pending" | "cancelled";
-  total: number;
-}
-
-interface Car {
-  id: number;
-  name: string;
-  type: string;
-  status: "available" | "rented" | "maintenance";
-  price: number;
-}
-
-const reservationColumns: Column<Reservation>[] = [
+const reservationColumns: Column<AdminReservation>[] = [
   {
     id: "id",
     header: "ID",
@@ -126,13 +107,13 @@ const AdminDashboard = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [cars, setCars] = useState<Car[]>([]);
+  const [reservations, setReservations] = useState<AdminReservation[]>([]);
+  const [cars, setCars] = useState<AdminCar[]>([]);
   const [selectedCar, setSelectedCar] = useState<number | null>(null);
 
   // Mock data pentru demo
   useEffect(() => {
-    const mockReservations: Reservation[] = [
+    const mockReservations: AdminReservation[] = [
       {
         id: "DC001",
         customerName: "Ana Popescu",
@@ -190,7 +171,7 @@ const AdminDashboard = () => {
       },
     ];
 
-    const mockCars: Car[] = [
+    const mockCars: AdminCar[] = [
       {
         id: 1,
         name: "Dacia Logan",

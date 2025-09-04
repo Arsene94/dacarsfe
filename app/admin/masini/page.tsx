@@ -18,43 +18,20 @@ import {
 } from "lucide-react";
 import { Star } from "lucide-react";
 import { Select } from "@/components/ui/select";
-
-interface Car {
-  id: number;
-  name: string;
-  type: string;
-  image: string;
-  price: number;
-  features: {
-    passengers: number;
-    transmission: string;
-    fuel: string;
-    doors: number;
-    luggage: number;
-  };
-  status: "available" | "rented" | "maintenance";
-  rating: number;
-  description: string;
-  specs: string[];
-  licensePlate: string;
-  year: number;
-  mileage: number;
-  lastService: string;
-  nextService: string;
-}
+import { AdminCar } from "@/types/admin";
 
 const CarsPage = () => {
-  const [cars, setCars] = useState<Car[]>([]);
-  const [filteredCars, setFilteredCars] = useState<Car[]>([]);
+  const [cars, setCars] = useState<AdminCar[]>([]);
+  const [filteredCars, setFilteredCars] = useState<AdminCar[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [selectedCar, setSelectedCar] = useState<Car | null>(null);
+  const [selectedCar, setSelectedCar] = useState<AdminCar | null>(null);
   const [showModal, setShowModal] = useState(false);
 
   // Mock data pentru demo
   useEffect(() => {
-    const mockCars: Car[] = [
+    const mockCars: AdminCar[] = [
       {
         id: 1,
         name: "Dacia Logan",

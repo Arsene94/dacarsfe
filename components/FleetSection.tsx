@@ -13,39 +13,7 @@ import {
 } from "lucide-react";
 import apiClient from "@/lib/api";
 import { Button } from '@/components/ui/button';
-
-type CarCategories = {
-    id: number;
-    name: string;
-}
-
-type Cars = {
-    id: number;
-    name: string;
-    type: string;
-    icon: string; // URL final, servibil
-    price?: number;
-    number_of_seats: number;
-    transmission: { name: string };
-    fuel: { name: string };
-    categories: { id: number; name: string };
-    rating?: number;
-};
-
-type ApiCar = {
-    id: number;
-    name?: string;
-    price_text?: string;
-    rental_rate?: string; // "25"
-    image_preview?: string | null;
-    thumbnail?: string | null;
-    avg_review?: number;
-    number_of_seats: number;
-    type?: { name?: string | null; image?: string | null } | null;
-    fuel?: { name?: string | null } | null;
-    transmission?: { name?: string | null } | null;
-    categories: CarCategories[];
-};
+import { ApiCar, CarCategory, FleetCar } from '@/types/car';
 
 const STORAGE_BASE =
     'https://dacars.ro/storage';
@@ -67,7 +35,7 @@ const parsePrice = (priceText?: string): number | undefined => {
 };
 
 const FleetSection = () => {
-    const [cars, setCars] = useState<Cars[]>([]);
+    const [cars, setCars] = useState<FleetCar[]>([]);
     const [current, setCurrent] = useState(0);
 
     useEffect(() => {
@@ -80,7 +48,7 @@ const FleetSection = () => {
                 : (response as any)?.data;
             const list = Array.isArray(items) ? (items as ApiCar[]) : [];
 
-            const mapped: Cars[] = list.map((c) => ({
+            const mapped: FleetCar[] = list.map((c) => ({
                 id: c.id,
                 name: c.name ?? "Autovehicul",
                 type: (c.type?.name ?? "—").trim(),
@@ -121,7 +89,7 @@ const FleetSection = () => {
         return () => clearInterval(id);
     }, [cars.length, nextSlide]);
 
-    const CarCard = ({ car, index }: { car: Cars; index: number }) => (
+    const CarCard = ({ car, index }: { car: FleetCar; index: number }) => (
         <div
             className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group border border-gray-100 animate-slide-up"
             style={{ animationDelay: `${index * 0.1}s` }}
