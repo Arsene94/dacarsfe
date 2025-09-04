@@ -7,7 +7,6 @@ import {
   Clock,
   MapPin,
   User,
-  Phone,
   Mail,
   Plane,
   Gift,
@@ -18,7 +17,8 @@ import {
 } from "@/services/wheelApi";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import {useBooking} from "@/context/BookingContext";
+import PhoneInput from "@/components/PhoneInput";
+import { useBooking } from "@/context/BookingContext";
 
 const ReservationPage = () => {
   const router = useRouter();
@@ -253,24 +253,14 @@ const ReservationPage = () => {
                       />
                     </div>
 
-                    <div>
-                      <Label
-                        htmlFor="reservation-phone"
-                        className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
-                      >
-                        Telefon *
-                      </Label>
-                      <input
-                        id="reservation-phone"
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                        placeholder="+40 722 123 456"
-                      />
-                    </div>
+                    <PhoneInput
+                      value={formData.phone}
+                      onChange={(val) =>
+                        setFormData((prev) => ({ ...prev, phone: val }))
+                      }
+                      required
+                      placeholder="+40 722 123 456"
+                    />
                   </div>
 
                   <div className="mt-6">
