@@ -34,6 +34,7 @@ type ApiCar = {
   transmission?: { id?: number; name?: string | null } | null;
   content?: string | null;
   days: number;
+  deposit: number;
   total_deposit: number | string;
   total_without_deposit: number | string;
 };
@@ -48,6 +49,7 @@ type Car = {
   rental_rate: string;
   rental_rate_casco: string;
   days: number;
+  deposit: number;
   total_deposit: number | string;
   total_without_deposit: number | string;
   features: {
@@ -188,6 +190,7 @@ const FleetPage = () => {
           rental_rate: String(Math.round(Number(c.rental_rate)) ?? ""),
           rental_rate_casco: String(Math.round(Number(c.rental_rate_casco)) ?? ""),
           days: c.days,
+          deposit: c.deposit,
           total_deposit: String(c.total_deposit),
           total_without_deposit: String(c.total_without_deposit),
           features: {
@@ -319,13 +322,13 @@ const FleetPage = () => {
     return () => observer.disconnect();
   }, [currentPage, totalPages, loading]);
 
-  const handleBooking = (withDeposit: boolean, carId: number | string) => {
+  const handleBooking = (withDeposit: boolean, car: Car) => {
       if (startDate && endDate) {
           setBooking({
               startDate: startDate,
               endDate: endDate,
               withDeposit: withDeposit,
-              selectedCar: carId,
+              selectedCar: car,
           });
 
           router.push('/checkout');
@@ -460,7 +463,7 @@ const FleetPage = () => {
                       </div>
 
                       <Button
-                          onClick={startDate && endDate ? () => handleBooking(false, car.id) : undefined}
+                          onClick={startDate && endDate ? () => handleBooking(false, car) : undefined}
                           className="px-2 py-2 h-10 w-[150px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
                           aria-label="Rezervă"
                       >
@@ -486,7 +489,7 @@ const FleetPage = () => {
                       </div>
 
                       <Button
-                          onClick={startDate && endDate ? () => handleBooking(true, car.id) : undefined}
+                          onClick={startDate && endDate ? () => handleBooking(true, car) : undefined}
                           className="px-4 py-2 h-10 w-[150px] !bg-transparent  text-center text-xs border border-jade  !text-jade font-dm-sans font-semibold rounded-lg hover:!bg-jade/90 hover:!text-white transition-colors duration-300"
                           aria-label="Rezervă"
                       >

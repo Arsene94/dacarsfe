@@ -15,7 +15,6 @@ import {
   validateDiscountCode,
   applyDiscountCode,
 } from "@/services/wheelApi";
-import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import { useBooking } from "@/context/BookingContext";
@@ -23,8 +22,7 @@ import { useBooking } from "@/context/BookingContext";
 const ReservationPage = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    name: "",
     email: "",
     phone: "",
     flight: "",
@@ -33,7 +31,7 @@ const ReservationPage = () => {
     dropoffDate: "",
     dropoffTime: "",
     location: "aeroport",
-    carType: "economic",
+    car_id: null,
     discountCode: "",
   });
   const { booking } = useBooking();
@@ -56,19 +54,6 @@ const ReservationPage = () => {
     );
   }
 
-  const carTypes = [
-    { value: "economic", label: "Economic - Dacia Logan", price: 45 },
-    { value: "comfort", label: "Comfort - Volkswagen Golf", price: 65 },
-    { value: "premium", label: "Premium - BMW Seria 3", price: 95 },
-    { value: "van", label: "Van 9 locuri - Ford Transit", price: 85 },
-  ];
-
-  const locations = [
-    { value: "aeroport", label: "Aeroport Henri Coandă, Otopeni" },
-    { value: "city", label: "Centrul Bucureștiului" },
-    { value: "other", label: "Altă locație (se percepe taxă)" },
-  ];
-
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -79,23 +64,18 @@ const ReservationPage = () => {
     }));
   };
 
-  const handleSelectChange = (name: string) => (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
   const calculateTotal = () => {
-    const selectedCar = carTypes.find((car) => car.value === formData.carType);
-    if (!selectedCar || !formData.pickupDate || !formData.dropoffDate) return 0;
+    const selectedCar = booking.selectedCar;
 
-    const pickupDate = new Date(formData.pickupDate);
-    const dropoffDate = new Date(formData.dropoffDate);
+    if (!selectedCar || !booking.startDate || !booking.endDate) return 0;
+
+    const pickupDate = new Date(booking.startDate);
+    const dropoffDate = new Date(booking.endDate);
     const timeDiff = dropoffDate.getTime() - pickupDate.getTime();
     const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-    return daysDiff > 0 ? daysDiff * selectedCar.price : selectedCar.price;
+    const bookingWithDeposit = booking.withDeposit;
+    console.log(booking)
+    return daysDiff > 0 && bookingWithDeposit ? Number(selectedCar.total_deposit) : Number(selectedCar.total_without_deposit);
   };
 
   const handleDiscountCodeValidation = async () => {
@@ -164,8 +144,9 @@ const ReservationPage = () => {
     router.push("/success");
   };
 
-  const selectedCar = carTypes.find((car) => car.value === formData.carType);
+  const selectedCar = booking.selectedCar;
   const total = calculateTotal();
+
   const finalTotal =
     discountStatus?.isValid && discountStatus.discount > 0
       ? total * (1 - discountStatus.discount / 100)
@@ -207,30 +188,11 @@ const ReservationPage = () => {
                         id="reservation-last-name"
                         type="text"
                         name="lastName"
-                        value={formData.lastName}
+                        value={formData.name}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                        placeholder="Introducă numele"
-                      />
-                    </div>
-
-                    <div>
-                      <Label
-                        htmlFor="reservation-first-name"
-                        className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
-                      >
-                        Prenume *
-                      </Label>
-                      <input
-                        id="reservation-first-name"
-                        type="text"
-                        name="firstName"
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                        placeholder="Introducă prenumele"
+                        placeholder="Introducă numele complet"
                       />
                     </div>
 
@@ -420,51 +382,6 @@ const ReservationPage = () => {
                       />
                     </div>
                   </div>
-
-                  <div className="mt-6">
-                    <Label
-                      htmlFor="reservation-location"
-                      className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
-                    >
-                      <MapPin className="h-4 w-4 inline text-jade mr-1" />
-                      Locația ridicării *
-                    </Label>
-                    <Select
-                      id="reservation-location"
-                      className="transition-all duration-300"
-                      value={formData.location}
-                      onValueChange={handleSelectChange("location")}
-                      placeholder="Selectează locația"
-                    >
-                      {locations.map((location) => (
-                        <option key={location.value} value={location.value}>
-                          {location.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-
-                  <div className="mt-6">
-                    <Label
-                      htmlFor="reservation-car-type"
-                      className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
-                    >
-                      Tip mașină *
-                    </Label>
-                    <Select
-                      id="reservation-car-type"
-                      className="transition-all duration-300"
-                      value={formData.carType}
-                      onValueChange={handleSelectChange("carType")}
-                      placeholder="Selectează tipul"
-                    >
-                      {carTypes.map((car) => (
-                        <option key={car.value} value={car.value}>
-                          {car.label} - {car.price}€/zi
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
                 </div>
 
                 <button
@@ -498,7 +415,7 @@ const ReservationPage = () => {
                   <div className="flex justify-between items-center">
                     <span className="font-dm-sans text-gray-600">Mașină:</span>
                     <span className="font-dm-sans font-semibold text-berkeley">
-                      {selectedCar.label.split(" - ")[0]}
+                      {selectedCar.name.split(" - ")[0]}
                     </span>
                   </div>
                 )}
@@ -528,9 +445,7 @@ const ReservationPage = () => {
                 <div className="flex justify-between items-center">
                   <span className="font-dm-sans text-gray-600">Locație:</span>
                   <span className="font-dm-sans font-semibold text-berkeley">
-                    {locations
-                      .find((loc) => loc.value === formData.location)
-                      ?.label.split(",")[0] || "Aeroport"}
+                    Aeroport Henri Coandă, Otopeni
                   </span>
                 </div>
               </div>
@@ -560,10 +475,20 @@ const ReservationPage = () => {
                   <span className="font-poppins font-semibold text-berkeley">
                     Total:
                   </span>
-                  <span className="font-poppins font-bold text-jade">
+                    <span className="font-poppins font-bold text-jade">
                     {Math.round(finalTotal)}€
                   </span>
                 </div>
+                  {booking.withDeposit && (
+                    <div className="flex justify-between items-center text-xl">
+                        <span className="font-poppins font-semibold text-berkeley">
+                            Garantie:
+                        </span>
+                        <span className="font-poppins font-bold text-jade">
+                            {selectedCar.deposit}€
+                        </span>
+                    </div>
+                )}
                 <p className="text-sm text-gray-600 font-dm-sans mt-2">
                   *Preț final, fără taxe ascunse
                 </p>
