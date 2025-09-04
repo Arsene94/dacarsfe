@@ -169,7 +169,12 @@ const ReservationPage = () => {
 
       const start = `${formData.pickupDate}T${formData.pickupTime}`;
       const end = `${formData.dropoffDate}T${formData.dropoffTime}`;
-
+        setBooking({
+            startDate: start,
+            endDate: end,
+            withDeposit: booking.withDeposit,
+            selectedCar: booking.selectedCar,
+        });
       try {
         const res = await apiClient.getCarForBooking({
           car_id: booking.selectedCar.id,
