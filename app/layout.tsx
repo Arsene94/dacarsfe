@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingContext";
 import { DM_Sans, Poppins } from "next/font/google";
 import AsyncStyles from "@/components/AsyncStyles";
+import "./globals.css"
 
 const poppins = Poppins({
   subsets: ["latin"],
