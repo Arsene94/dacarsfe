@@ -4,6 +4,7 @@ import PageTransition from "../components/PageTransition";
 import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingContext";
 import { DM_Sans, Poppins } from "next/font/google";
+import AsyncStyles from "@/components/AsyncStyles";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -39,21 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           href="/images/bg-hero-1920x1080.webp"
           media="(min-width: 640px)"
         />
-        <link
-          rel="preload"
-          href="/tailwind.css"
-          as="style"
-          onLoad={(e) => {
-            const target = e.currentTarget as HTMLLinkElement;
-            target.onload = null;
-            target.rel = "stylesheet";
-          }}
-        />
-        <noscript
-          dangerouslySetInnerHTML={{
-            __html: '<link rel="stylesheet" href="/tailwind.css" />',
-          }}
-        />
+        <AsyncStyles />
       </head>
       <body className="min-h-screen bg-white">
         <BookingProvider>
