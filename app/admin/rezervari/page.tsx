@@ -18,41 +18,23 @@ import {
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { DataTable, Column } from "@/components/ui/table";
-
-interface Reservation {
-  id: string;
-  customerName: string;
-  email: string;
-  phone: string;
-  carId: number;
-  carName: string;
-  startDate: string;
-  endDate: string;
-  pickupTime: string;
-  dropoffTime: string;
-  location: string;
-  status: "confirmed" | "pending" | "cancelled" | "completed";
-  total: number;
-  discountCode?: string;
-  notes?: string;
-  createdAt: string;
-}
+import { AdminReservation } from "@/types/admin";
 
 const ReservationsPage = () => {
-  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [reservations, setReservations] = useState<AdminReservation[]>([]);
   const [filteredReservations, setFilteredReservations] = useState<
-    Reservation[]
+    AdminReservation[]
   >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [selectedReservation, setSelectedReservation] =
-    useState<Reservation | null>(null);
+    useState<AdminReservation | null>(null);
   const [showModal, setShowModal] = useState(false);
 
   // Mock data pentru demo
   useEffect(() => {
-    const mockReservations: Reservation[] = [
+    const mockReservations: AdminReservation[] = [
       {
         id: "DC001",
         customerName: "Ana Popescu",
@@ -194,7 +176,7 @@ const ReservationsPage = () => {
     setFilteredReservations(filtered);
   }, [reservations, searchTerm, statusFilter, dateFilter]);
 
-  const handleViewReservation = (reservation: Reservation) => {
+  const handleViewReservation = (reservation: AdminReservation) => {
     setSelectedReservation(reservation);
     setShowModal(true);
   };
@@ -229,7 +211,7 @@ const ReservationsPage = () => {
     }
   };
 
-  const reservationColumns = React.useMemo<Column<Reservation>[]>(
+  const reservationColumns = React.useMemo<Column<AdminReservation>[]>(
     () => [
       {
         id: "reservation",

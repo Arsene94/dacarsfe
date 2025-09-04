@@ -3,15 +3,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronDown, Search, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { countries, sortedCountries, Country } from '@/lib/phone-countries';
-
-interface PhoneInputProps {
-  value: string;
-  onChange: (value: string, countryCode: string) => void;
-  required?: boolean;
-  className?: string;
-  placeholder?: string;
-}
+import { countries, sortedCountries } from '@/lib/phone-countries';
+import { Country, PhoneInputProps } from '@/types/phone';
 
 const PhoneInput: React.FC<PhoneInputProps> = ({
   value,

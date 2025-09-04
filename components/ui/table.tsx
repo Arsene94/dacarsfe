@@ -2,32 +2,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-
-export interface Column<T> {
-  /** unique column id */
-  id: string;
-  /** header label */
-  header: React.ReactNode;
-  /** accessor used for sorting */
-  accessor: (row: T) => any;
-  /** custom cell renderer */
-  cell?: (row: T) => React.ReactNode;
-  /** enable column sorting */
-  sortable?: boolean;
-}
-
-interface SortState<T> {
-  id: string;
-  accessor: (row: T) => any;
-  direction: 'asc' | 'desc';
-}
-
-interface DataTableProps<T> {
-  data: T[];
-  columns: Column<T>[];
-  /** number of rows per page; if omitted, pagination is disabled */
-  pageSize?: number;
-}
+import { Column, SortState, DataTableProps } from '@/types/ui';
 
 export function DataTable<T extends Record<string, any>>({
   data,

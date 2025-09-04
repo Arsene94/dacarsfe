@@ -1,24 +1,8 @@
 // Serviciu pentru comunicarea cu API-ul Laravel pentru roata norocului
 
+import { Prize, SpinResult } from '@/types/wheel';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-
-export interface Prize {
-  id: number;
-  name: string;
-  description: string;
-  discount_percentage: number;
-  probability: number;
-  color: string;
-  icon: string;
-  is_active: boolean;
-}
-
-export interface SpinResult {
-  success: boolean;
-  prize: Prize;
-  code?: string;
-  message: string;
-}
 
 // Obține lista de premii disponibile
 export const fetchWheelPrizes = async (): Promise<Prize[]> => {
