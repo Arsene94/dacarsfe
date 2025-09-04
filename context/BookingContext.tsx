@@ -3,8 +3,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
 type BookingData = {
-    startDate: string,
-    endDate: string,
+    startDate: string | null,
+    endDate: string | null,
     withDeposit: boolean | null,
     selectedCar: number | string | null
 }
@@ -15,8 +15,8 @@ type BookingContextType = {
 }
 
 const defaultBooking: BookingData = {
-    startDate: '',
-    endDate: '',
+    startDate: null,
+    endDate: null,
     withDeposit: false,
     selectedCar: null,
 }
