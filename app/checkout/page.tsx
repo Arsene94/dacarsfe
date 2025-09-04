@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
@@ -21,6 +21,7 @@ import { useBooking } from "@/context/BookingContext";
 
 const ReservationPage = () => {
   const router = useRouter();
+  const { booking } = useBooking();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -34,7 +35,20 @@ const ReservationPage = () => {
     car_id: null,
     discountCode: "",
   });
-  const { booking } = useBooking();
+  useEffect(() => {
+    if (booking.startDate && booking.endDate && booking.selectedCar) {
+      const [pickupDate, pickupTime] = booking.startDate.split("T");
+      const [dropoffDate, dropoffTime] = booking.endDate.split("T");
+      setFormData((prev) => ({
+        ...prev,
+        pickupDate,
+        pickupTime,
+        dropoffDate,
+        dropoffTime,
+        car_id: booking.selectedCar.id,
+      }));
+    }
+  }, [booking]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [discountStatus, setDiscountStatus] = useState<{
