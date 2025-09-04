@@ -9,6 +9,7 @@ import {Button} from "@/components/ui/button";
 import {Select} from "@/components/ui/select";
 import {Label} from "@/components/ui/label";
 import apiClient from "@/lib/api";
+import {useBooking} from "@/context/BookingContext";
 
 type ApiCar = {
   id: number;
@@ -54,6 +55,11 @@ type Car = {
   specs: string[];
 };
 
+type CarCategory = {
+    id: number;
+    name: string;
+}
+
 const STORAGE_BASE = "https://dacars.ro/storage";
 
 const toImageUrl = (p?: string | null): string => {
@@ -83,12 +89,14 @@ const parsePrice = (raw: unknown): number => {
 
 const FleetPage = () => {
   const [filters, setFilters] = useState({
+    car_type: "all",
     type: "all",
     transmission: "all",
     fuel: "all",
     passengers: "all",
     priceRange: "all",
   });
+  const { setBooking } = useBooking();
 
   const [sortBy, setSortBy] = useState("cheapest");
   const [viewMode, setViewMode] = useState("grid");
@@ -102,6 +110,7 @@ const FleetPage = () => {
   const [totalCars, setTotalCars] = useState(0);
   const [loading, setLoading] = useState(true);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [categories, setCategories] = useState<CarCategory[]>();
 
   const filterOptions = useMemo(() => {
     const types = new Map<number, string>();
@@ -141,6 +150,7 @@ const FleetPage = () => {
         page: currentPage,
         sort_by: sortBy,
       };
+      if (filters.car_type !== "all") payload.car_type = Number(filters.car_type);
       if (filters.type !== "all") payload.vehicle_type = Number(filters.type);
       if (filters.transmission !== "all") payload.transmission = Number(filters.transmission);
       if (filters.fuel !== "all") payload.fuel_type = Number(filters.fuel);
@@ -197,6 +207,22 @@ const FleetPage = () => {
     fetchCars();
   }, [startDate, endDate, carTypeParam, location, currentPage, sortBy, filters, searchTerm]);
 
+    useEffect(() => {
+        const getCategories = async () => {
+            const res = await apiClient.getCarCategories();
+
+            const obj: Record<string, string> = (res?.data ?? res) as Record<string, string>;
+
+            const cat: CarCategory[] = Object.entries(obj)
+                .map(([id, name]) => ({ id: Number(id), name: String(name) }))
+                .sort((a, b) => a.id - b.id);
+
+            setCategories(cat);
+        };
+
+        getCategories();
+    }, []);
+
   const handleFilterChange = (filterType: string, value: string) => {
     setFilters((prev) => ({
       ...prev,
@@ -207,6 +233,7 @@ const FleetPage = () => {
 
   const clearFilters = () => {
     setFilters({
+      car_type: "all",
       type: "all",
       transmission: "all",
       fuel: "all",
@@ -234,6 +261,15 @@ const FleetPage = () => {
     observer.observe(target);
     return () => observer.disconnect();
   }, [currentPage, totalPages, loading]);
+
+  const handleBooking = (withDeposit: boolean, carId: number | string) => {
+      setBooking({
+         startDate: startDate,
+         endDate: endDate,
+         withDeposit: withDeposit,
+         selectedCar: carId,
+     });
+  }
 
   const CarCard = ({
     car,
@@ -312,15 +348,15 @@ const FleetPage = () => {
               <span>{car.features.fuel}</span>
             </div>
 
-            {isListView && (
-              <div className="text-sm text-gray-600 font-dm-sans">
-                <span className="font-semibold">{car.features.doors} uși</span>{" "}
-                •{" "}
-                <span className="font-semibold">
-                  {car.features.luggage} bagaje
-                </span>
-              </div>
-            )}
+            {/*{isListView && (*/}
+            {/*  <div className="text-sm text-gray-600 font-dm-sans">*/}
+            {/*    <span className="font-semibold">{car.features.doors} uși</span>{" "}*/}
+            {/*    •{" "}*/}
+            {/*    <span className="font-semibold">*/}
+            {/*      {car.features.luggage} bagaje*/}
+            {/*    </span>*/}
+            {/*  </div>*/}
+            {/*)}*/}
           </div>
 
           {isListView && (
@@ -360,7 +396,8 @@ const FleetPage = () => {
                       </div>
 
                       <Link
-                          href="/rezervare"
+                          href="#"
+                          onClick={() => handleBooking(false, car.id)}
                           className="px-2 py-2 h-8 w-[150px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
                           aria-label="Rezervă"
                       >
@@ -386,7 +423,8 @@ const FleetPage = () => {
                       </div>
 
                       <Link
-                          href="/rezervare"
+                          href="#"
+                          onClick={() => handleBooking(true, car.id)}
                           className="px-4 py-2 h-8 w-[150px] text-center text-xs border border-jade  text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade/90 hover:text-white transition-colors duration-300"
                           aria-label="Rezervă"
                       >
@@ -496,7 +534,29 @@ const FleetPage = () => {
           {/* Filters */}
           {showFilters && (
             <div className="border-t border-gray-200 pt-6 animate-slide-up">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <div>
+                      <Label
+                          htmlFor="filter-type"
+                          className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                      >
+                          Categorie
+                      </Label>
+                      <Select
+                          id="filter-car-type"
+                          className="px-3 py-2 transition-all duration-300"
+                          value={filters.car_type}
+                          onValueChange={(value) => handleFilterChange("car_type", value)}
+                      >
+                          <option value="all">Toate</option>
+                          {categories?.map((category) => (
+                              <option key={category.id} value={String(category.id)}>
+                                  {category.name}
+                              </option>
+                          ))}
+                      </Select>
+                  </div>
+
                 <div>
                   <Label
                     htmlFor="filter-type"

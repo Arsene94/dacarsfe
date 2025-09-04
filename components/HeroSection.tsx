@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import {useBooking} from "@/context/BookingContext";
 
 type CarCategory = {
   id: number;
@@ -31,6 +32,8 @@ const HeroSection = () => {
     location: "otopeni",
     car_type: "",
   });
+  const { setBooking } = useBooking();
+
   const [categories, setCategories] = useState<CarCategory[]>([]);
   const router = useRouter();
 
@@ -123,6 +126,7 @@ const HeroSection = () => {
     const params = new URLSearchParams();
     params.set("start_date", formData.start_date);
     params.set("end_date", formData.end_date);
+
     if (formData.car_type) params.set("car_type", formData.car_type);
     if (formData.location) params.set("location", formData.location);
 
