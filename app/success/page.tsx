@@ -4,9 +4,11 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle, Car, Calendar, MapPin, Clock, Phone, ArrowLeft, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import PhoneInput, { PhoneInputValue } from '@/components/ui/phone-input';
 
 const SuccessPage = () => {
   const [reservationData, setReservationData] = useState<any>(null);
+  const [contactPhone, setContactPhone] = useState<PhoneInputValue>({ countryCode: '', phone: '' });
 
   useEffect(() => {
     const storedData = localStorage.getItem('reservationData');
@@ -204,6 +206,15 @@ const SuccessPage = () => {
             <p className="font-dm-sans text-sm text-gray-300 mt-2">
               Disponibili 24/7 pentru urgențe
             </p>
+            <div className="mt-6 max-w-xs mx-auto text-left">
+              <label
+                htmlFor="contact-phone"
+                className="block text-sm font-dm-sans font-semibold text-gray-800 mb-2"
+              >
+                Numărul tău de telefon
+              </label>
+              <PhoneInput id="contact-phone" onChange={setContactPhone} />
+            </div>
           </div>
         </div>
 
