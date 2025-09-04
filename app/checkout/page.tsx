@@ -300,22 +300,23 @@ const ReservationPage = () => {
     0,
   );
 
-  const calculateTotal = () => {
+  const calculateBaseTotal = () => {
     const selectedCar = booking.selectedCar;
 
-    if (!selectedCar || !booking.startDate || !booking.endDate)
-      return servicesTotal;
+    if (!selectedCar || !booking.startDate || !booking.endDate) return 0;
 
     const pickupDate = new Date(booking.startDate);
     const dropoffDate = new Date(booking.endDate);
     const timeDiff = dropoffDate.getTime() - pickupDate.getTime();
     const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
     const bookingWithDeposit = booking.withDeposit;
-    const baseTotal =
-      daysDiff > 0 && bookingWithDeposit
-        ? Number(selectedCar.total_deposit)
-        : Number(selectedCar.total_without_deposit);
-    return baseTotal + servicesTotal;
+    return daysDiff > 0 && bookingWithDeposit
+      ? Number(selectedCar.total_deposit)
+      : Number(selectedCar.total_without_deposit);
+  };
+
+  const calculateTotal = () => {
+    return calculateBaseTotal() + servicesTotal;
   };
 
   const handleDiscountCodeValidation = async () => {
@@ -386,6 +387,7 @@ const ReservationPage = () => {
   };
 
   const selectedCar = booking.selectedCar;
+  const rentalSubtotal = calculateBaseTotal();
   const total = calculateTotal();
 
   const finalTotal =
@@ -755,7 +757,7 @@ const ReservationPage = () => {
                   <>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-dm-sans text-gray-600">
-                        Subtotal:
+                        Total înainte de reducere:
                       </span>
                       <span className="font-dm-sans text-gray-600">
                         {total}€
@@ -771,14 +773,20 @@ const ReservationPage = () => {
                     </div>
                   </>
                 )}
-                  <div className="flex justify-between items-center text-xl">
+                <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
                     Sumar:
                   </span>
-                      <span className="font-poppins font-bold text-jade">
-                        {booking.withDeposit ? booking.selectedCar.rental_rate : booking.selectedCar.rental_rate_casco}€ x {booking.selectedCar.days} zile
+                  <span className="font-poppins font-bold text-jade">
+                    {booking.withDeposit ? booking.selectedCar.rental_rate : booking.selectedCar.rental_rate_casco}€ x {booking.selectedCar.days} zile
                   </span>
-                  </div>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-dm-sans text-gray-600">Subtotal:</span>
+                  <span className="font-dm-sans font-semibold text-berkeley">
+                    {Math.round(rentalSubtotal)}€
+                  </span>
+                </div>
                 {selectedServices.length > 0 && (
                   <div className="mt-2">
                     <span className="font-poppins font-semibold text-berkeley">
