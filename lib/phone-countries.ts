@@ -1,10 +1,4 @@
-export interface Country {
-  code: string;
-  name: string;
-  prefix: string;
-  flag: string;
-  pattern?: RegExp;
-}
+import { Country } from '@/types/phone';
 
 export const countries: Country[] = [
   { code: 'RO', name: 'Romania', prefix: '+40', flag: '🇷🇴', pattern: /^(\+40|0040|40)?[27]\d{8}$/ },

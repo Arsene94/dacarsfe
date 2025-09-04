@@ -1,45 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-
-type Car = {
-    id: number;
-    name: string;
-    type: string;
-    typeId: number | null;
-    image: string;
-    price: number;
-    rental_rate: string;
-    rental_rate_casco: string;
-    days: number;
-    deposit: number;
-    total_deposit: number | string;
-    total_without_deposit: number | string;
-    features: {
-        passengers: number;
-        transmission: string;
-        transmissionId: number | null;
-        fuel: string;
-        fuelId: number | null;
-        doors: number;
-        luggage: number;
-    };
-    rating: number;
-    description: string;
-    specs: string[];
-};
-
-type BookingData = {
-    startDate: string | null,
-    endDate: string | null,
-    withDeposit: boolean | null,
-    selectedCar: Car | null
-}
-
-type BookingContextType = {
-    booking: BookingData
-    setBooking: (data: BookingData) => void
-}
+import { BookingData, BookingContextType } from '@/types/booking'
 
 const defaultBooking: BookingData = {
     startDate: null,

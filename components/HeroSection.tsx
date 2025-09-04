@@ -19,11 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {useBooking} from "@/context/BookingContext";
-
-type CarCategory = {
-  id: number;
-  name: string;
-};
+import { CarCategory } from "@/types/car";
 
 const HeroSection = () => {
   const [formData, setFormData] = useState({

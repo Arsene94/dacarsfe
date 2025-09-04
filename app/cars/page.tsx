@@ -19,57 +19,7 @@ import {Select} from "@/components/ui/select";
 import {Label} from "@/components/ui/label";
 import apiClient from "@/lib/api";
 import {useBooking} from "@/context/BookingContext";
-
-type ApiCar = {
-  id: number;
-  name?: string;
-  rental_rate: number | string;
-  rental_rate_casco:  number | string;
-  image_preview?: string | null;
-  images?: Record<string, string>;
-  avg_review?: number;
-  number_of_seats: number;
-  fuel?: { id?: number; name?: string | null } | null;
-  type?: { id?: number; name?: string | null } | null;
-  transmission?: { id?: number; name?: string | null } | null;
-  content?: string | null;
-  days: number;
-  deposit: number;
-  total_deposit: number | string;
-  total_without_deposit: number | string;
-};
-
-type Car = {
-  id: number;
-  name: string;
-  type: string;
-  typeId: number | null;
-  image: string;
-  price: number;
-  rental_rate: string;
-  rental_rate_casco: string;
-  days: number;
-  deposit: number;
-  total_deposit: number | string;
-  total_without_deposit: number | string;
-  features: {
-    passengers: number;
-    transmission: string;
-    transmissionId: number | null;
-    fuel: string;
-    fuelId: number | null;
-    doors: number;
-    luggage: number;
-  };
-  rating: number;
-  description: string;
-  specs: string[];
-};
-
-type CarCategory = {
-    id: number;
-    name: string;
-}
+import { ApiCar, Car, CarCategory } from "@/types/car";
 
 const STORAGE_BASE = "https://dacars.ro/storage";
 

@@ -2,30 +2,17 @@
 
 import React, { useState } from 'react';
 import { Gift, RotateCcw, Sparkles } from 'lucide-react';
-
-interface Prize {
-    id: number;
-    title: string;
-    description: string;
-    color: string;
-    probability: number; // weight
-    type: 'discount' | 'upgrade' | 'free_days' | 'try_again' | 'bonus';
-}
-
-interface WheelOfFortuneProps {
-    isPopup?: boolean;
-    onClose?: () => void;
-}
+import { WheelPrize, WheelOfFortuneProps } from '@/types/wheel';
 
 const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClose }) => {
     const [isSpinning, setIsSpinning] = useState(false);
     const [rotation, setRotation] = useState(0);
-    const [selectedPrize, setSelectedPrize] = useState<Prize | null>(null);
+    const [selectedPrize, setSelectedPrize] = useState<WheelPrize | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [spinsLeft, setSpinsLeft] = useState(1);
 
     // Prizes (weights can sum to anything; treated as relative probabilities)
-    const prizes: Prize[] = [
+    const prizes: WheelPrize[] = [
         { id: 1, title: '5% Reducere', description: 'Reducere 5% la următoarea rezervare', color: '#1E7149', probability: 20, type: 'discount' },
         { id: 2, title: 'Mai încearcă', description: 'Încearcă din nou! Ai o șansă în plus', color: '#FF6B6B', probability: 45, type: 'try_again' },
         { id: 3, title: '10% Reducere', description: 'Reducere 10% la orice rezervare', color: '#1A3661', probability: 15, type: 'discount' },
