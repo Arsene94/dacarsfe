@@ -28,6 +28,19 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ro" className={`${poppins.variable} ${dmSans.variable}`}>
+      <head>
+        <link
+          rel="preload"
+          as="image"
+          href="/images/bg-hero-mobile.webp"
+        />
+        <link
+          rel="preload"
+          as="image"
+          href="/images/bg-hero-1920x1080.webp"
+          media="(min-width: 640px)"
+        />
+      </head>
       <body className="min-h-screen bg-white">
         <BookingProvider>
           <Header />
