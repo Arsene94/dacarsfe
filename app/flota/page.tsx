@@ -3,7 +3,7 @@
 import React, {useEffect, useMemo, useRef, useState} from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {useSearchParams} from "next/navigation";
+import {usePathname, useRouter, useSearchParams} from "next/navigation";
 import {Filter, Fuel, Search, Settings, SlidersHorizontal, Star, Users,} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Select} from "@/components/ui/select";
@@ -88,21 +88,24 @@ const parsePrice = (raw: unknown): number => {
 };
 
 const FleetPage = () => {
-  const [filters, setFilters] = useState({
-    car_type: "all",
-    type: "all",
-    transmission: "all",
-    fuel: "all",
-    passengers: "all",
-    priceRange: "all",
-  });
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [filters, setFilters] = useState(() => ({
+    car_type: searchParams.get("car_type") || "all",
+    type: searchParams.get("type") || "all",
+    transmission: searchParams.get("transmission") || "all",
+    fuel: searchParams.get("fuel") || "all",
+    passengers: searchParams.get("passengers") || "all",
+    priceRange: searchParams.get("priceRange") || "all",
+  }));
   const { setBooking } = useBooking();
 
   const [sortBy, setSortBy] = useState("cheapest");
   const [viewMode, setViewMode] = useState("grid");
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const searchParams = useSearchParams();
   const initialPage = Number(searchParams.get("page")) || 1;
   const [cars, setCars] = useState<Car[]>([]);
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -243,6 +246,18 @@ const FleetPage = () => {
     setSearchTerm("");
     setCurrentPage(1);
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value === "all") {
+        params.delete(key);
+      } else {
+        params.set(key, String(value));
+      }
+    });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [filters, router, pathname]);
   useEffect(() => {
     const target = loadMoreRef.current;
     if (!target) return;
