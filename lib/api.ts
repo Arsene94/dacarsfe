@@ -97,6 +97,13 @@ class ApiClient {
         return this.request<any>(`/front/cars/categories`);
     }
 
+    async getCarForBooking(params: {carId: number, startDate: any,  endDate: any}) {
+        return this.request<any>(`/front/cars/booking`, {
+            method: 'POST',
+            body: JSON.stringify(params),
+        })
+    }
+
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

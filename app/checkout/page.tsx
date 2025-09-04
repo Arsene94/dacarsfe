@@ -274,56 +274,56 @@ const ReservationPage = () => {
                   </div>
 
                   {/* Discount Code */}
-                  <div className="mt-6">
-                    <Label
-                      htmlFor="reservation-discount"
-                      className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
-                    >
-                      <Gift className="h-4 w-4 inline text-jade mr-1" />
-                      Cod de reducere (opțional)
-                    </Label>
-                    <div className="flex space-x-2">
-                      <input
-                        id="reservation-discount"
-                        type="text"
-                        name="discountCode"
-                        value={formData.discountCode}
-                        onChange={handleInputChange}
-                        onBlur={handleDiscountCodeValidation}
-                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                        placeholder="Ex: WHEEL10"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleDiscountCodeValidation}
-                        disabled={
-                          isValidatingCode || !formData.discountCode.trim()
-                        }
-                        className="px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
-                        aria-label="Validează codul"
-                      >
-                        {isValidatingCode ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        ) : (
-                          "Validează"
-                        )}
-                      </button>
-                    </div>
+                    <div className="mt-6">
+                        <Label
+                            htmlFor="reservation-discount"
+                            className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                        >
+                            <Gift className="h-4 w-4 inline text-jade mr-1" />
+                            Cod de reducere (opțional)
+                        </Label>
+                        <div className="flex space-x-2">
+                            <input
+                                id="reservation-discount"
+                                type="text"
+                                name="discountCode"
+                                value={formData.discountCode}
+                                onChange={handleInputChange}
+                                onBlur={handleDiscountCodeValidation}
+                                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                                placeholder="Ex: WHEEL10"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleDiscountCodeValidation}
+                                disabled={
+                                    isValidatingCode || !formData.discountCode.trim()
+                                }
+                                className="px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                                aria-label="Validează codul"
+                            >
+                                {isValidatingCode ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                ) : (
+                                    "Validează"
+                                )}
+                            </button>
+                        </div>
 
-                    {discountStatus && (
-                      <div
-                        className={`mt-2 p-3 rounded-lg ${
-                          discountStatus.isValid
-                            ? "bg-jade/10 text-jade"
-                            : "bg-red-50 text-red-600"
-                        }`}
-                      >
-                        <p className="text-sm font-dm-sans font-semibold">
-                          {discountStatus.message}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                        {discountStatus && (
+                            <div
+                                className={`mt-2 p-3 rounded-lg ${
+                                    discountStatus.isValid
+                                        ? "bg-jade/10 text-jade"
+                                        : "bg-red-50 text-red-600"
+                                }`}
+                            >
+                                <p className="text-sm font-dm-sans font-semibold">
+                                    {discountStatus.message}
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Reservation Details */}
@@ -455,7 +455,7 @@ const ReservationPage = () => {
                     <span className="font-dm-sans font-semibold text-berkeley">
                       {new Date(formData.pickupDate).toLocaleDateString(
                         "ro-RO",
-                      )}
+                      )} {formData.pickupTime}
                     </span>
                   </div>
                 )}
@@ -465,8 +465,8 @@ const ReservationPage = () => {
                     <span className="font-dm-sans text-gray-600">Până la:</span>
                     <span className="font-dm-sans font-semibold text-berkeley">
                       {new Date(formData.dropoffDate).toLocaleDateString(
-                        "ro-RO",
-                      )}
+                          "ro-RO",
+                      )} {formData.dropoffTime}
                     </span>
                   </div>
                 )}
@@ -500,18 +500,26 @@ const ReservationPage = () => {
                     </div>
                   </>
                 )}
+                  <div className="flex justify-between items-center text-xl">
+                  <span className="font-poppins font-semibold text-berkeley">
+                    Sumar:
+                  </span>
+                      <span className="font-poppins font-bold text-jade">
+                        {booking.withDeposit ? booking.selectedCar.rental_rate : booking.selectedCar.rental_rate_casco}€ x {booking.selectedCar.days} zile
+                  </span>
+                  </div>
                 <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
                     Total:
                   </span>
                     <span className="font-poppins font-bold text-jade">
-                    {Math.round(finalTotal)}€
+                        {Math.round(finalTotal)}€ {booking.withDeposit && (<span className=" text-xs font-dm-sans text-gray-600">(+100€ garanție)</span>)}
                   </span>
                 </div>
                   {booking.withDeposit && (
                     <div className="flex justify-between items-center text-xl">
                         <span className="font-poppins font-semibold text-berkeley">
-                            Garantie:
+                            Garanție:
                         </span>
                         <span className="font-poppins font-bold text-jade">
                             {selectedCar.deposit}€

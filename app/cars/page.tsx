@@ -448,14 +448,14 @@ const FleetPage = () => {
                   <div className="flex items-center justify-between mb-5">
                       <div className="me-1">
                           <span className="text-jade font-bold font-dm-sans">Fără garanție{" "}</span>
-                          <span className="text-2xl font-poppins font-bold text-jade">
+                          <span className="text-xl font-poppins font-bold text-jade">
                            {car.rental_rate_casco}€
                           </span>
                           <span className="text-jade font-bold font-dm-sans">/zi</span>
                           {startDate && endDate && (
                             <div>
                               <span className="text-jade font-bold font-dm-sans">x {car.days} zile = </span>
-                              <span className="text-2xl font-poppins font-bold text-jade">
+                              <span className="text-xl font-poppins font-bold text-jade">
                                 {car.total_without_deposit}€
                               </span>
                             </div>
@@ -474,14 +474,14 @@ const FleetPage = () => {
                   <div className="flex items-center justify-between">
                       <div className="me-3">
                           <span className="text-gray-600 font-dm-sans">Cu garanție{" "}</span>
-                          <span className="text-2xl font-poppins font-bold text-berkeley">
+                          <span className="text-xl font-poppins font-bold text-berkeley">
                {car.rental_rate}€
             </span>
                           <span className="text-gray-600 font-dm-sans">/zi</span>
                           {startDate && endDate && (
                               <div>
                                   <span className="text-gray-600 font-bold font-dm-sans">x {car.days} zile = </span>
-                                  <span className="text-2xl font-poppins font-bold text-berkeley">
+                                  <span className="text-xl font-poppins font-bold text-berkeley">
                                 {car.total_deposit}€
                               </span>
                               </div>
