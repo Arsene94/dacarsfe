@@ -1,4 +1,3 @@
-import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import PageTransition from "../components/PageTransition";
@@ -39,6 +38,21 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           as="image"
           href="/images/bg-hero-1920x1080.webp"
           media="(min-width: 640px)"
+        />
+        <link
+          rel="preload"
+          href="/tailwind.css"
+          as="style"
+          onLoad={(e) => {
+            const target = e.currentTarget as HTMLLinkElement;
+            target.onload = null;
+            target.rel = "stylesheet";
+          }}
+        />
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html: '<link rel="stylesheet" href="/tailwind.css" />',
+          }}
         />
       </head>
       <body className="min-h-screen bg-white">
