@@ -1,5 +1,73 @@
 import React from 'react';
 import { Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react';
+import LazyMap from './LazyMap';
+
+const contactItems = [
+  {
+    icon: Phone,
+    title: 'Telefon',
+    description: 'Suntem disponibili 24/7 pentru urgențe',
+    content: (
+      <a
+        href="tel:+40723817551"
+        className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
+        aria-label="Sună la +40 723 817 551"
+      >
+        +40 723 817 551
+      </a>
+    ),
+  },
+  {
+    icon: MessageCircle,
+    title: 'WhatsApp',
+    description: 'Scrie-ne pentru răspuns rapid',
+    content: (
+      <a
+        href="https://wa.me/40723817551"
+        className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
+        aria-label="Contactează pe WhatsApp la +40 723 817 551"
+      >
+        +40 723 817 551
+      </a>
+    ),
+  },
+  {
+    icon: Mail,
+    title: 'Email',
+    description: 'Pentru întrebări generale',
+    content: (
+      <a
+        href="mailto:contact@dacars.ro"
+        className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
+        aria-label="Trimite email la contact@dacars.ro"
+      >
+        contact@dacars.ro
+      </a>
+    ),
+  },
+  {
+    icon: MapPin,
+    title: 'Locație',
+    description: 'Punct de predare principal',
+    content: (
+      <p className="text-berkeley font-dm-sans font-semibold">
+        Calea Bucurestilor 305<br />
+        Otopeni, Ilfov
+      </p>
+    ),
+  },
+  {
+    icon: Clock,
+    title: 'Program',
+    description: 'Predare și ridicare',
+    content: (
+      <p className="text-berkeley font-dm-sans font-semibold">
+        24/7 - Non-stop<br />
+        <span className="text-jade">Disponibili oricând</span>
+      </p>
+    ),
+  },
+];
 
 const ContactSection = () => {
   return (
@@ -16,116 +84,28 @@ const ContactSection = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact info */}
-          <div className="space-y-8">
-            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300 group">
-              <div className="flex items-start space-x-4">
+          <ul className="space-y-8">
+            {contactItems.map(({ icon: Icon, title, description, content }) => (
+              <li
+                key={title}
+                className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300 group flex items-start space-x-4"
+              >
                 <div className="bg-jade/10 p-3 rounded-xl group-hover:bg-jade group-hover:text-white transition-colors duration-300">
-                  <Phone className="h-6 w-6 text-jade group-hover:text-white" />
+                  <Icon className="h-6 w-6 text-jade group-hover:text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">Telefon</h3>
-                  <p className="text-gray-600 font-dm-sans mb-3">Suntem disponibili 24/7 pentru urgențe</p>
-                  <a
-                    href="tel:+40723817551"
-                    className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
-                    aria-label="Sună la +40 723 817 551"
-                  >
-                    +40 723 817 551
-                  </a>
+                  <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">{title}</h3>
+                  <p className="text-gray-600 font-dm-sans mb-3">{description}</p>
+                  {content}
                 </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300 group">
-              <div className="flex items-start space-x-4">
-                <div className="bg-jade/10 p-3 rounded-xl group-hover:bg-jade group-hover:text-white transition-colors duration-300">
-                  <MessageCircle className="h-6 w-6 text-jade group-hover:text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">WhatsApp</h3>
-                  <p className="text-gray-600 font-dm-sans mb-3">Scrie-ne pentru răspuns rapid</p>
-                  <a
-                    href="https://wa.me/40723817551"
-                    className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
-                    aria-label="Contactează pe WhatsApp la +40 723 817 551"
-                  >
-                    +40 723 817 551
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300 group">
-              <div className="flex items-start space-x-4">
-                <div className="bg-jade/10 p-3 rounded-xl group-hover:bg-jade group-hover:text-white transition-colors duration-300">
-                  <Mail className="h-6 w-6 text-jade group-hover:text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">Email</h3>
-                  <p className="text-gray-600 font-dm-sans mb-3">Pentru întrebări generale</p>
-                  <a
-                    href="mailto:contact@dacars.ro"
-                    className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
-                    aria-label="Trimite email la contact@dacars.ro"
-                  >
-                    contact@dacars.ro
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300 group">
-              <div className="flex items-start space-x-4">
-                <div className="bg-jade/10 p-3 rounded-xl group-hover:bg-jade group-hover:text-white transition-colors duration-300">
-                  <MapPin className="h-6 w-6 text-jade group-hover:text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">Locație</h3>
-                  <p className="text-gray-600 font-dm-sans mb-3">Punct de predare principal</p>
-                  <p className="text-berkeley font-dm-sans font-semibold">
-                    Calea Bucurestilor 305<br />
-                    Otopeni, Ilfov
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300 group">
-              <div className="flex items-start space-x-4">
-                <div className="bg-jade/10 p-3 rounded-xl group-hover:bg-jade group-hover:text-white transition-colors duration-300">
-                  <Clock className="h-6 w-6 text-jade group-hover:text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">Program</h3>
-                  <p className="text-gray-600 font-dm-sans mb-3">Predare și ridicare</p>
-                  <p className="text-berkeley font-dm-sans font-semibold">
-                    24/7 - Non-stop<br />
-                    <span className="text-jade">Disponibili oricând</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+              </li>
+            ))}
+          </ul>
 
           {/* Map */}
           <div className="bg-white rounded-2xl p-8 shadow-lg">
-            <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6">
-              Locația noastră
-            </h3>
-            <div className="bg-gray-200 rounded-xl h-96 flex items-center justify-center relative overflow-hidden">
-              {/* Google Maps Embed would go here */}
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d815.3588428573492!2d26.0663427!3d44.5758331!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x678a7a998cb5b303%3A0x3591ace01367d55c!2sDaCars!5e0!3m2!1sen!2sro!4v1693793200000!5m2!1sen!2sro"
-                width="100%"
-                height="100%"
-                className="rounded-xl"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Harta DaCars Otopeni"
-              ></iframe>
-            </div>
+            <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6">Locația noastră</h3>
+            <LazyMap />
 
             <div className="mt-6 p-4 bg-jade/5 rounded-xl">
               <p className="text-berkeley font-dm-sans">

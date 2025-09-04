@@ -14,8 +14,8 @@ export default {
         eefie: '#191919',
       },
       fontFamily: {
-        poppins: ['Poppins', 'sans-serif'],
-        'dm-sans': ['DM Sans', 'sans-serif'],
+        poppins: ['var(--font-poppins)', 'sans-serif'],
+        'dm-sans': ['var(--font-dm-sans)', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.6s ease-out',
