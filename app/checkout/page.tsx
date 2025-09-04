@@ -183,11 +183,13 @@ const ReservationPage = () => {
 
       try {
         const res = await apiClient.getCarForBooking({
-          carId: booking.selectedCar.id,
-          startDate: start,
-          endDate: end,
+          car_id: booking.selectedCar.id,
+          start_date: start,
+          end_date: end,
         });
-        const apiCar: ApiCar = Array.isArray(res?.data) ? res.data[0] : res.data;
+        const apiCar: ApiCar = Array.isArray(res?.data)
+          ? res.data[0]
+          : (res?.data ?? (Array.isArray(res) ? res[0] : res));
         if (!apiCar) return;
         const mapped: Car = {
           id: apiCar.id,
@@ -205,8 +207,8 @@ const ReservationPage = () => {
           rental_rate_casco: String(
             Math.round(Number(apiCar.rental_rate_casco)) ?? "",
           ),
-          days: apiCar.days,
-          deposit: apiCar.deposit,
+          days: Number(apiCar.days),
+          deposit: Number(apiCar.deposit),
           total_deposit: String(apiCar.total_deposit),
           total_without_deposit: String(apiCar.total_without_deposit),
           features: {
@@ -241,7 +243,6 @@ const ReservationPage = () => {
     formData.pickupTime,
     formData.dropoffDate,
     formData.dropoffTime,
-    booking.selectedCar,
   ]);
 
   const calculateTotal = () => {
@@ -254,8 +255,9 @@ const ReservationPage = () => {
     const timeDiff = dropoffDate.getTime() - pickupDate.getTime();
     const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
     const bookingWithDeposit = booking.withDeposit;
-    console.log(booking)
-    return daysDiff > 0 && bookingWithDeposit ? Number(selectedCar.total_deposit) : Number(selectedCar.total_without_deposit);
+    return daysDiff > 0 && bookingWithDeposit
+      ? Number(selectedCar.total_deposit)
+      : Number(selectedCar.total_without_deposit);
   };
 
   const handleDiscountCodeValidation = async () => {
