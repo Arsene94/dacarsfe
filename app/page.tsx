@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import HeroSection from '../components/HeroSection';
-import BenefitsSection from '../components/BenefitsSection';
-import FleetSection from '../components/FleetSection';
-import OffersSection from '../components/OffersSection';
-import TestimonialsSection from '../components/TestimonialsSection';
-import ProcessSection from '../components/ProcessSection';
-import ContactSection from '../components/ContactSection';
-import WheelOfFortune from '../components/WheelOfFortune';
-import ElfsightWidget from "@/components/ElfsightWidget";
+import dynamic from "next/dynamic";
+import HeroSection from "../components/HeroSection";
+import BenefitsSection from "../components/BenefitsSection";
+import FleetSection from "../components/FleetSection";
+import OffersSection from "../components/OffersSection";
+import TestimonialsSection from "../components/TestimonialsSection";
+import ProcessSection from "../components/ProcessSection";
+import ContactSection from "../components/ContactSection";
+import WheelOfFortune from "../components/WheelOfFortune";
+
+const ElfsightWidget = dynamic(() => import("@/components/ElfsightWidget"), {
+    ssr: false,
+});
 
 const HomePage = () => {
     const [showWheelPopup, setShowWheelPopup] = useState(false);

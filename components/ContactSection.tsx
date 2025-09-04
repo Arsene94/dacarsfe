@@ -1,5 +1,6 @@
 import React from 'react';
 import { Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react';
+import LazyMap from './LazyMap';
 
 const ContactSection = () => {
   return (
@@ -112,24 +113,12 @@ const ContactSection = () => {
             <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6">
               Locația noastră
             </h3>
-            <div className="bg-gray-200 rounded-xl h-96 flex items-center justify-center relative overflow-hidden">
-              {/* Google Maps Embed would go here */}
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d815.3588428573492!2d26.0663427!3d44.5758331!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x678a7a998cb5b303%3A0x3591ace01367d55c!2sDaCars!5e0!3m2!1sen!2sro!4v1693793200000!5m2!1sen!2sro"
-                width="100%"
-                height="100%"
-                className="rounded-xl"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Harta DaCars Otopeni"
-              ></iframe>
-            </div>
+            <LazyMap />
 
             <div className="mt-6 p-4 bg-jade/5 rounded-xl">
               <p className="text-berkeley font-dm-sans">
-                <strong>Instrucțiuni de sosire:</strong> Când aterizezi, sună-ne la numărul de telefon, iar apoi ne întâlnim în fața stației CFR, în fața cupolei verde de sticlă, la terminalul Sosiri.
+                <strong>Instrucțiuni de sosire:</strong> Când aterizezi, sună-ne la numărul de telefon, iar apoi ne întâlnim în
+fața stației CFR, în fața cupolei verde de sticlă, la terminalul Sosiri.
               </p>
             </div>
           </div>
