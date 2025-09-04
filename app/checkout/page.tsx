@@ -155,6 +155,13 @@ const ReservationPage = () => {
     }));
   };
 
+  const handleDepositChange = (withDeposit: boolean) => {
+    setBooking({
+      ...booking,
+      withDeposit,
+    });
+  };
+
   useEffect(() => {
     const fetchUpdatedCar = async () => {
       if (
@@ -568,6 +575,34 @@ const ReservationPage = () => {
                       />
                     </div>
                   </div>
+
+                  <div className="mt-6">
+                    <Label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                      Garanție
+                    </Label>
+                    <div className="flex items-center space-x-6">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          name="depositOption"
+                          checked={!booking.withDeposit}
+                          onChange={() => handleDepositChange(false)}
+                          className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
+                        />
+                        <span className="font-dm-sans text-gray-700">Fără garanție</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          name="depositOption"
+                          checked={!!booking.withDeposit}
+                          onChange={() => handleDepositChange(true)}
+                          className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
+                        />
+                        <span className="font-dm-sans text-gray-700">Cu garanție</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 <button
@@ -670,7 +705,11 @@ const ReservationPage = () => {
                     Total:
                   </span>
                     <span className="font-poppins font-bold text-jade">
-                        {Math.round(finalTotal)}€ {booking.withDeposit && (<span className=" text-xs font-dm-sans text-gray-600">(+100€ garanție)</span>)}
+                        {Math.round(finalTotal)}€ {booking.withDeposit && (
+                          <span className=" text-xs font-dm-sans text-gray-600">
+                            (+{selectedCar.deposit}€ garanție)
+                          </span>
+                        )}
                   </span>
                 </div>
                   {booking.withDeposit && (
