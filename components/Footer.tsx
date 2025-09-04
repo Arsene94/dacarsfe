@@ -43,7 +43,7 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="/rezervare" className="text-gray-300 hover:text-jade transition-colors duration-300" aria-label="Rezervare">
+                <a href="/checkout" className="text-gray-300 hover:text-jade transition-colors duration-300" aria-label="Rezervare">
                   Rezervare
                 </a>
               </li>

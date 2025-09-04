@@ -326,6 +326,8 @@ const FleetPage = () => {
          withDeposit: withDeposit,
          selectedCar: carId,
      });
+
+      router.push('/checkout');
   }
 
   const CarCard = ({
@@ -453,8 +455,8 @@ const FleetPage = () => {
                       </div>
 
                       <Link
-                          href="#"
-                          onClick={() => handleBooking(false, car.id)}
+                          href={startDate && endDate ? "#" : "/"}
+                          onClick={startDate && endDate ? () => handleBooking(false, car.id) : undefined}
                           className="px-2 py-2 h-8 w-[150px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
                           aria-label="Rezervă"
                       >
@@ -480,8 +482,8 @@ const FleetPage = () => {
                       </div>
 
                       <Link
-                          href="#"
-                          onClick={() => handleBooking(true, car.id)}
+                          href={startDate && endDate ? "#" : "/"}
+                          onClick={startDate && endDate ? () => handleBooking(true, car.id) : undefined}
                           className="px-4 py-2 h-8 w-[150px] text-center text-xs border border-jade  text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade/90 hover:text-white transition-colors duration-300"
                           aria-label="Rezervă"
                       >
@@ -684,6 +686,21 @@ const FleetPage = () => {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                  {activeFilters.map((f) => (
+                      <span
+                          key={f.key}
+                          className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full"
+                      >
+                    {f.label}
+                          <button
+                              onClick={() => handleFilterChange(f.key, "all")}
+                              className="ml-2 hover:text-berkeley"
+                              aria-label={`Elimină filtrul ${f.label}`}
+                          >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </span>
+                  ))}
                 <button
                   onClick={clearFilters}
                   className="px-4 py-2 text-jade font-dm-sans font-semibold hover:bg-jade/10 rounded-lg transition-colors duration-300"
@@ -691,21 +708,6 @@ const FleetPage = () => {
                 >
                   Resetează filtrele
                 </button>
-                {activeFilters.map((f) => (
-                  <span
-                    key={f.key}
-                    className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full"
-                  >
-                    {f.label}
-                    <button
-                      onClick={() => handleFilterChange(f.key, "all")}
-                      className="ml-2 hover:text-berkeley"
-                      aria-label={`Elimină filtrul ${f.label}`}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </span>
-                ))}
               </div>
             </div>
           )}
@@ -792,7 +794,7 @@ const FleetPage = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link href="/rezervare" aria-label="Rezervă acum">
+            <Link href="/checkout" aria-label="Rezervă acum">
               <Button
                 className="transform hover:scale-105 shadow-lg"
                 aria-label="Rezervă acum"

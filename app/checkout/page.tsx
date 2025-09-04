@@ -149,7 +149,7 @@ const ReservationPage = () => {
       }),
     );
 
-    router.push("/succes");
+    router.push("/success");
   };
 
   const selectedCar = carTypes.find((car) => car.value === formData.carType);

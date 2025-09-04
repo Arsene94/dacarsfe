@@ -156,7 +156,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         ) : (
                             <>
                                 <button
-                                    onClick={() => { setShowModal(false); /* navigate('/rezervare') */ }}
+                                    onClick={() => { setShowModal(false); /* navigate('/checkout') */ }}
                                     aria-label="Rezervă acum"
                                     className="flex-1 bg-[#1E7149] text-white py-3 rounded-lg font-semibold font-['DM Sans'] hover:bg-[#195C3B] transition-colors duration-200"
                                 >

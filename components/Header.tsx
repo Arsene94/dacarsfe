@@ -21,9 +21,9 @@ const Header = () => {
 
   const menuItems = [
     { name: 'Acasă', href: '/' },
-    { name: 'Flotă', href: '/flota' },
+    { name: 'Flotă', href: '/cars' },
     { name: 'Oferte', href: '#oferte' },
-    { name: 'Rezervare', href: '/rezervare' },
+    { name: 'Rezervare', href: '/checkout' },
     { name: 'Contact', href: '#contact' },
   ];
 
@@ -63,7 +63,7 @@ const Header = () => {
           </nav>
 
             {/* CTA Button */}
-            <Link href="/rezervare" aria-label="Rezervă acum">
+            <Link href="/checkout" aria-label="Rezervă acum">
               <Button
                 aria-label="Rezervă acum"
                 className="hidden lg:inline-flex px-6 py-3 bg-jade text-white hover:bg-jade/90 transform hover:scale-105 shadow-lg hover:shadow-xl"
@@ -99,7 +99,7 @@ const Header = () => {
                 </Link>
               ))}
                 <Link
-                  href="/rezervare"
+                  href="/checkout"
                   onClick={() => setIsMobileMenuOpen(false)}
                   aria-label="Rezervă acum"
                 >
