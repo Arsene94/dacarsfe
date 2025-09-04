@@ -7,8 +7,6 @@ import {
   Clock,
   MapPin,
   User,
-  Phone,
-  Mail,
   Plane,
   Gift,
 } from "lucide-react";
@@ -19,6 +17,8 @@ import {
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {useBooking} from "@/context/BookingContext";
+import PhoneInput from "@/components/ui/phone-input";
+import { countries } from "@/lib/phone-codes";
 
 const ReservationPage = () => {
   const router = useRouter();
@@ -26,7 +26,8 @@ const ReservationPage = () => {
     firstName: "",
     lastName: "",
     email: "",
-    phone: "",
+    phoneCountry: "",
+    phoneNumber: "",
     flight: "",
     pickupDate: "",
     pickupTime: "",
@@ -84,6 +85,10 @@ const ReservationPage = () => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handlePhoneChange = (country: string, phone: string) => {
+    setFormData((prev) => ({ ...prev, phoneCountry: country, phoneNumber: phone }));
   };
 
   const calculateTotal = () => {
@@ -148,11 +153,19 @@ const ReservationPage = () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
+    const countryData = countries.find(
+      (c) => c.code === formData.phoneCountry,
+    );
+    const fullPhone = countryData
+      ? `${countryData.dialCode}${formData.phoneNumber}`
+      : formData.phoneNumber;
+
     // Store reservation data for success page
     localStorage.setItem(
       "reservationData",
       JSON.stringify({
         ...formData,
+        phone: fullPhone,
         total: Math.round(finalTotal),
         originalTotal: calculateTotal(),
         appliedDiscount: discountStatus?.isValid ? discountStatus.discount : 0,
@@ -260,15 +273,11 @@ const ReservationPage = () => {
                       >
                         Telefon *
                       </Label>
-                      <input
-                        id="reservation-phone"
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                        placeholder="+40 722 123 456"
+                      <PhoneInput
+                        inputId="reservation-phone"
+                        country={formData.phoneCountry}
+                        phone={formData.phoneNumber}
+                        onChange={handlePhoneChange}
                       />
                     </div>
                   </div>
