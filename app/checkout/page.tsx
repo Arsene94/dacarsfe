@@ -18,7 +18,7 @@ import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {useBooking} from "@/context/BookingContext";
 import PhoneInput from "@/components/ui/phone-input";
-import { countries } from "@/lib/phone-codes";
+import { loadCountries } from "@/lib/phone-codes";
 
 const ReservationPage = () => {
   const router = useRouter();
@@ -153,9 +153,8 @@ const ReservationPage = () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    const countryData = countries.find(
-      (c) => c.code === formData.phoneCountry,
-    );
+    const countries = await loadCountries();
+    const countryData = countries.find((c) => c.code === formData.phoneCountry);
     const fullPhone = countryData
       ? `${countryData.dialCode}${formData.phoneNumber}`
       : formData.phoneNumber;

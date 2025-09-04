@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { countries } from "@/lib/phone-codes";
+import { loadCountries, Country } from "@/lib/phone-codes";
 
 interface PhoneInputProps {
   country: string;
@@ -23,10 +23,12 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [countries, setCountries] = useState<Country[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedCountry =
-    countries.find((c) => c.code === country) || countries[0];
+    countries.find((c) => c.code === country) ||
+    countries[0] || { code: "", name: "", dialCode: "" };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -39,16 +41,25 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!country && typeof navigator !== "undefined") {
-      const locale = navigator.language.split("-")[1];
-      if (locale) {
-        const found = countries.find((c) => c.code === locale.toUpperCase());
-        if (found) {
-          onChange(found.code, phone);
+    loadCountries().then(setCountries).catch(() => setCountries([]));
+  }, []);
+
+  useEffect(() => {
+    if (country || countries.length === 0) return;
+    const detect = async () => {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        const data = await res.json();
+        if (data && data.country_code) {
+          const found = countries.find((c) => c.code === data.country_code);
+          if (found) onChange(found.code, phone);
         }
+      } catch {
+        // ignore
       }
-    }
-  }, [country, phone, onChange]);
+    };
+    detect();
+  }, [country, countries, phone, onChange]);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^\d+]/g, "");
