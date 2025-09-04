@@ -80,6 +80,12 @@ type Car = {
   specs: string[];
 };
 
+type Service = {
+  id: number;
+  name: string;
+  price: number;
+};
+
 const STORAGE_BASE = "https://dacars.ro/storage";
 
 const toImageUrl = (p?: string | null): string => {
@@ -138,6 +144,31 @@ const ReservationPage = () => {
     }
   }, [booking]);
 
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const res = await apiClient.getServices();
+        const list = Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res)
+            ? res
+            : [];
+        const mapped: Service[] = list.map((s: any) => ({
+          id: s.id,
+          name: s.name ?? "",
+          price: parsePrice(s.price),
+        }));
+        setServices(mapped);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchServices();
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [discountStatus, setDiscountStatus] = useState<{
     isValid: boolean;
@@ -160,6 +191,14 @@ const ReservationPage = () => {
       ...booking,
       withDeposit,
     });
+  };
+
+  const toggleService = (service: Service) => {
+    setSelectedServices((prev) =>
+      prev.some((s) => s.id === service.id)
+        ? prev.filter((s) => s.id !== service.id)
+        : [...prev, service],
+    );
   };
 
   useEffect(() => {
@@ -256,7 +295,12 @@ const ReservationPage = () => {
     );
   }
 
-  const calculateTotal = () => {
+  const servicesTotal = selectedServices.reduce(
+    (sum, service) => sum + service.price,
+    0,
+  );
+
+  const calculateBaseTotal = () => {
     const selectedCar = booking.selectedCar;
 
     if (!selectedCar || !booking.startDate || !booking.endDate) return 0;
@@ -269,6 +313,10 @@ const ReservationPage = () => {
     return daysDiff > 0 && bookingWithDeposit
       ? Number(selectedCar.total_deposit)
       : Number(selectedCar.total_without_deposit);
+  };
+
+  const calculateTotal = () => {
+    return calculateBaseTotal() + servicesTotal;
   };
 
   const handleDiscountCodeValidation = async () => {
@@ -326,6 +374,7 @@ const ReservationPage = () => {
       "reservationData",
       JSON.stringify({
         ...formData,
+        services: selectedServices,
         total: Math.round(finalTotal),
         originalTotal: calculateTotal(),
         appliedDiscount: discountStatus?.isValid ? discountStatus.discount : 0,
@@ -338,6 +387,7 @@ const ReservationPage = () => {
   };
 
   const selectedCar = booking.selectedCar;
+  const rentalSubtotal = calculateBaseTotal();
   const total = calculateTotal();
 
   const finalTotal =
@@ -488,6 +538,37 @@ const ReservationPage = () => {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* Extra Services */}
+                <div>
+                  <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">
+                    <Gift className="h-6 w-6 text-jade mr-3" />
+                    Servicii Extra
+                  </h3>
+                  <div className="space-y-4">
+                    {services.map((service) => (
+                      <label
+                        key={service.id}
+                        className="flex items-center space-x-3"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedServices.some((s) => s.id === service.id)}
+                          onChange={() => toggleService(service)}
+                          className="h-4 w-4 text-jade border-gray-300 rounded"
+                        />
+                        <span className="font-dm-sans text-gray-700">
+                          {service.name} - {service.price}€
+                        </span>
+                      </label>
+                    ))}
+                    {services.length === 0 && (
+                      <p className="font-dm-sans text-gray-600">
+                        Niciun serviciu disponibil
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Reservation Details */}
@@ -676,7 +757,7 @@ const ReservationPage = () => {
                   <>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-dm-sans text-gray-600">
-                        Subtotal:
+                        Total înainte de reducere:
                       </span>
                       <span className="font-dm-sans text-gray-600">
                         {total}€
@@ -692,14 +773,42 @@ const ReservationPage = () => {
                     </div>
                   </>
                 )}
-                  <div className="flex justify-between items-center text-xl">
+                <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
                     Sumar:
                   </span>
-                      <span className="font-poppins font-bold text-jade">
-                        {booking.withDeposit ? booking.selectedCar.rental_rate : booking.selectedCar.rental_rate_casco}€ x {booking.selectedCar.days} zile
+                  <span className="font-poppins font-bold text-jade">
+                    {booking.withDeposit ? booking.selectedCar.rental_rate : booking.selectedCar.rental_rate_casco}€ x {booking.selectedCar.days} zile
                   </span>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-dm-sans text-gray-600">Subtotal:</span>
+                  <span className="font-dm-sans font-semibold text-berkeley">
+                    {Math.round(rentalSubtotal)}€
+                  </span>
+                </div>
+                {selectedServices.length > 0 && (
+                  <div className="mt-2">
+                    <span className="font-poppins font-semibold text-berkeley">
+                      Servicii:
+                    </span>
+                    <div className="mt-2 space-y-1">
+                      {selectedServices.map((service) => (
+                        <div
+                          key={service.id}
+                          className="flex justify-between items-center"
+                        >
+                          <span className="font-dm-sans text-gray-600">
+                            {service.name}
+                          </span>
+                          <span className="font-dm-sans font-semibold text-berkeley">
+                            {service.price}€
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                )}
                 <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
                     Total:
