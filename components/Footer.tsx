@@ -53,24 +53,24 @@ const Footer = () => {
           {/* Contact */}
           <div>
             <h3 className="text-lg font-poppins font-semibold mb-4">Contact</h3>
-            <div className="space-y-3 font-dm-sans">
-              <div className="flex items-center space-x-3 text-gray-300">
+            <ul className="space-y-3 font-dm-sans text-gray-300">
+              <li className="flex items-center space-x-3">
                 <Phone className="h-4 w-4 text-jade" />
                 <span>+40 723 817 551</span>
-              </div>
-              <div className="flex items-center space-x-3 text-gray-300">
+              </li>
+              <li className="flex items-center space-x-3">
                 <Mail className="h-4 w-4 text-jade" />
                 <span>contact@dacars.ro</span>
-              </div>
-              <div className="flex items-center space-x-3 text-gray-300">
+              </li>
+              <li className="flex items-center space-x-3">
                 <MapPin className="h-4 w-4 text-jade" />
                 <span>Aeroportul Henri Coandă, Otopeni</span>
-              </div>
-              <div className="flex items-center space-x-3 text-gray-300">
+              </li>
+              <li className="flex items-center space-x-3">
                 <Clock className="h-4 w-4 text-jade" />
                 <span>Disponibil 24/7</span>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
 
           {/* Program și social */}
