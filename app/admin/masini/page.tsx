@@ -437,7 +437,7 @@ const CarsPage = () => {
             >
               <div className="relative w-full h-48">
                 <Image
-                  src={car.image}
+                  src={car.image || "/images/placeholder-car.svg"}
                   alt={car.name}
                   fill
                   className="object-cover"
