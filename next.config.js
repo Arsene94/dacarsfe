@@ -88,9 +88,6 @@ const nextConfig = {
 
         // Generate source maps for server bundles
         serverSourceMaps: true,
-
-        // Drop support for legacy browsers to avoid shipping extra polyfills
-        legacyBrowsers: false,
     },
 
     env: {
