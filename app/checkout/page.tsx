@@ -15,9 +15,10 @@ import {
 import {
   validateDiscountCode,
   applyDiscountCode,
-} from "../../services/wheelApi";
+} from "@/services/wheelApi";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import {useBooking} from "@/context/BookingContext";
 
 const ReservationPage = () => {
   const router = useRouter();
@@ -35,6 +36,7 @@ const ReservationPage = () => {
     carType: "economic",
     discountCode: "",
   });
+  const { booking } = useBooking();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [discountStatus, setDiscountStatus] = useState<{
