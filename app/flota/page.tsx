@@ -4,7 +4,16 @@ import React, {useEffect, useMemo, useRef, useState} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {usePathname, useRouter, useSearchParams} from "next/navigation";
-import {Filter, Fuel, Search, Settings, SlidersHorizontal, Star, Users,} from "lucide-react";
+import {
+  Filter,
+  Fuel,
+  Search,
+  Settings,
+  SlidersHorizontal,
+  Star,
+  Users,
+  X,
+} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Select} from "@/components/ui/select";
 import {Label} from "@/components/ui/label";
@@ -246,6 +255,39 @@ const FleetPage = () => {
     setSearchTerm("");
     setCurrentPage(1);
   };
+
+  type ActiveFilter = { key: string; label: string };
+
+  const activeFilters = useMemo<ActiveFilter[]>(() => {
+    const active: ActiveFilter[] = [];
+
+    if (filters.car_type !== "all") {
+      const label = categories?.find((c) => String(c.id) === filters.car_type)?.name;
+      if (label) active.push({ key: "car_type", label });
+    }
+    if (filters.type !== "all") {
+      const label = filterOptions.types.find((t) => String(t.id) === filters.type)?.name;
+      if (label) active.push({ key: "type", label });
+    }
+    if (filters.transmission !== "all") {
+      const label = filterOptions.transmissions.find(
+        (t) => String(t.id) === filters.transmission
+      )?.name;
+      if (label) active.push({ key: "transmission", label });
+    }
+    if (filters.fuel !== "all") {
+      const label = filterOptions.fuels.find((f) => String(f.id) === filters.fuel)?.name;
+      if (label) active.push({ key: "fuel", label });
+    }
+    if (filters.passengers !== "all") {
+      active.push({ key: "passengers", label: `${filters.passengers} persoane` });
+    }
+    if (filters.priceRange !== "all") {
+      active.push({ key: "priceRange", label: String(filters.priceRange) });
+    }
+
+    return active;
+  }, [filters, categories, filterOptions]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -641,13 +683,30 @@ const FleetPage = () => {
                 </div>
               </div>
 
-              <button
-                onClick={clearFilters}
-                className="px-4 py-2 text-jade font-dm-sans font-semibold hover:bg-jade/10 rounded-lg transition-colors duration-300"
-                aria-label="Resetează filtrele"
-              >
-                Resetează filtrele
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={clearFilters}
+                  className="px-4 py-2 text-jade font-dm-sans font-semibold hover:bg-jade/10 rounded-lg transition-colors duration-300"
+                  aria-label="Resetează filtrele"
+                >
+                  Resetează filtrele
+                </button>
+                {activeFilters.map((f) => (
+                  <span
+                    key={f.key}
+                    className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full"
+                  >
+                    {f.label}
+                    <button
+                      onClick={() => handleFilterChange(f.key, "all")}
+                      className="ml-2 hover:text-berkeley"
+                      aria-label={`Elimină filtrul ${f.label}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -693,13 +752,30 @@ const FleetPage = () => {
             <p className="text-gray-600 font-dm-sans mb-6 max-w-md mx-auto">
               Încearcă să modifici filtrele sau să cauți altceva.
             </p>
-            <Button
-              onClick={clearFilters}
-              className="px-6 py-3"
-              aria-label="Resetează filtrele"
-            >
-              Resetează filtrele
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button
+                onClick={clearFilters}
+                className="px-6 py-3"
+                aria-label="Resetează filtrele"
+              >
+                Resetează filtrele
+              </Button>
+              {activeFilters.map((f) => (
+                <span
+                  key={f.key}
+                  className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full"
+                >
+                  {f.label}
+                  <button
+                    onClick={() => handleFilterChange(f.key, "all")}
+                    className="ml-2 hover:text-berkeley"
+                    aria-label={`Elimină filtrul ${f.label}`}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
