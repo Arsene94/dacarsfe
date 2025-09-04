@@ -97,11 +97,11 @@ class ApiClient {
         return this.request<any>(`/front/cars/categories`);
     }
 
-    async getCarForBooking(params: {carId: number, startDate: any,  endDate: any}) {
+    async getCarForBooking(params: { car_id: number; start_date: string; end_date: string }) {
         return this.request<any>(`/front/cars/booking`, {
             method: 'POST',
             body: JSON.stringify(params),
-        })
+        });
     }
 
 }
