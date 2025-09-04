@@ -19,10 +19,24 @@ import { Label } from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import { useBooking } from "@/context/BookingContext";
 
+interface ReservationFormData {
+  name: string;
+  email: string;
+  phone: string;
+  flight: string;
+  pickupDate: string;
+  pickupTime: string;
+  dropoffDate: string;
+  dropoffTime: string;
+  location: string;
+  car_id: number | null;
+  discountCode: string;
+}
+
 const ReservationPage = () => {
   const router = useRouter();
   const { booking } = useBooking();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ReservationFormData>({
     name: "",
     email: "",
     phone: "",
@@ -39,13 +53,14 @@ const ReservationPage = () => {
     if (booking.startDate && booking.endDate && booking.selectedCar) {
       const [pickupDate, pickupTime] = booking.startDate.split("T");
       const [dropoffDate, dropoffTime] = booking.endDate.split("T");
+      const selectedCar = booking.selectedCar;
       setFormData((prev) => ({
         ...prev,
         pickupDate,
         pickupTime,
         dropoffDate,
         dropoffTime,
-        car_id: booking.selectedCar.id,
+        car_id: selectedCar.id,
       }));
     }
   }, [booking]);
