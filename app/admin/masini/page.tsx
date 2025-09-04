@@ -249,7 +249,7 @@ const CarsPage = () => {
       filtered = filtered.filter(
         (car) =>
           car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          car.licensePlate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          car?.licensePlate.toLowerCase().includes(searchTerm.toLowerCase()) ||
           car.type.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
