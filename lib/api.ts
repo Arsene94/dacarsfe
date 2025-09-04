@@ -104,6 +104,10 @@ class ApiClient {
         });
     }
 
+    async getServices() {
+        return this.request<any>(`/front/cars/services`);
+    }
+
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
