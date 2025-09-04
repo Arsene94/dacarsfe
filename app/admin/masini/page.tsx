@@ -226,7 +226,9 @@ const CarsPage = () => {
       filtered = filtered.filter(
         (car) =>
           car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          car.licensePlate?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          car.licensePlate
+            ?.toLowerCase()
+            ?.includes(searchTerm.toLowerCase()) ||
           car.type.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
@@ -244,7 +246,7 @@ const CarsPage = () => {
     setFilteredCars(filtered);
   }, [cars, searchTerm, statusFilter, typeFilter]);
 
-  const handleViewCar = (car: Car) => {
+  const handleViewCar = (car: AdminCar) => {
     setSelectedCar(car);
     setShowModal(true);
   };
