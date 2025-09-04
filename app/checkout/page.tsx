@@ -46,6 +46,16 @@ const ReservationPage = () => {
   } | null>(null);
   const [isValidatingCode, setIsValidatingCode] = useState(false);
 
+  if (!booking.startDate || !booking.endDate || !booking.selectedCar) {
+    return (
+      <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-xl font-dm-sans text-gray-600">
+          Trebuie să completezi datele și să selectezi mașina.
+        </p>
+      </div>
+    );
+  }
+
   const carTypes = [
     { value: "economic", label: "Economic - Dacia Logan", price: 45 },
     { value: "comfort", label: "Comfort - Volkswagen Golf", price: 65 },
