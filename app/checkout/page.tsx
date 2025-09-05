@@ -8,10 +8,6 @@ import {
   Plane,
   Gift,
 } from "lucide-react";
-import {
-  validateDiscountCode,
-  applyDiscountCode,
-} from "@/services/wheelApi";
 import { Label } from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import { useBooking } from "@/context/BookingContext";
@@ -107,6 +103,7 @@ const ReservationPage = () => {
     isValid: boolean;
     message: string;
     discount: number;
+    discountCasco: number;
   } | null>(null);
   const [isValidatingCode, setIsValidatingCode] = useState(false);
   const handleInputChange = (
@@ -278,29 +275,18 @@ const ReservationPage = () => {
           withDeposit: booking?.withDeposit,
           selectedCar: data,
       })
-
-      // if (isValid) {
-      //   // Simulare extragere procent reducere din cod
-      //   const discountMatch = formData.discountCode.match(/WHEEL(\d+)/);
-      //   const discount = discountMatch ? parseInt(discountMatch[1]) : 10;
-      //
-      //   setDiscountStatus({
-      //     isValid: true,
-      //     message: `Cod valid! Reducere ${discount}% aplicată.`,
-      //     discount,
-      //   });
-      // } else {
-      //   setDiscountStatus({
-      //     isValid: false,
-      //     message: "Cod invalid sau expirat.",
-      //     discount: 0,
-      //   });
-      // }
+      setDiscountStatus({
+        isValid: true,
+        message: "Cod valid! Reducere aplicată.",
+        discount: Number((data as any)?.discount_amount) || 0,
+        discountCasco: Number((data as any)?.discount_amount_casco) || 0,
+      });
     } catch (error) {
       setDiscountStatus({
         isValid: false,
         message: "Eroare la validarea codului.",
         discount: 0,
+        discountCasco: 0,
       });
     } finally {
       setIsValidatingCode(false);
@@ -310,12 +296,14 @@ const ReservationPage = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    let finalTotal = calculateTotal();
+    const finalTotal = calculateTotal();
+    const appliedDiscount = discountStatus?.isValid
+      ? booking.withDeposit
+        ? discountStatus.discount
+        : discountStatus.discountCasco
+      : 0;
+    const originalTotal = finalTotal + appliedDiscount;
 
-    // Aplică reducerea dacă există cod valid
-    if (discountStatus?.isValid && discountStatus.discount > 0) {
-      finalTotal = finalTotal * (1 - discountStatus.discount / 100);
-    }
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
@@ -326,8 +314,8 @@ const ReservationPage = () => {
         ...formData,
         services: selectedServices,
         total: Math.round(finalTotal),
-        originalTotal: calculateTotal(),
-        appliedDiscount: discountStatus?.isValid ? discountStatus.discount : 0,
+        originalTotal: Math.round(originalTotal),
+        appliedDiscount,
         reservationId:
           "DC" + Math.random().toString(36).substr(2, 9).toUpperCase(),
       }),
@@ -339,11 +327,13 @@ const ReservationPage = () => {
   const selectedCar = booking.selectedCar;
   const rentalSubtotal = calculateBaseTotal();
   const total = calculateTotal();
-
-  const finalTotal =
-    discountStatus?.isValid && discountStatus.discount > 0
-      ? total * (1 - discountStatus.discount / 100)
-      : total;
+  const discountAmount = discountStatus?.isValid
+    ? booking.withDeposit
+      ? discountStatus.discount
+      : discountStatus.discountCasco
+    : 0;
+  const originalTotal = total + discountAmount;
+  const finalTotal = total;
 
   return (
     <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
@@ -703,22 +693,20 @@ const ReservationPage = () => {
               </div>
 
               <div className="border-t border-gray-200 pt-4">
-                {discountStatus?.isValid && discountStatus.discount > 0 && (
+                {discountStatus?.isValid && discountAmount > 0 && (
                   <>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-dm-sans text-gray-600">
                         Total înainte de reducere:
                       </span>
                       <span className="font-dm-sans text-gray-600">
-                        {total}€
+                        {Math.round(originalTotal)}€
                       </span>
                     </div>
                     <div className="flex justify-between items-center mb-2">
+                      <span className="font-dm-sans text-jade">Reducere:</span>
                       <span className="font-dm-sans text-jade">
-                        Reducere ({discountStatus.discount}%):
-                      </span>
-                      <span className="font-dm-sans text-jade">
-                        -{Math.round((total * discountStatus.discount) / 100)}€
+                        -{Math.round(discountAmount)}€
                       </span>
                     </div>
                   </>
