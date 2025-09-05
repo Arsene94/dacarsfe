@@ -102,10 +102,11 @@ const ReservationPage = () => {
   const [discountStatus, setDiscountStatus] = useState<{
     isValid: boolean;
     message: string;
-    discount: number;
-    discountCasco: number;
+    discount: string;
+    discountCasco: string;
   } | null>(null);
   const [isValidatingCode, setIsValidatingCode] = useState(false);
+  const [originalCar, setOriginalCar] = useState<Car | null>(null);
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -250,6 +251,7 @@ const ReservationPage = () => {
   };
 
   const handleDiscountCodeValidation = async () => {
+    if (discountStatus?.isValid) return;
     if (!formData.discountCode.trim()) {
       setDiscountStatus(null);
       return;
@@ -257,40 +259,54 @@ const ReservationPage = () => {
 
     setIsValidatingCode(true);
     try {
-        const payload: any = {
-            code: formData.discountCode,
-            car_id: booking?.selectedCar?.id,
-            start_date: booking?.startDate,
-            end_date: booking?.endDate,
-            price: booking?.selectedCar?.rental_rate,
-            price_casco: booking?.selectedCar?.rental_rate_casco,
-            total_price: booking?.selectedCar?.total_deposit,
-            total_price_casco: booking?.selectedCar?.total_without_deposit
-        };
+      const payload: any = {
+        code: formData.discountCode,
+        car_id: booking?.selectedCar?.id,
+        start_date: booking?.startDate,
+        end_date: booking?.endDate,
+        price: booking?.selectedCar?.rental_rate,
+        price_casco: booking?.selectedCar?.rental_rate_casco,
+        total_price: booking?.selectedCar?.total_deposit,
+        total_price_casco: booking?.selectedCar?.total_without_deposit,
+      };
       const data = await apiClient.validateDiscountCode(payload);
-
+      if (!originalCar) setOriginalCar(booking.selectedCar);
       setBooking({
-          startDate: booking?.startDate,
-          endDate: booking?.endDate,
-          withDeposit: booking?.withDeposit,
-          selectedCar: data,
-      })
+        startDate: booking?.startDate,
+        endDate: booking?.endDate,
+        withDeposit: booking?.withDeposit,
+        selectedCar: data,
+      });
       setDiscountStatus({
         isValid: true,
         message: "Cod valid! Reducere aplicată.",
-        discount: Number((data as any)?.discount_amount) || 0,
-        discountCasco: Number((data as any)?.discount_amount_casco) || 0,
+        discount: String((data as any)?.discount_amount ?? "0"),
+        discountCasco: String((data as any)?.discount_amount_casco ?? "0"),
       });
     } catch (error) {
       setDiscountStatus({
         isValid: false,
         message: "Eroare la validarea codului.",
-        discount: 0,
-        discountCasco: 0,
+        discount: "0",
+        discountCasco: "0",
       });
     } finally {
       setIsValidatingCode(false);
     }
+  };
+
+  const handleRemoveDiscountCode = () => {
+    if (originalCar) {
+      setBooking({
+        startDate: booking.startDate,
+        endDate: booking.endDate,
+        withDeposit: booking.withDeposit,
+        selectedCar: originalCar,
+      });
+    }
+    setOriginalCar(null);
+    setDiscountStatus(null);
+    setFormData((prev) => ({ ...prev, discountCode: "" }));
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -299,22 +315,20 @@ const ReservationPage = () => {
     const finalTotal = calculateTotal();
     const appliedDiscount = discountStatus?.isValid
       ? booking.withDeposit
-        ? discountStatus.discount
-        : discountStatus.discountCasco
+        ? parseFloat(discountStatus.discount)
+        : parseFloat(discountStatus.discountCasco)
       : 0;
     const originalTotal = finalTotal + appliedDiscount;
 
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Store reservation data for success page
     localStorage.setItem(
       "reservationData",
       JSON.stringify({
         ...formData,
         services: selectedServices,
-        total: Math.round(finalTotal),
-        originalTotal: Math.round(originalTotal),
+        total: finalTotal,
+        originalTotal,
         appliedDiscount,
         reservationId:
           "DC" + Math.random().toString(36).substr(2, 9).toUpperCase(),
@@ -325,14 +339,22 @@ const ReservationPage = () => {
   };
 
   const selectedCar = booking.selectedCar;
-  const rentalSubtotal = calculateBaseTotal();
-  const total = calculateTotal();
+  const baseTotal = calculateBaseTotal();
+  const rentalSubtotal = baseTotal;
   const discountAmount = discountStatus?.isValid
     ? booking.withDeposit
-      ? discountStatus.discount
-      : discountStatus.discountCasco
+      ? parseFloat(discountStatus.discount)
+      : parseFloat(discountStatus.discountCasco)
     : 0;
-  const originalTotal = total + discountAmount;
+  const originalBaseTotal = originalCar
+    ? booking.withDeposit
+      ? parsePrice(originalCar.total_deposit)
+      : parsePrice(originalCar.total_without_deposit)
+    : baseTotal;
+  const total = baseTotal + servicesTotal;
+  const originalTotal = discountStatus?.isValid
+    ? originalBaseTotal + servicesTotal
+    : total;
   const finalTotal = total;
 
   return (
@@ -428,56 +450,71 @@ const ReservationPage = () => {
                   </div>
 
                   {/* Discount Code */}
-                    <div className="mt-6">
-                        <Label
-                            htmlFor="reservation-discount"
-                            className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                  <div className="mt-6">
+                    <Label
+                      htmlFor="reservation-discount"
+                      className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                    >
+                      <Gift className="h-4 w-4 inline text-jade mr-1" />
+                      Cod de reducere (opțional)
+                    </Label>
+                    {discountStatus?.isValid ? (
+                      <div className="flex items-center space-x-2">
+                        <span className="font-dm-sans text-jade">
+                          {formData.discountCode}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleRemoveDiscountCode}
+                          className="px-4 py-3 bg-red-500 text-white font-dm-sans font-semibold rounded-lg hover:bg-red-600 transition-all duration-300"
                         >
-                            <Gift className="h-4 w-4 inline text-jade mr-1" />
-                            Cod de reducere (opțional)
-                        </Label>
-                        <div className="flex space-x-2">
-                            <input
-                                id="reservation-discount"
-                                type="text"
-                                name="discountCode"
-                                value={formData.discountCode}
-                                onChange={handleInputChange}
-                                onBlur={handleDiscountCodeValidation}
-                                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                                placeholder="Ex: WHEEL10"
-                            />
-                            <button
-                                type="button"
-                                onClick={handleDiscountCodeValidation}
-                                disabled={
-                                    isValidatingCode || !formData.discountCode.trim()
-                                }
-                                className="px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
-                                aria-label="Validează codul"
-                            >
-                                {isValidatingCode ? (
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                ) : (
-                                    "Validează"
-                                )}
-                            </button>
-                        </div>
+                          Șterge cod
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex space-x-2">
+                        <input
+                          id="reservation-discount"
+                          type="text"
+                          name="discountCode"
+                          value={formData.discountCode}
+                          onChange={handleInputChange}
+                          onBlur={handleDiscountCodeValidation}
+                          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                          placeholder="Ex: WHEEL10"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleDiscountCodeValidation}
+                          disabled={
+                            isValidatingCode || !formData.discountCode.trim()
+                          }
+                          className="px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                          aria-label="Validează codul"
+                        >
+                          {isValidatingCode ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          ) : (
+                            "Validează"
+                          )}
+                        </button>
+                      </div>
+                    )}
 
-                        {discountStatus && (
-                            <div
-                                className={`mt-2 p-3 rounded-lg ${
-                                    discountStatus.isValid
-                                        ? "bg-jade/10 text-jade"
-                                        : "bg-red-50 text-red-600"
-                                }`}
-                            >
-                                <p className="text-sm font-dm-sans font-semibold">
-                                    {discountStatus.message}
-                                </p>
-                            </div>
-                        )}
-                    </div>
+                    {discountStatus && (
+                      <div
+                        className={`mt-2 p-3 rounded-lg ${
+                          discountStatus.isValid
+                            ? "bg-jade/10 text-jade"
+                            : "bg-red-50 text-red-600"
+                        }`}
+                      >
+                        <p className="text-sm font-dm-sans font-semibold">
+                          {discountStatus.message}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Extra Services */}
@@ -700,13 +737,13 @@ const ReservationPage = () => {
                         Total înainte de reducere:
                       </span>
                       <span className="font-dm-sans text-gray-600">
-                        {Math.round(originalTotal)}€
+                        {originalTotal.toFixed(2)}€
                       </span>
                     </div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-dm-sans text-jade">Reducere:</span>
                       <span className="font-dm-sans text-jade">
-                        -{Math.round(discountAmount)}€
+                        -{discountAmount.toFixed(2)}€
                       </span>
                     </div>
                   </>
@@ -722,7 +759,7 @@ const ReservationPage = () => {
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-dm-sans text-gray-600">Subtotal:</span>
                   <span className="font-dm-sans font-semibold text-berkeley">
-                    {Math.round(rentalSubtotal)}€
+                    {rentalSubtotal.toFixed(2)}€
                   </span>
                 </div>
                 {selectedServices.length > 0 && (
@@ -740,7 +777,7 @@ const ReservationPage = () => {
                             {service.name}
                           </span>
                           <span className="font-dm-sans font-semibold text-berkeley">
-                            {service.price}€
+                            {service.price.toFixed(2)}€
                           </span>
                         </div>
                       ))}
@@ -752,7 +789,7 @@ const ReservationPage = () => {
                     Total:
                   </span>
                     <span className="font-poppins font-bold text-jade">
-                        {Math.round(finalTotal)}€ {booking.withDeposit && (
+                        {finalTotal.toFixed(2)}€ {booking.withDeposit && (
                           <span className=" text-xs font-dm-sans text-gray-600">
                             (+{selectedCar.deposit}€ garanție)
                           </span>
