@@ -471,17 +471,21 @@ const CarsPage = () => {
                   <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                     <div className="flex items-center space-x-2">
                       <Users className="h-4 w-4 text-jade" />
-                      <span>{car.features.passengers} persoane</span>
+                      <span>
+                        {car.features?.passengers
+                          ? `${car.features.passengers} persoane`
+                          : '-'}
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Settings className="h-4 w-4 text-jade" />
-                      <span>{car.features.transmission}</span>
+                      <span>{car.features?.transmission ?? '-'}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                     <div className="flex items-center space-x-2">
                       <Fuel className="h-4 w-4 text-jade" />
-                      <span>{car.features.fuel}</span>
+                      <span>{car.features?.fuel ?? '-'}</span>
                     </div>
                     <span className="font-semibold">{car.licensePlate}</span>
                   </div>
