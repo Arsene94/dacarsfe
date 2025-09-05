@@ -109,12 +109,12 @@ const FleetSection = () => {
                 <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
                     {car.categories.name}
                 </div>
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center space-x-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm font-dm-sans font-semibold text-berkeley">
-                        {car.rating ?? "—"}
-                    </span>
-                </div>
+                {/*<div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center space-x-1">*/}
+                {/*    <Star className="h-4 w-4 text-yellow-400 fill-current" />*/}
+                {/*    <span className="text-sm font-dm-sans font-semibold text-berkeley">*/}
+                {/*        {car.rating ?? "—"}*/}
+                {/*    </span>*/}
+                {/*</div>*/}
             </div>
 
             <div className="p-6">

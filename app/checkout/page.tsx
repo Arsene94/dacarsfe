@@ -1,19 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import {
-  Calendar,
-  User,
-  Plane,
-  Gift,
-} from "lucide-react";
-import { Label } from "@/components/ui/label";
+import React, {useEffect, useState} from "react";
+import {useRouter} from "next/navigation";
+import {Calendar, Gift, Plane, User,} from "lucide-react";
+import {Label} from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
-import { useBooking } from "@/context/BookingContext";
+import {useBooking} from "@/context/BookingContext";
 import apiClient from "@/lib/api";
-import { ApiCar, Car } from "@/types/car";
-import { ReservationFormData, Service } from "@/types/reservation";
+import {ApiCar, Car} from "@/types/car";
+import {ReservationFormData, Service} from "@/types/reservation";
 
 const STORAGE_BASE = "https://dacars.ro/storage";
 
@@ -279,7 +274,7 @@ const ReservationPage = () => {
       });
       setDiscountStatus({
         isValid: true,
-        message: "Cod valid! Reducere aplicată.",
+        message: "Reducere aplicată!",
         discount: String((data as any)?.discount_amount ?? "0"),
         discountCasco: String((data as any)?.discount_amount_casco ?? "0"),
       });
@@ -355,9 +350,8 @@ const ReservationPage = () => {
   const originalTotal = discountStatus?.isValid
     ? originalBaseTotal + servicesTotal
     : total;
-  const finalTotal = total;
 
-  return (
+    return (
     <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
@@ -397,7 +391,7 @@ const ReservationPage = () => {
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                        placeholder="Introducă numele complet"
+                        placeholder="Introduceți numele complet"
                       />
                     </div>
 
@@ -456,13 +450,19 @@ const ReservationPage = () => {
                       className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                     >
                       <Gift className="h-4 w-4 inline text-jade mr-1" />
-                      Cod de reducere (opțional)
+                      Cod de reducere
                     </Label>
                     {discountStatus?.isValid ? (
                       <div className="flex items-center space-x-2">
-                        <span className="font-dm-sans text-jade">
-                          {formData.discountCode}
-                        </span>
+                          <input
+                              id="reservation-discount"
+                              type="text"
+                              name="discountCode"
+                              value={formData.discountCode}
+                              disabled={true}
+                              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                              placeholder="Ex: WHEEL10"
+                          />
                         <button
                           type="button"
                           onClick={handleRemoveDiscountCode}
@@ -730,24 +730,6 @@ const ReservationPage = () => {
               </div>
 
               <div className="border-t border-gray-200 pt-4">
-                {discountStatus?.isValid && discountAmount > 0 && (
-                  <>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-dm-sans text-gray-600">
-                        Total înainte de reducere:
-                      </span>
-                      <span className="font-dm-sans text-gray-600">
-                        {originalTotal.toFixed(2)}€
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-dm-sans text-jade">Reducere:</span>
-                      <span className="font-dm-sans text-jade">
-                        -{discountAmount.toFixed(2)}€
-                      </span>
-                    </div>
-                  </>
-                )}
                 <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
                     Sumar:
@@ -784,12 +766,31 @@ const ReservationPage = () => {
                     </div>
                   </div>
                 )}
+                  <hr className="my-2" />
+                  {discountStatus?.isValid && discountAmount > 0 && (
+                      <>
+                          <div className="flex justify-between items-center mb-2">
+                      <span className="font-dm-sans text-gray-600">
+                        Total înainte de reducere:
+                      </span>
+                              <span className="font-dm-sans text-gray-600">
+                        {originalTotal.toFixed(2)}€
+                      </span>
+                          </div>
+                          <div className="flex justify-between items-center mb-2">
+                              <span className="font-dm-sans text-jade">Reducere:</span>
+                              <span className="font-dm-sans text-jade">
+                        -{(discountAmount * Number(booking.selectedCar.days)).toFixed(2)}€
+                      </span>
+                          </div>
+                      </>
+                  )}
                 <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
                     Total:
                   </span>
                     <span className="font-poppins font-bold text-jade">
-                        {finalTotal.toFixed(2)}€ {booking.withDeposit && (
+                        {total.toFixed(2)}€ {booking.withDeposit && (
                           <span className=" text-xs font-dm-sans text-gray-600">
                             (+{selectedCar.deposit}€ garanție)
                           </span>
