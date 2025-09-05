@@ -106,7 +106,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
         setSelectedCountry(detectedCountry);
       }
     }
-  }, [value]);
+  }, [phoneNumber, value]);
 
   return (
     <div className={cn('relative', className)}>

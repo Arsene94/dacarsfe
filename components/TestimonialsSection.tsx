@@ -70,7 +70,7 @@ const TestimonialsSection = () => {
         <div className="max-w-4xl mx-auto mb-16">
           <div className="bg-white rounded-3xl p-8 lg:p-12 shadow-xl relative">
             <Quote className="h-16 w-16 text-jade/20 absolute top-6 left-6" />
-            
+
             <div className="relative z-10">
               <div className="flex items-center justify-center mb-6">
                 {[...Array(testimonials[currentTestimonial].rating)].map((_, i) => (
@@ -79,7 +79,7 @@ const TestimonialsSection = () => {
               </div>
 
               <blockquote className="text-2xl lg:text-3xl font-dm-sans text-gray-800 text-center leading-relaxed mb-8">
-                "{testimonials[currentTestimonial].text}"
+                  &quot;{testimonials[currentTestimonial].text}&quot;
               </blockquote>
 
               <div className="flex items-center justify-center space-x-4">
@@ -141,7 +141,7 @@ const TestimonialsSection = () => {
         {/* All testimonials grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {testimonials.map((testimonial, index) => (
-            <div 
+            <div
               key={index}
               className={`bg-white rounded-2xl p-6 shadow-lg transition-all duration-300 cursor-pointer ${
                 index === currentTestimonial ? 'ring-2 ring-jade shadow-xl transform scale-105' : 'hover:shadow-xl'
@@ -167,7 +167,7 @@ const TestimonialsSection = () => {
                   </div>
                 </div>
               </div>
-              
+
               <p className="text-gray-600 font-dm-sans text-sm line-clamp-3">
                 {testimonial.text}
               </p>

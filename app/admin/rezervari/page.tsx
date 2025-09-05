@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useCallback} from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -177,10 +177,10 @@ const ReservationsPage = () => {
     setFilteredReservations(filtered);
   }, [reservations, searchTerm, statusFilter, dateFilter]);
 
-  const handleViewReservation = (reservation: AdminReservation) => {
+  const handleViewReservation = useCallback((reservation: AdminReservation) => {
     setSelectedReservation(reservation);
     setShowModal(true);
-  };
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {

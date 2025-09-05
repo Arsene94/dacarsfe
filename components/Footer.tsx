@@ -1,5 +1,6 @@
 import React from 'react';
 import { Car, Phone, Mail, MapPin, Clock } from 'lucide-react';
+import Link from "next/link";
 
 const Footer = () => {
   return (
@@ -24,28 +25,28 @@ const Footer = () => {
             <h3 className="text-lg font-poppins font-semibold mb-4">Linkuri Rapide</h3>
             <ul className="space-y-2 font-dm-sans">
               <li>
-                <a href="/" className="text-gray-300 hover:text-jade transition-colors duration-300" aria-label="Acasă">
+                <Link href="/" className="text-gray-300 hover:text-jade transition-colors duration-300" aria-label="Acasă">
                   Acasă
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#flota"
+                <Link
+                  href="/cars"
                   className="text-gray-300 hover:text-jade transition-colors duration-300"
                   aria-label="Flota Auto"
                 >
                   Flota Auto
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#oferte" className="text-gray-300 hover:text-jade transition-colors duration-300" aria-label="Oferte Speciale">
+                <Link href="#" className="text-gray-300 hover:text-jade transition-colors duration-300" aria-label="Oferte Speciale">
                   Oferte Speciale
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/checkout" className="text-gray-300 hover:text-jade transition-colors duration-300" aria-label="Rezervare">
+                <Link href="/checkout" className="text-gray-300 hover:text-jade transition-colors duration-300" aria-label="Rezervare">
                   Rezervare
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -89,20 +90,20 @@ const Footer = () => {
             © 2024 DaCars. Toate drepturile rezervate.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <a
+            <Link
               href="#"
               className="text-gray-300 hover:text-jade transition-colors duration-300 text-sm font-dm-sans"
               aria-label="Termeni și Condiții"
             >
               Termeni și Condiții
-            </a>
-            <a
+            </Link>
+            <Link
               href="#"
               className="text-gray-300 hover:text-jade transition-colors duration-300 text-sm font-dm-sans"
               aria-label="Politica de Confidențialitate"
             >
               Politica de Confidențialitate
-            </a>
+            </Link>
           </div>
         </div>
       </div>
