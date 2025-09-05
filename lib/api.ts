@@ -82,30 +82,37 @@ class ApiClient {
             }
         });
 
-        return this.request<any>(`/front/cars?${searchParams.toString()}`);
+        return this.request<any>(`/front/nextjs/cars?${searchParams.toString()}`);
 
     }
 
     async getCarsByDateCriteria(payload: any){
-        return this.request<any>(`/front/cars/paginate`, {
+        return this.request<any>(`/front/nextjs/cars/paginate`, {
             method: 'POST',
             body: JSON.stringify(payload),
         })
     }
 
     async getCarCategories() {
-        return this.request<any>(`/front/cars/categories`);
+        return this.request<any>(`/front/nextjs/categories`);
     }
 
     async getCarForBooking(params: { car_id: number; start_date: string; end_date: string }) {
-        return this.request<any>(`/front/cars/booking`, {
+        return this.request<any>(`/front/nextjs/booking`, {
             method: 'POST',
             body: JSON.stringify(params),
         });
     }
 
     async getServices() {
-        return this.request<any>(`/front/cars/services`);
+        return this.request<any>(`/front/nextjs/services`);
+    }
+
+    async validateDiscountCode(params: { code: string, car_id: number, start_date: any, end_date: any, price: any, price_casco: any, total_price: any, total_price_casco: any }) {
+        return this.request<any>(`/front/nextjs/discount/validate`, {
+            method: 'POST',
+            body: JSON.stringify(params),
+        })
     }
 
 }

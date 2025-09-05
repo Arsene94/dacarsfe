@@ -4,10 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
-  Clock,
-  MapPin,
   User,
-  Mail,
   Plane,
   Gift,
 } from "lucide-react";
@@ -263,25 +260,42 @@ const ReservationPage = () => {
 
     setIsValidatingCode(true);
     try {
-      const isValid = await validateDiscountCode(formData.discountCode);
+        const payload: any = {
+            code: formData.discountCode,
+            car_id: booking?.selectedCar?.id,
+            start_date: booking?.startDate,
+            end_date: booking?.endDate,
+            price: booking?.selectedCar?.rental_rate,
+            price_casco: booking?.selectedCar?.rental_rate_casco,
+            total_price: booking?.selectedCar?.total_deposit,
+            total_price_casco: booking?.selectedCar?.total_without_deposit
+        };
+      const data = await apiClient.validateDiscountCode(payload);
 
-      if (isValid) {
-        // Simulare extragere procent reducere din cod
-        const discountMatch = formData.discountCode.match(/WHEEL(\d+)/);
-        const discount = discountMatch ? parseInt(discountMatch[1]) : 10;
+      setBooking({
+          startDate: booking?.startDate,
+          endDate: booking?.endDate,
+          withDeposit: booking?.withDeposit,
+          selectedCar: data,
+      })
 
-        setDiscountStatus({
-          isValid: true,
-          message: `Cod valid! Reducere ${discount}% aplicată.`,
-          discount,
-        });
-      } else {
-        setDiscountStatus({
-          isValid: false,
-          message: "Cod invalid sau expirat.",
-          discount: 0,
-        });
-      }
+      // if (isValid) {
+      //   // Simulare extragere procent reducere din cod
+      //   const discountMatch = formData.discountCode.match(/WHEEL(\d+)/);
+      //   const discount = discountMatch ? parseInt(discountMatch[1]) : 10;
+      //
+      //   setDiscountStatus({
+      //     isValid: true,
+      //     message: `Cod valid! Reducere ${discount}% aplicată.`,
+      //     discount,
+      //   });
+      // } else {
+      //   setDiscountStatus({
+      //     isValid: false,
+      //     message: "Cod invalid sau expirat.",
+      //     discount: 0,
+      //   });
+      // }
     } catch (error) {
       setDiscountStatus({
         isValid: false,
