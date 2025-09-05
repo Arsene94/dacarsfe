@@ -16,7 +16,6 @@ import {
   Eye,
   AlertTriangle,
 } from "lucide-react";
-import { Star } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { AdminCar } from "@/types/admin";
 
