@@ -225,7 +225,8 @@ const ReservationsPage = () => {
               {r.id}
             </div>
             <div className="text-sm text-gray-500 font-dm-sans">
-              {new Date(r.createdAt).toLocaleDateString("ro-RO")}
+              {r.createdAt &&
+                new Date(r.createdAt).toLocaleDateString("ro-RO")}
             </div>
           </div>
         ),
