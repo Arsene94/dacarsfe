@@ -17,7 +17,8 @@ import {
   MapPin,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
-import { DataTable, Column } from "@/components/ui/table";
+import { DataTable } from "@/components/ui/table";
+import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 
 const ReservationsPage = () => {
