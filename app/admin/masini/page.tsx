@@ -471,17 +471,17 @@ const CarsPage = () => {
                   <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                     <div className="flex items-center space-x-2">
                       <Users className="h-4 w-4 text-jade" />
-                      <span>{car.features.passengers} persoane</span>
+                      <span>{car?.features?.passengers} persoane</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Settings className="h-4 w-4 text-jade" />
-                      <span>{car.features.transmission}</span>
+                      <span>{car?.features?.transmission}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                     <div className="flex items-center space-x-2">
                       <Fuel className="h-4 w-4 text-jade" />
-                      <span>{car.features.fuel}</span>
+                      <span>{car?.features?.fuel}</span>
                     </div>
                     <span className="font-semibold">{car.licensePlate}</span>
                   </div>
@@ -499,7 +499,7 @@ const CarsPage = () => {
                       Anul {car.year}
                     </p>
                     <p className="text-sm text-gray-600 font-dm-sans">
-                      {car.mileage.toLocaleString()} km
+                      {car?.mileage?.toLocaleString()} km
                     </p>
                   </div>
                 </div>
@@ -575,14 +575,14 @@ const CarsPage = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Car Image and Basic Info */}
                 <div>
-                  <div className="relative w-full h-64 mb-6">
+                    {selectedCar.image && (<div className="relative w-full h-64 mb-6">
                     <Image
-                      src={selectedCar.image}
+                      src={selectedCar?.image}
                       alt={selectedCar.name}
                       fill
                       className="object-cover rounded-xl"
                     />
-                  </div>
+                  </div>)}
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -616,7 +616,7 @@ const CarsPage = () => {
                         Kilometraj:
                       </span>
                       <span className="font-dm-sans font-semibold text-berkeley">
-                        {selectedCar.mileage.toLocaleString()} km
+                        {selectedCar?.mileage?.toLocaleString()} km
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -640,25 +640,25 @@ const CarsPage = () => {
                       <div className="flex items-center space-x-2">
                         <Users className="h-4 w-4 text-jade" />
                         <span className="font-dm-sans text-gray-600">
-                          {selectedCar.features.passengers} persoane
+                          {selectedCar?.features?.passengers} persoane
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Settings className="h-4 w-4 text-jade" />
                         <span className="font-dm-sans text-gray-600">
-                          {selectedCar.features.transmission}
+                          {selectedCar?.features?.transmission}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Fuel className="h-4 w-4 text-jade" />
                         <span className="font-dm-sans text-gray-600">
-                          {selectedCar.features.fuel}
+                          {selectedCar?.features?.fuel}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Car className="h-4 w-4 text-jade" />
                         <span className="font-dm-sans text-gray-600">
-                          {selectedCar.features.doors} uși
+                          {selectedCar?.features?.doors} uși
                         </span>
                       </div>
                     </div>
@@ -669,7 +669,7 @@ const CarsPage = () => {
                       Dotări
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {selectedCar.specs.map((spec, index) => (
+                      {selectedCar?.specs?.map((spec, index) => (
                         <span
                           key={index}
                           className="px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full"
