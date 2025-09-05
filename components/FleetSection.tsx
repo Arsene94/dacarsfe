@@ -60,7 +60,10 @@ const FleetSection = () => {
                         : parsePrice(c.price_text),
                 transmission: { name: c.transmission?.name ?? "—" },
                 fuel: { name: c.fuel?.name ?? "—" },
-                categories: { id: c.categories?.[0].id, name: c.categories?.[0].name},
+                categories: {
+                    id: c.categories?.[0]?.id ?? 0,
+                    name: c.categories?.[0]?.name ?? "—",
+                },
                 rating: typeof c.avg_review === "number" ? c.avg_review : undefined,
             }));
 
