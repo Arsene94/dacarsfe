@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Select } from "@/components/ui/select";
-import { DataTable, Column } from "@/components/ui/table";
+import DataTable from "@/components/ui/table";
+import type { Column } from "@/types/ui";
 import { AdminReservation, AdminCar } from "@/types/admin";
 
 const reservationColumns: Column<AdminReservation>[] = [

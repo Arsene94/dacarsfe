@@ -277,7 +277,8 @@ const CarsPage = () => {
     }
   };
 
-  const isServiceDue = (nextServiceDate: string) => {
+  const isServiceDue = (nextServiceDate?: string) => {
+    if (!nextServiceDate) return false;
     const nextService = new Date(nextServiceDate);
     const today = new Date();
     const daysUntilService = Math.ceil(
@@ -437,7 +438,7 @@ const CarsPage = () => {
             >
               <div className="relative w-full h-48">
                 <Image
-                  src={car.image}
+                  src={car.image || "/images/placeholder-car.svg"}
                   alt={car.name}
                   fill
                   className="object-cover"
@@ -470,17 +471,21 @@ const CarsPage = () => {
                   <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                     <div className="flex items-center space-x-2">
                       <Users className="h-4 w-4 text-jade" />
-                      <span>{car.features.passengers} persoane</span>
+                      <span>
+                        {car.features?.passengers
+                          ? `${car.features.passengers} persoane`
+                          : '-'}
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Settings className="h-4 w-4 text-jade" />
-                      <span>{car.features.transmission}</span>
+                      <span>{car.features?.transmission ?? '-'}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                     <div className="flex items-center space-x-2">
                       <Fuel className="h-4 w-4 text-jade" />
-                      <span>{car.features.fuel}</span>
+                      <span>{car.features?.fuel ?? '-'}</span>
                     </div>
                     <span className="font-semibold">{car.licensePlate}</span>
                   </div>
@@ -689,9 +694,11 @@ const CarsPage = () => {
                           Ultimul service:
                         </span>
                         <span className="font-dm-sans text-gray-900">
-                          {new Date(selectedCar.lastService).toLocaleDateString(
-                            "ro-RO",
-                          )}
+                          {selectedCar.lastService
+                            ? new Date(selectedCar.lastService).toLocaleDateString(
+                                "ro-RO",
+                              )
+                            : "-"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -701,9 +708,11 @@ const CarsPage = () => {
                         <span
                           className={`font-dm-sans ${isServiceDue(selectedCar.nextService) ? "text-red-600 font-semibold" : "text-gray-900"}`}
                         >
-                          {new Date(selectedCar.nextService).toLocaleDateString(
-                            "ro-RO",
-                          )}
+                          {selectedCar.nextService
+                            ? new Date(selectedCar.nextService).toLocaleDateString(
+                                "ro-RO",
+                              )
+                            : "-"}
                           {isServiceDue(selectedCar.nextService) && (
                             <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
                               Urgent
