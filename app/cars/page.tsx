@@ -136,13 +136,18 @@ const FleetPage = () => {
           image: toImageUrl(
             c.image_preview || Object.values(c.images ?? {})[0] || null
           ),
-          price: parsePrice(Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco))),
+          price: parsePrice(
+            Math.round(Number(c.rental_rate)) ??
+              Math.round(Number(c.rental_rate_casco))
+          ),
           rental_rate: String(Math.round(Number(c.rental_rate)) ?? ""),
-          rental_rate_casco: String(Math.round(Number(c.rental_rate_casco)) ?? ""),
-          days: c.days,
-          deposit: c.deposit,
-          total_deposit: String(c.total_deposit),
-          total_without_deposit: String(c.total_without_deposit),
+          rental_rate_casco: String(
+            Math.round(Number(c.rental_rate_casco)) ?? ""
+          ),
+          days: Number(c.days ?? 0),
+          deposit: Number(c.deposit ?? 0),
+          total_deposit: String(c.total_deposit ?? ""),
+          total_without_deposit: String(c.total_without_deposit ?? ""),
           features: {
             passengers: Number(c.number_of_seats) || 0,
             transmission: c.transmission?.name ?? "—",
