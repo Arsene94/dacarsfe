@@ -277,7 +277,8 @@ const CarsPage = () => {
     }
   };
 
-  const isServiceDue = (nextServiceDate: string) => {
+  const isServiceDue = (nextServiceDate?: string) => {
+    if (!nextServiceDate) return false;
     const nextService = new Date(nextServiceDate);
     const today = new Date();
     const daysUntilService = Math.ceil(
@@ -689,9 +690,11 @@ const CarsPage = () => {
                           Ultimul service:
                         </span>
                         <span className="font-dm-sans text-gray-900">
-                          {new Date(selectedCar.lastService).toLocaleDateString(
-                            "ro-RO",
-                          )}
+                          {selectedCar.lastService
+                            ? new Date(selectedCar.lastService).toLocaleDateString(
+                                "ro-RO",
+                              )
+                            : "-"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -701,9 +704,11 @@ const CarsPage = () => {
                         <span
                           className={`font-dm-sans ${isServiceDue(selectedCar.nextService) ? "text-red-600 font-semibold" : "text-gray-900"}`}
                         >
-                          {new Date(selectedCar.nextService).toLocaleDateString(
-                            "ro-RO",
-                          )}
+                          {selectedCar.nextService
+                            ? new Date(selectedCar.nextService).toLocaleDateString(
+                                "ro-RO",
+                              )
+                            : "-"}
                           {isServiceDue(selectedCar.nextService) && (
                             <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
                               Urgent
