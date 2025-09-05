@@ -17,7 +17,8 @@ import {
   MapPin,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
-import { DataTable, Column } from "@/components/ui/table";
+import { DataTable } from "@/components/ui/table";
+import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 
 const ReservationsPage = () => {
@@ -224,7 +225,8 @@ const ReservationsPage = () => {
               {r.id}
             </div>
             <div className="text-sm text-gray-500 font-dm-sans">
-              {new Date(r.createdAt).toLocaleDateString("ro-RO")}
+              {r.createdAt &&
+                new Date(r.createdAt).toLocaleDateString("ro-RO")}
             </div>
           </div>
         ),
