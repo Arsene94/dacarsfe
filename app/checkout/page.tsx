@@ -235,16 +235,6 @@ const ReservationPage = () => {
     formData.dropoffTime,
     discountStatus?.isValid,
   ]);
-    console.log(booking)
-  if (!booking.startDate || !booking.endDate || !booking.selectedCar) {
-    return (
-      <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-xl font-dm-sans text-gray-600">
-          Trebuie să completezi datele și să selectezi mașina.
-        </p>
-      </div>
-    );
-  }
 
   const servicesTotal = selectedServices.reduce(
     (sum, service) => sum + service.price,
@@ -365,6 +355,16 @@ const ReservationPage = () => {
     handleDiscountCodeValidation(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [booking.selectedCar]);
+
+  if (!booking.startDate || !booking.endDate || !booking.selectedCar) {
+    return (
+      <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-xl font-dm-sans text-gray-600">
+          Trebuie să completezi datele și să selectezi mașina.
+        </p>
+      </div>
+    );
+  }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
