@@ -54,35 +54,35 @@ const ReservationPage = () => {
         customer_email: "",
         customer_phone: "",
         flight_number: "",
-        pickupDate: "",
-        pickupTime: "",
-        dropoffDate: "",
-        dropoffTime: "",
+        rental_start_date: "",
+        rental_start_time: "",
+        rental_end_date: "",
+        rental_end_time: "",
         location: "aeroport",
         car_id: null,
-        discountCode: storedDiscount?.code || "",
+        coupon_code: storedDiscount?.code || "",
     });
     useEffect(() => {
         if (booking.startDate && booking.endDate && booking.selectedCar) {
-            const [pickupDate, pickupTime] = booking.startDate.split("T");
-            const [dropoffDate, dropoffTime] = booking.endDate.split("T");
+            const [rental_start_date, rental_start_time] = booking.startDate.split("T");
+            const [rental_end_date, rental_end_time] = booking.endDate.split("T");
             const selectedCar = booking.selectedCar;
             setFormData((prev) => {
                 if (
-                    prev.pickupDate === pickupDate &&
-                    prev.pickupTime === pickupTime &&
-                    prev.dropoffDate === dropoffDate &&
-                    prev.dropoffTime === dropoffTime &&
+                    prev.rental_start_date === rental_start_date &&
+                    prev.rental_start_time === rental_start_time &&
+                    prev.rental_end_date === rental_end_date &&
+                    prev.rental_end_time === rental_end_time &&
                     prev.car_id === selectedCar.id
                 ) {
                     return prev;
                 }
                 return {
                     ...prev,
-                    pickupDate,
-                    pickupTime,
-                    dropoffDate,
-                    dropoffTime,
+                    rental_start_date,
+                    rental_start_time,
+                    rental_end_date,
+                    rental_end_time,
                     car_id: selectedCar.id,
                 };
             });
@@ -144,14 +144,14 @@ const ReservationPage = () => {
         const updated = { ...formData, [name]: value };
         setFormData(updated);
         if (
-            ["pickupDate", "pickupTime", "dropoffDate", "dropoffTime"].includes(
+            ["rental_start_date", "rental_start_time", "rental_end_date", "rental_end_time"].includes(
                 name,
             )
         ) {
-            const { pickupDate, pickupTime, dropoffDate, dropoffTime } = updated;
-            if (pickupDate && dropoffDate) {
-                const start = new Date(`${pickupDate}T${pickupTime || "00:00"}`);
-                const end = new Date(`${dropoffDate}T${dropoffTime || "00:00"}`);
+            const { rental_start_date, rental_start_time, rental_end_date, rental_end_time } = updated as any;
+            if (rental_start_date && rental_end_date) {
+                const start = new Date(`${rental_start_date}T${rental_start_time || "00:00"}`);
+                const end = new Date(`${rental_end_date}T${rental_end_time || "00:00"}`);
                 if (end <= start) {
                     setAvailabilityError(
                         "Data de returnare trebuie să fie mai mare decât data de ridicare.",
@@ -183,17 +183,17 @@ const ReservationPage = () => {
         const fetchUpdatedCar = async () => {
             if (
                 !booking.selectedCar ||
-                !formData.pickupDate ||
-                !formData.pickupTime ||
-                !formData.dropoffDate ||
-                !formData.dropoffTime ||
+                !formData.rental_start_date ||
+                !formData.rental_start_time ||
+                !formData.rental_end_date ||
+                !formData.rental_end_time ||
                 discountStatus?.isValid
             ) {
                 return;
             }
 
-            const start = `${formData.pickupDate}T${formData.pickupTime}`;
-            const end = `${formData.dropoffDate}T${formData.dropoffTime}`;
+            const start = `${formData.rental_start_date}T${formData.rental_start_time}`;
+            const end = `${formData.rental_end_date}T${formData.rental_end_time}`;
 
             if (new Date(end) <= new Date(start)) {
                 setAvailabilityError(
@@ -284,10 +284,10 @@ const ReservationPage = () => {
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
-        formData.pickupDate,
-        formData.pickupTime,
-        formData.dropoffDate,
-        formData.dropoffTime,
+        formData.rental_start_date,
+        formData.rental_start_time,
+        formData.rental_end_date,
+        formData.rental_end_time,
         discountStatus?.isValid,
     ]);
 
@@ -301,18 +301,14 @@ const ReservationPage = () => {
 
         if (!selectedCar || !booking.startDate || !booking.endDate) return 0;
 
-        const pickupDate = new Date(booking.startDate);
-        const dropoffDate = new Date(booking.endDate);
-        const timeDiff = dropoffDate.getTime() - pickupDate.getTime();
+        const startDate = new Date(booking.startDate);
+        const endDate = new Date(booking.endDate);
+        const timeDiff = endDate.getTime() - startDate.getTime();
         const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
         const bookingWithDeposit = booking.withDeposit;
         return daysDiff > 0 && bookingWithDeposit
             ? Number(selectedCar.total_deposit)
             : Number(selectedCar.total_without_deposit);
-    };
-
-    const calculateTotal = () => {
-        return calculateBaseTotal() + servicesTotal;
     };
 
     const handleDiscountCodeValidation = async (
@@ -321,7 +317,7 @@ const ReservationPage = () => {
     ) => {
         if (isValidatingCode) return;
         if (discountStatus?.isValid && !force) return;
-        if (!formData.discountCode.trim()) {
+        if (!formData.coupon_code.trim()) {
             setDiscountStatus(null);
             return;
         }
@@ -332,7 +328,7 @@ const ReservationPage = () => {
         setIsValidatingCode(true);
         try {
             const payload: any = {
-                code: formData.discountCode,
+                code: formData.coupon_code,
                 car_id: carForValidation.id,
                 start_date: booking?.startDate,
                 end_date: booking?.endDate,
@@ -362,7 +358,7 @@ const ReservationPage = () => {
                     withDeposit: booking?.withDeposit ?? null,
                 };
                 const discountData = {
-                    code: formData.discountCode,
+                    code: formData.coupon_code,
                     discount: (data.data.coupon as any)?.discount_deposit ?? "0",
                     discountCasco: (data.data.coupon as any)?.discount_casco ?? "0",
                 };
@@ -398,7 +394,7 @@ const ReservationPage = () => {
         }
         setOriginalCar(null);
         setDiscountStatus(null);
-        setFormData((prev) => ({ ...prev, discountCode: "" }));
+        setFormData((prev) => ({ ...prev, coupon_code: "" }));
         localStorage.removeItem("discount");
         localStorage.removeItem("originalCar");
         lastValidatedRef.current = { carId: null, withDeposit: null };
@@ -407,7 +403,7 @@ const ReservationPage = () => {
         if (
             !booking.selectedCar ||
             !discountStatus?.isValid ||
-            !formData.discountCode ||
+            !formData.coupon_code ||
             isValidatingCode
         ) {
             return;
@@ -441,33 +437,55 @@ const ReservationPage = () => {
     }
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (availabilityError) return;
+        if (availabilityError || !booking.startDate || !booking.endDate) return;
         setIsSubmitting(true);
 
-        const finalTotal = calculateTotal();
-        const appliedDiscount = discountStatus?.isValid
-            ? booking.withDeposit
-                ? parseFloat(discountStatus.discount)
-                : parseFloat(discountStatus.discountCasco)
-            : 0;
-        const originalTotal = finalTotal + appliedDiscount;
-console.log(formData)
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-
-        localStorage.setItem(
-            "reservationData",
-            JSON.stringify({
-                ...formData,
-                services: selectedServices,
-                total: finalTotal,
-                originalTotal,
-                appliedDiscount,
-                reservationId:
-                    "DC" + Math.random().toString(36).substr(2, 9).toUpperCase(),
-            }),
+        const subTotal = calculateBaseTotal();
+        const totalServices = servicesTotal;
+        const total = subTotal + totalServices;
+        const start = new Date(booking.startDate);
+        const end = new Date(booking.endDate);
+        const daysDiff = Math.ceil(
+            (end.getTime() - start.getTime()) / (1000 * 3600 * 24),
         );
+        const pricePerDay = daysDiff > 0 ? subTotal / daysDiff : 0;
+        const couponAmount = discountAmount;
+        const payload = {
+            ...formData,
+            service_ids: selectedServices.map((s) => s.id),
+            price_per_day: pricePerDay,
+            total_services: totalServices,
+            coupon_amount: couponAmount,
+            total,
+            sub_total: subTotal,
+            with_deposit: booking.withDeposit,
+        };
 
-        router.push("/success");
+        try {
+            const res = await apiClient.createBooking(payload);
+            const reservationId =
+                res?.booking_number ||
+                res?.id ||
+                "DC" + Math.random().toString(36).substr(2, 9).toUpperCase();
+            localStorage.setItem(
+                "reservationData",
+                JSON.stringify({
+                    ...formData,
+                    services: selectedServices,
+                    price_per_day: pricePerDay,
+                    total_services: totalServices,
+                    coupon_amount: couponAmount,
+                    total,
+                    sub_total: subTotal,
+                    reservationId,
+                }),
+            );
+            router.push("/success");
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const selectedCar = booking.selectedCar;
@@ -478,13 +496,8 @@ console.log(formData)
             ? parseFloat(discountStatus.discount)
             : parseFloat(discountStatus.discountCasco)
         : 0;
-    const originalBaseTotal = discountStatus?.isValid
-        ? baseTotal + discountAmount
-        : baseTotal;
     const total = baseTotal + servicesTotal;
-    const originalTotal = discountStatus?.isValid
-        ? originalBaseTotal + servicesTotal
-        : total;
+    const originalTotal = discountStatus?.isValid ? total + discountAmount : total;
 
     return (
         <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
@@ -591,8 +604,8 @@ console.log(formData)
                                                 <input
                                                     id="reservation-discount"
                                                     type="text"
-                                                    name="discountCode"
-                                                    value={formData.discountCode}
+                                                    name="coupon_code"
+                                                    value={formData.coupon_code}
                                                     disabled={true}
                                                     className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
                                                     placeholder="Ex: WHEEL10"
@@ -610,8 +623,8 @@ console.log(formData)
                                                 <input
                                                     id="reservation-discount"
                                                     type="text"
-                                                    name="discountCode"
-                                                    value={formData.discountCode}
+                                                    name="coupon_code"
+                                                    value={formData.coupon_code}
                                                     onChange={handleInputChange}
                                                     className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
                                                     placeholder="Ex: WHEEL10"
@@ -620,7 +633,7 @@ console.log(formData)
                                                     type="button"
                                                     onClick={() => handleDiscountCodeValidation}
                                                     disabled={
-                                                        isValidatingCode || !formData.discountCode.trim()
+                                                        isValidatingCode || !formData.coupon_code.trim()
                                                     }
                                                     className="px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                                                     aria-label="Validează codul"
@@ -699,8 +712,8 @@ console.log(formData)
                                               <input
                                                   id="reservation-pickup-date"
                                                   type="date"
-                                                  name="pickupDate"
-                                                  value={formData.pickupDate}
+                                                  name="rental_start_date"
+                                                  value={formData.rental_start_date}
                                                   onChange={handleInputChange}
                                                   required
                                                   min={new Date().toISOString().split("T")[0]}
@@ -718,8 +731,8 @@ console.log(formData)
                                               <input
                                                   id="reservation-pickup-time"
                                                   type="time"
-                                                  name="pickupTime"
-                                                  value={formData.pickupTime}
+                                                  name="rental_start_time"
+                                                  value={formData.rental_start_time}
                                                   onChange={handleInputChange}
                                                   required
                                                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityError ? "border-red-500" : "border-gray-300"}`}
@@ -736,12 +749,12 @@ console.log(formData)
                                               <input
                                                   id="reservation-dropoff-date"
                                                   type="date"
-                                                  name="dropoffDate"
-                                                  value={formData.dropoffDate}
+                                                  name="rental_end_date"
+                                                  value={formData.rental_end_date}
                                                   onChange={handleInputChange}
                                                   required
                                                   min={
-                                                      formData.pickupDate ||
+                                                      formData.rental_start_date ||
                                                       new Date().toISOString().split("T")[0]
                                                   }
                                                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityError ? "border-red-500" : "border-gray-300"}`}
@@ -758,8 +771,8 @@ console.log(formData)
                                               <input
                                                   id="reservation-dropoff-time"
                                                   type="time"
-                                                  name="dropoffTime"
-                                                  value={formData.dropoffTime}
+                                                  name="rental_end_time"
+                                                  value={formData.rental_end_time}
                                                   onChange={handleInputChange}
                                                   required
                                                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityError ? "border-red-500" : "border-gray-300"}`}
@@ -835,24 +848,24 @@ console.log(formData)
                                     </div>
                                 )}
 
-                                {formData.pickupDate && (
+                                {formData.rental_start_date && (
                                     <div className="flex justify-between items-center">
                                         <span className="font-dm-sans text-gray-600">De la:</span>
                                         <span className="font-dm-sans font-semibold text-berkeley">
-                      {new Date(formData.pickupDate).toLocaleDateString(
+                      {new Date(formData.rental_start_date).toLocaleDateString(
                           "ro-RO",
-                      )} {formData.pickupTime}
+                      )} {formData.rental_start_time}
                     </span>
                                     </div>
                                 )}
 
-                                {formData.dropoffDate && (
+                                {formData.rental_end_date && (
                                     <div className="flex justify-between items-center">
                                         <span className="font-dm-sans text-gray-600">Până la:</span>
                                         <span className="font-dm-sans font-semibold text-berkeley">
-                      {new Date(formData.dropoffDate).toLocaleDateString(
+                      {new Date(formData.rental_end_date).toLocaleDateString(
                           "ro-RO",
-                      )} {formData.dropoffTime}
+                      )} {formData.rental_end_time}
                     </span>
                                     </div>
                                 )}
