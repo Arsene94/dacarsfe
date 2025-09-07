@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useState, useRef} from "react";
 import {useRouter} from "next/navigation";
 import {Calendar, Gift, Plane, User,} from "lucide-react";
 import {Label} from "@/components/ui/label";
@@ -66,16 +66,27 @@ const ReservationPage = () => {
       const [pickupDate, pickupTime] = booking.startDate.split("T");
       const [dropoffDate, dropoffTime] = booking.endDate.split("T");
       const selectedCar = booking.selectedCar;
-      setFormData((prev) => ({
-        ...prev,
-        pickupDate,
-        pickupTime,
-        dropoffDate,
-        dropoffTime,
-        car_id: selectedCar.id,
-      }));
+      setFormData((prev) => {
+        if (
+          prev.pickupDate === pickupDate &&
+          prev.pickupTime === pickupTime &&
+          prev.dropoffDate === dropoffDate &&
+          prev.dropoffTime === dropoffTime &&
+          prev.car_id === selectedCar.id
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          pickupDate,
+          pickupTime,
+          dropoffDate,
+          dropoffTime,
+          car_id: selectedCar.id,
+        };
+      });
     }
-  }, [booking]);
+  }, [booking.startDate, booking.endDate, booking.selectedCar]);
 
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
@@ -120,6 +131,10 @@ const ReservationPage = () => {
   );
   const [isValidatingCode, setIsValidatingCode] = useState(false);
   const [originalCar, setOriginalCar] = useState<Car | null>(storedOriginalCar);
+  const lastValidatedRef = useRef<{ carId: number | null; withDeposit: boolean | null }>({
+    carId: null,
+    withDeposit: null,
+  });
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -261,6 +276,7 @@ const ReservationPage = () => {
   };
 
   const handleDiscountCodeValidation = async (force = false) => {
+    if (isValidatingCode) return;
     if (discountStatus?.isValid && !force) return;
     if (!formData.discountCode.trim()) {
       setDiscountStatus(null);
@@ -296,6 +312,10 @@ const ReservationPage = () => {
           withDeposit: booking?.withDeposit,
           selectedCar: data.data,
         });
+        lastValidatedRef.current = {
+          carId: data.data?.id ?? null,
+          withDeposit: booking?.withDeposit ?? null,
+        };
         const discountData = {
           code: formData.discountCode,
           discount: (data.data.coupon as any)?.discount_deposit ?? "0",
@@ -338,23 +358,41 @@ const ReservationPage = () => {
     setFormData((prev) => ({ ...prev, discountCode: "" }));
     localStorage.removeItem("discount");
     localStorage.removeItem("originalCar");
+    lastValidatedRef.current = { carId: null, withDeposit: null };
   };
   useEffect(() => {
     if (
       !booking.selectedCar ||
       !discountStatus?.isValid ||
       !formData.discountCode ||
+      isValidatingCode
+    ) {
+      return;
+    }
+
+    const alreadyValidated =
+      lastValidatedRef.current.carId === booking.selectedCar.id &&
+      lastValidatedRef.current.withDeposit === booking.withDeposit;
+
+    if (
+      alreadyValidated ||
       (booking.selectedCar as any)?.coupon?.code === formData.discountCode
     ) {
       return;
     }
+
+    lastValidatedRef.current = {
+      carId: booking.selectedCar.id,
+      withDeposit: booking.withDeposit,
+    };
+
     setOriginalCar(null);
     if (typeof window !== "undefined") {
       localStorage.removeItem("originalCar");
     }
     handleDiscountCodeValidation(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [booking.selectedCar]);
+  }, [booking.selectedCar, booking.withDeposit, isValidatingCode]);
 
   if (!booking.startDate || !booking.endDate || !booking.selectedCar) {
     return (
@@ -541,7 +579,6 @@ const ReservationPage = () => {
                           name="discountCode"
                           value={formData.discountCode}
                           onChange={handleInputChange}
-                          onBlur={handleDiscountCodeValidation}
                           className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
                           placeholder="Ex: WHEEL10"
                         />
