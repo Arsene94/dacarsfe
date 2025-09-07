@@ -1,8 +1,8 @@
 export interface ReservationFormData {
-  name: string;
-  email: string;
-  phone: string;
-  flight: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  flight_number: string;
   pickupDate: string;
   pickupTime: string;
   dropoffDate: string;

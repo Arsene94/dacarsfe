@@ -50,10 +50,10 @@ const ReservationPage = () => {
             ? JSON.parse(localStorage.getItem("originalCar") || "null")
             : null;
     const [formData, setFormData] = useState<ReservationFormData>({
-        name: "",
-        email: "",
-        phone: "",
-        flight: "",
+        customer_name: "",
+        customer_email: "",
+        customer_phone: "",
+        flight_number: "",
         pickupDate: "",
         pickupTime: "",
         dropoffDate: "",
@@ -209,7 +209,7 @@ const ReservationPage = () => {
             };
             const checkAvailability = await apiClient.checkCarAvailability(payload);
 
-            if (checkAvailability.length !== 0) {
+            if (checkAvailability.available === false) {
                 setAvailabilityError(
                     "Mașina nu este disponibilă în perioada selectată.",
                 );
@@ -451,7 +451,7 @@ const ReservationPage = () => {
                 : parseFloat(discountStatus.discountCasco)
             : 0;
         const originalTotal = finalTotal + appliedDiscount;
-
+console.log(formData)
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
         localStorage.setItem(
@@ -522,7 +522,7 @@ const ReservationPage = () => {
                                                 id="reservation-name"
                                                 type="text"
                                                 name="name"
-                                                value={formData.name}
+                                                value={formData.customer_name}
                                                 onChange={handleInputChange}
                                                 required
                                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
@@ -541,7 +541,7 @@ const ReservationPage = () => {
                                                 id="reservation-email"
                                                 type="email"
                                                 name="email"
-                                                value={formData.email}
+                                                value={formData.customer_email}
                                                 onChange={handleInputChange}
                                                 required
                                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
@@ -550,7 +550,7 @@ const ReservationPage = () => {
                                         </div>
 
                                         <PhoneInput
-                                            value={formData.phone}
+                                            value={formData.customer_phone}
                                             onChange={(val) =>
                                                 setFormData((prev) => ({ ...prev, phone: val }))
                                             }
@@ -570,7 +570,7 @@ const ReservationPage = () => {
                                             id="reservation-flight"
                                             type="text"
                                             name="flight"
-                                            value={formData.flight}
+                                            value={formData.flight_number}
                                             onChange={handleInputChange}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
                                             placeholder="Ex: RO123 sau Blue Air 456"
