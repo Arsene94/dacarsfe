@@ -116,6 +116,13 @@ class ApiClient {
         })
     }
 
+    async checkCarAvailability(params: { car_id: number, start_date: string, end_date: string }) {
+        return this.request<any>(`/bookings/availability/check`, {
+            method: 'POST',
+            body: JSON.stringify(params),
+        });
+    }
+
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
