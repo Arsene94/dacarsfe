@@ -39,6 +39,15 @@ const parsePrice = (raw: unknown): number => {
 const ReservationPage = () => {
   const router = useRouter();
   const { booking, setBooking } = useBooking();
+
+  const storedDiscount =
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("discount") || "null")
+      : null;
+  const storedOriginalCar =
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("originalCar") || "null")
+      : null;
   const [formData, setFormData] = useState<ReservationFormData>({
     name: "",
     email: "",
@@ -50,7 +59,7 @@ const ReservationPage = () => {
     dropoffTime: "",
     location: "aeroport",
     car_id: null,
-    discountCode: "",
+    discountCode: storedDiscount?.code || "",
   });
   useEffect(() => {
     if (booking.startDate && booking.endDate && booking.selectedCar) {
@@ -99,9 +108,18 @@ const ReservationPage = () => {
     message: string;
     discount: string;
     discountCasco: string;
-  } | null>(null);
+  } | null>(
+    storedDiscount
+      ? {
+          isValid: true,
+          message: "Reducere aplicată!",
+          discount: String(storedDiscount.discount ?? "0"),
+          discountCasco: String(storedDiscount.discountCasco ?? "0"),
+        }
+      : null,
+  );
   const [isValidatingCode, setIsValidatingCode] = useState(false);
-  const [originalCar, setOriginalCar] = useState<Car | null>(null);
+  const [originalCar, setOriginalCar] = useState<Car | null>(storedOriginalCar);
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -272,27 +290,37 @@ const ReservationPage = () => {
         total_price_casco: booking?.selectedCar?.total_without_deposit,
       };
       const data = await apiClient.validateDiscountCode(payload);
-      if (!originalCar) setOriginalCar(booking.selectedCar);
+      const baseCar = originalCar ?? booking.selectedCar;
+      if (!originalCar) setOriginalCar(baseCar);
       if (data.valid === false) {
-          setDiscountStatus({
-              isValid: false,
-              message: "Eroare la validarea codului.",
-              discount: "0",
-              discountCasco: "0",
-          });
+        setDiscountStatus({
+          isValid: false,
+          message: "Eroare la validarea codului.",
+          discount: "0",
+          discountCasco: "0",
+        });
       } else {
-          setBooking({
-              startDate: booking?.startDate,
-              endDate: booking?.endDate,
-              withDeposit: booking?.withDeposit,
-              selectedCar: data.data,
-          });
-          setDiscountStatus({
-              isValid: true,
-              message: "Reducere aplicată!",
-              discount: String((data.data.coupon as any)?.discount_deposit ?? "0"),
-              discountCasco: String((data.data.coupon as any)?.discount_casco ?? "0"),
-          });
+        setBooking({
+          startDate: booking?.startDate,
+          endDate: booking?.endDate,
+          withDeposit: booking?.withDeposit,
+          selectedCar: data.data,
+        });
+        const discountData = {
+          code: formData.discountCode,
+          discount: (data.data.coupon as any)?.discount_deposit ?? "0",
+          discountCasco: (data.data.coupon as any)?.discount_casco ?? "0",
+        };
+        localStorage.setItem("discount", JSON.stringify(discountData));
+        if (baseCar) {
+          localStorage.setItem("originalCar", JSON.stringify(baseCar));
+        }
+        setDiscountStatus({
+          isValid: true,
+          message: "Reducere aplicată!",
+          discount: String(discountData.discount),
+          discountCasco: String(discountData.discountCasco),
+        });
       }
     } catch (error) {
       setDiscountStatus({
@@ -318,6 +346,8 @@ const ReservationPage = () => {
     setOriginalCar(null);
     setDiscountStatus(null);
     setFormData((prev) => ({ ...prev, discountCode: "" }));
+    localStorage.removeItem("discount");
+    localStorage.removeItem("originalCar");
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
