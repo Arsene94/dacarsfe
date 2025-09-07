@@ -494,15 +494,15 @@ const ReservationPage = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
                                             <Label
-                                                htmlFor="reservation-last-name"
+                                                htmlFor="reservation-name"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
                                                 Nume *
                                             </Label>
                                             <input
-                                                id="reservation-last-name"
+                                                id="reservation-name"
                                                 type="text"
-                                                name="lastName"
+                                                name="name"
                                                 value={formData.name}
                                                 onChange={handleInputChange}
                                                 required
