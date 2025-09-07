@@ -275,7 +275,10 @@ const ReservationPage = () => {
     return calculateBaseTotal() + servicesTotal;
   };
 
-  const handleDiscountCodeValidation = async (force = false) => {
+  const handleDiscountCodeValidation = async (
+    force = false,
+    baseCar?: Car | null,
+  ) => {
     if (isValidatingCode) return;
     if (discountStatus?.isValid && !force) return;
     if (!formData.discountCode.trim()) {
@@ -283,21 +286,23 @@ const ReservationPage = () => {
       return;
     }
 
+    const carForValidation = baseCar ?? booking.selectedCar;
+    if (!carForValidation) return;
+
     setIsValidatingCode(true);
     try {
       const payload: any = {
         code: formData.discountCode,
-        car_id: booking?.selectedCar?.id,
+        car_id: carForValidation.id,
         start_date: booking?.startDate,
         end_date: booking?.endDate,
-        price: booking?.selectedCar?.rental_rate,
-        price_casco: booking?.selectedCar?.rental_rate_casco,
-        total_price: booking?.selectedCar?.total_deposit,
-        total_price_casco: booking?.selectedCar?.total_without_deposit,
+        price: carForValidation.rental_rate,
+        price_casco: carForValidation.rental_rate_casco,
+        total_price: carForValidation.total_deposit,
+        total_price_casco: carForValidation.total_without_deposit,
       };
       const data = await apiClient.validateDiscountCode(payload);
-      const baseCar = originalCar ?? booking.selectedCar;
-      if (!originalCar) setOriginalCar(baseCar);
+      setOriginalCar(carForValidation);
       if (data.valid === false) {
         setDiscountStatus({
           isValid: false,
@@ -322,9 +327,7 @@ const ReservationPage = () => {
           discountCasco: (data.data.coupon as any)?.discount_casco ?? "0",
         };
         localStorage.setItem("discount", JSON.stringify(discountData));
-        if (baseCar) {
-          localStorage.setItem("originalCar", JSON.stringify(baseCar));
-        }
+        localStorage.setItem("originalCar", JSON.stringify(carForValidation));
         setDiscountStatus({
           isValid: true,
           message: "Reducere aplicată!",
@@ -374,10 +377,7 @@ const ReservationPage = () => {
       lastValidatedRef.current.carId === booking.selectedCar.id &&
       lastValidatedRef.current.withDeposit === booking.withDeposit;
 
-    if (
-      alreadyValidated ||
-      (booking.selectedCar as any)?.coupon?.code === formData.discountCode
-    ) {
+    if (alreadyValidated) {
       return;
     }
 
@@ -386,11 +386,7 @@ const ReservationPage = () => {
       withDeposit: booking.withDeposit,
     };
 
-    setOriginalCar(null);
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("originalCar");
-    }
-    handleDiscountCodeValidation(true);
+    handleDiscountCodeValidation(true, originalCar || booking.selectedCar);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [booking.selectedCar, booking.withDeposit, isValidatingCode]);
 
@@ -441,10 +437,8 @@ const ReservationPage = () => {
       ? parseFloat(discountStatus.discount)
       : parseFloat(discountStatus.discountCasco)
     : 0;
-  const originalBaseTotal = originalCar
-    ? booking.withDeposit
-      ? parsePrice(originalCar.total_deposit)
-      : parsePrice(originalCar.total_without_deposit)
+  const originalBaseTotal = discountStatus?.isValid
+    ? baseTotal + discountAmount
     : baseTotal;
   const total = baseTotal + servicesTotal;
   const originalTotal = discountStatus?.isValid
@@ -867,22 +861,22 @@ const ReservationPage = () => {
                 )}
                   <hr className="my-2" />
                   {discountStatus?.isValid && discountAmount > 0 && (
-                      <>
-                          <div className="flex justify-between items-center mb-2">
-                      <span className="font-dm-sans text-gray-600">
-                        Total înainte de reducere:
-                      </span>
-                              <span className="font-dm-sans text-gray-600">
-                        {originalTotal.toFixed(2)}€
-                      </span>
-                          </div>
-                          <div className="flex justify-between items-center mb-2">
-                              <span className="font-dm-sans text-jade">Reducere:</span>
-                              <span className="font-dm-sans text-jade">
-                        -{(discountAmount * Number(booking.selectedCar.days)).toFixed(2)}€
-                      </span>
-                          </div>
-                      </>
+                    <>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-dm-sans text-gray-600">
+                          Total înainte de reducere:
+                        </span>
+                        <span className="font-dm-sans text-gray-600">
+                          {originalTotal.toFixed(2)}€
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-dm-sans text-jade">Reducere:</span>
+                        <span className="font-dm-sans text-jade">
+                          -{discountAmount.toFixed(2)}€
+                        </span>
+                      </div>
+                    </>
                   )}
                 <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
