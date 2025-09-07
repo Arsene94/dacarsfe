@@ -270,8 +270,8 @@ const ReservationPage = () => {
     return calculateBaseTotal() + servicesTotal;
   };
 
-  const handleDiscountCodeValidation = async () => {
-    if (discountStatus?.isValid) return;
+  const handleDiscountCodeValidation = async (force = false) => {
+    if (discountStatus?.isValid && !force) return;
     if (!formData.discountCode.trim()) {
       setDiscountStatus(null);
       return;
@@ -349,6 +349,22 @@ const ReservationPage = () => {
     localStorage.removeItem("discount");
     localStorage.removeItem("originalCar");
   };
+  useEffect(() => {
+    if (
+      !booking.selectedCar ||
+      !discountStatus?.isValid ||
+      !formData.discountCode ||
+      (booking.selectedCar as any)?.coupon?.code === formData.discountCode
+    ) {
+      return;
+    }
+    setOriginalCar(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("originalCar");
+    }
+    handleDiscountCodeValidation(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking.selectedCar]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
