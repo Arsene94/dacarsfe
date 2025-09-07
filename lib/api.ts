@@ -1,3 +1,6 @@
+import {mapCarSearchFilters} from "@/lib/mapFilters";
+import {toQuery} from "@/lib/qs";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 class ApiClient {
@@ -82,34 +85,32 @@ class ApiClient {
             }
         });
 
-        return this.request<any>(`/front/nextjs/cars?${searchParams.toString()}`);
+        return this.request<any>(`/cars?${searchParams.toString()}`);
 
     }
 
-    async getCarsByDateCriteria(payload: any){
-        return this.request<any>(`/front/nextjs/cars/paginate`, {
-            method: 'POST',
-            body: JSON.stringify(payload),
-        })
+    async getCarsByDateCriteria(uiPayload: any){
+        const mapped = mapCarSearchFilters(uiPayload);
+        const query  = toQuery(mapped);
+        return this.request<any>(`/cars?${query}`);
     }
 
     async getCarCategories() {
-        return this.request<any>(`/front/nextjs/categories`);
+        return this.request<any>(`/car-categories?limit=100`);
     }
 
-    async getCarForBooking(params: { car_id: number; start_date: string; end_date: string }) {
-        return this.request<any>(`/front/nextjs/booking`, {
-            method: 'POST',
-            body: JSON.stringify(params),
-        });
+    async getCarForBooking(uiPayload: any) {
+        const mapped = mapCarSearchFilters(uiPayload);
+        const query  = toQuery(mapped);
+        return this.request<any>(`/cars/${uiPayload.car_id}/info-for-booking?${query}`);
     }
 
     async getServices() {
-        return this.request<any>(`/front/nextjs/services`);
+        return this.request<any>(`/services`);
     }
 
     async validateDiscountCode(params: { code: string, car_id: number, start_date: any, end_date: any, price: any, price_casco: any, total_price: any, total_price_casco: any }) {
-        return this.request<any>(`/front/nextjs/discount/validate`, {
+        return this.request<any>(`/coupons/validate`, {
             method: 'POST',
             body: JSON.stringify(params),
         })

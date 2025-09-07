@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { ApiCar, CarCategory, FleetCar } from '@/types/car';
 
 const STORAGE_BASE =
-    'https://dacars.ro/storage';
+    process.env.NEXT_PUBLIC_STORAGE_URL ?? 'http://127.0.0.1:8000/storage';
 
 const toImageUrl = (p?: string | null): string => {
     if (!p) return "/images/placeholder-car.svg";
@@ -43,6 +43,7 @@ const FleetSection = () => {
 
         (async () => {
             const response = await apiClient.getHomePageCars({ limit: 4 });
+            console.log(response);
             const items: unknown = Array.isArray(response)
                 ? response
                 : (response as any)?.data;

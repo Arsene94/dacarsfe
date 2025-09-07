@@ -210,7 +210,7 @@ const ReservationPage = () => {
     formData.dropoffDate,
     formData.dropoffTime,
   ]);
-
+    console.log(booking)
   if (!booking.startDate || !booking.endDate || !booking.selectedCar) {
     return (
       <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
@@ -266,18 +266,27 @@ const ReservationPage = () => {
       };
       const data = await apiClient.validateDiscountCode(payload);
       if (!originalCar) setOriginalCar(booking.selectedCar);
-      setBooking({
-        startDate: booking?.startDate,
-        endDate: booking?.endDate,
-        withDeposit: booking?.withDeposit,
-        selectedCar: data,
-      });
-      setDiscountStatus({
-        isValid: true,
-        message: "Reducere aplicată!",
-        discount: String((data as any)?.discount_amount ?? "0"),
-        discountCasco: String((data as any)?.discount_amount_casco ?? "0"),
-      });
+      if (data.valid === false) {
+          setDiscountStatus({
+              isValid: false,
+              message: "Eroare la validarea codului.",
+              discount: "0",
+              discountCasco: "0",
+          });
+      } else {
+          setBooking({
+              startDate: booking?.startDate,
+              endDate: booking?.endDate,
+              withDeposit: booking?.withDeposit,
+              selectedCar: data.data,
+          });
+          setDiscountStatus({
+              isValid: true,
+              message: "Reducere aplicată!",
+              discount: String((data.data.coupon as any)?.discount_deposit ?? "0"),
+              discountCasco: String((data.data.coupon as any)?.discount_casco ?? "0"),
+          });
+      }
     } catch (error) {
       setDiscountStatus({
         isValid: false,

@@ -86,13 +86,31 @@ const HeroSection = () => {
 
   useEffect(() => {
     const getCategories = async () => {
-        const res = await apiClient.getCarCategories();
+        const res = await apiClient.getCarCategories()
+        const raw = res?.data ?? res
 
-        const obj: Record<string, string> = (res?.data ?? res) as Record<string, string>;
+        const cat: CarCategory[] = Array.isArray(raw)
+            // cazul tău curent: array de obiecte
+            ? raw
+                .filter((it: any) => it && typeof it === 'object' && 'id' in it && 'name' in it)
+                // (opțional) doar cele publicate:
+                .filter((it: any) => !('status' in it) || it.status === 'published')
+                .map((it: any) => ({
+                    id: Number(it.id),
+                    name: String(it.name),
+                    order: typeof it.order === 'number' ? it.order : undefined,
+                }))
+            // fallback: obiect tip Record<id, name>
+            : Object.entries(raw as Record<string, string>).map(([id, name]) => ({
+                id: Number(id),
+                name: String(name),
+            }))
 
-        const cat: CarCategory[] = Object.entries(obj)
-            .map(([id, name]) => ({ id: Number(id), name: String(name) }))
-            .sort((a, b) => a.id - b.id);
+        cat.sort((a, b) => {
+            const ao = a.order ?? Number.POSITIVE_INFINITY
+            const bo = b.order ?? Number.POSITIVE_INFINITY
+            return ao - bo || a.id - b.id
+        })
 
         setCategories(cat);
     };

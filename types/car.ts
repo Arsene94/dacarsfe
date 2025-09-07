@@ -1,7 +1,8 @@
 export type CarCategory = {
-  id: number;
-  name: string;
-};
+    id: number;
+    name: string;
+    order?: number
+}
 
 export type ApiCar = {
   id: number;
