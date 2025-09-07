@@ -123,6 +123,13 @@ class ApiClient {
         });
     }
 
+    async createBooking(payload: any) {
+        return this.request<any>(`/bookings`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
