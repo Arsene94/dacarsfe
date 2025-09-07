@@ -141,15 +141,24 @@ const ReservationPage = () => {
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     ) => {
         const { name, value } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
+        const updated = { ...formData, [name]: value };
+        setFormData(updated);
         if (
             ["pickupDate", "pickupTime", "dropoffDate", "dropoffTime"].includes(
                 name,
             )
         ) {
+            const { pickupDate, pickupTime, dropoffDate, dropoffTime } = updated;
+            if (pickupDate && dropoffDate) {
+                const start = new Date(`${pickupDate}T${pickupTime || "00:00"}`);
+                const end = new Date(`${dropoffDate}T${dropoffTime || "00:00"}`);
+                if (end <= start) {
+                    setAvailabilityError(
+                        "Data de returnare trebuie să fie mai mare decât data de ridicare.",
+                    );
+                    return;
+                }
+            }
             setAvailabilityError(null);
         }
     };
@@ -185,15 +194,25 @@ const ReservationPage = () => {
 
             const start = `${formData.pickupDate}T${formData.pickupTime}`;
             const end = `${formData.dropoffDate}T${formData.dropoffTime}`;
+
+            if (new Date(end) <= new Date(start)) {
+                setAvailabilityError(
+                    "Data de returnare trebuie să fie mai mare decât data de ridicare.",
+                );
+                return;
+            }
+
             const payload = {
                 car_id: booking.selectedCar.id,
                 start_date: start,
-                end_date: end
-            }
+                end_date: end,
+            };
             const checkAvailability = await apiClient.checkCarAvailability(payload);
 
             if (checkAvailability.length !== 0) {
-                setAvailabilityError("Mașina nu este disponibilă în perioada selectată.");
+                setAvailabilityError(
+                    "Mașina nu este disponibilă în perioada selectată.",
+                );
                 return;
             }
             setAvailabilityError(null);
