@@ -9,6 +9,7 @@ import {useBooking} from "@/context/BookingContext";
 import apiClient from "@/lib/api";
 import {ApiCar, Car} from "@/types/car";
 import {ReservationFormData, Service} from "@/types/reservation";
+import {Button} from "@/components/ui/button";
 
 const STORAGE_BASE = "https://dacars.ro/storage";
 
@@ -576,9 +577,9 @@ const ReservationPage = () => {
                           className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
                           placeholder="Ex: WHEEL10"
                         />
-                        <button
+                        <Button
                           type="button"
-                          onClick={handleDiscountCodeValidation}
+                          onClick={() => handleDiscountCodeValidation}
                           disabled={
                             isValidatingCode || !formData.discountCode.trim()
                           }
@@ -590,7 +591,7 @@ const ReservationPage = () => {
                           ) : (
                             "Validează"
                           )}
-                        </button>
+                        </Button>
                       </div>
                     )}
 
