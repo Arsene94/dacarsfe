@@ -128,31 +128,34 @@ const ReservationPage = () => {
   };
 
   useEffect(() => {
+    let ignore = false;
     const fetchUpdatedCar = async () => {
       if (
         !booking.selectedCar ||
         !formData.pickupDate ||
         !formData.pickupTime ||
         !formData.dropoffDate ||
-        !formData.dropoffTime
+        !formData.dropoffTime ||
+        discountStatus?.isValid
       ) {
         return;
       }
 
       const start = `${formData.pickupDate}T${formData.pickupTime}`;
       const end = `${formData.dropoffDate}T${formData.dropoffTime}`;
-        setBooking({
-            startDate: start,
-            endDate: end,
-            withDeposit: booking.withDeposit,
-            selectedCar: booking.selectedCar,
-        });
+      setBooking({
+        startDate: start,
+        endDate: end,
+        withDeposit: booking.withDeposit,
+        selectedCar: booking.selectedCar,
+      });
       try {
         const res = await apiClient.getCarForBooking({
           car_id: booking.selectedCar.id,
           start_date: start,
           end_date: end,
         });
+        if (ignore) return;
         const apiCar: ApiCar = Array.isArray(res?.data)
           ? res.data[0]
           : (res?.data ?? (Array.isArray(res) ? res[0] : res));
@@ -203,12 +206,16 @@ const ReservationPage = () => {
     };
 
     fetchUpdatedCar();
+    return () => {
+      ignore = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     formData.pickupDate,
     formData.pickupTime,
     formData.dropoffDate,
     formData.dropoffTime,
+    discountStatus?.isValid,
   ]);
     console.log(booking)
   if (!booking.startDate || !booking.endDate || !booking.selectedCar) {
