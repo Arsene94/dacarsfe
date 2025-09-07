@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useState, useRef} from "react";
 import {useRouter} from "next/navigation";
 import {Calendar, Gift, Plane, User,} from "lucide-react";
 import {Label} from "@/components/ui/label";
@@ -9,6 +9,7 @@ import {useBooking} from "@/context/BookingContext";
 import apiClient from "@/lib/api";
 import {ApiCar, Car} from "@/types/car";
 import {ReservationFormData, Service} from "@/types/reservation";
+import {Button} from "@/components/ui/button";
 
 const STORAGE_BASE = "https://dacars.ro/storage";
 
@@ -39,6 +40,15 @@ const parsePrice = (raw: unknown): number => {
 const ReservationPage = () => {
   const router = useRouter();
   const { booking, setBooking } = useBooking();
+
+  const storedDiscount =
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("discount") || "null")
+      : null;
+  const storedOriginalCar =
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("originalCar") || "null")
+      : null;
   const [formData, setFormData] = useState<ReservationFormData>({
     name: "",
     email: "",
@@ -50,23 +60,34 @@ const ReservationPage = () => {
     dropoffTime: "",
     location: "aeroport",
     car_id: null,
-    discountCode: "",
+    discountCode: storedDiscount?.code || "",
   });
   useEffect(() => {
     if (booking.startDate && booking.endDate && booking.selectedCar) {
       const [pickupDate, pickupTime] = booking.startDate.split("T");
       const [dropoffDate, dropoffTime] = booking.endDate.split("T");
       const selectedCar = booking.selectedCar;
-      setFormData((prev) => ({
-        ...prev,
-        pickupDate,
-        pickupTime,
-        dropoffDate,
-        dropoffTime,
-        car_id: selectedCar.id,
-      }));
+      setFormData((prev) => {
+        if (
+          prev.pickupDate === pickupDate &&
+          prev.pickupTime === pickupTime &&
+          prev.dropoffDate === dropoffDate &&
+          prev.dropoffTime === dropoffTime &&
+          prev.car_id === selectedCar.id
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          pickupDate,
+          pickupTime,
+          dropoffDate,
+          dropoffTime,
+          car_id: selectedCar.id,
+        };
+      });
     }
-  }, [booking]);
+  }, [booking.startDate, booking.endDate, booking.selectedCar]);
 
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
@@ -99,9 +120,22 @@ const ReservationPage = () => {
     message: string;
     discount: string;
     discountCasco: string;
-  } | null>(null);
+  } | null>(
+    storedDiscount
+      ? {
+          isValid: true,
+          message: "Reducere aplicată!",
+          discount: String(storedDiscount.discount ?? "0"),
+          discountCasco: String(storedDiscount.discountCasco ?? "0"),
+        }
+      : null,
+  );
   const [isValidatingCode, setIsValidatingCode] = useState(false);
-  const [originalCar, setOriginalCar] = useState<Car | null>(null);
+  const [originalCar, setOriginalCar] = useState<Car | null>(storedOriginalCar);
+  const lastValidatedRef = useRef<{ carId: number | null; withDeposit: boolean | null }>({
+    carId: null,
+    withDeposit: null,
+  });
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -128,31 +162,34 @@ const ReservationPage = () => {
   };
 
   useEffect(() => {
+    let ignore = false;
     const fetchUpdatedCar = async () => {
       if (
         !booking.selectedCar ||
         !formData.pickupDate ||
         !formData.pickupTime ||
         !formData.dropoffDate ||
-        !formData.dropoffTime
+        !formData.dropoffTime ||
+        discountStatus?.isValid
       ) {
         return;
       }
 
       const start = `${formData.pickupDate}T${formData.pickupTime}`;
       const end = `${formData.dropoffDate}T${formData.dropoffTime}`;
-        setBooking({
-            startDate: start,
-            endDate: end,
-            withDeposit: booking.withDeposit,
-            selectedCar: booking.selectedCar,
-        });
+      setBooking({
+        startDate: start,
+        endDate: end,
+        withDeposit: booking.withDeposit,
+        selectedCar: booking.selectedCar,
+      });
       try {
         const res = await apiClient.getCarForBooking({
           car_id: booking.selectedCar.id,
           start_date: start,
           end_date: end,
         });
+        if (ignore) return;
         const apiCar: ApiCar = Array.isArray(res?.data)
           ? res.data[0]
           : (res?.data ?? (Array.isArray(res) ? res[0] : res));
@@ -203,23 +240,17 @@ const ReservationPage = () => {
     };
 
     fetchUpdatedCar();
+    return () => {
+      ignore = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     formData.pickupDate,
     formData.pickupTime,
     formData.dropoffDate,
     formData.dropoffTime,
+    discountStatus?.isValid,
   ]);
-    console.log(booking)
-  if (!booking.startDate || !booking.endDate || !booking.selectedCar) {
-    return (
-      <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-xl font-dm-sans text-gray-600">
-          Trebuie să completezi datele și să selectezi mașina.
-        </p>
-      </div>
-    );
-  }
 
   const servicesTotal = selectedServices.reduce(
     (sum, service) => sum + service.price,
@@ -245,47 +276,65 @@ const ReservationPage = () => {
     return calculateBaseTotal() + servicesTotal;
   };
 
-  const handleDiscountCodeValidation = async () => {
-    if (discountStatus?.isValid) return;
+  const handleDiscountCodeValidation = async (
+    force = false,
+    baseCar?: Car | null,
+  ) => {
+    if (isValidatingCode) return;
+    if (discountStatus?.isValid && !force) return;
     if (!formData.discountCode.trim()) {
       setDiscountStatus(null);
       return;
     }
 
+    const carForValidation = baseCar ?? booking.selectedCar;
+    if (!carForValidation) return;
+
     setIsValidatingCode(true);
     try {
       const payload: any = {
         code: formData.discountCode,
-        car_id: booking?.selectedCar?.id,
+        car_id: carForValidation.id,
         start_date: booking?.startDate,
         end_date: booking?.endDate,
-        price: booking?.selectedCar?.rental_rate,
-        price_casco: booking?.selectedCar?.rental_rate_casco,
-        total_price: booking?.selectedCar?.total_deposit,
-        total_price_casco: booking?.selectedCar?.total_without_deposit,
+        price: carForValidation.rental_rate,
+        price_casco: carForValidation.rental_rate_casco,
+        total_price: carForValidation.total_deposit,
+        total_price_casco: carForValidation.total_without_deposit,
       };
       const data = await apiClient.validateDiscountCode(payload);
-      if (!originalCar) setOriginalCar(booking.selectedCar);
+      setOriginalCar(carForValidation);
       if (data.valid === false) {
-          setDiscountStatus({
-              isValid: false,
-              message: "Eroare la validarea codului.",
-              discount: "0",
-              discountCasco: "0",
-          });
+        setDiscountStatus({
+          isValid: false,
+          message: "Eroare la validarea codului.",
+          discount: "0",
+          discountCasco: "0",
+        });
       } else {
-          setBooking({
-              startDate: booking?.startDate,
-              endDate: booking?.endDate,
-              withDeposit: booking?.withDeposit,
-              selectedCar: data.data,
-          });
-          setDiscountStatus({
-              isValid: true,
-              message: "Reducere aplicată!",
-              discount: String((data.data.coupon as any)?.discount_deposit ?? "0"),
-              discountCasco: String((data.data.coupon as any)?.discount_casco ?? "0"),
-          });
+        setBooking({
+          startDate: booking?.startDate,
+          endDate: booking?.endDate,
+          withDeposit: booking?.withDeposit,
+          selectedCar: data.data,
+        });
+        lastValidatedRef.current = {
+          carId: data.data?.id ?? null,
+          withDeposit: booking?.withDeposit ?? null,
+        };
+        const discountData = {
+          code: formData.discountCode,
+          discount: (data.data.coupon as any)?.discount_deposit ?? "0",
+          discountCasco: (data.data.coupon as any)?.discount_casco ?? "0",
+        };
+        localStorage.setItem("discount", JSON.stringify(discountData));
+        localStorage.setItem("originalCar", JSON.stringify(carForValidation));
+        setDiscountStatus({
+          isValid: true,
+          message: "Reducere aplicată!",
+          discount: String(discountData.discount),
+          discountCasco: String(discountData.discountCasco),
+        });
       }
     } catch (error) {
       setDiscountStatus({
@@ -311,7 +360,46 @@ const ReservationPage = () => {
     setOriginalCar(null);
     setDiscountStatus(null);
     setFormData((prev) => ({ ...prev, discountCode: "" }));
+    localStorage.removeItem("discount");
+    localStorage.removeItem("originalCar");
+    lastValidatedRef.current = { carId: null, withDeposit: null };
   };
+  useEffect(() => {
+    if (
+      !booking.selectedCar ||
+      !discountStatus?.isValid ||
+      !formData.discountCode ||
+      isValidatingCode
+    ) {
+      return;
+    }
+
+    const alreadyValidated =
+      lastValidatedRef.current.carId === booking.selectedCar.id &&
+      lastValidatedRef.current.withDeposit === booking.withDeposit;
+
+    if (alreadyValidated) {
+      return;
+    }
+
+    lastValidatedRef.current = {
+      carId: booking.selectedCar.id,
+      withDeposit: booking.withDeposit,
+    };
+
+    handleDiscountCodeValidation(true, originalCar || booking.selectedCar);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking.selectedCar, booking.withDeposit, isValidatingCode]);
+
+  if (!booking.startDate || !booking.endDate || !booking.selectedCar) {
+    return (
+      <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-xl font-dm-sans text-gray-600">
+          Trebuie să completezi datele și să selectezi mașina.
+        </p>
+      </div>
+    );
+  }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -350,10 +438,8 @@ const ReservationPage = () => {
       ? parseFloat(discountStatus.discount)
       : parseFloat(discountStatus.discountCasco)
     : 0;
-  const originalBaseTotal = originalCar
-    ? booking.withDeposit
-      ? parsePrice(originalCar.total_deposit)
-      : parsePrice(originalCar.total_without_deposit)
+  const originalBaseTotal = discountStatus?.isValid
+    ? baseTotal + discountAmount
     : baseTotal;
   const total = baseTotal + servicesTotal;
   const originalTotal = discountStatus?.isValid
@@ -488,13 +574,12 @@ const ReservationPage = () => {
                           name="discountCode"
                           value={formData.discountCode}
                           onChange={handleInputChange}
-                          onBlur={handleDiscountCodeValidation}
                           className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
                           placeholder="Ex: WHEEL10"
                         />
-                        <button
+                        <Button
                           type="button"
-                          onClick={handleDiscountCodeValidation}
+                          onClick={() => handleDiscountCodeValidation}
                           disabled={
                             isValidatingCode || !formData.discountCode.trim()
                           }
@@ -506,7 +591,7 @@ const ReservationPage = () => {
                           ) : (
                             "Validează"
                           )}
-                        </button>
+                        </Button>
                       </div>
                     )}
 
@@ -777,22 +862,22 @@ const ReservationPage = () => {
                 )}
                   <hr className="my-2" />
                   {discountStatus?.isValid && discountAmount > 0 && (
-                      <>
-                          <div className="flex justify-between items-center mb-2">
-                      <span className="font-dm-sans text-gray-600">
-                        Total înainte de reducere:
-                      </span>
-                              <span className="font-dm-sans text-gray-600">
-                        {originalTotal.toFixed(2)}€
-                      </span>
-                          </div>
-                          <div className="flex justify-between items-center mb-2">
-                              <span className="font-dm-sans text-jade">Reducere:</span>
-                              <span className="font-dm-sans text-jade">
-                        -{(discountAmount * Number(booking.selectedCar.days)).toFixed(2)}€
-                      </span>
-                          </div>
-                      </>
+                    <>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-dm-sans text-gray-600">
+                          Total înainte de reducere:
+                        </span>
+                        <span className="font-dm-sans text-gray-600">
+                          {originalTotal.toFixed(2)}€
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-dm-sans text-jade">Reducere:</span>
+                        <span className="font-dm-sans text-jade">
+                          -{discountAmount.toFixed(2)}€
+                        </span>
+                      </div>
+                    </>
                   )}
                 <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
