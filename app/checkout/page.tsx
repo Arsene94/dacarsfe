@@ -115,6 +115,7 @@ const ReservationPage = () => {
     }, []);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [availabilityError, setAvailabilityError] = useState<string | null>(null);
     const [discountStatus, setDiscountStatus] = useState<{
         isValid: boolean;
         message: string;
@@ -144,6 +145,13 @@ const ReservationPage = () => {
             ...prev,
             [name]: value,
         }));
+        if (
+            ["pickupDate", "pickupTime", "dropoffDate", "dropoffTime"].includes(
+                name,
+            )
+        ) {
+            setAvailabilityError(null);
+        }
     };
 
     const handleDepositChange = (withDeposit: boolean) => {
@@ -185,8 +193,10 @@ const ReservationPage = () => {
             const checkAvailability = await apiClient.checkCarAvailability(payload);
 
             if (checkAvailability.length !== 0) {
-                return ; //message
+                setAvailabilityError("Mașina nu este disponibilă în perioada selectată.");
+                return;
             }
+            setAvailabilityError(null);
             setBooking({
                 startDate: start,
                 endDate: end,
@@ -412,6 +422,7 @@ const ReservationPage = () => {
     }
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (availabilityError) return;
         setIsSubmitting(true);
 
         const finalTotal = calculateTotal();
@@ -527,9 +538,8 @@ const ReservationPage = () => {
                                             required
                                             placeholder="+40 722 123 456"
                                         />
-                                    </div>
-
-                                    <div className="mt-6">
+                                      </div>
+                                        <div className="mt-6">
                                         <Label
                                             htmlFor="reservation-flight"
                                             className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
@@ -667,16 +677,16 @@ const ReservationPage = () => {
                                             >
                                                 Dată ridicare *
                                             </Label>
-                                            <input
-                                                id="reservation-pickup-date"
-                                                type="date"
-                                                name="pickupDate"
-                                                value={formData.pickupDate}
-                                                onChange={handleInputChange}
-                                                required
-                                                min={new Date().toISOString().split("T")[0]}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                                            />
+                                              <input
+                                                  id="reservation-pickup-date"
+                                                  type="date"
+                                                  name="pickupDate"
+                                                  value={formData.pickupDate}
+                                                  onChange={handleInputChange}
+                                                  required
+                                                  min={new Date().toISOString().split("T")[0]}
+                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityError ? "border-red-500" : "border-gray-300"}`}
+                                              />
                                         </div>
 
                                         <div>
@@ -686,15 +696,15 @@ const ReservationPage = () => {
                                             >
                                                 Oră ridicare *
                                             </Label>
-                                            <input
-                                                id="reservation-pickup-time"
-                                                type="time"
-                                                name="pickupTime"
-                                                value={formData.pickupTime}
-                                                onChange={handleInputChange}
-                                                required
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                                            />
+                                              <input
+                                                  id="reservation-pickup-time"
+                                                  type="time"
+                                                  name="pickupTime"
+                                                  value={formData.pickupTime}
+                                                  onChange={handleInputChange}
+                                                  required
+                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityError ? "border-red-500" : "border-gray-300"}`}
+                                                  />
                                         </div>
 
                                         <div>
@@ -704,19 +714,19 @@ const ReservationPage = () => {
                                             >
                                                 Dată returnare *
                                             </Label>
-                                            <input
-                                                id="reservation-dropoff-date"
-                                                type="date"
-                                                name="dropoffDate"
-                                                value={formData.dropoffDate}
-                                                onChange={handleInputChange}
-                                                required
-                                                min={
-                                                    formData.pickupDate ||
-                                                    new Date().toISOString().split("T")[0]
-                                                }
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                                            />
+                                              <input
+                                                  id="reservation-dropoff-date"
+                                                  type="date"
+                                                  name="dropoffDate"
+                                                  value={formData.dropoffDate}
+                                                  onChange={handleInputChange}
+                                                  required
+                                                  min={
+                                                      formData.pickupDate ||
+                                                      new Date().toISOString().split("T")[0]
+                                                  }
+                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityError ? "border-red-500" : "border-gray-300"}`}
+                                              />
                                         </div>
 
                                         <div>
@@ -726,19 +736,22 @@ const ReservationPage = () => {
                                             >
                                                 Oră returnare *
                                             </Label>
-                                            <input
-                                                id="reservation-dropoff-time"
-                                                type="time"
-                                                name="dropoffTime"
-                                                value={formData.dropoffTime}
-                                                onChange={handleInputChange}
-                                                required
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                                            />
+                                              <input
+                                                  id="reservation-dropoff-time"
+                                                  type="time"
+                                                  name="dropoffTime"
+                                                  value={formData.dropoffTime}
+                                                  onChange={handleInputChange}
+                                                  required
+                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityError ? "border-red-500" : "border-gray-300"}`}
+                                              />
                                         </div>
-                                    </div>
+                                      </div>
+                                      {availabilityError && (
+                                          <p className="text-red-500 text-sm mt-2">{availabilityError}</p>
+                                      )}
 
-                                    <div className="mt-6">
+                                      <div className="mt-6">
                                         <Label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                                             Garanție
                                         </Label>
@@ -769,7 +782,7 @@ const ReservationPage = () => {
 
                                 <button
                                     type="submit"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || !!availabilityError}
                                     className="w-full py-4 bg-jade text-white font-dm-sans font-semibold text-lg rounded-lg hover:bg-jade/90 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg flex items-center justify-center space-x-2"
                                     aria-label="Finalizează rezervarea"
                                 >
