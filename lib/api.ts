@@ -167,6 +167,28 @@ class ApiClient {
         });
     }
 
+    async fetchAdminBookingsToday(params: { by?: string; statuses?: string } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.by) searchParams.append('by', params.by);
+        if (params.statuses) searchParams.append('statuses', params.statuses);
+        const query = searchParams.toString();
+        return this.request<any>(`/admin/metrics/bookings-today${query ? `?${query}` : ''}`);
+    }
+
+    async fetchAdminCarsTotal(params: { status?: string } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.status) searchParams.append('status', params.status);
+        const query = searchParams.toString();
+        return this.request<any>(`/admin/metrics/cars-total${query ? `?${query}` : ''}`);
+    }
+
+    async fetchAdminBookingsTotal(params: { statuses?: string } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.statuses) searchParams.append('statuses', params.statuses);
+        const query = searchParams.toString();
+        return this.request<any>(`/admin/metrics/bookings-total${query ? `?${query}` : ''}`);
+    }
+
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

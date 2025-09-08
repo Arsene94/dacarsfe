@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
 import type { Column } from "@/types/ui";
-import { AdminReservation, AdminCar } from "@/types/admin";
+import { AdminReservation } from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
 import apiClient from "@/lib/api";
 
@@ -111,7 +111,6 @@ const reservationColumns: Column<AdminReservation>[] = [
 
 const AdminDashboard = () => {
     const [reservations, setReservations] = useState<AdminReservation[]>([]);
-    const [cars, setCars] = useState<AdminCar[]>([]);
     const [carActivityDay, setCarActivityDay] = useState<string>('azi');
     const [activityDay, setActivityDay] = useState<string>('');
     const [activityHours, setActivityHours] = useState<string[]>([]);
@@ -124,6 +123,9 @@ const AdminDashboard = () => {
         arrivalTime: string;
         returnTime: string;
     } | null>(null);
+    const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
+    const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);
+    const [bookingsTotalCount, setBookingsTotalCount] = useState<number>(0);
 
     const openActivity = (details: {
         customer: string;
@@ -149,6 +151,24 @@ const AdminDashboard = () => {
         };
         loadActivity();
     }, [carActivityDay]);
+
+    useEffect(() => {
+        const loadMetrics = async () => {
+            try {
+                const [bookingsToday, carsTotal, bookingsTotal] = await Promise.all([
+                    apiClient.fetchAdminBookingsToday(),
+                    apiClient.fetchAdminCarsTotal({ status: 'available' }),
+                    apiClient.fetchAdminBookingsTotal({ statuses: 'all' }),
+                ]);
+                setBookingsTodayCount(bookingsToday.count);
+                setAvailableCarsCount(carsTotal.count);
+                setBookingsTotalCount(bookingsTotal.count);
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        };
+        loadMetrics();
+    }, []);
 
     // Mock data pentru demo
     useEffect(() => {
@@ -210,64 +230,8 @@ const AdminDashboard = () => {
             },
         ];
 
-        const mockCars: AdminCar[] = [
-            {
-                id: 1,
-                name: "Dacia Logan",
-                type: "Economic",
-                status: "available",
-                price: 45,
-            },
-            { id: 2, name: "VW Golf", type: "Comfort", status: "rented", price: 65 },
-            {
-                id: 3,
-                name: "BMW Seria 3",
-                type: "Premium",
-                status: "available",
-                price: 95,
-            },
-            {
-                id: 4,
-                name: "Ford Transit",
-                type: "Van",
-                status: "available",
-                price: 85,
-            },
-            {
-                id: 5,
-                name: "Skoda Octavia",
-                type: "Comfort",
-                status: "maintenance",
-                price: 68,
-            },
-            {
-                id: 6,
-                name: "Audi A4",
-                type: "Premium",
-                status: "available",
-                price: 98,
-            },
-        ];
-
         setReservations(mockReservations);
-        setCars(mockCars);
     }, []);
-    const getReservationsForDate = (date: string, carId?: number) => {
-        return reservations.filter((reservation) => {
-            const startDate = new Date(reservation.startDate);
-            const endDate = new Date(reservation.endDate);
-            const checkDate = new Date(date);
-
-            const isInRange = checkDate >= startDate && checkDate <= endDate;
-            const matchesCar = !carId || reservation.carId === carId;
-
-            return isInRange && matchesCar;
-        });
-    };
-
-    const todayReservations = getReservationsForDate(
-        new Date().toISOString().split("T")[0],
-    );
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -282,7 +246,7 @@ const AdminDashboard = () => {
                                     Rezervări astăzi
                                 </p>
                                 <p className="text-2xl font-poppins font-bold text-berkeley">
-                                    {todayReservations.length}
+                                    {bookingsTodayCount}
                                 </p>
                             </div>
                             <Calendar className="h-8 w-8 text-jade" />
@@ -296,7 +260,7 @@ const AdminDashboard = () => {
                                     Mașini disponibile
                                 </p>
                                 <p className="text-2xl font-poppins font-bold text-berkeley">
-                                    {cars.filter((car) => car.status === "available").length}
+                                    {availableCarsCount}
                                 </p>
                             </div>
                             <Car className="h-8 w-8 text-jade" />
@@ -310,7 +274,7 @@ const AdminDashboard = () => {
                                     Total rezervări
                                 </p>
                                 <p className="text-2xl font-poppins font-bold text-berkeley">
-                                    {reservations.length}
+                                    {bookingsTotalCount}
                                 </p>
                             </div>
                             <Users className="h-8 w-8 text-jade" />
