@@ -534,7 +534,7 @@ const ReservationPage = () => {
                                             <input
                                                 id="reservation-name"
                                                 type="text"
-                                                name="name"
+                                                name="customer_name"
                                                 value={formData.customer_name}
                                                 onChange={handleInputChange}
                                                 required
@@ -553,7 +553,7 @@ const ReservationPage = () => {
                                             <input
                                                 id="reservation-email"
                                                 type="email"
-                                                name="email"
+                                                name="customer_email"
                                                 value={formData.customer_email}
                                                 onChange={handleInputChange}
                                                 required
@@ -565,7 +565,7 @@ const ReservationPage = () => {
                                         <PhoneInput
                                             value={formData.customer_phone}
                                             onChange={(val) =>
-                                                setFormData((prev) => ({ ...prev, phone: val }))
+                                                setFormData((prev) => ({ ...prev, customer_phone: val }))
                                             }
                                             required
                                             placeholder="+40 722 123 456"
@@ -582,7 +582,7 @@ const ReservationPage = () => {
                                         <input
                                             id="reservation-flight"
                                             type="text"
-                                            name="flight"
+                                            name="flight_number"
                                             value={formData.flight_number}
                                             onChange={handleInputChange}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
