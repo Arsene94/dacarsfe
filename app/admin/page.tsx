@@ -10,7 +10,7 @@ import {
     Filter,
     Search,
     ChevronLeft,
-    ChevronRight, Eye, Clock, User, Phone,
+    ChevronRight, Eye, Clock,
 } from "lucide-react";
 import Link from "next/link";
 import { Select } from "@/components/ui/select";
@@ -19,7 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
 import type { Column } from "@/types/ui";
-import { AdminReservation, AdminCar } from "@/types/admin";
+import { AdminReservation, AdminCar, WidgetActivityResponse } from "@/types/admin";
+import { fetchWidgetActivity } from "@/services/dashboardApi";
 
 const reservationColumns: Column<AdminReservation>[] = [
     {
@@ -111,6 +112,8 @@ const AdminDashboard = () => {
     const [reservations, setReservations] = useState<AdminReservation[]>([]);
     const [cars, setCars] = useState<AdminCar[]>([]);
     const [carActivityDay, setCarActivityDay] = useState<string>('azi');
+    const [activity, setActivity] = useState<WidgetActivityResponse | null>(null);
+    const [activityLoading, setActivityLoading] = useState(false);
     const [popupOpen, setPopupOpen] = useState(false);
     const [activityDetails, setActivityDetails] = useState<{
         customer: string;
@@ -233,6 +236,22 @@ const AdminDashboard = () => {
         setReservations(mockReservations);
         setCars(mockCars);
     }, []);
+
+    useEffect(() => {
+        const load = async () => {
+            setActivityLoading(true);
+            try {
+                const res = await fetchWidgetActivity(carActivityDay);
+                setActivity(res);
+            } catch (err) {
+                console.error('Failed to fetch activity', err);
+                setActivity(null);
+            } finally {
+                setActivityLoading(false);
+            }
+        };
+        load();
+    }, [carActivityDay]);
     const getReservationsForDate = (date: string, carId?: number) => {
         return reservations.filter((reservation) => {
             const startDate = new Date(reservation.startDate);
@@ -347,178 +366,126 @@ const AdminDashboard = () => {
 
                         {/* Activity Schedule */}
                         <div className="space-y-6">
-                            {/* Time Slot 1 */}
-                            <div className="border border-gray-200 rounded-xl overflow-hidden">
-                                <div className="bg-gradient-to-r from-berkeley/5 to-jade/5 px-6 py-4 border-b border-gray-200">
-                                    <div className="flex items-center space-x-3">
-                                        <Clock className="h-5 w-5 text-berkeley" />
-                                        <h3 className="text-lg font-poppins font-semibold text-berkeley">13:00</h3>
-                                        <span className="text-sm font-dm-sans text-gray-600">2 activități</span>
-                                    </div>
+                            {activityLoading && (
+                                <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
+                                    <p className="text-gray-500 font-dm-sans">Se încarcă...</p>
                                 </div>
-                                <div className="divide-y divide-gray-100">
-                                    {/* Departure */}
-                                    <div className="px-6 py-4 hover:bg-green-50 transition-colors duration-200">
-                                        <div className="flex items-center space-x-4">
-                                            <div className="flex-shrink-0">
-                                                <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                                                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                                                </div>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center space-x-3">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Plecare
-                            </span>
-                                                    <span className="text-sm font-dm-sans font-semibold text-gray-900">B 00 ABC</span>
-                                                    <span className="text-sm text-red-500 font-bold">- scaun copil - varsta copil 2 ani</span>
-                                                </div>
-                                                <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
-                                                    <div className="flex items-center space-x-1">
-                                                        <User className="h-4 w-4" />
-                                                        <span>Nume Prenume</span>
-                                                    </div>
-                                                    <div className="flex items-center space-x-1">
-                                                        <Phone className="h-4 w-4" />
-                                                        <span>+40712345678</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex-shrink-0">
-                                                <button
-                                                onClick={() =>
-                                                    openActivity({
-                                                        customer: "Nume Prenume",
-                                                        phone: "+40712345678",
-                                                        car: "B 00 ABC",
-                                                        arrivalTime: "13:00",
-                                                        returnTime: "15:00",
-                                                    })
-                                                }
-                                                className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
-                                            >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
+                            )}
+                            {!activityLoading && activity && activity.hours.length === 0 && (
+                                <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
+                                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                    <h3 className="text-lg font-poppins font-semibold text-gray-600 mb-2">
+                                        Nu există activități
+                                    </h3>
+                                    <p className="text-gray-500 font-dm-sans">
+                                        Toate activitățile pentru ziua selectată sunt afișate mai sus.
+                                    </p>
+                                </div>
+                            )}
+                            {!activityLoading && activity && activity.hours.map((hour) => {
+                                const departures = activity.data.filter(
+                                    (r) => r.start_hour_group.slice(0, 5) === hour,
+                                );
+                                const arrivals = activity.data.filter(
+                                    (r) => r.end_hour_group.slice(0, 5) === hour,
+                                );
+                                const count = departures.length + arrivals.length;
+                                return (
+                                    <div key={hour} className="border border-gray-200 rounded-xl overflow-hidden">
+                                        <div className="bg-gradient-to-r from-berkeley/5 to-jade/5 px-6 py-4 border-b border-gray-200">
+                                            <div className="flex items-center space-x-3">
+                                                <Clock className="h-5 w-5 text-berkeley" />
+                                                <h3 className="text-lg font-poppins font-semibold text-berkeley">{hour}</h3>
+                                                <span className="text-sm font-dm-sans text-gray-600">{count} activități</span>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    {/* Return */}
-                                    <div className="px-6 py-4 hover:bg-red-50 transition-colors duration-200">
-                                        <div className="flex items-center space-x-4">
-                                            <div className="flex-shrink-0">
-                                                <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                                                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                                                </div>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center space-x-3">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                              Sosire
-                            </span>
-                                                    <span className="text-sm font-dm-sans font-semibold text-gray-900">B 00 ABC</span>
-                                                </div>
-                                                <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
-                                                    <div className="flex items-center space-x-1">
-                                                        <User className="h-4 w-4" />
-                                                        <span>Nume Prenume</span>
+                                        <div className="divide-y divide-gray-100">
+                                            {departures.map((r) => (
+                                                <div
+                                                    key={`dep-${r.id}`}
+                                                    className="px-6 py-4 hover:bg-green-50 transition-colors duration-200"
+                                                >
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className="flex-shrink-0">
+                                                            <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center space-x-3">
+                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                    Plecare
+                                                                </span>
+                                                                <span className="text-sm font-dm-sans font-semibold text-gray-900">
+                                                                    {r.car.name}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex-shrink-0">
+                                                            <button
+                                                                onClick={() =>
+                                                                    openActivity({
+                                                                        customer: 'Necunoscut',
+                                                                        phone: '-',
+                                                                        car: r.car.name,
+                                                                        arrivalTime: r.start_hour_group.slice(0, 5),
+                                                                        returnTime: r.end_hour_group.slice(0, 5),
+                                                                    })
+                                                                }
+                                                                className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center space-x-1">
-                                                        <Phone className="h-4 w-4" />
-                                                        <span>+40712345678</span>
+                                                </div>
+                                            ))}
+                                            {arrivals.map((r) => (
+                                                <div
+                                                    key={`arr-${r.id}`}
+                                                    className="px-6 py-4 hover:bg-red-50 transition-colors duration-200"
+                                                >
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className="flex-shrink-0">
+                                                            <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center space-x-3">
+                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                                    Sosire
+                                                                </span>
+                                                                <span className="text-sm font-dm-sans font-semibold text-gray-900">
+                                                                    {r.car.name}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex-shrink-0">
+                                                            <button
+                                                                onClick={() =>
+                                                                    openActivity({
+                                                                        customer: 'Necunoscut',
+                                                                        phone: '-',
+                                                                        car: r.car.name,
+                                                                        arrivalTime: r.start_hour_group.slice(0, 5),
+                                                                        returnTime: r.end_hour_group.slice(0, 5),
+                                                                    })
+                                                                }
+                                                                className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex-shrink-0">
-                                                <button
-                                                onClick={() =>
-                                                    openActivity({
-                                                        customer: "Nume Prenume",
-                                                        phone: "+40712345678",
-                                                        car: "B 00 ABC",
-                                                        arrivalTime: "13:00",
-                                                        returnTime: "15:00",
-                                                    })
-                                                }
-                                                className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
-                                            >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
-                                            </div>
+                                            ))}
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-
-                            {/* Time Slot 2 */}
-                            <div className="border border-gray-200 rounded-xl overflow-hidden">
-                                <div className="bg-gradient-to-r from-berkeley/5 to-jade/5 px-6 py-4 border-b border-gray-200">
-                                    <div className="flex items-center space-x-3">
-                                        <Clock className="h-5 w-5 text-berkeley" />
-                                        <h3 className="text-lg font-poppins font-semibold text-berkeley">15:30</h3>
-                                        <span className="text-sm font-dm-sans text-gray-600">1 activitate</span>
-                                    </div>
-                                </div>
-                                <div className="divide-y divide-gray-100">
-                                    {/* Departure */}
-                                    <div className="px-6 py-4 hover:bg-green-50 transition-colors duration-200">
-                                        <div className="flex items-center space-x-4">
-                                            <div className="flex-shrink-0">
-                                                <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                                                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                                                </div>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center space-x-3">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Plecare
-                            </span>
-                                                    <span className="text-sm font-dm-sans font-semibold text-gray-900">B 01 XYZ</span>
-                                                </div>
-                                                <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
-                                                    <div className="flex items-center space-x-1">
-                                                        <User className="h-4 w-4" />
-                                                        <span>Ion Popescu</span>
-                                                    </div>
-                                                    <div className="flex items-center space-x-1">
-                                                        <Phone className="h-4 w-4" />
-                                                        <span>+40723456789</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex-shrink-0">
-                                                <button
-                                                onClick={() =>
-                                                    openActivity({
-                                                        customer: "Ion Popescu",
-                                                        phone: "+40723456789",
-                                                        car: "B 01 XYZ",
-                                                        arrivalTime: "15:30",
-                                                        returnTime: "17:00",
-                                                    })
-                                                }
-                                                className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
-                                            >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Empty State */}
-                            <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
-                                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                <h3 className="text-lg font-poppins font-semibold text-gray-600 mb-2">
-                                    Nu există alte activități
-                                </h3>
-                                <p className="text-gray-500 font-dm-sans">
-                                    Toate activitățile pentru ziua selectată sunt afișate mai sus.
-                                </p>
-                            </div>
+                                );
+                            })}
                         </div>
-                    </div>
+                        </div>
                 </div>
 
                 {/* Recent Reservations */}
