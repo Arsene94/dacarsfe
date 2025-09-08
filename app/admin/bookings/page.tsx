@@ -20,6 +20,7 @@ import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
+import {Input} from "@/components/ui/input";
 
 const ReservationsPage = () => {
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
@@ -45,6 +46,7 @@ const ReservationsPage = () => {
         carName: "Dacia Logan",
         startDate: "2025-01-15",
         endDate: "2025-01-18",
+        plan: 0,
         pickupTime: "14:30",
         dropoffTime: "10:00",
         location: "Aeroport Otopeni",
@@ -63,6 +65,7 @@ const ReservationsPage = () => {
         carName: "VW Golf",
         startDate: "2025-01-20",
         endDate: "2025-01-25",
+        plan: 1,
         pickupTime: "16:45",
         dropoffTime: "12:00",
         location: "Aeroport Otopeni",
@@ -80,6 +83,7 @@ const ReservationsPage = () => {
         carName: "BMW Seria 3",
         startDate: "2025-01-22",
         endDate: "2025-01-24",
+        plan: 0,
         pickupTime: "09:15",
         dropoffTime: "18:30",
         location: "București Centru",
@@ -96,6 +100,7 @@ const ReservationsPage = () => {
         carName: "Dacia Logan",
         startDate: "2025-02-01",
         endDate: "2025-02-05",
+        plan: 0,
         pickupTime: "11:00",
         dropoffTime: "14:00",
         location: "Aeroport Otopeni",
@@ -113,6 +118,7 @@ const ReservationsPage = () => {
         carName: "Ford Transit",
         startDate: "2025-02-10",
         endDate: "2025-02-12",
+        plan: 1,
         pickupTime: "08:30",
         dropoffTime: "20:00",
         location: "Aeroport Otopeni",
@@ -212,6 +218,24 @@ const ReservationsPage = () => {
     }
   };
 
+  const getPlanColor = (plan: number) => {
+      switch (plan) {
+          case 0:
+              return "bg-lime-100 text-lime-800";
+          case 1:
+              return "bg-fuchsia-100 text-fuchsia-800";
+      }
+  }
+
+  const getPlanText = (plan: number) => {
+      switch (plan) {
+          case 0:
+              return 'Fara Garantie';
+          case 1:
+              return 'Cu Garantie';
+      }
+    }
+
   const reservationColumns = React.useMemo<Column<AdminReservation>[]>(
     () => [
       {
@@ -271,6 +295,20 @@ const ReservationsPage = () => {
             </div>
           </div>
         ),
+      },
+      {
+          id: "plan",
+          header: "Tip Plan",
+          accessor: (r) => r.plan,
+          cell: (r) => (
+              <span
+                  className={`px-3 py-1 rounded-full text-sm font-dm-sans ${getPlanColor(
+                      r.plan,
+                  )}`}
+              >
+                {getPlanText(r.plan)}
+              </span>
+          ),
       },
       {
         id: "status",
@@ -369,10 +407,10 @@ const ReservationsPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
+              <Input
                 type="text"
                 placeholder="Caută rezervări..."
                 aria-label="Caută rezervări"
@@ -383,7 +421,6 @@ const ReservationsPage = () => {
             </div>
 
             <Select
-              className="px-4 py-3"
               value={statusFilter}
               onValueChange={setStatusFilter}
               placeholder="Toate statusurile"
@@ -397,7 +434,6 @@ const ReservationsPage = () => {
             </Select>
 
             <Select
-              className="px-4 py-3"
               value={dateFilter}
               onValueChange={setDateFilter}
               placeholder="Toate perioadele"

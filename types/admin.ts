@@ -6,6 +6,7 @@ export interface AdminReservation {
   carName: string;
   startDate: string;
   endDate: string;
+  plan: number,
   status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
   total: number;
   email?: string;
