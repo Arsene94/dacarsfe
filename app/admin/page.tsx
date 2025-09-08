@@ -108,12 +108,9 @@ const reservationColumns: Column<AdminReservation>[] = [
 ];
 
 const AdminDashboard = () => {
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [reservations, setReservations] = useState<AdminReservation[]>([]);
     const [cars, setCars] = useState<AdminCar[]>([]);
-    const [selectedCar, setSelectedCar] = useState<number | null>(null);
+    const [carActivityDay, setCarActivityDay] = useState<string>('azi');
     const [popupOpen, setPopupOpen] = useState(false);
     const [activityDetails, setActivityDetails] = useState<{
         customer: string;
@@ -236,15 +233,6 @@ const AdminDashboard = () => {
         setReservations(mockReservations);
         setCars(mockCars);
     }, []);
-
-    const getDaysInMonth = (month: number, year: number) => {
-        return new Date(year, month + 1, 0).getDate();
-    };
-
-    const getFirstDayOfMonth = (month: number, year: number) => {
-        return new Date(year, month, 1).getDay();
-    };
-
     const getReservationsForDate = (date: string, carId?: number) => {
         return reservations.filter((reservation) => {
             const startDate = new Date(reservation.startDate);
@@ -258,107 +246,6 @@ const AdminDashboard = () => {
         });
     };
 
-    const renderCalendarMonth = (month: number, year: number) => {
-        const daysInMonth = getDaysInMonth(month, year);
-        const firstDay = getFirstDayOfMonth(month, year);
-        const monthNames = [
-            "Ianuarie",
-            "Februarie",
-            "Martie",
-            "Aprilie",
-            "Mai",
-            "Iunie",
-            "Iulie",
-            "August",
-            "Septembrie",
-            "Octombrie",
-            "Noiembrie",
-            "Decembrie",
-        ];
-        // Use distinct abbreviations for each day to avoid duplicate React keys
-        const dayNames = ["D", "L", "Ma", "Mi", "J", "V", "S"];
-
-        const days = [];
-
-        // Empty cells for days before month starts
-        for (let i = 0; i < firstDay; i++) {
-            days.push(<div key={`empty-${i}`} className="h-8"></div>);
-        }
-
-        // Days of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            const dayReservations = getReservationsForDate(
-                dateStr,
-                selectedCar || undefined,
-            );
-            const isToday =
-                new Date().toDateString() === new Date(dateStr).toDateString();
-
-            days.push(
-                <div
-                    key={day}
-                    className={`h-8 text-xs flex items-center justify-center relative cursor-pointer transition-colors duration-200 ${
-                        isToday
-                            ? "bg-jade text-white font-semibold rounded"
-                            : "hover:bg-gray-100"
-                    }`}
-                    title={
-                        dayReservations.length > 0
-                            ? dayReservations
-                                .map((r) => `${r.customerName} - ${r.phone}`)
-                                .join("\n")
-                            : ""
-                    }
-                >
-                    <span className="relative z-10">{day}</span>
-                    {dayReservations.length > 0 && (
-                        <div
-                            className={`absolute inset-0 rounded text-white text-[10px] flex items-center justify-center ${
-                                dayReservations[0].status === "confirmed"
-                                    ? "bg-jade"
-                                    : dayReservations[0].status === "pending"
-                                        ? "bg-yellow-500"
-                                        : "bg-red-500"
-                            }`}
-                        >
-                            <div className="text-center leading-tight">
-                                <div className="font-semibold">
-                                    {dayReservations[0].customerName.split(" ")[0]}
-                                </div>
-                                <div className="text-[8px]">
-                                    {dayReservations[0].phone.slice(-4)}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>,
-            );
-        }
-
-        return (
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-                <h3 className="font-semibold text-berkeley mb-3 text-center">
-                    {monthNames[month]} {year}
-                </h3>
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                    {dayNames.map((day) => (
-                        <div
-                            key={day}
-                            className="h-6 text-xs font-semibold text-gray-500 flex items-center justify-center"
-                        >
-                            {day}
-                        </div>
-                    ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1">{days}</div>
-            </div>
-        );
-    };
-
-    const filteredCars = selectedCar
-        ? cars.filter((car) => car.id === selectedCar)
-        : cars;
     const todayReservations = getReservationsForDate(
         new Date().toISOString().split("T")[0],
     );
@@ -443,8 +330,10 @@ const AdminDashboard = () => {
                             <div className="mt-2">
                                 <Select
                                     id="day-selector"
+                                    value={carActivityDay}
                                     className="w-full max-w-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
                                     aria-label="Selectează ziua"
+                                    onValueChange={setCarActivityDay}
                                 >
                                     <option value="azi">Astăzi - {new Date().toLocaleDateString('ro-RO')}</option>
                                     <option value="maine">Mâine - {new Date(Date.now() + 86400000).toLocaleDateString('ro-RO')}</option>
