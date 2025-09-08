@@ -116,6 +116,7 @@ const AdminDashboard = () => {
     const [activityLoading, setActivityLoading] = useState(false);
     const [popupOpen, setPopupOpen] = useState(false);
     const [activityDetails, setActivityDetails] = useState<{
+        bookingNumber: string;
         customer: string;
         phone: string;
         car: string;
@@ -124,6 +125,7 @@ const AdminDashboard = () => {
     } | null>(null);
 
     const openActivity = (details: {
+        bookingNumber: string;
         customer: string;
         phone: string;
         car: string;
@@ -417,17 +419,21 @@ const AdminDashboard = () => {
                                                                     Plecare
                                                                 </span>
                                                                 <span className="text-sm font-dm-sans font-semibold text-gray-900">
-                                                                    {r.car.name}
+                                                                    {r.customer_name}
                                                                 </span>
                                                             </div>
+                                                            <p className="text-xs font-dm-sans text-gray-600">
+                                                                {r.car.name} - {r.car.license_plate} · {r.customer_phone}
+                                                            </p>
                                                         </div>
                                                         <div className="flex-shrink-0">
                                                             <button
                                                                 onClick={() =>
                                                                     openActivity({
-                                                                        customer: 'Necunoscut',
-                                                                        phone: '-',
-                                                                        car: r.car.name,
+                                                                        bookingNumber: r.booking_number,
+                                                                        customer: r.customer_name,
+                                                                        phone: r.customer_phone,
+                                                                        car: `${r.car.name} - ${r.car.license_plate}`,
                                                                         arrivalTime: r.start_hour_group.slice(0, 5),
                                                                         returnTime: r.end_hour_group.slice(0, 5),
                                                                     })
@@ -457,17 +463,21 @@ const AdminDashboard = () => {
                                                                     Sosire
                                                                 </span>
                                                                 <span className="text-sm font-dm-sans font-semibold text-gray-900">
-                                                                    {r.car.name}
+                                                                    {r.customer_name}
                                                                 </span>
                                                             </div>
+                                                            <p className="text-xs font-dm-sans text-gray-600">
+                                                                {r.car.name} - {r.car.license_plate} · {r.customer_phone}
+                                                            </p>
                                                         </div>
                                                         <div className="flex-shrink-0">
                                                             <button
                                                                 onClick={() =>
                                                                     openActivity({
-                                                                        customer: 'Necunoscut',
-                                                                        phone: '-',
-                                                                        car: r.car.name,
+                                                                        bookingNumber: r.booking_number,
+                                                                        customer: r.customer_name,
+                                                                        phone: r.customer_phone,
+                                                                        car: `${r.car.name} - ${r.car.license_plate}`,
                                                                         arrivalTime: r.start_hour_group.slice(0, 5),
                                                                         returnTime: r.end_hour_group.slice(0, 5),
                                                                     })
@@ -512,6 +522,7 @@ const AdminDashboard = () => {
                 <Popup open={popupOpen} onClose={() => setPopupOpen(false)}>
                     <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">Detalii rezervare</h3>
                     <div className="space-y-2 mb-4">
+                        <div className="text-sm font-dm-sans"><span className="font-semibold">Număr rezervare:</span> {activityDetails.bookingNumber}</div>
                         <div className="text-sm font-dm-sans"><span className="font-semibold">Client:</span> {activityDetails.customer}</div>
                         <div className="text-sm font-dm-sans"><span className="font-semibold">Telefon:</span> {activityDetails.phone}</div>
                         <div className="text-sm font-dm-sans"><span className="font-semibold">Mașină:</span> {activityDetails.car}</div>
