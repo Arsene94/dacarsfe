@@ -15,6 +15,9 @@ import {
 import Link from "next/link";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Popup } from "@/components/ui/popup";
 import type { Column } from "@/types/ui";
 import { AdminReservation, AdminCar } from "@/types/admin";
 
@@ -111,6 +114,25 @@ const AdminDashboard = () => {
     const [reservations, setReservations] = useState<AdminReservation[]>([]);
     const [cars, setCars] = useState<AdminCar[]>([]);
     const [selectedCar, setSelectedCar] = useState<number | null>(null);
+    const [popupOpen, setPopupOpen] = useState(false);
+    const [activityDetails, setActivityDetails] = useState<{
+        customer: string;
+        phone: string;
+        car: string;
+        arrivalTime: string;
+        returnTime: string;
+    } | null>(null);
+
+    const openActivity = (details: {
+        customer: string;
+        phone: string;
+        car: string;
+        arrivalTime: string;
+        returnTime: string;
+    }) => {
+        setActivityDetails(details);
+        setPopupOpen(true);
+    };
 
     // Mock data pentru demo
     useEffect(() => {
@@ -473,7 +495,18 @@ const AdminDashboard = () => {
                                                 </div>
                                             </div>
                                             <div className="flex-shrink-0">
-                                                <button className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200">
+                                                <button
+                                                onClick={() =>
+                                                    openActivity({
+                                                        customer: "Nume Prenume",
+                                                        phone: "+40712345678",
+                                                        car: "B 00 ABC",
+                                                        arrivalTime: "13:00",
+                                                        returnTime: "15:00",
+                                                    })
+                                                }
+                                                className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                            >
                                                     <Eye className="h-4 w-4" />
                                                 </button>
                                             </div>
@@ -507,7 +540,18 @@ const AdminDashboard = () => {
                                                 </div>
                                             </div>
                                             <div className="flex-shrink-0">
-                                                <button className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200">
+                                                <button
+                                                onClick={() =>
+                                                    openActivity({
+                                                        customer: "Nume Prenume",
+                                                        phone: "+40712345678",
+                                                        car: "B 00 ABC",
+                                                        arrivalTime: "13:00",
+                                                        returnTime: "15:00",
+                                                    })
+                                                }
+                                                className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                            >
                                                     <Eye className="h-4 w-4" />
                                                 </button>
                                             </div>
@@ -553,7 +597,18 @@ const AdminDashboard = () => {
                                                 </div>
                                             </div>
                                             <div className="flex-shrink-0">
-                                                <button className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200">
+                                                <button
+                                                onClick={() =>
+                                                    openActivity({
+                                                        customer: "Ion Popescu",
+                                                        phone: "+40723456789",
+                                                        car: "B 01 XYZ",
+                                                        arrivalTime: "15:30",
+                                                        returnTime: "17:00",
+                                                    })
+                                                }
+                                                className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                            >
                                                     <Eye className="h-4 w-4" />
                                                 </button>
                                             </div>
@@ -596,6 +651,48 @@ const AdminDashboard = () => {
                     </div>
                 </div>
             </div>
+            {activityDetails && (
+                <Popup open={popupOpen} onClose={() => setPopupOpen(false)}>
+                    <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">Detalii rezervare</h3>
+                    <div className="space-y-2 mb-4">
+                        <div className="text-sm font-dm-sans"><span className="font-semibold">Client:</span> {activityDetails.customer}</div>
+                        <div className="text-sm font-dm-sans"><span className="font-semibold">Telefon:</span> {activityDetails.phone}</div>
+                        <div className="text-sm font-dm-sans"><span className="font-semibold">Mașină:</span> {activityDetails.car}</div>
+                    </div>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Ora sosire</label>
+                            <Input
+                                type="time"
+                                value={activityDetails.arrivalTime}
+                                onChange={(e) =>
+                                    setActivityDetails({
+                                        ...activityDetails,
+                                        arrivalTime: e.target.value,
+                                    })
+                                }
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Ora retur</label>
+                            <Input
+                                type="time"
+                                value={activityDetails.returnTime}
+                                onChange={(e) =>
+                                    setActivityDetails({
+                                        ...activityDetails,
+                                        returnTime: e.target.value,
+                                    })
+                                }
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end mt-6 space-x-2">
+                        <Button variant="outline" onClick={() => setPopupOpen(false)}>Anulează</Button>
+                        <Button onClick={() => setPopupOpen(false)}>Salvează</Button>
+                    </div>
+                </Popup>
+            )}
         </div>
     );
 };
