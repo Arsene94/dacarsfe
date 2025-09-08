@@ -132,8 +132,12 @@ class ApiClient {
         });
     }
 
-    async getBookings() {
-        return this.request<any>(`/bookings`);
+    async getBookings(params: { page?: number; perPage?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.page) searchParams.append('page', params.page.toString());
+        if (params.perPage) searchParams.append('per_page', params.perPage.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/bookings${query ? `?${query}` : ''}`);
     }
 
     // Authentication helpers

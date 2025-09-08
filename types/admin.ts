@@ -18,6 +18,23 @@ export interface AdminReservation {
   createdAt?: string;
 }
 
+export interface AdminBooking {
+  id: number;
+  booking_number: string;
+  customer_name: string;
+  customer_email: string | null;
+  customer_phone: string | null;
+  car_name: string;
+  rental_start_date: string;
+  rental_end_date: string;
+  price_per_day: number;
+  total_services: number;
+  coupon_amount: number;
+  sub_total: number;
+  total: number;
+  status: string;
+}
+
 export interface AdminCar {
   id: number;
   name: string;
