@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Column, SortState, DataTableProps } from '@/types/ui';
 
@@ -8,9 +9,11 @@ export function DataTable<T extends Record<string, any>>({
   data,
   columns,
   pageSize,
+  renderRowDetails,
 }: DataTableProps<T>) {
   const [sort, setSort] = React.useState<SortState<T> | undefined>();
   const [page, setPage] = React.useState(0);
+  const [expanded, setExpanded] = React.useState<Record<number, boolean>>({});
 
   const sortedData = React.useMemo(() => {
     if (!sort) return data;
@@ -54,6 +57,10 @@ export function DataTable<T extends Record<string, any>>({
     }
   }, [pageCount, page]);
 
+  const toggleRow = (index: number) => {
+    setExpanded((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-left">
@@ -82,16 +89,51 @@ export function DataTable<T extends Record<string, any>>({
         </thead>
         <tbody>
           {paginatedData.map((row, i) => (
-            <tr
-              key={i}
-              className={`border-b hover:bg-gray-200 transition-colors ${i % 2 !== 0 ? 'bg-gray-100' : ''}`}
-            >
-              {columns.map((col) => (
-                <td key={col.id} className="py-3 px-4">
-                  {col.cell ? col.cell(row) : col.accessor(row)}
-                </td>
-              ))}
-            </tr>
+            <React.Fragment key={i}>
+              <tr
+                className={`border-b hover:bg-gray-200 transition-colors ${i % 2 !== 0 ? 'bg-gray-100' : ''}`}
+              >
+                {renderRowDetails && (
+                  <td className="py-3 px-4">
+                    <button
+                      onClick={() => toggleRow(i)}
+                      aria-label="Afișează detalii"
+                      className="flex items-center justify-center text-sm"
+                    >
+                      <ChevronDown
+                        className={cn(
+                          'h-4 w-4 transition-transform',
+                          expanded[i] && 'rotate-180'
+                        )}
+                      />
+                    </button>
+                  </td>
+                )}
+                {columns.map((col) => (
+                  <td key={col.id} className="py-3 px-4">
+                    {col.cell ? col.cell(row) : col.accessor(row)}
+                  </td>
+                ))}
+              </tr>
+              {renderRowDetails && (
+                <tr className="bg-gray-50">
+                  <td colSpan={columns.length + 1} className="p-0">
+                    <div
+                      className={cn(
+                        'grid overflow-hidden transition-all duration-200 ease-in-out',
+                        expanded[i]
+                          ? 'grid-rows-[1fr] opacity-100 p-4'
+                          : 'grid-rows-[0fr] opacity-0 p-0'
+                      )}
+                    >
+                      <div className="overflow-hidden">
+                        {renderRowDetails(row)}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
           ))}
         </tbody>
       </table>

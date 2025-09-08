@@ -372,6 +372,34 @@ const ReservationsPage = () => {
     [handleViewReservation],
   );
 
+  const renderReservationDetails = (r: AdminReservation) => (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-700 font-dm-sans">
+      <div className="flex items-center space-x-2">
+        <Mail className="h-4 w-4 text-gray-500" />
+        <span>{r.email}</span>
+      </div>
+      <div className="flex items-center space-x-2">
+        <Phone className="h-4 w-4 text-gray-500" />
+        <span>{r.phone}</span>
+      </div>
+      <div className="flex items-center space-x-2">
+        <MapPin className="h-4 w-4 text-gray-500" />
+        <span>{r.location}</span>
+      </div>
+      {r.discountCode && (
+        <div className="flex items-center space-x-2">
+          <span className="font-semibold">Cod: {r.discountCode}</span>
+        </div>
+      )}
+      {r.notes && (
+        <div className="md:col-span-4">
+          <span className="font-semibold">Notițe: </span>
+          {r.notes}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -459,6 +487,7 @@ const ReservationsPage = () => {
             data={filteredReservations}
             columns={reservationColumns}
             pageSize={10}
+            renderRowDetails={renderReservationDetails}
           />
 
           {filteredReservations.length === 0 && (

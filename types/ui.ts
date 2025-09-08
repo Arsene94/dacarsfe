@@ -31,4 +31,5 @@ export interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
   pageSize?: number;
+  renderRowDetails?: (row: T) => React.ReactNode;
 }
