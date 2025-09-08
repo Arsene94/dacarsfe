@@ -127,7 +127,7 @@ class ApiClient {
         return this.request<any>(`/bookings`, {
             method: 'POST',
             body: JSON.stringify(payload),
-        })
+        });
     }
 
 }

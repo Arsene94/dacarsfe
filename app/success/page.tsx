@@ -4,9 +4,10 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle, Car, Calendar, MapPin, Clock, Phone, ArrowLeft, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ReservationPayload } from '@/types/reservation';
 
 const SuccessPage = () => {
-  const [reservationData, setReservationData] = useState<any>(null);
+  const [reservationData, setReservationData] = useState<ReservationPayload | null>(null);
 
   useEffect(() => {
     const storedData = localStorage.getItem('reservationData');
@@ -33,13 +34,13 @@ const SuccessPage = () => {
           <div className="bg-jade/10 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="h-12 w-12 text-jade" />
           </div>
-          
+
           <h1 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
             Rezervarea este <span className="text-jade">confirmată!</span>
           </h1>
-          
+
           <p className="text-xl lg:text-2xl font-dm-sans text-gray-700 leading-relaxed max-w-3xl mx-auto">
-            Mulțumim, <strong>{reservationData.firstName}</strong>! Mașina ta te așteaptă la aeroport. 
+            Mulțumim, <strong>{reservationData.customer_name}</strong>! Mașina ta te așteaptă la aeroport.
             <br className="hidden sm:block" />
             <span className="text-jade font-semibold">Ne vedem acasă!</span>
           </p>
@@ -67,10 +68,7 @@ const SuccessPage = () => {
                 <div>
                   <h3 className="font-poppins font-semibold text-berkeley text-lg">Mașina ta</h3>
                   <p className="font-dm-sans text-gray-600 capitalize">
-                    {reservationData.carType === 'economic' && 'Dacia Logan - Economic'}
-                    {reservationData.carType === 'comfort' && 'Volkswagen Golf - Comfort'}
-                    {reservationData.carType === 'premium' && 'BMW Seria 3 - Premium'}
-                    {reservationData.carType === 'van' && 'Ford Transit - Van 9 locuri'}
+                    {reservationData.selectedCar.name}
                   </p>
                 </div>
               </div>
@@ -82,10 +80,10 @@ const SuccessPage = () => {
                 <div>
                   <h3 className="font-poppins font-semibold text-berkeley text-lg">Perioada</h3>
                   <p className="font-dm-sans text-gray-600">
-                    <strong>Ridicare:</strong> {new Date(reservationData.pickupDate).toLocaleDateString('ro-RO')} la {reservationData.pickupTime}
+                    <strong>Ridicare:</strong> {new Date(reservationData.rental_start_date).toLocaleDateString('ro-RO')} la {reservationData.rental_start_time}
                   </p>
                   <p className="font-dm-sans text-gray-600">
-                    <strong>Returnare:</strong> {new Date(reservationData.dropoffDate).toLocaleDateString('ro-RO')} la {reservationData.dropoffTime}
+                    <strong>Returnare:</strong> {new Date(reservationData.rental_end_date).toLocaleDateString('ro-RO')} la {reservationData.rental_end_time}
                   </p>
                 </div>
               </div>
@@ -111,32 +109,28 @@ const SuccessPage = () => {
                 <h3 className="font-poppins font-semibold text-berkeley text-lg mb-4">
                   Costul total
                 </h3>
-                {reservationData.appliedDiscount > 0 && (
-                  <>
-                    <div className="text-lg font-dm-sans text-gray-600 mb-1">
-                      Subtotal: <span className="line-through">{reservationData.originalTotal}€</span>
-                    </div>
-                    <div className="text-lg font-dm-sans text-jade mb-2">
-                      Reducere ({reservationData.appliedDiscount}%): -{Math.round(reservationData.originalTotal * reservationData.appliedDiscount / 100)}€
-                    </div>
-                  </>
+                <div className="text-lg font-dm-sans text-gray-600 mb-1">
+                  Subtotal: {reservationData.sub_total.toFixed(2)}€
+                </div>
+                {reservationData.total_services > 0 && (
+                  <div className="text-lg font-dm-sans text-gray-600 mb-1">
+                    Servicii: +{reservationData.total_services.toFixed(2)}€
+                  </div>
+                )}
+                {reservationData.coupon_amount > 0 && (
+                  <div className="text-lg font-dm-sans text-jade mb-2">
+                    Reducere: -{reservationData.coupon_amount.toFixed(2)}€
+                  </div>
                 )}
                 <div className="text-4xl font-poppins font-bold text-jade mb-2">
-                  {reservationData.total}€
+                  {reservationData.total.toFixed(2)}€
                 </div>
                 <p className="font-dm-sans text-gray-600 text-sm">
                   *Preț final, fără taxe ascunse
                 </p>
-                {reservationData.appliedDiscount > 0 && (
-                  <div className="mt-3 p-2 bg-jade/10 rounded-lg">
-                    <p className="text-xs font-dm-sans text-jade font-semibold">
-                      🎉 Reducere aplicată cu succes!
-                    </p>
-                  </div>
-                )}
               </div>
 
-              {reservationData.flight && (
+              {reservationData.flight_number && (
                 <div className="flex items-start space-x-4">
                   <div className="bg-jade/10 p-3 rounded-xl">
                     <Clock className="h-6 w-6 text-jade" />
@@ -144,7 +138,7 @@ const SuccessPage = () => {
                   <div>
                     <h3 className="font-poppins font-semibold text-berkeley text-lg">Zborul tău</h3>
                     <p className="font-dm-sans text-gray-600">
-                      {reservationData.flight}
+                      {reservationData.flight_number}
                     </p>
                   </div>
                 </div>
