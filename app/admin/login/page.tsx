@@ -3,6 +3,9 @@
 import { FormEvent, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 const LoginPage = () => {
   const { login } = useAuth();
@@ -38,36 +41,28 @@ const LoginPage = () => {
           <p className="text-red-600 text-sm text-center">{error}</p>
         )}
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Email sau username
-          </label>
-          <input
+          <Label>Email sau username</Label>
+          <Input
             type="text"
             value={form.login}
             onChange={(e) => setForm({ ...form, login: e.target.value })}
-            className="mt-1 block w-full rounded border-gray-300 focus:border-jade focus:ring-jade"
+            className="mt-1"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Parola
-          </label>
-          <input
+          <Label>Parola</Label>
+          <Input
             type="password"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
-            className="mt-1 block w-full rounded border-gray-300 focus:border-jade focus:ring-jade"
+            className="mt-1"
             required
           />
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-jade text-white py-2 px-4 rounded hover:bg-jade/90"
-        >
+        <Button type="submit" disabled={loading} className="w-full">
           {loading ? "Se încarcă..." : "Autentificare"}
-        </button>
+        </Button>
       </form>
     </div>
   );
