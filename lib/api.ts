@@ -1,6 +1,7 @@
 import { mapCarSearchFilters } from "@/lib/mapFilters";
 import { toQuery } from "@/lib/qs";
 import type { AuthResponse, User } from "@/types/auth";
+import type { WidgetActivityResponse } from "@/types/activity";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
@@ -153,8 +154,8 @@ class ApiClient {
         this.removeToken();
     }
 
-    async fetchWidgetActivity(period: string) {
-        return this.request<User>(`/widgets/activity/${period}`, {
+    async fetchWidgetActivity(period: string, paginate = 20): Promise<WidgetActivityResponse> {
+        return this.request<WidgetActivityResponse>(`/widgets/activity/${period}?paginate=${paginate}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
