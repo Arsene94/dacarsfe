@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { DM_Sans, Poppins } from "next/font/google";
-import AsyncStyles from "@/components/AsyncStyles";
 import "./globals.css"
 
 const poppins = Poppins({
@@ -42,7 +41,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           href="/images/bg-hero-1920x1080.webp"
           media="(min-width: 640px)"
         />
-        <AsyncStyles />
       </head>
       <body className="min-h-screen bg-white">
         <AuthProvider>
