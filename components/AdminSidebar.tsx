@@ -15,7 +15,7 @@ import {
 
 const menuItems = [
   { name: "Dashboard", href: "/admin", icon: BarChart3 },
-  { name: "Rezervări", href: "/admin/rezervari", icon: Calendar },
+  { name: "Rezervări", href: "/admin/bookings", icon: Calendar },
   { name: "Mașini", href: "/admin/masini", icon: Car },
   {
     name: "Mockup",

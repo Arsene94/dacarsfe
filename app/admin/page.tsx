@@ -456,7 +456,7 @@ const AdminDashboard = () => {
                                 Rezervări Recente
                             </h2>
                             <Link
-                                href="/admin/rezervari"
+                                href="/admin/bookings"
                                 className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors"
                                 aria-label="Vezi toate rezervările"
                             >
