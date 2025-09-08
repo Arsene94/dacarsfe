@@ -8,9 +8,11 @@ export function DataTable<T extends Record<string, any>>({
   data,
   columns,
   pageSize,
+  renderRowDetails,
 }: DataTableProps<T>) {
   const [sort, setSort] = React.useState<SortState<T> | undefined>();
   const [page, setPage] = React.useState(0);
+  const [expanded, setExpanded] = React.useState<Record<number, boolean>>({});
 
   const sortedData = React.useMemo(() => {
     if (!sort) return data;
@@ -54,11 +56,16 @@ export function DataTable<T extends Record<string, any>>({
     }
   }, [pageCount, page]);
 
+  const toggleRow = (index: number) => {
+    setExpanded((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-left">
         <thead>
           <tr className="border-b">
+            {renderRowDetails && <th className="w-8"></th>}
             {columns.map((col) => (
               <th
                 key={col.id}
@@ -82,16 +89,38 @@ export function DataTable<T extends Record<string, any>>({
         </thead>
         <tbody>
           {paginatedData.map((row, i) => (
-            <tr
-              key={i}
-              className="border-b hover:bg-gray-50 transition-colors"
-            >
-              {columns.map((col) => (
-                <td key={col.id} className="py-3 px-4">
-                  {col.cell ? col.cell(row) : col.accessor(row)}
-                </td>
-              ))}
-            </tr>
+            <React.Fragment key={i}>
+              <tr
+                className="border-b hover:bg-gray-50 transition-colors"
+              >
+                {renderRowDetails && (
+                  <td className="py-3 px-4">
+                    <button
+                      onClick={() => toggleRow(i)}
+                      aria-label="Afișează detalii"
+                      className="text-sm"
+                    >
+                      {expanded[i] ? '▲' : '▼'}
+                    </button>
+                  </td>
+                )}
+                {columns.map((col) => (
+                  <td key={col.id} className="py-3 px-4">
+                    {col.cell ? col.cell(row) : col.accessor(row)}
+                  </td>
+                ))}
+              </tr>
+              {renderRowDetails && expanded[i] && (
+                <tr className="bg-gray-50">
+                  <td
+                    className="py-2 px-4"
+                    colSpan={columns.length + 1}
+                  >
+                    {renderRowDetails(row)}
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
           ))}
         </tbody>
       </table>
