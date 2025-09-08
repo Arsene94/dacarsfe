@@ -482,6 +482,7 @@ const AdminDashboard = () => {
                               Plecare
                             </span>
                                                     <span className="text-sm font-dm-sans font-semibold text-gray-900">B 00 ABC</span>
+                                                    <span className="text-sm text-red-500 font-bold">- scaun copil - varsta copil 2 ani</span>
                                                 </div>
                                                 <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
                                                     <div className="flex items-center space-x-1">
