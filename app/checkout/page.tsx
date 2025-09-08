@@ -631,7 +631,7 @@ const ReservationPage = () => {
                                                 />
                                                 <Button
                                                     type="button"
-                                                    onClick={() => handleDiscountCodeValidation}
+                                                    onClick={() => handleDiscountCodeValidation()}
                                                     disabled={
                                                         isValidatingCode || !formData.coupon_code.trim()
                                                     }
