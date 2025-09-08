@@ -26,11 +26,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   if (pathname === "/admin/login") {
-    return <>{children}</>;
+    return <div className="pt-16 lg:pt-20">{children}</div>;
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen pt-16 lg:pt-20">
       <AdminSidebar />
       <main className="flex-1">{children}</main>
     </div>

@@ -1,9 +1,11 @@
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+import PageTransition from "../components/PageTransition";
 import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { DM_Sans, Poppins } from "next/font/google";
 import "./globals.css";
-import LayoutClient from "../components/LayoutClient";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -43,7 +45,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-screen bg-white">
         <AuthProvider>
           <BookingProvider>
-            <LayoutClient>{children}</LayoutClient>
+            <Header />
+            <main>
+              <PageTransition>{children}</PageTransition>
+            </main>
+            <Footer />
           </BookingProvider>
         </AuthProvider>
       </body>
