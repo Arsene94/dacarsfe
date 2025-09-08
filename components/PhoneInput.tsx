@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronDown, Search, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { countries, sortedCountries } from '@/lib/phone-countries';
+import { countries } from '@/lib/phone-countries';
 import { Country, PhoneInputProps } from '@/types/phone';
 
 const PhoneInput: React.FC<PhoneInputProps> = ({
@@ -16,7 +16,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(countries[0].prefix);
   const [isValid, setIsValid] = useState(true);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -32,15 +32,6 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
     [searchTerm],
   );
 
-  const detectCountryFromNumber = (number: string) => {
-    const cleanNumber = number.replace(/\D/g, '');
-    return (
-      sortedCountries.find((c) =>
-        cleanNumber.startsWith(c.prefix.replace('+', '')),
-      ) || null
-    );
-  };
-
   const validatePhoneNumber = (number: string, country: Country) => {
     if (!number.trim()) return true;
     const cleanNumber = number.replace(/\D/g, '');
@@ -55,20 +46,17 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   };
 
   const handlePhoneChange = (inputValue: string) => {
-    setPhoneNumber(inputValue);
-    const detectedCountry = inputValue.startsWith('+')
-      ? detectCountryFromNumber(inputValue)
-      : null;
-    const currentCountry = detectedCountry || selectedCountry;
-    if (detectedCountry && detectedCountry.code !== selectedCountry.code) {
-      setSelectedCountry(detectedCountry);
-    }
-    const valid = validatePhoneNumber(inputValue, currentCountry);
+    const prefix = selectedCountry.prefix;
+    const digits = inputValue.replace(/\D/g, '');
+    const prefixDigits = prefix.replace('+', '');
+    const withoutPrefix = digits.startsWith(prefixDigits)
+      ? digits.slice(prefixDigits.length)
+      : digits;
+    const newValue = `${prefix}${withoutPrefix}`;
+    setPhoneNumber(newValue);
+    const valid = validatePhoneNumber(newValue, selectedCountry);
     setIsValid(valid);
-    const fullNumber = inputValue.startsWith('+')
-      ? inputValue
-      : `${currentCountry.prefix}${inputValue.replace(/[^\d]/g, '')}`;
-    onChange(fullNumber, currentCountry.code);
+    onChange(newValue, selectedCountry.code);
   };
 
   const handleCountrySelect = (country: Country) => {
@@ -76,9 +64,17 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
     setIsDropdownOpen(false);
     setSearchTerm('');
     const cleanNumber = phoneNumber.replace(/^\+?\d*/, '').replace(/\D/g, '');
-    const newFullNumber = cleanNumber ? `${country.prefix}${cleanNumber}` : '';
+    const newFullNumber = `${country.prefix}${cleanNumber}`;
     setPhoneNumber(newFullNumber);
     onChange(newFullNumber, country.code);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const prefixLength = selectedCountry.prefix.length;
+    const pos = e.currentTarget.selectionStart || 0;
+    if ((e.key === 'Backspace' || e.key === 'Delete') && pos <= prefixLength) {
+      e.preventDefault();
+    }
   };
 
   useEffect(() => {
@@ -101,9 +97,9 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   useEffect(() => {
     if (value && value !== phoneNumber) {
       setPhoneNumber(value);
-      const detectedCountry = detectCountryFromNumber(value);
-      if (detectedCountry) {
-        setSelectedCountry(detectedCountry);
+      const detected = countries.find((c) => value.startsWith(c.prefix));
+      if (detected) {
+        setSelectedCountry(detected);
       }
     }
   }, [phoneNumber, value]);
@@ -181,6 +177,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
           type="tel"
           value={phoneNumber}
           onChange={(e) => handlePhoneChange(e.target.value)}
+          onKeyDown={handleKeyDown}
           required={required}
           placeholder={placeholder}
           className={cn(

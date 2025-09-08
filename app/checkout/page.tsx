@@ -52,7 +52,7 @@ const ReservationPage = () => {
     const [formData, setFormData] = useState<ReservationFormData>({
         customer_name: "",
         customer_email: "",
-        customer_phone: "",
+        customer_phone: "+40",
         flight_number: "",
         rental_start_date: "",
         rental_start_time: "",
