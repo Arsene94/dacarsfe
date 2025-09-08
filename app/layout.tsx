@@ -3,6 +3,7 @@ import Footer from "../components/Footer";
 import PageTransition from "../components/PageTransition";
 import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingContext";
+import { AuthProvider } from "@/context/AuthContext";
 import { DM_Sans, Poppins } from "next/font/google";
 import AsyncStyles from "@/components/AsyncStyles";
 import "./globals.css"
@@ -44,13 +45,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <AsyncStyles />
       </head>
       <body className="min-h-screen bg-white">
-        <BookingProvider>
-          <Header />
-          <main>
-            <PageTransition>{children}</PageTransition>
-          </main>
-          <Footer />
-        </BookingProvider>
+        <AuthProvider>
+          <BookingProvider>
+            <Header />
+            <main>
+              <PageTransition>{children}</PageTransition>
+            </main>
+            <Footer />
+          </BookingProvider>
+        </AuthProvider>
       </body>
     </html>
   );

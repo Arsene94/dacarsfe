@@ -253,7 +253,8 @@ const AdminDashboard = () => {
       "Noiembrie",
       "Decembrie",
     ];
-    const dayNames = ["D", "L", "M", "M", "J", "V", "S"];
+    // Use distinct abbreviations for each day to avoid duplicate React keys
+    const dayNames = ["D", "L", "Ma", "Mi", "J", "V", "S"];
 
     const days = [];
 

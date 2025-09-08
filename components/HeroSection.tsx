@@ -13,7 +13,7 @@ import {
   Star,
   Users,
 } from "lucide-react";
-import apiClient from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";

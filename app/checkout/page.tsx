@@ -6,7 +6,7 @@ import {Calendar, Gift, Plane, User,} from "lucide-react";
 import {Label} from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import {useBooking} from "@/context/BookingContext";
-import apiClient from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import {ApiCar, Car} from "@/types/car";
 import {ReservationFormData, Service} from "@/types/reservation";
 import {Button} from "@/components/ui/button";
