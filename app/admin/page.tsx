@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Calendar,
-  Car,
-  Users,
-  BarChart3,
-  Plus,
-  Filter,
-  Search,
-  ChevronLeft,
-  ChevronRight,
+    Calendar,
+    Car,
+    Users,
+    BarChart3,
+    Plus,
+    Filter,
+    Search,
+    ChevronLeft,
+    ChevronRight, Eye, Clock, User, Phone,
 } from "lucide-react";
 import Link from "next/link";
 import { Select } from "@/components/ui/select";
@@ -19,461 +19,585 @@ import type { Column } from "@/types/ui";
 import { AdminReservation, AdminCar } from "@/types/admin";
 
 const reservationColumns: Column<AdminReservation>[] = [
-  {
-    id: "id",
-    header: "ID",
-    accessor: (r) => r.id,
-    sortable: true,
-    cell: (r) => (
-      <span className="font-dm-sans text-sm text-berkeley font-semibold">
+    {
+        id: "id",
+        header: "ID",
+        accessor: (r) => r.id,
+        sortable: true,
+        cell: (r) => (
+            <span className="font-dm-sans text-sm text-berkeley font-semibold">
         {r.id}
       </span>
-    ),
-  },
-  {
-    id: "customer",
-    header: "Client",
-    accessor: (r) => r.customerName,
-    sortable: true,
-    cell: (r) => (
-      <span className="font-dm-sans text-sm text-gray-900">
+        ),
+    },
+    {
+        id: "customer",
+        header: "Client",
+        accessor: (r) => r.customerName,
+        sortable: true,
+        cell: (r) => (
+            <span className="font-dm-sans text-sm text-gray-900">
         {r.customerName}
       </span>
-    ),
-  },
-  {
-    id: "phone",
-    header: "Telefon",
-    accessor: (r) => r.phone,
-    cell: (r) => (
-      <span className="font-dm-sans text-sm text-gray-600">{r.phone}</span>
-    ),
-  },
-  {
-    id: "car",
-    header: "Mașină",
-    accessor: (r) => r.carName,
-    cell: (r) => (
-      <span className="font-dm-sans text-sm text-gray-900">{r.carName}</span>
-    ),
-  },
-  {
-    id: "period",
-    header: "Perioada",
-    accessor: (r) => new Date(r.startDate).getTime(),
-    cell: (r) => (
-      <span className="font-dm-sans text-sm text-gray-600">
+        ),
+    },
+    {
+        id: "phone",
+        header: "Telefon",
+        accessor: (r) => r.phone,
+        cell: (r) => (
+            <span className="font-dm-sans text-sm text-gray-600">{r.phone}</span>
+        ),
+    },
+    {
+        id: "car",
+        header: "Mașină",
+        accessor: (r) => r.carName,
+        cell: (r) => (
+            <span className="font-dm-sans text-sm text-gray-900">{r.carName}</span>
+        ),
+    },
+    {
+        id: "period",
+        header: "Perioada",
+        accessor: (r) => new Date(r.startDate).getTime(),
+        cell: (r) => (
+            <span className="font-dm-sans text-sm text-gray-600">
         {new Date(r.startDate).toLocaleDateString("ro-RO")} -
-        {" "}
-        {new Date(r.endDate).toLocaleDateString("ro-RO")}
+                {" "}
+                {new Date(r.endDate).toLocaleDateString("ro-RO")}
       </span>
-    ),
-  },
-  {
-    id: "status",
-    header: "Status",
-    accessor: (r) => r.status,
-    cell: (r) => (
-      <span
-        className={`px-2 py-1 rounded-full text-xs font-dm-sans ${
-          r.status === "confirmed"
-            ? "bg-green-100 text-green-800"
-            : r.status === "pending"
-              ? "bg-yellow-100 text-yellow-800"
-              : "bg-red-100 text-red-800"
-        }`}
-      >
+        ),
+    },
+    {
+        id: "status",
+        header: "Status",
+        accessor: (r) => r.status,
+        cell: (r) => (
+            <span
+                className={`px-2 py-1 rounded-full text-xs font-dm-sans ${
+                    r.status === "confirmed"
+                        ? "bg-green-100 text-green-800"
+                        : r.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                }`}
+            >
         {r.status === "confirmed"
-          ? "Confirmat"
-          : r.status === "pending"
-            ? "În așteptare"
-            : "Anulat"}
+            ? "Confirmat"
+            : r.status === "pending"
+                ? "În așteptare"
+                : "Anulat"}
       </span>
-    ),
-  },
-  {
-    id: "total",
-    header: "Total",
-    accessor: (r) => r.total,
-    sortable: true,
-    cell: (r) => (
-      <span className="font-dm-sans text-sm font-semibold text-berkeley">
+        ),
+    },
+    {
+        id: "total",
+        header: "Total",
+        accessor: (r) => r.total,
+        sortable: true,
+        cell: (r) => (
+            <span className="font-dm-sans text-sm font-semibold text-berkeley">
         {r.total}€
       </span>
-    ),
-  },
+        ),
+    },
 ];
 
 const AdminDashboard = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [reservations, setReservations] = useState<AdminReservation[]>([]);
-  const [cars, setCars] = useState<AdminCar[]>([]);
-  const [selectedCar, setSelectedCar] = useState<number | null>(null);
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [reservations, setReservations] = useState<AdminReservation[]>([]);
+    const [cars, setCars] = useState<AdminCar[]>([]);
+    const [selectedCar, setSelectedCar] = useState<number | null>(null);
 
-  // Mock data pentru demo
-  useEffect(() => {
-    const mockReservations: AdminReservation[] = [
-      {
-        id: "DC001",
-        customerName: "Ana Popescu",
-        phone: "+40722123456",
-        carId: 1,
-        carName: "Dacia Logan",
-        startDate: "2025-01-15",
-        endDate: "2025-01-18",
-        status: "confirmed",
-        total: 135,
-      },
-      {
-        id: "DC002",
-        customerName: "Mihai Ionescu",
-        phone: "+40733987654",
-        carId: 2,
-        carName: "VW Golf",
-        startDate: "2025-01-20",
-        endDate: "2025-01-25",
-        status: "confirmed",
-        total: 325,
-      },
-      {
-        id: "DC003",
-        customerName: "Elena Dumitrescu",
-        phone: "+40744555666",
-        carId: 3,
-        carName: "BMW Seria 3",
-        startDate: "2025-01-22",
-        endDate: "2025-01-24",
-        status: "pending",
-        total: 190,
-      },
-      {
-        id: "DC004",
-        customerName: "Radu Constantin",
-        phone: "+40755111222",
-        carId: 1,
-        carName: "Dacia Logan",
-        startDate: "2025-02-01",
-        endDate: "2025-02-05",
-        status: "confirmed",
-        total: 180,
-      },
-      {
-        id: "DC005",
-        customerName: "Maria Georgescu",
-        phone: "+40766333444",
-        carId: 4,
-        carName: "Ford Transit",
-        startDate: "2025-02-10",
-        endDate: "2025-02-12",
-        status: "confirmed",
-        total: 170,
-      },
-    ];
+    // Mock data pentru demo
+    useEffect(() => {
+        const mockReservations: AdminReservation[] = [
+            {
+                id: "DC001",
+                customerName: "Ana Popescu",
+                phone: "+40722123456",
+                carId: 1,
+                carName: "Dacia Logan",
+                startDate: "2025-01-15",
+                endDate: "2025-01-18",
+                status: "confirmed",
+                total: 135,
+            },
+            {
+                id: "DC002",
+                customerName: "Mihai Ionescu",
+                phone: "+40733987654",
+                carId: 2,
+                carName: "VW Golf",
+                startDate: "2025-01-20",
+                endDate: "2025-01-25",
+                status: "confirmed",
+                total: 325,
+            },
+            {
+                id: "DC003",
+                customerName: "Elena Dumitrescu",
+                phone: "+40744555666",
+                carId: 3,
+                carName: "BMW Seria 3",
+                startDate: "2025-01-22",
+                endDate: "2025-01-24",
+                status: "pending",
+                total: 190,
+            },
+            {
+                id: "DC004",
+                customerName: "Radu Constantin",
+                phone: "+40755111222",
+                carId: 1,
+                carName: "Dacia Logan",
+                startDate: "2025-02-01",
+                endDate: "2025-02-05",
+                status: "confirmed",
+                total: 180,
+            },
+            {
+                id: "DC005",
+                customerName: "Maria Georgescu",
+                phone: "+40766333444",
+                carId: 4,
+                carName: "Ford Transit",
+                startDate: "2025-02-10",
+                endDate: "2025-02-12",
+                status: "confirmed",
+                total: 170,
+            },
+        ];
 
-    const mockCars: AdminCar[] = [
-      {
-        id: 1,
-        name: "Dacia Logan",
-        type: "Economic",
-        status: "available",
-        price: 45,
-      },
-      { id: 2, name: "VW Golf", type: "Comfort", status: "rented", price: 65 },
-      {
-        id: 3,
-        name: "BMW Seria 3",
-        type: "Premium",
-        status: "available",
-        price: 95,
-      },
-      {
-        id: 4,
-        name: "Ford Transit",
-        type: "Van",
-        status: "available",
-        price: 85,
-      },
-      {
-        id: 5,
-        name: "Skoda Octavia",
-        type: "Comfort",
-        status: "maintenance",
-        price: 68,
-      },
-      {
-        id: 6,
-        name: "Audi A4",
-        type: "Premium",
-        status: "available",
-        price: 98,
-      },
-    ];
+        const mockCars: AdminCar[] = [
+            {
+                id: 1,
+                name: "Dacia Logan",
+                type: "Economic",
+                status: "available",
+                price: 45,
+            },
+            { id: 2, name: "VW Golf", type: "Comfort", status: "rented", price: 65 },
+            {
+                id: 3,
+                name: "BMW Seria 3",
+                type: "Premium",
+                status: "available",
+                price: 95,
+            },
+            {
+                id: 4,
+                name: "Ford Transit",
+                type: "Van",
+                status: "available",
+                price: 85,
+            },
+            {
+                id: 5,
+                name: "Skoda Octavia",
+                type: "Comfort",
+                status: "maintenance",
+                price: 68,
+            },
+            {
+                id: 6,
+                name: "Audi A4",
+                type: "Premium",
+                status: "available",
+                price: 98,
+            },
+        ];
 
-    setReservations(mockReservations);
-    setCars(mockCars);
-  }, []);
+        setReservations(mockReservations);
+        setCars(mockCars);
+    }, []);
 
-  const getDaysInMonth = (month: number, year: number) => {
-    return new Date(year, month + 1, 0).getDate();
-  };
+    const getDaysInMonth = (month: number, year: number) => {
+        return new Date(year, month + 1, 0).getDate();
+    };
 
-  const getFirstDayOfMonth = (month: number, year: number) => {
-    return new Date(year, month, 1).getDay();
-  };
+    const getFirstDayOfMonth = (month: number, year: number) => {
+        return new Date(year, month, 1).getDay();
+    };
 
-  const getReservationsForDate = (date: string, carId?: number) => {
-    return reservations.filter((reservation) => {
-      const startDate = new Date(reservation.startDate);
-      const endDate = new Date(reservation.endDate);
-      const checkDate = new Date(date);
+    const getReservationsForDate = (date: string, carId?: number) => {
+        return reservations.filter((reservation) => {
+            const startDate = new Date(reservation.startDate);
+            const endDate = new Date(reservation.endDate);
+            const checkDate = new Date(date);
 
-      const isInRange = checkDate >= startDate && checkDate <= endDate;
-      const matchesCar = !carId || reservation.carId === carId;
+            const isInRange = checkDate >= startDate && checkDate <= endDate;
+            const matchesCar = !carId || reservation.carId === carId;
 
-      return isInRange && matchesCar;
-    });
-  };
+            return isInRange && matchesCar;
+        });
+    };
 
-  const renderCalendarMonth = (month: number, year: number) => {
-    const daysInMonth = getDaysInMonth(month, year);
-    const firstDay = getFirstDayOfMonth(month, year);
-    const monthNames = [
-      "Ianuarie",
-      "Februarie",
-      "Martie",
-      "Aprilie",
-      "Mai",
-      "Iunie",
-      "Iulie",
-      "August",
-      "Septembrie",
-      "Octombrie",
-      "Noiembrie",
-      "Decembrie",
-    ];
-    // Use distinct abbreviations for each day to avoid duplicate React keys
-    const dayNames = ["D", "L", "Ma", "Mi", "J", "V", "S"];
+    const renderCalendarMonth = (month: number, year: number) => {
+        const daysInMonth = getDaysInMonth(month, year);
+        const firstDay = getFirstDayOfMonth(month, year);
+        const monthNames = [
+            "Ianuarie",
+            "Februarie",
+            "Martie",
+            "Aprilie",
+            "Mai",
+            "Iunie",
+            "Iulie",
+            "August",
+            "Septembrie",
+            "Octombrie",
+            "Noiembrie",
+            "Decembrie",
+        ];
+        // Use distinct abbreviations for each day to avoid duplicate React keys
+        const dayNames = ["D", "L", "Ma", "Mi", "J", "V", "S"];
 
-    const days = [];
+        const days = [];
 
-    // Empty cells for days before month starts
-    for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-8"></div>);
-    }
+        // Empty cells for days before month starts
+        for (let i = 0; i < firstDay; i++) {
+            days.push(<div key={`empty-${i}`} className="h-8"></div>);
+        }
 
-    // Days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const dayReservations = getReservationsForDate(
-        dateStr,
-        selectedCar || undefined,
-      );
-      const isToday =
-        new Date().toDateString() === new Date(dateStr).toDateString();
+        // Days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            const dayReservations = getReservationsForDate(
+                dateStr,
+                selectedCar || undefined,
+            );
+            const isToday =
+                new Date().toDateString() === new Date(dateStr).toDateString();
 
-      days.push(
-        <div
-          key={day}
-          className={`h-8 text-xs flex items-center justify-center relative cursor-pointer transition-colors duration-200 ${
-            isToday
-              ? "bg-jade text-white font-semibold rounded"
-              : "hover:bg-gray-100"
-          }`}
-          title={
-            dayReservations.length > 0
-              ? dayReservations
-                  .map((r) => `${r.customerName} - ${r.phone}`)
-                  .join("\n")
-              : ""
-          }
-        >
-          <span className="relative z-10">{day}</span>
-          {dayReservations.length > 0 && (
-            <div
-              className={`absolute inset-0 rounded text-white text-[10px] flex items-center justify-center ${
-                dayReservations[0].status === "confirmed"
-                  ? "bg-jade"
-                  : dayReservations[0].status === "pending"
-                    ? "bg-yellow-500"
-                    : "bg-red-500"
-              }`}
-            >
-              <div className="text-center leading-tight">
-                <div className="font-semibold">
-                  {dayReservations[0].customerName.split(" ")[0]}
+            days.push(
+                <div
+                    key={day}
+                    className={`h-8 text-xs flex items-center justify-center relative cursor-pointer transition-colors duration-200 ${
+                        isToday
+                            ? "bg-jade text-white font-semibold rounded"
+                            : "hover:bg-gray-100"
+                    }`}
+                    title={
+                        dayReservations.length > 0
+                            ? dayReservations
+                                .map((r) => `${r.customerName} - ${r.phone}`)
+                                .join("\n")
+                            : ""
+                    }
+                >
+                    <span className="relative z-10">{day}</span>
+                    {dayReservations.length > 0 && (
+                        <div
+                            className={`absolute inset-0 rounded text-white text-[10px] flex items-center justify-center ${
+                                dayReservations[0].status === "confirmed"
+                                    ? "bg-jade"
+                                    : dayReservations[0].status === "pending"
+                                        ? "bg-yellow-500"
+                                        : "bg-red-500"
+                            }`}
+                        >
+                            <div className="text-center leading-tight">
+                                <div className="font-semibold">
+                                    {dayReservations[0].customerName.split(" ")[0]}
+                                </div>
+                                <div className="text-[8px]">
+                                    {dayReservations[0].phone.slice(-4)}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>,
+            );
+        }
+
+        return (
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+                <h3 className="font-semibold text-berkeley mb-3 text-center">
+                    {monthNames[month]} {year}
+                </h3>
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                    {dayNames.map((day) => (
+                        <div
+                            key={day}
+                            className="h-6 text-xs font-semibold text-gray-500 flex items-center justify-center"
+                        >
+                            {day}
+                        </div>
+                    ))}
                 </div>
-                <div className="text-[8px]">
-                  {dayReservations[0].phone.slice(-4)}
-                </div>
-              </div>
+                <div className="grid grid-cols-7 gap-1">{days}</div>
             </div>
-          )}
-        </div>,
-      );
-    }
+        );
+    };
+
+    const filteredCars = selectedCar
+        ? cars.filter((car) => car.id === selectedCar)
+        : cars;
+    const todayReservations = getReservationsForDate(
+        new Date().toISOString().split("T")[0],
+    );
 
     return (
-      <div className="bg-white rounded-lg p-4 shadow-sm">
-        <h3 className="font-semibold text-berkeley mb-3 text-center">
-          {monthNames[month]} {year}
-        </h3>
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {dayNames.map((day) => (
-            <div
-              key={day}
-              className="h-6 text-xs font-semibold text-gray-500 flex items-center justify-center"
-            >
-              {day}
+        <div className="min-h-screen bg-gray-50">
+            {/* Header */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white rounded-xl p-6 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-dm-sans text-gray-600">
+                                    Rezervări astăzi
+                                </p>
+                                <p className="text-2xl font-poppins font-bold text-berkeley">
+                                    {todayReservations.length}
+                                </p>
+                            </div>
+                            <Calendar className="h-8 w-8 text-jade" />
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-6 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-dm-sans text-gray-600">
+                                    Mașini disponibile
+                                </p>
+                                <p className="text-2xl font-poppins font-bold text-berkeley">
+                                    {cars.filter((car) => car.status === "available").length}
+                                </p>
+                            </div>
+                            <Car className="h-8 w-8 text-jade" />
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-6 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-dm-sans text-gray-600">
+                                    Total rezervări
+                                </p>
+                                <p className="text-2xl font-poppins font-bold text-berkeley">
+                                    {reservations.length}
+                                </p>
+                            </div>
+                            <Users className="h-8 w-8 text-jade" />
+                        </div>
+                    </div>
+
+                </div>
+
+                <div className="grid grid-cols-1 gap-8">
+                    {/* Calendar */}
+                    <div className="bg-white rounded-xl shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-poppins font-semibold text-berkeley">
+                                Program Activitate Auto
+                            </h2>
+                            <div className="flex items-center space-x-4">
+                                <div className="flex items-center space-x-2">
+                                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                    <span className="text-sm font-dm-sans text-gray-600">Plecare</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                    <span className="text-sm font-dm-sans text-gray-600">Sosire</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Day Selector */}
+                        <div className="mb-6">
+                            <div className="flex items-center space-x-3">
+                                <Calendar className="h-5 w-5 text-jade" />
+                                <label htmlFor="day-selector" className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Selectează ziua:
+                                </label>
+                            </div>
+                            <div className="mt-2">
+                                <Select
+                                    id="day-selector"
+                                    className="px-4 py-3 w-full max-w-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
+                                    aria-label="Selectează ziua"
+                                >
+                                    <option value="azi">Astăzi - {new Date().toLocaleDateString('ro-RO')}</option>
+                                    <option value="maine">Mâine - {new Date(Date.now() + 86400000).toLocaleDateString('ro-RO')}</option>
+                                    <option value="2zile">Peste 2 zile - {new Date(Date.now() + 172800000).toLocaleDateString('ro-RO')}</option>
+                                    <option value="3zile">Peste 3 zile - {new Date(Date.now() + 259200000).toLocaleDateString('ro-RO')}</option>
+                                    <option value="4zile">Peste 4 zile - {new Date(Date.now() + 345600000).toLocaleDateString('ro-RO')}</option>
+                                    <option value="5zile">Peste 5 zile - {new Date(Date.now() + 432000000).toLocaleDateString('ro-RO')}</option>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {/* Activity Schedule */}
+                        <div className="space-y-6">
+                            {/* Time Slot 1 */}
+                            <div className="border border-gray-200 rounded-xl overflow-hidden">
+                                <div className="bg-gradient-to-r from-berkeley/5 to-jade/5 px-6 py-4 border-b border-gray-200">
+                                    <div className="flex items-center space-x-3">
+                                        <Clock className="h-5 w-5 text-berkeley" />
+                                        <h3 className="text-lg font-poppins font-semibold text-berkeley">13:00</h3>
+                                        <span className="text-sm font-dm-sans text-gray-600">2 activități</span>
+                                    </div>
+                                </div>
+                                <div className="divide-y divide-gray-100">
+                                    {/* Departure */}
+                                    <div className="px-6 py-4 hover:bg-green-50 transition-colors duration-200">
+                                        <div className="flex items-center space-x-4">
+                                            <div className="flex-shrink-0">
+                                                <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center space-x-3">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Plecare
+                            </span>
+                                                    <span className="text-sm font-dm-sans font-semibold text-gray-900">B 00 ABC</span>
+                                                </div>
+                                                <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
+                                                    <div className="flex items-center space-x-1">
+                                                        <User className="h-4 w-4" />
+                                                        <span>Nume Prenume</span>
+                                                    </div>
+                                                    <div className="flex items-center space-x-1">
+                                                        <Phone className="h-4 w-4" />
+                                                        <span>+40712345678</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex-shrink-0">
+                                                <button className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200">
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Return */}
+                                    <div className="px-6 py-4 hover:bg-red-50 transition-colors duration-200">
+                                        <div className="flex items-center space-x-4">
+                                            <div className="flex-shrink-0">
+                                                <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center space-x-3">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              Sosire
+                            </span>
+                                                    <span className="text-sm font-dm-sans font-semibold text-gray-900">B 00 ABC</span>
+                                                </div>
+                                                <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
+                                                    <div className="flex items-center space-x-1">
+                                                        <User className="h-4 w-4" />
+                                                        <span>Nume Prenume</span>
+                                                    </div>
+                                                    <div className="flex items-center space-x-1">
+                                                        <Phone className="h-4 w-4" />
+                                                        <span>+40712345678</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex-shrink-0">
+                                                <button className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200">
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Time Slot 2 */}
+                            <div className="border border-gray-200 rounded-xl overflow-hidden">
+                                <div className="bg-gradient-to-r from-berkeley/5 to-jade/5 px-6 py-4 border-b border-gray-200">
+                                    <div className="flex items-center space-x-3">
+                                        <Clock className="h-5 w-5 text-berkeley" />
+                                        <h3 className="text-lg font-poppins font-semibold text-berkeley">15:30</h3>
+                                        <span className="text-sm font-dm-sans text-gray-600">1 activitate</span>
+                                    </div>
+                                </div>
+                                <div className="divide-y divide-gray-100">
+                                    {/* Departure */}
+                                    <div className="px-6 py-4 hover:bg-green-50 transition-colors duration-200">
+                                        <div className="flex items-center space-x-4">
+                                            <div className="flex-shrink-0">
+                                                <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center space-x-3">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Plecare
+                            </span>
+                                                    <span className="text-sm font-dm-sans font-semibold text-gray-900">B 01 XYZ</span>
+                                                </div>
+                                                <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
+                                                    <div className="flex items-center space-x-1">
+                                                        <User className="h-4 w-4" />
+                                                        <span>Ion Popescu</span>
+                                                    </div>
+                                                    <div className="flex items-center space-x-1">
+                                                        <Phone className="h-4 w-4" />
+                                                        <span>+40723456789</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex-shrink-0">
+                                                <button className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200">
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Empty State */}
+                            <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
+                                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                <h3 className="text-lg font-poppins font-semibold text-gray-600 mb-2">
+                                    Nu există alte activități
+                                </h3>
+                                <p className="text-gray-500 font-dm-sans">
+                                    Toate activitățile pentru ziua selectată sunt afișate mai sus.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Recent Reservations */}
+                <div className="mt-8">
+                    <div className="bg-white rounded-xl shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-poppins font-semibold text-berkeley">
+                                Rezervări Recente
+                            </h2>
+                            <Link
+                                href="/admin/rezervari"
+                                className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors"
+                                aria-label="Vezi toate rezervările"
+                            >
+                                Vezi toate
+                            </Link>
+                        </div>
+
+                        <DataTable data={reservations.slice(0, 5)} columns={reservationColumns} />
+                    </div>
+                </div>
             </div>
-          ))}
         </div>
-        <div className="grid grid-cols-7 gap-1">{days}</div>
-      </div>
     );
-  };
-
-  const filteredCars = selectedCar
-    ? cars.filter((car) => car.id === selectedCar)
-    : cars;
-  const todayReservations = getReservationsForDate(
-    new Date().toISOString().split("T")[0],
-  );
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-dm-sans text-gray-600">
-                  Rezervări astăzi
-                </p>
-                <p className="text-2xl font-poppins font-bold text-berkeley">
-                  {todayReservations.length}
-                </p>
-              </div>
-              <Calendar className="h-8 w-8 text-jade" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-dm-sans text-gray-600">
-                  Mașini disponibile
-                </p>
-                <p className="text-2xl font-poppins font-bold text-berkeley">
-                  {cars.filter((car) => car.status === "available").length}
-                </p>
-              </div>
-              <Car className="h-8 w-8 text-jade" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-dm-sans text-gray-600">
-                  Total rezervări
-                </p>
-                <p className="text-2xl font-poppins font-bold text-berkeley">
-                  {reservations.length}
-                </p>
-              </div>
-              <Users className="h-8 w-8 text-jade" />
-            </div>
-          </div>
-
-        </div>
-
-        <div className="grid grid-cols-1 gap-8">
-          {/* Calendar */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-poppins font-semibold text-berkeley">
-                  Calendar Rezervări {selectedYear}
-                </h2>
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => setSelectedYear(selectedYear - 1)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    aria-label="Anul precedent"
-                  >
-                    <ChevronLeft className="h-5 w-5 text-gray-600" />
-                  </button>
-                  <span className="font-dm-sans font-semibold text-berkeley">
-                    {selectedYear}
-                  </span>
-                  <button
-                    onClick={() => setSelectedYear(selectedYear + 1)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    aria-label="Anul următor"
-                  >
-                    <ChevronRight className="h-5 w-5 text-gray-600" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Year Calendar Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {Array.from({ length: 12 }, (_, month) => (
-                  <div key={month}>
-                    {renderCalendarMonth(month, selectedYear)}
-                  </div>
-                ))}
-              </div>
-
-              {/* Legend */}
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-6 p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-jade rounded"></div>
-                  <span className="text-sm font-dm-sans text-gray-600">
-                    Confirmat
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                  <span className="text-sm font-dm-sans text-gray-600">
-                    În așteptare
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-red-500 rounded"></div>
-                  <span className="text-sm font-dm-sans text-gray-600">
-                    Anulat
-                  </span>
-                </div>
-              </div>
-            </div>
-        </div>
-
-        {/* Recent Reservations */}
-        <div className="mt-8">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-poppins font-semibold text-berkeley">
-                Rezervări Recente
-              </h2>
-              <Link
-                href="/admin/rezervari"
-                className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors"
-                aria-label="Vezi toate rezervările"
-              >
-                Vezi toate
-              </Link>
-            </div>
-
-            <DataTable data={reservations.slice(0, 5)} columns={reservationColumns} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 export default AdminDashboard;
