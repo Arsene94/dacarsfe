@@ -8,7 +8,7 @@ import { Filter, Fuel, Search, Settings, SlidersHorizontal, Users, X } from "luc
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import apiClient from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { useBooking } from "@/context/BookingContext";
 import { ApiCar, Car, CarCategory } from "@/types/car";
 

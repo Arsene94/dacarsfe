@@ -11,7 +11,7 @@ import {
     ChevronLeft,
     ChevronRight,
 } from "lucide-react";
-import apiClient from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { Button } from '@/components/ui/button';
 import { ApiCar, CarCategory, FleetCar } from '@/types/car';
 
