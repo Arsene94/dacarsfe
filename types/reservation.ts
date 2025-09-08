@@ -1,3 +1,5 @@
+import {Car} from "@/types/car";
+
 export interface ReservationFormData {
   customer_name: string;
   customer_email: string;
@@ -26,4 +28,5 @@ export interface ReservationPayload extends ReservationFormData {
   total: number;
   sub_total: number;
   reservationId: string;
+  selectedCar: Car;
 }

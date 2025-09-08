@@ -34,11 +34,11 @@ const SuccessPage = () => {
           <div className="bg-jade/10 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="h-12 w-12 text-jade" />
           </div>
-          
+
           <h1 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
             Rezervarea este <span className="text-jade">confirmată!</span>
           </h1>
-          
+
           <p className="text-xl lg:text-2xl font-dm-sans text-gray-700 leading-relaxed max-w-3xl mx-auto">
             Mulțumim, <strong>{reservationData.customer_name}</strong>! Mașina ta te așteaptă la aeroport.
             <br className="hidden sm:block" />
@@ -68,10 +68,7 @@ const SuccessPage = () => {
                 <div>
                   <h3 className="font-poppins font-semibold text-berkeley text-lg">Mașina ta</h3>
                   <p className="font-dm-sans text-gray-600 capitalize">
-                    {reservationData.carType === 'economic' && 'Dacia Logan - Economic'}
-                    {reservationData.carType === 'comfort' && 'Volkswagen Golf - Comfort'}
-                    {reservationData.carType === 'premium' && 'BMW Seria 3 - Premium'}
-                    {reservationData.carType === 'van' && 'Ford Transit - Van 9 locuri'}
+                    {reservationData.selectedCar.name}
                   </p>
                 </div>
               </div>

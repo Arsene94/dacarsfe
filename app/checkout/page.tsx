@@ -475,6 +475,7 @@ const ReservationPage = () => {
                     price_per_day: pricePerDay,
                     total_services: totalServices,
                     coupon_amount: couponAmount,
+                    selectedCar: selectedCar,
                     total,
                     sub_total: subTotal,
                     reservationId,
