@@ -421,7 +421,7 @@ const AdminDashboard = () => {
                             <div className="mt-2">
                                 <Select
                                     id="day-selector"
-                                    className="px-4 py-3 w-full max-w-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
+                                    className="w-full max-w-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
                                     aria-label="Selectează ziua"
                                 >
                                     <option value="azi">Astăzi - {new Date().toLocaleDateString('ro-RO')}</option>
