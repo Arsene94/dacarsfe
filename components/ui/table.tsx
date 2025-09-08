@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Column, SortState, DataTableProps } from '@/types/ui';
 
@@ -98,9 +99,14 @@ export function DataTable<T extends Record<string, any>>({
                     <button
                       onClick={() => toggleRow(i)}
                       aria-label="Afișează detalii"
-                      className="text-sm"
+                      className="flex items-center justify-center text-sm"
                     >
-                      {expanded[i] ? '▲' : '▼'}
+                      <ChevronDown
+                        className={cn(
+                          'h-4 w-4 transition-transform',
+                          expanded[i] && 'rotate-180'
+                        )}
+                      />
                     </button>
                   </td>
                 )}
@@ -110,13 +116,21 @@ export function DataTable<T extends Record<string, any>>({
                   </td>
                 ))}
               </tr>
-              {renderRowDetails && expanded[i] && (
+              {renderRowDetails && (
                 <tr className="bg-gray-50">
-                  <td
-                    className="py-2 px-4"
-                    colSpan={columns.length + 1}
-                  >
-                    {renderRowDetails(row)}
+                  <td colSpan={columns.length + 1} className="p-0">
+                    <div
+                      className={cn(
+                        'grid overflow-hidden transition-all duration-200 ease-in-out',
+                        expanded[i]
+                          ? 'grid-rows-[1fr] opacity-100 p-4'
+                          : 'grid-rows-[0fr] opacity-0 p-0'
+                      )}
+                    >
+                      <div className="overflow-hidden">
+                        {renderRowDetails(row)}
+                      </div>
+                    </div>
                   </td>
                 </tr>
               )}
