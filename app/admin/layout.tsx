@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
+import AdminSidebar from "@/components/AdminSidebar";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -24,5 +25,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return loading ? <div /> : <div />;
   }
 
-  return <>{children}</>;
+  if (pathname === "/admin/login") {
+    return <div className="pt-16 lg:pt-20">{children}</div>;
+  }
+
+  return (
+    <div className="flex min-h-screen pt-16 lg:pt-20">
+      <AdminSidebar />
+      <main className="flex-1">{children}</main>
+    </div>
+  );
 }

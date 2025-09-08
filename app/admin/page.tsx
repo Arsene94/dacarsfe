@@ -344,47 +344,6 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Link href="/" className="flex items-center space-x-2" aria-label="DaCars Admin Acasă">
-                <div className="bg-jade p-2 rounded-lg">
-                  <Car className="h-6 w-6 text-white" />
-                </div>
-                <span className="text-xl font-poppins font-bold text-berkeley">
-                  DaCars Admin
-                </span>
-              </Link>
-            </div>
-
-            <nav className="flex items-center space-x-6">
-              <Link
-                href="/admin"
-                className="text-berkeley font-dm-sans font-medium hover:text-jade transition-colors"
-                aria-label="Dashboard"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/admin/rezervari"
-                className="text-gray-600 font-dm-sans font-medium hover:text-jade transition-colors"
-                aria-label="Rezervări"
-              >
-                Rezervări
-              </Link>
-              <Link
-                href="/admin/masini"
-                className="text-gray-600 font-dm-sans font-medium hover:text-jade transition-colors"
-                aria-label="Mașini"
-              >
-                Mașini
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

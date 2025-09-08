@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { DM_Sans, Poppins } from "next/font/google";
-import "./globals.css"
+import "./globals.css";
 
 const poppins = Poppins({
   subsets: ["latin"],
