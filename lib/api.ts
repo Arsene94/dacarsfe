@@ -132,6 +132,10 @@ class ApiClient {
         });
     }
 
+    async getBookings() {
+        return this.request<any>(`/bookings`);
+    }
+
     // Authentication helpers
 
     async login(payload: { login: string; password: string }): Promise<AuthResponse> {

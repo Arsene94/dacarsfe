@@ -21,6 +21,7 @@ import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 import {Input} from "@/components/ui/input";
+import apiClient from "@/lib/api";
 
 const ReservationsPage = () => {
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
