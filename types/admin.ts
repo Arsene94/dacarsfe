@@ -7,8 +7,17 @@ export interface AdminReservation {
   startDate: string;
   endDate: string;
   plan: number,
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
+  status:
+    | 'pending'
+    | 'no_answer'
+    | 'waiting_advance_payment'
+    | 'reserved'
+    | 'completed'
+    | 'cancelled';
   total: number;
+  pricePerDay?: number;
+  servicesPrice?: number;
+  discount?: number;
   email?: string;
   pickupTime?: string;
   dropoffTime?: string;
@@ -31,7 +40,7 @@ export interface AdminCar {
     doors: number;
     luggage: number;
   };
-  status: 'available' | 'rented' | 'maintenance';
+  status: 'available' | 'maintenance' | 'out_of_service';
   rating?: number;
   description?: string;
   specs?: string[];

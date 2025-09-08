@@ -34,105 +34,68 @@ const ReservationsPage = () => {
   const [selectedReservation, setSelectedReservation] =
     useState<AdminReservation | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
 
-  // Mock data pentru demo
+  const mapStatus = (status: string): AdminReservation["status"] => {
+    switch (status) {
+      case "no_answer":
+        return "no_answer";
+      case "waiting_advance_payment":
+        return "waiting_advance_payment";
+      case "reserved":
+        return "reserved";
+      case "cancelled":
+        return "cancelled";
+      case "completed":
+        return "completed";
+      case "pending":
+      default:
+        return "pending";
+    }
+  };
+
+  const fetchBookings = useCallback(async () => {
+    try {
+      const res = await apiClient.getBookings({ page: currentPage });
+      const mapped: AdminReservation[] = res.data.map((b: any) => ({
+        id: b.booking_number || b.id?.toString(),
+        customerName: b.customer_name,
+        email: b.customer_email,
+        phone: b.customer_phone,
+        carId: b.car_id,
+        carName: b.car_name,
+        startDate: b.rental_start_date,
+        endDate: b.rental_end_date,
+        plan: b.with_deposit ? 1 : 0,
+        pickupTime: new Date(b.rental_start_date).toLocaleTimeString("ro-RO", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        dropoffTime: new Date(b.rental_end_date).toLocaleTimeString("ro-RO", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        location: b.location || "",
+        status: mapStatus(b.status),
+        total: b.total,
+        discountCode: b.coupon_code || undefined,
+        createdAt: b.created_at,
+        pricePerDay: b.price_per_day,
+        servicesPrice: b.total_services,
+        discount: b.coupon_amount,
+      }));
+      setReservations(mapped);
+      setFilteredReservations(mapped);
+      setLastPage(res.meta?.last_page || 1);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [currentPage]);
+
   useEffect(() => {
-    const mockReservations: AdminReservation[] = [
-      {
-        id: "DC001",
-        customerName: "Ana Popescu",
-        email: "ana.popescu@email.com",
-        phone: "+40722123456",
-        carId: 1,
-        carName: "Dacia Logan",
-        startDate: "2025-01-15",
-        endDate: "2025-01-18",
-        plan: 0,
-        pickupTime: "14:30",
-        dropoffTime: "10:00",
-        location: "Aeroport Otopeni",
-        status: "confirmed",
-        total: 135,
-        discountCode: "WHEEL10",
-        notes: "Client VIP, zbor RO123",
-        createdAt: "2025-01-10T10:30:00Z",
-      },
-      {
-        id: "DC002",
-        customerName: "Mihai Ionescu",
-        email: "mihai.ionescu@gmail.com",
-        phone: "+40733987654",
-        carId: 2,
-        carName: "VW Golf",
-        startDate: "2025-01-20",
-        endDate: "2025-01-25",
-        plan: 1,
-        pickupTime: "16:45",
-        dropoffTime: "12:00",
-        location: "Aeroport Otopeni",
-        status: "confirmed",
-        total: 325,
-        notes: "Rezervare pentru vacanță",
-        createdAt: "2025-01-12T15:20:00Z",
-      },
-      {
-        id: "DC003",
-        customerName: "Elena Dumitrescu",
-        email: "elena.d@yahoo.com",
-        phone: "+40744555666",
-        carId: 3,
-        carName: "BMW Seria 3",
-        startDate: "2025-01-22",
-        endDate: "2025-01-24",
-        plan: 0,
-        pickupTime: "09:15",
-        dropoffTime: "18:30",
-        location: "București Centru",
-        status: "pending",
-        total: 190,
-        createdAt: "2025-01-14T09:45:00Z",
-      },
-      {
-        id: "DC004",
-        customerName: "Radu Constantin",
-        email: "radu.c@outlook.com",
-        phone: "+40755111222",
-        carId: 1,
-        carName: "Dacia Logan",
-        startDate: "2025-02-01",
-        endDate: "2025-02-05",
-        plan: 0,
-        pickupTime: "11:00",
-        dropoffTime: "14:00",
-        location: "Aeroport Otopeni",
-        status: "confirmed",
-        total: 180,
-        discountCode: "FRIEND20",
-        createdAt: "2025-01-16T14:10:00Z",
-      },
-      {
-        id: "DC005",
-        customerName: "Maria Georgescu",
-        email: "maria.georgescu@email.ro",
-        phone: "+40766333444",
-        carId: 4,
-        carName: "Ford Transit",
-        startDate: "2025-02-10",
-        endDate: "2025-02-12",
-        plan: 1,
-        pickupTime: "08:30",
-        dropoffTime: "20:00",
-        location: "Aeroport Otopeni",
-        status: "completed",
-        total: 170,
-        notes: "Grup de prieteni, 8 persoane",
-        createdAt: "2025-01-18T11:25:00Z",
-      },
-    ];
-
-    setReservations(mockReservations);
-    setFilteredReservations(mockReservations);
-  }, []);
+    fetchBookings();
+  }, [fetchBookings]);
 
   // Filter reservations
   useEffect(() => {
@@ -191,7 +154,7 @@ const ReservationsPage = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "confirmed":
+      case "reserved":
         return "bg-green-100 text-green-800";
       case "pending":
         return "bg-yellow-100 text-yellow-800";
@@ -199,6 +162,10 @@ const ReservationsPage = () => {
         return "bg-red-100 text-red-800";
       case "completed":
         return "bg-blue-100 text-blue-800";
+      case "no_answer":
+        return "bg-orange-100 text-orange-800";
+      case "waiting_advance_payment":
+        return "bg-purple-100 text-purple-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -206,14 +173,18 @@ const ReservationsPage = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "confirmed":
-        return "Confirmat";
+      case "reserved":
+        return "Rezervat";
       case "pending":
         return "În așteptare";
       case "cancelled":
         return "Anulat";
       case "completed":
         return "Finalizat";
+      case "no_answer":
+        return "Fără răspuns";
+      case "waiting_advance_payment":
+        return "Așteaptă avans";
       default:
         return status;
     }
@@ -456,10 +427,12 @@ const ReservationsPage = () => {
               aria-label="Filtrează după status"
             >
               <option value="all">Toate statusurile</option>
-              <option value="confirmed">Confirmat</option>
               <option value="pending">În așteptare</option>
-              <option value="cancelled">Anulat</option>
+              <option value="no_answer">Fără răspuns</option>
+              <option value="waiting_advance_payment">Așteaptă avans</option>
+              <option value="reserved">Rezervat</option>
               <option value="completed">Finalizat</option>
+              <option value="cancelled">Anulat</option>
             </Select>
 
             <Select
@@ -487,9 +460,30 @@ const ReservationsPage = () => {
           <DataTable
             data={filteredReservations}
             columns={reservationColumns}
-            pageSize={10}
             renderRowDetails={renderReservationDetails}
           />
+
+          <div className="flex items-center justify-between py-2 px-4 text-sm">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-2 py-1 text-gray-600 disabled:opacity-50"
+              aria-label="Pagina anterioară"
+            >
+              Anterior
+            </button>
+            <span className="text-gray-600">
+              Pagina {currentPage} din {lastPage}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, lastPage))}
+              disabled={currentPage === lastPage}
+              className="px-2 py-1 text-gray-600 disabled:opacity-50"
+              aria-label="Pagina următoare"
+            >
+              Următoarea
+            </button>
+          </div>
 
           {filteredReservations.length === 0 && (
             <div className="text-center py-12">
@@ -653,22 +647,38 @@ const ReservationsPage = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-dm-sans text-gray-600">
+                          Preț/zi:
+                        </span>
+                        <span className="font-dm-sans text-gray-900">
+                          {selectedReservation.pricePerDay}€
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-dm-sans text-gray-600">
+                          Servicii:
+                        </span>
+                        <span className="font-dm-sans text-gray-900">
+                          {selectedReservation.servicesPrice}€
+                        </span>
+                      </div>
+                      {selectedReservation.discount && selectedReservation.discount > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="font-dm-sans text-gray-600">
+                            Discount:
+                          </span>
+                          <span className="font-dm-sans text-gray-900">
+                            -{selectedReservation.discount}€
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="font-dm-sans text-gray-600">
                           Total:
                         </span>
                         <span className="font-dm-sans font-bold text-berkeley text-lg">
                           {selectedReservation.total}€
                         </span>
                       </div>
-                      {selectedReservation.discountCode && (
-                        <div className="flex items-center justify-between">
-                          <span className="font-dm-sans text-gray-600">
-                            Cod reducere:
-                          </span>
-                          <span className="font-dm-sans text-jade font-semibold">
-                            {selectedReservation.discountCode}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
 
