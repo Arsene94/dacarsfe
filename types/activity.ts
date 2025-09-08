@@ -9,6 +9,7 @@ export interface ActivityReservation {
   booking_number: string;
   customer_name: string;
   customer_phone: string;
+  flight_number: string | null;
   note: string | null;
   status: string;
   car_id: number;

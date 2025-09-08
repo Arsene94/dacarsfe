@@ -10,7 +10,7 @@ import {
     Filter,
     Search,
     ChevronLeft,
-    ChevronRight, Eye, Clock, User, Phone,
+    ChevronRight, Eye, Clock, User, Phone, Plane,
 } from "lucide-react";
 import Link from "next/link";
 import { Select } from "@/components/ui/select";
@@ -411,6 +411,10 @@ const AdminDashboard = () => {
                                                                     <div className="flex items-center space-x-1">
                                                                         <Phone className="h-4 w-4" />
                                                                         <span>{r.customer_phone}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center space-x-1">
+                                                                        <Plane className="h-4 w-4" />
+                                                                        <span>{r.flight_number}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
