@@ -153,6 +153,19 @@ class ApiClient {
         this.removeToken();
     }
 
+    async fetchWidgetActivity(period: string) {
+        return this.request<User>(`/widgets/activity/${period}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${this.token}`
+            },
+            credentials: 'include',
+            cache: 'no-cache',
+        });
+    }
+
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
