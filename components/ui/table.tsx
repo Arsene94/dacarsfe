@@ -66,6 +66,9 @@ export function DataTable<T extends Record<string, any>>({
       <table className="min-w-full text-left">
         <thead>
           <tr className="border-b bg-blue-50">
+            {renderRowDetails && (
+              <th className="py-3 px-4"></th>
+            )}
             {columns.map((col) => (
               <th
                 key={col.id}
