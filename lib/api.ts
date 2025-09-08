@@ -1,5 +1,6 @@
-import {mapCarSearchFilters} from "@/lib/mapFilters";
-import {toQuery} from "@/lib/qs";
+import { mapCarSearchFilters } from "@/lib/mapFilters";
+import { toQuery } from "@/lib/qs";
+import type { AuthResponse, User } from "@/types/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
@@ -39,7 +40,7 @@ class ApiClient {
         const config: RequestInit = {
             headers: {
                 'Content-Type': 'application/json',
-                ...(this.token && { Authorization: `Bearer 27|7YBKC3eaKss2qhy5EVEbMr0CfJo04vE48v7Fnpco788b99fd` }),
+                ...(this.token && { Authorization: `Bearer ${this.token}` }),
                 'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
                 ...options.headers,
             },
@@ -128,6 +129,28 @@ class ApiClient {
             method: 'POST',
             body: JSON.stringify(payload),
         });
+    }
+
+    // Authentication helpers
+
+    async login(payload: { login: string; password: string }): Promise<AuthResponse> {
+        const response = await this.request<AuthResponse>(`/auth/login`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+        if (response?.token) {
+            this.setToken(response.token);
+        }
+        return response;
+    }
+
+    async me(): Promise<User> {
+        return this.request<User>(`/auth/me`);
+    }
+
+    async logout(): Promise<void> {
+        await this.request(`/auth/logout`, { method: 'POST' });
+        this.removeToken();
     }
 
 }
