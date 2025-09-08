@@ -428,6 +428,11 @@ const AdminDashboard = () => {
                                                                             - {r.child_seat_service_name}
                                                                         </span>
                                                                     )}
+                                                                    {r.note && (
+                                                                        <span className="text-sm text-red-500 font-bold">
+                                                                            - {r.note}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                                 <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
                                                                     <div className="flex items-center space-x-1">
