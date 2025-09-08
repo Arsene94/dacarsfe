@@ -58,7 +58,7 @@ export function DataTable<T extends Record<string, any>>({
     <div className="overflow-x-auto">
       <table className="min-w-full text-left">
         <thead>
-          <tr className="border-b">
+          <tr className="border-b bg-blue-50">
             {columns.map((col) => (
               <th
                 key={col.id}
@@ -84,7 +84,7 @@ export function DataTable<T extends Record<string, any>>({
           {paginatedData.map((row, i) => (
             <tr
               key={i}
-              className="border-b hover:bg-gray-50 transition-colors"
+              className={`border-b hover:bg-gray-200 transition-colors ${i % 2 !== 0 ? 'bg-gray-100' : ''}`}
             >
               {columns.map((col) => (
                 <td key={col.id} className="py-3 px-4">
