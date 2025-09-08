@@ -346,7 +346,7 @@ const AdminDashboard = () => {
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -389,101 +389,10 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-dm-sans text-gray-600">
-                  Venituri luna
-                </p>
-                <p className="text-2xl font-poppins font-bold text-berkeley">
-                  {reservations.reduce((sum, r) => sum + r.total, 0)}€
-                </p>
-              </div>
-              <BarChart3 className="h-8 w-8 text-jade" />
-            </div>
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Cars List */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-poppins font-semibold text-berkeley">
-                  Flota Auto
-                </h2>
-                <Link
-                  href="/admin/masini"
-                  className="p-2 bg-jade text-white rounded-lg hover:bg-jade/90 transition-colors"
-                  aria-label="Adaugă mașină"
-                >
-                  <Plus className="h-4 w-4" />
-                </Link>
-              </div>
-
-              <div className="mb-4">
-                <Select
-                  className="px-3 py-2"
-                  value={selectedCar ? String(selectedCar) : ""}
-                  onValueChange={(value) =>
-                    setSelectedCar(value ? Number(value) : null)
-                  }
-                  placeholder="Toate mașinile"
-                  aria-label="Selectează mașina"
-                >
-                  <option value="">Toate mașinile</option>
-                  {cars.map((car) => (
-                    <option key={car.id} value={car.id.toString()}>
-                      {car.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="space-y-3">
-                {filteredCars.map((car) => (
-                  <div
-                    key={car.id}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-                      selectedCar === car.id
-                        ? "border-jade bg-jade/5"
-                        : "border-gray-200 hover:border-jade/50"
-                    }`}
-                    onClick={() =>
-                      setSelectedCar(selectedCar === car.id ? null : car.id)
-                    }
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-dm-sans font-semibold text-berkeley">
-                        {car.name}
-                      </h3>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-dm-sans ${
-                          car.status === "available"
-                            ? "bg-green-100 text-green-800"
-                            : car.status === "rented"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {car.status === "available"
-                          ? "Disponibilă"
-                          : car.status === "rented"
-                            ? "Închiriată"
-                            : "Service"}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 font-dm-sans">
-                      {car.type} • {car.price}€/zi
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 gap-8">
           {/* Calendar */}
-          <div className="lg:col-span-3">
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-poppins font-semibold text-berkeley">
@@ -541,7 +450,6 @@ const AdminDashboard = () => {
                 </div>
               </div>
             </div>
-          </div>
         </div>
 
         {/* Recent Reservations */}
