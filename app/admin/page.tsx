@@ -18,6 +18,7 @@ import Image from "next/image";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { SearchSelect } from "@/components/ui/search-select";
 import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
 import type { Column } from "@/types/ui";
@@ -250,7 +251,7 @@ const AdminDashboard = () => {
         }
         const handler = setTimeout(async () => {
             try {
-                const resp = await apiClient.getCars({ search: carSearch, limit: 10 });
+                const resp = await apiClient.getCars({ search: carSearch, start_date: activityDetails?.arrivalDate + ' ' + activityDetails?.arrivalTime, end_date: activityDetails?.returnDate + ' ' + activityDetails?.returnTime , limit: 10 });
                 const list = Array.isArray(resp?.data)
                     ? resp.data
                     : Array.isArray(resp)
@@ -405,6 +406,10 @@ const AdminDashboard = () => {
                 customer_id: info.customer_id ?? "",
                 car_id: info.car_id ?? 0,
                 car_name: info.car_name ?? "",
+                car_image: info.car_image ?? info.image_preview ?? "",
+                car_license_plate: info.car_license_plate ?? info.license_plate ?? "",
+                car_transmission: info.car_transmission ?? info.transmission_name ?? "",
+                car_fuel: info.car_fuel ?? info.fuel_name ?? "",
                 booking_number: info.booking_number ?? "",
                 note: info.note ?? "",
                 days: info.days ?? 0,
@@ -416,7 +421,7 @@ const AdminDashboard = () => {
                 total: info.total ?? 0,
             };
             setBookingInfo(formatted);
-            setCarSearch(formatted.car_name || "");
+            setCarSearch("");
             setCarResults([]);
             setPopupOpen(false);
             setEditPopupOpen(true);
@@ -434,11 +439,15 @@ const AdminDashboard = () => {
             ...bookingInfo,
             car_id: car.id,
             car_name: car.name,
+            car_image: car.image_preview || car.image || "",
+            car_license_plate: car.license_plate || "",
+            car_transmission: car.transmission?.name || "",
+            car_fuel: car.fuel?.name || "",
             price_per_day: price,
             sub_total: subTotal,
             total,
         });
-        setCarSearch(car.name);
+        setCarSearch("");
         setCarResults([]);
     };
 
@@ -809,37 +818,48 @@ const AdminDashboard = () => {
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
                                     Mașină
                                 </label>
-                                <Input
-                                    type="text"
-                                    value={carSearch}
-                                    onChange={(e) => setCarSearch(e.target.value)}
-                                    placeholder="Caută mașina"
-                                />
-                                {carResults.length > 0 && (
-                                    <div className="mt-2 max-h-60 overflow-y-auto border border-gray-300 rounded-lg bg-white">
-                                        {carResults.map((car) => (
-                                            <div
-                                                key={car.id}
-                                                className="p-2 flex items-center gap-3 cursor-pointer hover:bg-gray-50"
-                                                onClick={() => handleSelectCar(car)}
-                                            >
-                                                <Image
-                                                    src={STORAGE_BASE + '/' + car.image_preview || STORAGE_BASE + '/' + car.image || "/images/placeholder-car.svg"}
-                                                    alt={car.name}
-                                                    width={64}
-                                                    height={40}
-                                                    className="w-16 h-10 object-cover rounded"
-                                                />
-                                                <div className="text-left">
-                                                    <div className="font-dm-sans font-semibold text-gray-700">{car.name}</div>
-                                                    <div className="text-xs text-gray-600">
-                                                        {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
-                                                    </div>
+                                <SearchSelect
+                                    value={
+                                        bookingInfo.car_id
+                                            ? {
+                                                  id: bookingInfo.car_id,
+                                                  name: bookingInfo.car_name,
+                                                  image_preview: bookingInfo.car_image,
+                                                  license_plate: bookingInfo.car_license_plate,
+                                                  transmission: { name: bookingInfo.car_transmission },
+                                                  fuel: { name: bookingInfo.car_fuel },
+                                              }
+                                            : null
+                                    }
+                                    search={carSearch}
+                                    items={carResults}
+                                    onSearch={setCarSearch}
+                                    onSelect={handleSelectCar}
+                                    placeholder="Selectează mașina"
+                                    renderItem={(car) => (
+                                        <div className={`w-full ${car.available ? 'bg-green-500' : 'bg-red-500' }`}>
+                                            <Image
+                                                src={
+                                                    car.image_preview || car.image
+                                                        ? STORAGE_BASE +
+                                                          "/" +
+                                                          (car.image_preview || car.image)
+                                                        : "/images/placeholder-car.svg"
+                                                }
+                                                alt={car.name}
+                                                width={64}
+                                                height={40}
+                                                className="w-16 h-10 object-cover rounded"
+                                            />
+                                            <div className="text-left">
+                                                <div className="font-dm-sans font-semibold text-gray-700">{car.name}</div>
+                                                <div className="text-xs text-gray-600">
+                                                    {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                        </div>
+                                    )}
+                                />
                             </div>
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
