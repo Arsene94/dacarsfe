@@ -22,7 +22,7 @@ import { Popup } from "@/components/ui/popup";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
-import apiClient from "@/lib/api";
+import apiClient, { getBookingInfo } from "@/lib/api";
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -351,7 +351,7 @@ const AdminDashboard = () => {
     const handleEditBooking = async () => {
         if (!activityDetails) return;
         try {
-            const info = await apiClient.getBookingInfo(activityDetails.id);
+            const info = await getBookingInfo(activityDetails.id);
             setBookingInfo(info);
             setPopupOpen(false);
             setEditPopupOpen(true);

@@ -228,4 +228,5 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
+export const getBookingInfo = (id: any) => apiClient.getBookingInfo(id);
 export default apiClient;
