@@ -134,7 +134,7 @@ class ApiClient {
 
     async updateBookingDate(id: any, params: { arrivalDate: string | undefined, arrivalTime: string | undefined, returnDate: string | undefined, returnTime: string | undefined }) {
         return this.request<any>(`/bookings/${id}/update-date`, {
-            method: 'PATCH',
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 Accept: 'application/json',

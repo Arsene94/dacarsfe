@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
     Calendar,
@@ -176,19 +176,20 @@ const AdminDashboard = () => {
         setPopupOpen(true);
     };
 
-    useEffect(() => {
-        const loadActivity = async () => {
-            try {
-                const res = await apiClient.fetchWidgetActivity(carActivityDay);
-                setActivityDay(res.day);
-                setActivityHours(res.hours);
-                setActivityReservations(res.data);
-            } catch (error) {
-                console.error('Error loading activity:', error);
-            }
-        };
-        loadActivity();
+    const loadActivity = useCallback(async () => {
+        try {
+            const res = await apiClient.fetchWidgetActivity(carActivityDay);
+            setActivityDay(res.day);
+            setActivityHours(res.hours);
+            setActivityReservations(res.data);
+        } catch (error) {
+            console.error('Error loading activity:', error);
+        }
     }, [carActivityDay]);
+
+    useEffect(() => {
+        loadActivity();
+    }, [loadActivity]);
 
     useEffect(() => {
         const loadMetrics = async () => {
@@ -323,6 +324,7 @@ const AdminDashboard = () => {
             console.log(err);
         } finally {
             setPopupOpen(false);
+            loadActivity();
         }
     }
 
