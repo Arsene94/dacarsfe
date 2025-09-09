@@ -19,8 +19,11 @@ const isSameDay = (a: Date, b: Date) =>
   a.getDate() === b.getDate();
 
 const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, onClose }) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const [currentMonth, setCurrentMonth] = useState(() => {
-    return value.startDate ? new Date(value.startDate) : new Date();
+    const initial = value.startDate ? new Date(value.startDate) : new Date();
+    return initial > today ? today : initial;
   });
   const [tempRange, setTempRange] = useState<DateRange>(value);
 
@@ -35,6 +38,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, onCl
 
   const handleDayClick = (day: number) => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    if (date > today) return;
     if (!tempRange.startDate || (tempRange.startDate && tempRange.endDate)) {
       setTempRange({ startDate: date, endDate: null });
     } else if (date < tempRange.startDate) {
@@ -92,7 +96,12 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, onCl
               new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
             )
           }
-          className="px-2 py-1 text-sm"
+          disabled={
+            currentMonth.getFullYear() > today.getFullYear() ||
+            (currentMonth.getFullYear() === today.getFullYear() &&
+              currentMonth.getMonth() >= today.getMonth())
+          }
+          className="px-2 py-1 text-sm disabled:opacity-50"
           aria-label="Luna următoare"
         >
           &gt;
@@ -106,19 +115,23 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, onCl
         ))}
         {days.map((day, idx) => {
           if (!day) return <div key={idx} />;
-          const classes = ["p-2 rounded cursor-pointer text-sm"];
+          const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+          const disabled = date > today;
+          const classes = ["p-2 rounded text-sm"];
+          if (!disabled) classes.push("cursor-pointer");
           if (isStart(day) || isEnd(day)) {
             classes.push("bg-jade text-white");
           } else if (inRange(day)) {
             classes.push("bg-jade/20");
-          } else {
+          } else if (!disabled) {
             classes.push("hover:bg-gray-100");
           }
+          if (disabled) classes.push("text-gray-300 pointer-events-none");
           return (
             <div
               key={idx}
               className={classes.join(" ")}
-              onClick={() => handleDayClick(day)}
+              onClick={!disabled ? () => handleDayClick(day) : undefined}
             >
               {day}
             </div>
