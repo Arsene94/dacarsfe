@@ -766,7 +766,7 @@ const AdminDashboard = () => {
                         Editează rezervarea
                     </h3>
                     <div className="flex gap-6">
-                        <div className="w-2/3 space-y-4">
+                        <div className="w-2/3 space-y-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
                                     Mașină
@@ -918,24 +918,24 @@ const AdminDashboard = () => {
                                 />
                             </div>
                         </div>
-                        <div className="w-1/3 space-y-4">
-                            <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                        <div className="w-1/3 space-y-2 p-4 border border-gray-300 rounded-lg bg-gray-50">
+                            <div className="font-dm-sans text-sm">
                                 Preț per zi: {bookingInfo.price_per_day}€ x {bookingInfo.days} zile
                             </div>
                             {bookingInfo.coupon_amount > 0 && (
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                                <div className="font-dm-sans text-sm">
                                     Discount: {bookingInfo.coupon_amount}€
                                 </div>
                             )}
                             {bookingInfo.total_services > 0 && (
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                                <div className="font-dm-sans text-sm">
                                     Total Servicii: {bookingInfo.total_services}€
                                 </div>
                             )}
-                            <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                            <div className="font-dm-sans text-sm">
                                 Subtotal: {bookingInfo.sub_total}€
                             </div>
-                            <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                            <div className="font-dm-sans text-sm font-semibold">
                                 Total: {bookingInfo.total}€
                             </div>
                         </div>
