@@ -360,7 +360,8 @@ const AdminDashboard = () => {
     const handleEditBooking = async () => {
         if (!activityDetails) return;
         try {
-            const info = await getBookingInfo(activityDetails.id);
+            const res = await getBookingInfo(activityDetails.id);
+            const info = res.data;
             const formatted = {
                 ...info,
                 rental_start_date: toLocalDateTimeInput(info.rental_start_date),
