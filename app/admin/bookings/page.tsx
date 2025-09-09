@@ -377,6 +377,13 @@ const ReservationsPage = () => {
     </div>
   );
 
+  const getPageNumbers = (): (number | "ellipsis")[] => {
+    if (lastPage <= 6) {
+      return Array.from({ length: lastPage }, (_, i) => i + 1);
+    }
+    return [1, 2, 3, "ellipsis", lastPage - 2, lastPage - 1, lastPage];
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -495,20 +502,26 @@ const ReservationsPage = () => {
               >
                 Anterior
               </button>
-              {Array.from({ length: lastPage }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`px-2 py-1 rounded ${
-                    currentPage === page
-                      ? "bg-jade text-white"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                  aria-label={`Pagina ${page}`}
-                >
-                  {page}
-                </button>
-              ))}
+              {getPageNumbers().map((page, idx) =>
+                page === "ellipsis" ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 py-1">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page as number)}
+                    className={`px-2 py-1 rounded ${
+                      currentPage === page
+                        ? "bg-jade text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                    aria-label={`Pagina ${page}`}
+                  >
+                    {page}
+                  </button>
+                ),
+              )}
               <button
                 onClick={() => setCurrentPage((p) => Math.min(p + 1, lastPage))}
                 disabled={currentPage === lastPage}
