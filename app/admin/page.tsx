@@ -11,7 +11,7 @@ import {
     Filter,
     Search,
     ChevronLeft,
-    ChevronRight, Eye, Clock, User, Phone, Plane,
+    ChevronRight, Eye, Clock, User, Phone, Plane, Newspaper,
 } from "lucide-react";
 import Link from "next/link";
 import { Select } from "@/components/ui/select";
@@ -465,11 +465,17 @@ const AdminDashboard = () => {
                                                                         <Phone className="h-4 w-4" />
                                                                         <span>{r.customer_phone}</span>
                                                                     </div>
-                                                                    <div className="flex items-center space-x-1">
-                                                                        <Plane className="h-4 w-4" />
-                                                                        <span>{r.flight_number}</span>
-                                                                    </div>
                                                                 </div>
+
+                                                                {r.flight_number && (
+                                                                    <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
+                                                                        <div className="flex items-center space-x-1">
+                                                                            <Plane className="h-4 w-4" />
+                                                                            <span>{r.flight_number}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
                                                             </div>
                                                             <div className="flex-shrink-0">
                                                                 <button
@@ -488,6 +494,12 @@ const AdminDashboard = () => {
                                                                     className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
                                                                 >
                                                                     <Eye className="h-4 w-4" />
+                                                                </button>
+
+                                                                <button
+                                                                    className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                                                >
+                                                                    <Newspaper className="h-4 w-4" />
                                                                 </button>
                                                             </div>
                                                         </div>
