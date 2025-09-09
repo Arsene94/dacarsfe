@@ -214,6 +214,9 @@ const AdminDashboard = () => {
                 plan: 1,
                 status: "reserved",
                 total: 135,
+                couponAmount: 0,
+                subTotal: 0,
+                taxAmount: 0
             },
             {
                 id: "DC002",
@@ -226,6 +229,9 @@ const AdminDashboard = () => {
                 plan: 0,
                 status: "reserved",
                 total: 325,
+                couponAmount: 0,
+                subTotal: 0,
+                taxAmount: 0
             },
             {
                 id: "DC003",
