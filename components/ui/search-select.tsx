@@ -56,6 +56,12 @@ export function SearchSelect<T>({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  useEffect(() => {
+    if (open) {
+      onOpen?.();
+    }
+  }, [open, onOpen]);
+
   const display = value
     ? renderValue
       ? renderValue(value)
@@ -67,13 +73,7 @@ export function SearchSelect<T>({
       <div
         className="relative w-full pl-4 pr-10 py-3 text-[#191919] border border-gray-300 rounded-lg bg-white flex items-center gap-3 cursor-pointer"
         onClick={() => {
-          setOpen((o) => {
-            const next = !o;
-            if (!o && next) {
-              onOpen?.();
-            }
-            return next;
-          });
+          setOpen((o) => !o);
         }}
       >
         <div className="flex items-center gap-3 overflow-hidden">
