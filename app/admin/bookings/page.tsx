@@ -26,9 +26,6 @@ import apiClient from "@/lib/api";
 
 const ReservationsPage = () => {
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
-  const [filteredReservations, setFilteredReservations] = useState<
-    AdminReservation[]
-  >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [startDateFilter, setStartDateFilter] = useState("");
@@ -66,7 +63,19 @@ const ReservationsPage = () => {
 
   const fetchBookings = useCallback(async () => {
     try {
-      const res = await apiClient.getBookings({ page: currentPage, perPage });
+      const params: {
+        page: number;
+        perPage: number;
+        search?: string;
+        status?: string;
+        start_date?: string;
+        end_date?: string;
+      } = { page: currentPage, perPage };
+      if (searchTerm) params.search = searchTerm;
+      if (statusFilter !== "all") params.status = statusFilter;
+      if (startDateFilter) params.start_date = startDateFilter;
+      if (endDateFilter) params.end_date = endDateFilter;
+      const res = await apiClient.getBookings(params);
       const mapped: AdminReservation[] = res.data.map((b: any) => ({
         id: b.booking_number || b.id?.toString(),
         customerName: b.customer_name,
@@ -100,58 +109,16 @@ const ReservationsPage = () => {
       const meta = res?.meta || {};
       const total = meta?.total ?? res?.total ?? mapped.length;
       setReservations(mapped);
-      setFilteredReservations(mapped);
       setLastPage(meta?.last_page ?? res?.last_page ?? 1);
       setTotalReservations(total);
     } catch (e) {
       console.error(e);
     }
-  }, [currentPage, perPage]);
+  }, [currentPage, perPage, searchTerm, statusFilter, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
-
-  // Filter reservations
-  useEffect(() => {
-    let filtered = reservations;
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (reservation) =>
-          reservation.customerName
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          reservation.phone.includes(searchTerm) ||
-          reservation.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          reservation.carName.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(
-        (reservation) => reservation.status === statusFilter,
-      );
-    }
-
-    // Date range filter
-    if (startDateFilter || endDateFilter) {
-      filtered = filtered.filter((reservation) => {
-        const startDate = new Date(reservation.startDate);
-        if (startDateFilter && startDate < new Date(startDateFilter)) {
-          return false;
-        }
-        if (endDateFilter && startDate > new Date(endDateFilter)) {
-          return false;
-        }
-        return true;
-      });
-    }
-
-    setFilteredReservations(filtered);
-  }, [reservations, searchTerm, statusFilter, startDateFilter, endDateFilter]);
 
   const handleViewReservation = useCallback((reservation: AdminReservation) => {
     setSelectedReservation(reservation);
@@ -167,6 +134,7 @@ const ReservationsPage = () => {
       setEndDateFilter(
         range.endDate ? range.endDate.toISOString().split("T")[0] : "",
       );
+      setCurrentPage(1);
     },
     [],
   );
@@ -442,14 +410,20 @@ const ReservationsPage = () => {
                 placeholder="Caută rezervări..."
                 aria-label="Caută rezervări"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
               />
             </div>
 
             <Select
               value={statusFilter}
-              onValueChange={setStatusFilter}
+              onValueChange={(v) => {
+                setStatusFilter(v);
+                setCurrentPage(1);
+              }}
               placeholder="Toate statusurile"
               aria-label="Filtrează după status"
             >
@@ -502,7 +476,7 @@ const ReservationsPage = () => {
         {/* Reservations Table */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <DataTable
-            data={filteredReservations}
+            data={reservations}
             columns={reservationColumns}
             renderRowDetails={renderReservationDetails}
           />
@@ -565,7 +539,7 @@ const ReservationsPage = () => {
             </div>
           </div>
 
-          {filteredReservations.length === 0 && (
+          {reservations.length === 0 && (
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-poppins font-semibold text-gray-600 mb-2">
