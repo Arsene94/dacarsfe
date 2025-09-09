@@ -369,6 +369,22 @@ const AdminDashboard = () => {
                 total_services: info.total_services ?? 0,
                 sub_total: info.sub_total ?? 0,
                 coupon_code: info.coupon_code ?? "",
+                customer_name: info.customer_name ?? "",
+                customer_email: info.customer_email ?? "",
+                customer_phone: info.customer_phone ?? "",
+                customer_age: info.customer_age ?? "",
+                customer_id: info.customer_id ?? "",
+                car_id: info.car_id ?? 0,
+                car_name: info.car_name ?? "",
+                booking_number: info.booking_number ?? "",
+                note: info.note ?? "",
+                days: info.days ?? 0,
+                price_per_day: info.price_per_day ?? 0,
+                with_deposit: info.with_deposit ?? false,
+                tax_amount: info.tax_amount ?? 0,
+                currency_id: info.currency_id ?? "",
+                status: info.status ?? "",
+                total: info.total ?? 0,
             };
             const carsResp = await getCars({ limit: 100 });
             const list = Array.isArray(carsResp?.data)
