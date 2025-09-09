@@ -291,6 +291,23 @@ const AdminDashboard = () => {
         setReservations(mockReservations);
     }, []);
 
+    const getCarActivityLabel = (status: string) => {
+        switch (status) {
+            case 'azi':
+                return `Astăzi ${new Date().toLocaleDateString('ro-RO')}`;
+            case 'maine':
+                return `Mâine ${new Date(Date.now() + 86400000).toLocaleDateString('ro-RO')}`;
+            case '2zile':
+                return `Peste 2 zile ${new Date(Date.now() + 172800000).toLocaleDateString('ro-RO')}`;
+            case '3zile':
+                return `Peste 3 zile ${new Date(Date.now() + 259200000).toLocaleDateString('ro-RO')}`;
+            case '4zile':
+                return `Peste 4 zile ${new Date(Date.now() + 345600000).toLocaleDateString('ro-RO')}`;
+            case '5zile':
+                return `Peste 5 zile ${new Date(Date.now() + 432000000).toLocaleDateString('ro-RO')}`;
+        }
+    }
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
@@ -346,7 +363,7 @@ const AdminDashboard = () => {
                     <div className="bg-white rounded-xl shadow-sm p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-poppins font-semibold text-berkeley">
-                                Program Activitate Auto
+                                Activitate Auto - {getCarActivityLabel(carActivityDay)}
                             </h2>
                             <div className="flex items-center space-x-4">
                                 <div className="flex items-center space-x-2">
