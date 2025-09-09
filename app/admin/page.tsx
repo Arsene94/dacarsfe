@@ -421,7 +421,7 @@ const AdminDashboard = () => {
                 total: info.total ?? 0,
             };
             setBookingInfo(formatted);
-            setCarSearch(formatted.car_name || "");
+            setCarSearch("");
             setCarResults([]);
             setPopupOpen(false);
             setEditPopupOpen(true);
@@ -447,7 +447,7 @@ const AdminDashboard = () => {
             sub_total: subTotal,
             total,
         });
-        setCarSearch(car.name);
+        setCarSearch("");
         setCarResults([]);
     };
 
@@ -819,15 +819,33 @@ const AdminDashboard = () => {
                                     Mașină
                                 </label>
                                 <SearchSelect
+                                    value={
+                                        bookingInfo.car_id
+                                            ? {
+                                                  id: bookingInfo.car_id,
+                                                  name: bookingInfo.car_name,
+                                                  image_preview: bookingInfo.car_image,
+                                                  license_plate: bookingInfo.car_license_plate,
+                                                  transmission: { name: bookingInfo.car_transmission },
+                                                  fuel: { name: bookingInfo.car_fuel },
+                                              }
+                                            : null
+                                    }
                                     search={carSearch}
                                     items={carResults}
                                     onSearch={setCarSearch}
                                     onSelect={handleSelectCar}
-                                    placeholder="Caută mașina"
+                                    placeholder="Selectează mașina"
                                     renderItem={(car) => (
                                         <>
                                             <Image
-                                                src={STORAGE_BASE + '/' + (car.image_preview || car.image || "/images/placeholder-car.svg")}
+                                                src={
+                                                    car.image_preview || car.image
+                                                        ? STORAGE_BASE +
+                                                          "/" +
+                                                          (car.image_preview || car.image)
+                                                        : "/images/placeholder-car.svg"
+                                                }
                                                 alt={car.name}
                                                 width={64}
                                                 height={40}
@@ -842,29 +860,6 @@ const AdminDashboard = () => {
                                         </>
                                     )}
                                 />
-                                {bookingInfo.car_id && (
-                                    <div className="mt-2 flex items-center gap-3">
-                                        <Image
-                                            src={
-                                                bookingInfo.car_image
-                                                    ? STORAGE_BASE + "/" + bookingInfo.car_image
-                                                    : "/images/placeholder-car.svg"
-                                            }
-                                            alt={bookingInfo.car_name}
-                                            width={64}
-                                            height={40}
-                                            className="w-16 h-10 object-cover rounded"
-                                        />
-                                        <div className="text-left">
-                                            <div className="font-dm-sans font-semibold text-gray-700">
-                                                {bookingInfo.car_name}
-                                            </div>
-                                            <div className="text-xs text-gray-600">
-                                                {bookingInfo.car_license_plate} • {bookingInfo.car_transmission} • {bookingInfo.car_fuel}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
