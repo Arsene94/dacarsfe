@@ -251,7 +251,7 @@ const AdminDashboard = () => {
         }
         const handler = setTimeout(async () => {
             try {
-                const resp = await apiClient.getCars({ search: carSearch, limit: 10 });
+                const resp = await apiClient.getCars({ search: carSearch, start_date: activityDetails?.arrivalDate + ' ' + activityDetails?.arrivalTime, end_date: activityDetails?.returnDate + ' ' + activityDetails?.returnTime , limit: 10 });
                 const list = Array.isArray(resp?.data)
                     ? resp.data
                     : Array.isArray(resp)
@@ -837,7 +837,7 @@ const AdminDashboard = () => {
                                     onSelect={handleSelectCar}
                                     placeholder="Selectează mașina"
                                     renderItem={(car) => (
-                                        <>
+                                        <div className={`w-full ${car.available ? 'bg-green-500' : 'bg-red-500' }`}>
                                             <Image
                                                 src={
                                                     car.image_preview || car.image
@@ -857,7 +857,7 @@ const AdminDashboard = () => {
                                                     {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
                                                 </div>
                                             </div>
-                                        </>
+                                        </div>
                                     )}
                                 />
                             </div>

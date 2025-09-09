@@ -80,6 +80,8 @@ class ApiClient {
         page?: number,
         perPage?: number,
         search?: string,
+        start_date?: string,
+        end_date?: string
     } = {}) {
         const searchParams = new URLSearchParams();
         Object.entries(params).forEach(([key, value]) => {
