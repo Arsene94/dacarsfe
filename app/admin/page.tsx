@@ -14,6 +14,7 @@ import {
     Newspaper,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,10 @@ import { Popup } from "@/components/ui/popup";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
-import apiClient, { getBookingInfo, getCars } from "@/lib/api";
+import apiClient from "@/lib/api";
+
+const STORAGE_BASE =
+    process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://backend.dacars.ro/storage';
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -177,7 +181,8 @@ const AdminDashboard = () => {
     } | null>(null);
     const [editPopupOpen, setEditPopupOpen] = useState(false);
     const [bookingInfo, setBookingInfo] = useState<any>(null);
-    const [carOptions, setCarOptions] = useState<any[]>([]);
+    const [carSearch, setCarSearch] = useState("");
+    const [carResults, setCarResults] = useState<any[]>([]);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
     const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);
     const [bookingsTotalCount, setBookingsTotalCount] = useState<number>(0);
@@ -237,6 +242,29 @@ const AdminDashboard = () => {
         };
         loadMetrics();
     }, []);
+
+    useEffect(() => {
+        if (!carSearch) {
+            setCarResults([]);
+            return;
+        }
+        const handler = setTimeout(async () => {
+            try {
+                const resp = await apiClient.getCars({ search: carSearch, limit: 10 });
+                const list = Array.isArray(resp?.data)
+                    ? resp.data
+                    : Array.isArray(resp)
+                        ? resp
+                        : Array.isArray(resp?.items)
+                            ? resp.items
+                            : [];
+                setCarResults(list);
+            } catch (error) {
+                console.error('Error searching cars:', error);
+            }
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [carSearch]);
 
     // Mock data pentru demo
     useEffect(() => {
@@ -360,7 +388,7 @@ const AdminDashboard = () => {
     const handleEditBooking = async () => {
         if (!activityDetails) return;
         try {
-            const res = await getBookingInfo(activityDetails.id);
+            const res = await apiClient.getBookingInfo(activityDetails.id);
             const info = res.data;
             const formatted = {
                 ...info,
@@ -387,22 +415,32 @@ const AdminDashboard = () => {
                 status: info.status ?? "",
                 total: info.total ?? 0,
             };
-            const carsResp = await getCars({ limit: 100 });
-            const list = Array.isArray(carsResp?.data)
-                ? carsResp.data
-                : Array.isArray(carsResp)
-                    ? carsResp
-                    : Array.isArray(carsResp?.items)
-                        ? carsResp.items
-                        : [];
-            setCarOptions(list);
             setBookingInfo(formatted);
+            setCarSearch(formatted.car_name || "");
+            setCarResults([]);
             setPopupOpen(false);
             setEditPopupOpen(true);
         } catch (err) {
             console.error('Error loading booking info:', err);
         }
     }
+
+    const handleSelectCar = (car: any) => {
+        if (!bookingInfo) return;
+        const price = car?.rental_rate ? Number(car.rental_rate) : bookingInfo.price_per_day || 0;
+        const subTotal = (bookingInfo.days || 0) * price;
+        const total = subTotal + (bookingInfo.total_services || 0) - (bookingInfo.coupon_amount || 0);
+        setBookingInfo({
+            ...bookingInfo,
+            car_id: car.id,
+            car_name: car.name,
+            price_per_day: price,
+            sub_total: subTotal,
+            total,
+        });
+        setCarSearch(car.name);
+        setCarResults([]);
+    };
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -760,48 +798,48 @@ const AdminDashboard = () => {
                 <Popup
                     open={editPopupOpen}
                     onClose={() => setEditPopupOpen(false)}
-                    className="max-w-4xl w-full max-h-[80vh] overflow-y-auto"
+                    className="max-w-5xl w-full max-h-[80vh] overflow-y-auto"
                 >
                     <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">
                         Editează rezervarea
                     </h3>
-                    <div className="flex gap-6">
-                        <div className="w-2/3 space-y-4">
+                    <div className="flex items-start gap-6">
+                        <div className="w-2/3 grid grid-cols-2 gap-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
                                     Mașină
                                 </label>
-                                <Select
-                                    value={bookingInfo.car_id?.toString()}
-                                    onValueChange={(val) => {
-                                        const selected = carOptions.find(
-                                            (c) => c.id === Number(val),
-                                        );
-                                        const price = selected?.rental_rate
-                                            ? Number(selected.rental_rate)
-                                            : bookingInfo.price_per_day || 0;
-                                        const subTotal =
-                                            (bookingInfo.days || 0) * price;
-                                        const total =
-                                            subTotal +
-                                            (bookingInfo.total_services || 0) -
-                                            (bookingInfo.coupon_amount || 0);
-                                        setBookingInfo({
-                                            ...bookingInfo,
-                                            car_id: Number(val),
-                                            car_name: selected?.name || bookingInfo.car_name,
-                                            price_per_day: price,
-                                            sub_total: subTotal,
-                                            total,
-                                        });
-                                    }}
-                                >
-                                    {carOptions.map((car) => (
-                                        <option key={car.id} value={car.id}>
-                                            {car.name}
-                                        </option>
-                                    ))}
-                                </Select>
+                                <Input
+                                    type="text"
+                                    value={carSearch}
+                                    onChange={(e) => setCarSearch(e.target.value)}
+                                    placeholder="Caută mașina"
+                                />
+                                {carResults.length > 0 && (
+                                    <div className="mt-2 max-h-60 overflow-y-auto border border-gray-300 rounded-lg bg-white">
+                                        {carResults.map((car) => (
+                                            <div
+                                                key={car.id}
+                                                className="p-2 flex items-center gap-3 cursor-pointer hover:bg-gray-50"
+                                                onClick={() => handleSelectCar(car)}
+                                            >
+                                                <Image
+                                                    src={STORAGE_BASE + '/' + car.image_preview || STORAGE_BASE + '/' + car.image || "/images/placeholder-car.svg"}
+                                                    alt={car.name}
+                                                    width={64}
+                                                    height={40}
+                                                    className="w-16 h-10 object-cover rounded"
+                                                />
+                                                <div className="text-left">
+                                                    <div className="font-dm-sans font-semibold text-gray-700">{car.name}</div>
+                                                    <div className="text-xs text-gray-600">
+                                                        {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
@@ -918,54 +956,25 @@ const AdminDashboard = () => {
                                 />
                             </div>
                         </div>
-                        <div className="w-1/3 space-y-4">
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Preț/zi
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.price_per_day}
-                                </div>
+                        <div className="w-1/3 h-fit sticky top-0 space-y-2 p-4 border border-gray-300 rounded-lg bg-gray-50">
+                            <div className="font-dm-sans text-sm">
+                                Preț per zi: {bookingInfo.price_per_day}€ x {bookingInfo.days} zile
                             </div>
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Reducere
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.coupon_amount}
+                            {bookingInfo.coupon_amount > 0 && (
+                                <div className="font-dm-sans text-sm">
+                                    Discount: {bookingInfo.coupon_amount}€
                                 </div>
+                            )}
+                            {bookingInfo.total_services > 0 && (
+                                <div className="font-dm-sans text-sm">
+                                    Total Servicii: {bookingInfo.total_services}€
+                                </div>
+                            )}
+                            <div className="font-dm-sans text-sm">
+                                Subtotal: {bookingInfo.sub_total}€
                             </div>
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Cod reducere
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.coupon_code}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Total servicii
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.total_services}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Subtotal
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.sub_total}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Total
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.total}
-                                </div>
+                            <div className="font-dm-sans text-sm font-semibold">
+                                Total: {bookingInfo.total}€
                             </div>
                         </div>
                     </div>

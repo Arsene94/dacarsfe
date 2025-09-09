@@ -78,7 +78,8 @@ class ApiClient {
     async getCars(params: {
         limit?: number,
         page?: number,
-        perPage?: number
+        perPage?: number,
+        search?: string,
     } = {}) {
         const searchParams = new URLSearchParams();
         Object.entries(params).forEach(([key, value]) => {
@@ -243,6 +244,4 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
-export const getBookingInfo = (id: any) => apiClient.getBookingInfo(id);
-export const getCars = (params?: any) => apiClient.getCars(params);
 export default apiClient;
