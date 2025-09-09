@@ -36,6 +36,7 @@ const ReservationsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
   const mapStatus = (status: string): AdminReservation["status"] => {
     switch (status) {
@@ -57,7 +58,7 @@ const ReservationsPage = () => {
 
   const fetchBookings = useCallback(async () => {
     try {
-      const res = await apiClient.getBookings({ page: currentPage });
+      const res = await apiClient.getBookings({ page: currentPage, perPage });
       const mapped: AdminReservation[] = res.data.map((b: any) => ({
         id: b.booking_number || b.id?.toString(),
         customerName: b.customer_name,
@@ -94,7 +95,7 @@ const ReservationsPage = () => {
     } catch (e) {
       console.error(e);
     }
-  }, [currentPage]);
+  }, [currentPage, perPage]);
 
   useEffect(() => {
     fetchBookings();
@@ -468,25 +469,55 @@ const ReservationsPage = () => {
           />
 
           <div className="flex items-center justify-between py-2 px-4 text-sm">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-2 py-1 text-gray-600 disabled:opacity-50"
-              aria-label="Pagina anterioară"
-            >
-              Anterior
-            </button>
-            <span className="text-gray-600">
-              Pagina {currentPage} din {lastPage}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, lastPage))}
-              disabled={currentPage === lastPage}
-              className="px-2 py-1 text-gray-600 disabled:opacity-50"
-              aria-label="Pagina următoare"
-            >
-              Următoarea
-            </button>
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-600">Pe pagină:</span>
+              <Select
+                value={perPage.toString()}
+                onValueChange={(v) => {
+                  setPerPage(Number(v));
+                  setCurrentPage(1);
+                }}
+                aria-label="Rezervări pe pagină"
+                className="w-20"
+              >
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-2 py-1 text-gray-600 disabled:opacity-50"
+                aria-label="Pagina anterioară"
+              >
+                Anterior
+              </button>
+              {Array.from({ length: lastPage }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-2 py-1 rounded ${
+                    currentPage === page
+                      ? "bg-jade text-white"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                  aria-label={`Pagina ${page}`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, lastPage))}
+                disabled={currentPage === lastPage}
+                className="px-2 py-1 text-gray-600 disabled:opacity-50"
+                aria-label="Pagina următoare"
+              >
+                Următoarea
+              </button>
+            </div>
           </div>
 
           {filteredReservations.length === 0 && (
