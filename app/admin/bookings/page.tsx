@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Search,
-  Filter,
   Download,
   Eye,
   Edit,
@@ -21,6 +20,8 @@ import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 import {Input} from "@/components/ui/input";
+import DateRangePicker from "@/components/ui/date-range-picker";
+import { Popup } from "@/components/ui/popup";
 import apiClient from "@/lib/api";
 
 const ReservationsPage = () => {
@@ -32,6 +33,11 @@ const ReservationsPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
+  const [dateRange, setDateRange] = useState<{ startDate: Date | null; endDate: Date | null }>({
+    startDate: null,
+    endDate: null,
+  });
+  const [showCalendar, setShowCalendar] = useState(false);
   const [selectedReservation, setSelectedReservation] =
     useState<AdminReservation | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -151,6 +157,19 @@ const ReservationsPage = () => {
     setSelectedReservation(reservation);
     setShowModal(true);
   }, []);
+
+  const handleDateRangeChange = useCallback(
+    (range: { startDate: Date | null; endDate: Date | null }) => {
+      setDateRange(range);
+      setStartDateFilter(
+        range.startDate ? range.startDate.toISOString().split("T")[0] : "",
+      );
+      setEndDateFilter(
+        range.endDate ? range.endDate.toISOString().split("T")[0] : "",
+      );
+    },
+    [],
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -443,29 +462,22 @@ const ReservationsPage = () => {
               <option value="cancelled">Anulat</option>
             </Select>
 
-            <div className="flex space-x-2">
-              <div className="relative">
+            <div className="relative">
+              <button
+                onClick={() => setShowCalendar(true)}
+                className="w-full flex items-center pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-left hover:bg-gray-50"
+                aria-label="Selectează perioada"
+              >
                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  type="date"
-                  value={startDateFilter}
-                  onChange={(e) => setStartDateFilter(e.target.value)}
-                  placeholder="De la"
-                  aria-label="Data început"
-                  className="pl-10"
-                />
-              </div>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  type="date"
-                  value={endDateFilter}
-                  onChange={(e) => setEndDateFilter(e.target.value)}
-                  placeholder="Până la"
-                  aria-label="Data sfârșit"
-                  className="pl-10"
-                />
-              </div>
+                {startDateFilter && endDateFilter ? (
+                  <span>
+                    {new Date(startDateFilter).toLocaleDateString("ro-RO")} - {""}
+                    {new Date(endDateFilter).toLocaleDateString("ro-RO")}
+                  </span>
+                ) : (
+                  <span className="text-gray-500">Perioada</span>
+                )}
+              </button>
             </div>
 
             <div className="flex items-center justify-between">
@@ -475,6 +487,17 @@ const ReservationsPage = () => {
             </div>
           </div>
         </div>
+        <Popup
+          open={showCalendar}
+          onClose={() => setShowCalendar(false)}
+          className="p-0"
+        >
+          <DateRangePicker
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            onClose={() => setShowCalendar(false)}
+          />
+        </Popup>
 
         {/* Reservations Table */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
