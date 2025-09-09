@@ -482,8 +482,8 @@ const ReservationsPage = () => {
           />
 
           <div className="flex items-center justify-between py-2 px-4 text-sm">
-            <div className="flex items-center space-x-2">
-              <span className="text-gray-600">Pe pagină:</span>
+            <div className="flex items-center space-x-2 w-[10rem]">
+              <span className="text-gray-600 w-full">Pe pagină:</span>
               <Select
                 value={perPage.toString()}
                 onValueChange={(v) => {
