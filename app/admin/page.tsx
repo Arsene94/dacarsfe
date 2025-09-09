@@ -167,6 +167,8 @@ const AdminDashboard = () => {
         returnDate: string;
         returnTime: string;
     } | null>(null);
+    const [editPopupOpen, setEditPopupOpen] = useState(false);
+    const [bookingInfo, setBookingInfo] = useState<any>(null);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
     const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);
     const [bookingsTotalCount, setBookingsTotalCount] = useState<number>(0);
@@ -343,6 +345,18 @@ const AdminDashboard = () => {
         } finally {
             setPopupOpen(false);
             loadActivity();
+        }
+    }
+
+    const handleEditBooking = async () => {
+        if (!activityDetails) return;
+        try {
+            const info = await apiClient.getBookingInfo(activityDetails.id);
+            setBookingInfo(info);
+            setPopupOpen(false);
+            setEditPopupOpen(true);
+        } catch (err) {
+            console.error('Error loading booking info:', err);
         }
     }
 
@@ -689,7 +703,64 @@ const AdminDashboard = () => {
                         <div className="space-x-2">
                             <Button className="!px-4 py-4" variant="danger" onClick={() => setPopupOpen(false)}>Anulează</Button>
                             <Button className="!px-4 py-4" onClick={() => updateDateTime()}>Salvează</Button>
-                            <Button className="!px-4 py-4" variant="blue">Editează</Button>
+                            <Button className="!px-4 py-4" variant="blue" onClick={handleEditBooking}>Editează</Button>
+                        </div>
+                    </div>
+                </Popup>
+            )}
+            {bookingInfo && (
+                <Popup open={editPopupOpen} onClose={() => setEditPopupOpen(false)}>
+                    <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">Editează rezervarea</h3>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Nume client</label>
+                            <Input
+                                type="text"
+                                value={bookingInfo.customer_name}
+                                onChange={(e) =>
+                                    setBookingInfo({ ...bookingInfo, customer_name: e.target.value })
+                                }
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Email</label>
+                            <Input
+                                type="email"
+                                value={bookingInfo.customer_email}
+                                onChange={(e) =>
+                                    setBookingInfo({ ...bookingInfo, customer_email: e.target.value })
+                                }
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Telefon</label>
+                            <Input
+                                type="text"
+                                value={bookingInfo.customer_phone}
+                                onChange={(e) =>
+                                    setBookingInfo({ ...bookingInfo, customer_phone: e.target.value })
+                                }
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Notițe</label>
+                            <Input
+                                type="text"
+                                value={bookingInfo.note || ''}
+                                onChange={(e) =>
+                                    setBookingInfo({ ...bookingInfo, note: e.target.value })
+                                }
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-between mt-6">
+                        <div className="space-x-2">
+                            <Button className="!px-4 py-4" variant="danger" onClick={() => setEditPopupOpen(false)}>
+                                Anulează
+                            </Button>
+                            <Button className="!px-4 py-4" onClick={() => setEditPopupOpen(false)}>
+                                Salvează
+                            </Button>
                         </div>
                     </div>
                 </Popup>
