@@ -35,6 +35,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           as="image"
           href="/images/bg-hero-mobile.webp"
         />
+          <link rel="dns-prefetch" href="//vercel.app" />
+          <meta name="format-detection" content="telephone=no" />
+          <meta name="mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+          <meta httpEquiv="x-dns-prefetch-control" content="on" />
+          <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+          <meta name="color-scheme" content="light dark" />
         <link
           rel="preload"
           as="image"

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
     Calendar,
     Car,
@@ -140,6 +141,7 @@ const reservationColumns: Column<AdminReservation>[] = [
 ];
 
 const AdminDashboard = () => {
+    const router = useRouter();
     const [reservations, setReservations] = useState<AdminReservation[]>([]);
     const [carActivityDay, setCarActivityDay] = useState<string>('azi');
     const [activityDay, setActivityDay] = useState<string>('');
@@ -147,10 +149,13 @@ const AdminDashboard = () => {
     const [activityReservations, setActivityReservations] = useState<ActivityReservation[]>([]);
     const [popupOpen, setPopupOpen] = useState(false);
     const [activityDetails, setActivityDetails] = useState<{
+        id: number;
         customer: string;
         phone: string;
         car: string;
+        arrivalDate: string;
         arrivalTime: string;
+        returnDate: string;
         returnTime: string;
     } | null>(null);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
@@ -158,10 +163,13 @@ const AdminDashboard = () => {
     const [bookingsTotalCount, setBookingsTotalCount] = useState<number>(0);
 
     const openActivity = (details: {
+        id: number;
         customer: string;
         phone: string;
         car: string;
+        arrivalDate: string;
         arrivalTime: string;
+        returnDate: string;
         returnTime: string;
     }) => {
         setActivityDetails(details);
@@ -467,10 +475,13 @@ const AdminDashboard = () => {
                                                                 <button
                                                                     onClick={() =>
                                                                         openActivity({
+                                                                            id: r.id,
                                                                             customer: r.customer_name,
                                                                             phone: r.customer_phone,
                                                                             car: r.car?.license_plate || '',
+                                                                            arrivalDate: r.rental_start_date.slice(0, 10),
                                                                             arrivalTime: r.start_hour_group.slice(0, 5),
+                                                                            returnDate: r.rental_end_date.slice(0, 10),
                                                                             returnTime: r.end_hour_group.slice(0, 5),
                                                                         })
                                                                     }
@@ -532,35 +543,61 @@ const AdminDashboard = () => {
                     </div>
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Ora sosire</label>
-                            <Input
-                                type="time"
-                                value={activityDetails.arrivalTime}
-                                onChange={(e) =>
-                                    setActivityDetails({
-                                        ...activityDetails,
-                                        arrivalTime: e.target.value,
-                                    })
-                                }
-                            />
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Sosire</label>
+                            <div className="flex gap-2">
+                                <Input
+                                    type="date"
+                                    value={activityDetails.arrivalDate}
+                                    onChange={(e) =>
+                                        setActivityDetails({
+                                            ...activityDetails,
+                                            arrivalDate: e.target.value,
+                                        })
+                                    }
+                                />
+                                <Input
+                                    type="time"
+                                    value={activityDetails.arrivalTime}
+                                    onChange={(e) =>
+                                        setActivityDetails({
+                                            ...activityDetails,
+                                            arrivalTime: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
                         </div>
                         <div>
-                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Ora retur</label>
-                            <Input
-                                type="time"
-                                value={activityDetails.returnTime}
-                                onChange={(e) =>
-                                    setActivityDetails({
-                                        ...activityDetails,
-                                        returnTime: e.target.value,
-                                    })
-                                }
-                            />
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Retur</label>
+                            <div className="flex gap-2">
+                                <Input
+                                    type="date"
+                                    value={activityDetails.returnDate}
+                                    onChange={(e) =>
+                                        setActivityDetails({
+                                            ...activityDetails,
+                                            returnDate: e.target.value,
+                                        })
+                                    }
+                                />
+                                <Input
+                                    type="time"
+                                    value={activityDetails.returnTime}
+                                    onChange={(e) =>
+                                        setActivityDetails({
+                                            ...activityDetails,
+                                            returnTime: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
                         </div>
                     </div>
-                    <div className="flex justify-end mt-6 space-x-2">
-                        <Button variant="outline" onClick={() => setPopupOpen(false)}>Anulează</Button>
-                        <Button onClick={() => setPopupOpen(false)}>Salvează</Button>
+                    <div className="flex justify-between mt-6">
+                        <div className="space-x-2">
+                            <Button variant="outline" onClick={() => setPopupOpen(false)}>Anulează</Button>
+                            <Button onClick={() => setPopupOpen(false)}>Salvează</Button>
+                        </div>
                     </div>
                 </Popup>
             )}
