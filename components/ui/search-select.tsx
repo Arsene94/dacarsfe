@@ -20,6 +20,8 @@ interface SearchSelectProps<T> {
   renderItem: (item: T) => React.ReactNode;
   /** Optional renderer for the currently selected value. */
   renderValue?: (item: T) => React.ReactNode;
+  /** Optional function to customize className for each option. */
+  itemClassName?: (item: T) => string;
 }
 
 /**
@@ -36,6 +38,7 @@ export function SearchSelect<T>({
   placeholder,
   renderItem,
   renderValue,
+  itemClassName,
 }: SearchSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -91,7 +94,9 @@ export function SearchSelect<T>({
             {items.map((item, idx) => (
               <div
                 key={idx}
-                className="p-2 flex items-center gap-3 cursor-pointer hover:bg-gray-50"
+                className={`p-2 flex items-center gap-3 cursor-pointer ${
+                  itemClassName ? itemClassName(item) : "hover:bg-gray-50"
+                }`}
                 onClick={() => {
                   onSelect(item);
                   setOpen(false);

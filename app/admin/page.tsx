@@ -245,13 +245,14 @@ const AdminDashboard = () => {
     }, []);
 
     useEffect(() => {
-        if (!carSearch) {
-            setCarResults([]);
-            return;
-        }
         const handler = setTimeout(async () => {
             try {
-                const resp = await apiClient.getCars({ search: carSearch, start_date: activityDetails?.arrivalDate + ' ' + activityDetails?.arrivalTime, end_date: activityDetails?.returnDate + ' ' + activityDetails?.returnTime , limit: 10 });
+                const resp = await apiClient.getCars({
+                    search: carSearch,
+                    start_date: activityDetails?.arrivalDate + ' ' + activityDetails?.arrivalTime,
+                    end_date: activityDetails?.returnDate + ' ' + activityDetails?.returnTime,
+                    limit: 10,
+                });
                 const list = Array.isArray(resp?.data)
                     ? resp.data
                     : Array.isArray(resp)
@@ -265,7 +266,7 @@ const AdminDashboard = () => {
             }
         }, 300);
         return () => clearTimeout(handler);
-    }, [carSearch]);
+    }, [carSearch, activityDetails]);
 
     // Mock data pentru demo
     useEffect(() => {
@@ -837,13 +838,43 @@ const AdminDashboard = () => {
                                     onSelect={handleSelectCar}
                                     placeholder="Selectează mașina"
                                     renderItem={(car) => (
-                                        <div className={`w-full ${car.available ? 'bg-green-500' : 'bg-red-500' }`}>
+                                        <>
                                             <Image
                                                 src={
                                                     car.image_preview || car.image
-                                                        ? STORAGE_BASE +
-                                                          "/" +
-                                                          (car.image_preview || car.image)
+                                                        ?
+                                                              STORAGE_BASE +
+                                                              "/" +
+                                                              (car.image_preview || car.image)
+                                                        : "/images/placeholder-car.svg"
+                                                }
+                                                alt={car.name}
+                                                width={64}
+                                                height={40}
+                                                className="w-16 h-10 object-cover rounded"
+                                            />
+                                            <div className="text-left">
+                                                <div className="font-dm-sans font-semibold">{car.name}</div>
+                                                <div className="text-xs">
+                                                    {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                    itemClassName={(car) =>
+                                        car.available
+                                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                            : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                    }
+                                    renderValue={(car) => (
+                                        <div className="flex items-center gap-3">
+                                            <Image
+                                                src={
+                                                    car.image_preview || car.image
+                                                        ?
+                                                              STORAGE_BASE +
+                                                              "/" +
+                                                              (car.image_preview || car.image)
                                                         : "/images/placeholder-car.svg"
                                                 }
                                                 alt={car.name}
