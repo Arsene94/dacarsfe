@@ -22,7 +22,7 @@ import { Popup } from "@/components/ui/popup";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
-import apiClient, { getBookingInfo } from "@/lib/api";
+import apiClient, { getBookingInfo, getCars } from "@/lib/api";
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -177,6 +177,7 @@ const AdminDashboard = () => {
     } | null>(null);
     const [editPopupOpen, setEditPopupOpen] = useState(false);
     const [bookingInfo, setBookingInfo] = useState<any>(null);
+    const [carOptions, setCarOptions] = useState<any[]>([]);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
     const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);
     const [bookingsTotalCount, setBookingsTotalCount] = useState<number>(0);
@@ -367,7 +368,17 @@ const AdminDashboard = () => {
                 coupon_amount: info.coupon_amount ?? 0,
                 total_services: info.total_services ?? 0,
                 sub_total: info.sub_total ?? 0,
+                coupon_code: info.coupon_code ?? "",
             };
+            const carsResp = await getCars({ limit: 100 });
+            const list = Array.isArray(carsResp?.data)
+                ? carsResp.data
+                : Array.isArray(carsResp)
+                    ? carsResp
+                    : Array.isArray(carsResp?.items)
+                        ? carsResp.items
+                        : [];
+            setCarOptions(list);
             setBookingInfo(formatted);
             setPopupOpen(false);
             setEditPopupOpen(true);
@@ -743,7 +754,37 @@ const AdminDashboard = () => {
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
                                     Mașină
                                 </label>
-                                <Input type="text" value={bookingInfo.car_name} disabled />
+                                <Select
+                                    value={bookingInfo.car_id?.toString()}
+                                    onValueChange={(val) => {
+                                        const selected = carOptions.find(
+                                            (c) => c.id === Number(val),
+                                        );
+                                        const price = selected?.rental_rate
+                                            ? Number(selected.rental_rate)
+                                            : bookingInfo.price_per_day || 0;
+                                        const subTotal =
+                                            (bookingInfo.days || 0) * price;
+                                        const total =
+                                            subTotal +
+                                            (bookingInfo.total_services || 0) -
+                                            (bookingInfo.coupon_amount || 0);
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            car_id: Number(val),
+                                            car_name: selected?.name || bookingInfo.car_name,
+                                            price_per_day: price,
+                                            sub_total: subTotal,
+                                            total,
+                                        });
+                                    }}
+                                >
+                                    {carOptions.map((car) => (
+                                        <option key={car.id} value={car.id}>
+                                            {car.name}
+                                        </option>
+                                    ))}
+                                </Select>
                             </div>
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
@@ -865,25 +906,9 @@ const AdminDashboard = () => {
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
                                     Preț/zi
                                 </label>
-                                <Input
-                                    type="number"
-                                    value={bookingInfo.price_per_day}
-                                    onChange={(e) => {
-                                        const price = parseFloat(e.target.value) || 0;
-                                        const subTotal =
-                                            (bookingInfo.days || 0) * price;
-                                        const total =
-                                            subTotal +
-                                            (bookingInfo.total_services || 0) -
-                                            (bookingInfo.coupon_amount || 0);
-                                        setBookingInfo({
-                                            ...bookingInfo,
-                                            price_per_day: price,
-                                            sub_total: subTotal,
-                                            total,
-                                        });
-                                    }}
-                                />
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.price_per_day}
+                                </div>
                             </div>
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
@@ -913,67 +938,42 @@ const AdminDashboard = () => {
                             </div>
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Total servicii
+                                    Cod reducere
                                 </label>
                                 <Input
-                                    type="number"
-                                    value={bookingInfo.total_services}
-                                    onChange={(e) => {
-                                        const services =
-                                            parseFloat(e.target.value) || 0;
-                                        const subTotal =
-                                            (bookingInfo.days || 0) *
-                                            (bookingInfo.price_per_day || 0);
-                                        const total =
-                                            subTotal +
-                                            services -
-                                            (bookingInfo.coupon_amount || 0);
+                                    type="text"
+                                    value={bookingInfo.coupon_code || ""}
+                                    onChange={(e) =>
                                         setBookingInfo({
                                             ...bookingInfo,
-                                            total_services: services,
-                                            sub_total: subTotal,
-                                            total,
-                                        });
-                                    }}
+                                            coupon_code: e.target.value,
+                                        })
+                                    }
                                 />
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Total servicii
+                                </label>
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.total_services}
+                                </div>
                             </div>
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
                                     Subtotal
                                 </label>
-                                <Input
-                                    type="number"
-                                    value={bookingInfo.sub_total}
-                                    onChange={(e) => {
-                                        const sub =
-                                            parseFloat(e.target.value) || 0;
-                                        const total =
-                                            sub +
-                                            (bookingInfo.total_services || 0) -
-                                            (bookingInfo.coupon_amount || 0);
-                                        setBookingInfo({
-                                            ...bookingInfo,
-                                            sub_total: sub,
-                                            total,
-                                        });
-                                    }}
-                                />
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.sub_total}
+                                </div>
                             </div>
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
                                     Total
                                 </label>
-                                <Input
-                                    type="number"
-                                    value={bookingInfo.total}
-                                    onChange={(e) =>
-                                        setBookingInfo({
-                                            ...bookingInfo,
-                                            total:
-                                                parseFloat(e.target.value) || 0,
-                                        })
-                                    }
-                                />
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.total}
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -75,6 +75,21 @@ class ApiClient {
         }
     }
 
+    async getCars(params: {
+        limit?: number,
+        page?: number,
+        perPage?: number
+    } = {}) {
+        const searchParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                searchParams.append(key, value.toString());
+            }
+        });
+        const query = searchParams.toString();
+        return this.request<any>(`/cars${query ? `?${query}` : ''}`);
+    }
+
     async getHomePageCars(params: {
         limit?: number,
         page?: number,
@@ -229,4 +244,5 @@ class ApiClient {
 
 export const apiClient = new ApiClient(API_BASE_URL);
 export const getBookingInfo = (id: any) => apiClient.getBookingInfo(id);
+export const getCars = (params?: any) => apiClient.getCars(params);
 export default apiClient;
