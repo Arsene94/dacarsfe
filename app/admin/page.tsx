@@ -594,12 +594,6 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                     <div className="flex justify-between mt-6">
-                        <Button
-                            variant="outline"
-                            onClick={() => router.push(`/admin/bookings?reservation=${activityDetails.id}`)}
-                        >
-                            Editează rezervarea
-                        </Button>
                         <div className="space-x-2">
                             <Button variant="outline" onClick={() => setPopupOpen(false)}>Anulează</Button>
                             <Button onClick={() => setPopupOpen(false)}>Salvează</Button>
