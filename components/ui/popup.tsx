@@ -14,7 +14,7 @@ const Popup: React.FC<PopupProps> = ({ open, onClose, children, className }) => 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div
-        className={cn("bg-white rounded-lg shadow-lg w-full max-w-md p-6", className)}
+        className={cn("bg-white rounded-lg shadow-lg w-full p-6", className)}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

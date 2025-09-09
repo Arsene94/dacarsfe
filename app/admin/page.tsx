@@ -22,7 +22,7 @@ import { Popup } from "@/components/ui/popup";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
-import apiClient from "@/lib/api";
+import apiClient, { getBookingInfo, getCars } from "@/lib/api";
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -140,6 +140,14 @@ const reservationColumns: Column<AdminReservation>[] = [
     },
 ];
 
+const toLocalDateTimeInput = (iso?: string | null) => {
+    if (!iso) return "";
+    const date = new Date(iso);
+    const tzOffset = date.getTimezoneOffset();
+    const local = new Date(date.getTime() - tzOffset * 60000);
+    return local.toISOString().slice(0, 16);
+};
+
 const AdminDashboard = () => {
     const router = useRouter();
     const [reservations, setReservations] = useState<AdminReservation[]>([]);
@@ -167,6 +175,9 @@ const AdminDashboard = () => {
         returnDate: string;
         returnTime: string;
     } | null>(null);
+    const [editPopupOpen, setEditPopupOpen] = useState(false);
+    const [bookingInfo, setBookingInfo] = useState<any>(null);
+    const [carOptions, setCarOptions] = useState<any[]>([]);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
     const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);
     const [bookingsTotalCount, setBookingsTotalCount] = useState<number>(0);
@@ -343,6 +354,53 @@ const AdminDashboard = () => {
         } finally {
             setPopupOpen(false);
             loadActivity();
+        }
+    }
+
+    const handleEditBooking = async () => {
+        if (!activityDetails) return;
+        try {
+            const res = await getBookingInfo(activityDetails.id);
+            const info = res.data;
+            const formatted = {
+                ...info,
+                rental_start_date: toLocalDateTimeInput(info.rental_start_date),
+                rental_end_date: toLocalDateTimeInput(info.rental_end_date),
+                coupon_amount: info.coupon_amount ?? 0,
+                total_services: info.total_services ?? 0,
+                sub_total: info.sub_total ?? 0,
+                coupon_code: info.coupon_code ?? "",
+                customer_name: info.customer_name ?? "",
+                customer_email: info.customer_email ?? "",
+                customer_phone: info.customer_phone ?? "",
+                customer_age: info.customer_age ?? "",
+                customer_id: info.customer_id ?? "",
+                car_id: info.car_id ?? 0,
+                car_name: info.car_name ?? "",
+                booking_number: info.booking_number ?? "",
+                note: info.note ?? "",
+                days: info.days ?? 0,
+                price_per_day: info.price_per_day ?? 0,
+                with_deposit: info.with_deposit ?? false,
+                tax_amount: info.tax_amount ?? 0,
+                currency_id: info.currency_id ?? "",
+                status: info.status ?? "",
+                total: info.total ?? 0,
+            };
+            const carsResp = await getCars({ limit: 100 });
+            const list = Array.isArray(carsResp?.data)
+                ? carsResp.data
+                : Array.isArray(carsResp)
+                    ? carsResp
+                    : Array.isArray(carsResp?.items)
+                        ? carsResp.items
+                        : [];
+            setCarOptions(list);
+            setBookingInfo(formatted);
+            setPopupOpen(false);
+            setEditPopupOpen(true);
+        } catch (err) {
+            console.error('Error loading booking info:', err);
         }
     }
 
@@ -610,7 +668,11 @@ const AdminDashboard = () => {
                 </div>
             </div>
             {activityDetails && (
-                <Popup open={popupOpen} onClose={() => setPopupOpen(false)}>
+                <Popup
+                    open={popupOpen}
+                    onClose={() => setPopupOpen(false)}
+                    className="max-w-xl"
+                >
                     <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">Detalii rezervare</h3>
                     <div className="space-y-2 mb-4">
                         <div className="text-sm font-dm-sans"><span className="font-semibold">Client:</span> {activityDetails.customer}</div>
@@ -689,7 +751,239 @@ const AdminDashboard = () => {
                         <div className="space-x-2">
                             <Button className="!px-4 py-4" variant="danger" onClick={() => setPopupOpen(false)}>Anulează</Button>
                             <Button className="!px-4 py-4" onClick={() => updateDateTime()}>Salvează</Button>
-                            <Button className="!px-4 py-4" variant="blue">Editează</Button>
+                            <Button className="!px-4 py-4" variant="blue" onClick={handleEditBooking}>Editează</Button>
+                        </div>
+                    </div>
+                </Popup>
+            )}
+            {bookingInfo && (
+                <Popup
+                    open={editPopupOpen}
+                    onClose={() => setEditPopupOpen(false)}
+                    className="max-w-4xl w-full max-h-[80vh] overflow-y-auto"
+                >
+                    <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">
+                        Editează rezervarea
+                    </h3>
+                    <div className="flex gap-6">
+                        <div className="w-2/3 space-y-4">
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Mașină
+                                </label>
+                                <Select
+                                    value={bookingInfo.car_id?.toString()}
+                                    onValueChange={(val) => {
+                                        const selected = carOptions.find(
+                                            (c) => c.id === Number(val),
+                                        );
+                                        const price = selected?.rental_rate
+                                            ? Number(selected.rental_rate)
+                                            : bookingInfo.price_per_day || 0;
+                                        const subTotal =
+                                            (bookingInfo.days || 0) * price;
+                                        const total =
+                                            subTotal +
+                                            (bookingInfo.total_services || 0) -
+                                            (bookingInfo.coupon_amount || 0);
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            car_id: Number(val),
+                                            car_name: selected?.name || bookingInfo.car_name,
+                                            price_per_day: price,
+                                            sub_total: subTotal,
+                                            total,
+                                        });
+                                    }}
+                                >
+                                    {carOptions.map((car) => (
+                                        <option key={car.id} value={car.id}>
+                                            {car.name}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Nume client
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={bookingInfo.customer_name}
+                                    onChange={(e) =>
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            customer_name: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Email
+                                </label>
+                                <Input
+                                    type="email"
+                                    value={bookingInfo.customer_email}
+                                    onChange={(e) =>
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            customer_email: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Telefon
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={bookingInfo.customer_phone}
+                                    onChange={(e) =>
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            customer_phone: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Data preluare
+                                </label>
+                                <Input
+                                    type="datetime-local"
+                                    value={bookingInfo.rental_start_date}
+                                    onChange={(e) =>
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            rental_start_date: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Data returnare
+                                </label>
+                                <Input
+                                    type="datetime-local"
+                                    value={bookingInfo.rental_end_date}
+                                    onChange={(e) =>
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            rental_end_date: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Zile
+                                </label>
+                                <Input
+                                    type="number"
+                                    value={bookingInfo.days}
+                                    onChange={(e) => {
+                                        const days = parseInt(e.target.value, 10) || 0;
+                                        const subTotal =
+                                            days * (bookingInfo.price_per_day || 0);
+                                        const total =
+                                            subTotal +
+                                            (bookingInfo.total_services || 0) -
+                                            (bookingInfo.coupon_amount || 0);
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            days,
+                                            sub_total: subTotal,
+                                            total,
+                                        });
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Notițe
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={bookingInfo.note || ""}
+                                    onChange={(e) =>
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            note: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+                        </div>
+                        <div className="w-1/3 space-y-4">
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Preț/zi
+                                </label>
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.price_per_day}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Reducere
+                                </label>
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.coupon_amount}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Cod reducere
+                                </label>
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.coupon_code}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Total servicii
+                                </label>
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.total_services}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Subtotal
+                                </label>
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.sub_total}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                                    Total
+                                </label>
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.total}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex justify-between mt-6">
+                        <div className="space-x-2">
+                            <Button
+                                className="!px-4 py-4"
+                                variant="danger"
+                                onClick={() => setEditPopupOpen(false)}
+                            >
+                                Anulează
+                            </Button>
+                            <Button
+                                className="!px-4 py-4"
+                                onClick={() => setEditPopupOpen(false)}
+                            >
+                                Salvează
+                            </Button>
                         </div>
                     </div>
                 </Popup>
