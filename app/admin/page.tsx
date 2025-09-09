@@ -760,13 +760,13 @@ const AdminDashboard = () => {
                 <Popup
                     open={editPopupOpen}
                     onClose={() => setEditPopupOpen(false)}
-                    className="max-w-4xl w-full max-h-[80vh] overflow-y-auto"
+                    className="max-w-5xl w-full max-h-[80vh] overflow-y-auto"
                 >
                     <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">
                         Editează rezervarea
                     </h3>
                     <div className="flex items-start gap-6">
-                        <div className="w-2/3 space-y-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
+                        <div className="w-2/3 grid grid-cols-2 gap-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
                                     Mașină
