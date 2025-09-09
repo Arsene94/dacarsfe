@@ -641,8 +641,9 @@ const AdminDashboard = () => {
                     </div>
                     <div className="flex justify-between mt-6">
                         <div className="space-x-2">
-                            <Button variant="outline" onClick={() => setPopupOpen(false)}>Anulează</Button>
-                            <Button onClick={() => updateDateTime()}>Salvează</Button>
+                            <Button className="!px-4 py-4" variant="danger" onClick={() => setPopupOpen(false)}>Anulează</Button>
+                            <Button className="!px-4 py-4" onClick={() => updateDateTime()}>Salvează</Button>
+                            <Button className="!px-4 py-4" variant="blue">Editează</Button>
                         </div>
                     </div>
                 </Popup>

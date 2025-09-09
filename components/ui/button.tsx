@@ -4,10 +4,14 @@ import { ButtonProps } from '@/types/ui';
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'default', children, ...props }, ref) => {
-    const variantClasses =
-      variant === 'outline'
-        ? 'border-2'
-        : 'bg-jade text-white hover:bg-jade/90';
+      const variants = {
+          default: "bg-jade text-white",
+          outline: "border-2 bg-jade text-white",
+          danger: "border-2 bg-red-500 text-white",
+          blue: "border-2 bg-blue-400 text-white",
+      };
+
+      const variantClasses = variants[variant] ?? "";
 
     const { ['aria-label']: ariaLabel, ...rest } = props as any;
 
