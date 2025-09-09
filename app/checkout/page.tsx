@@ -11,7 +11,7 @@ import {ApiCar, Car} from "@/types/car";
 import {ReservationFormData, Service} from "@/types/reservation";
 import {Button} from "@/components/ui/button";
 
-const STORAGE_BASE = "https://dacars.ro/storage";
+const STORAGE_BASE = "https://backend.dacars.ro/storage";
 
 const toImageUrl = (p?: string | null): string => {
     if (!p) return "/images/placeholder-car.svg";

@@ -23,7 +23,10 @@ import { Popup } from "@/components/ui/popup";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
-import apiClient, { getBookingInfo, searchCars } from "@/lib/api";
+import apiClient from "@/lib/api";
+
+const STORAGE_BASE =
+    process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://backend.dacars.ro/storage';
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -247,7 +250,7 @@ const AdminDashboard = () => {
         }
         const handler = setTimeout(async () => {
             try {
-                const resp = await searchCars(carSearch);
+                const resp = await apiClient.getCars({ search: carSearch, limit: 10 });
                 const list = Array.isArray(resp?.data)
                     ? resp.data
                     : Array.isArray(resp)
@@ -385,7 +388,7 @@ const AdminDashboard = () => {
     const handleEditBooking = async () => {
         if (!activityDetails) return;
         try {
-            const res = await getBookingInfo(activityDetails.id);
+            const res = await apiClient.getBookingInfo(activityDetails.id);
             const info = res.data;
             const formatted = {
                 ...info,
@@ -821,7 +824,7 @@ const AdminDashboard = () => {
                                                 onClick={() => handleSelectCar(car)}
                                             >
                                                 <Image
-                                                    src={car.image_preview || car.image || "/images/placeholder-car.svg"}
+                                                    src={STORAGE_BASE + car.image_preview || STORAGE_BASE + car.image || "/images/placeholder-car.svg"}
                                                     alt={car.name}
                                                     width={64}
                                                     height={40}

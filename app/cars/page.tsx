@@ -12,7 +12,7 @@ import { apiClient } from "@/lib/api";
 import { useBooking } from "@/context/BookingContext";
 import { ApiCar, Car, CarCategory } from "@/types/car";
 
-const STORAGE_BASE = "https://dacars.ro/storage";
+const STORAGE_BASE = "https://backend.dacars.ro/storage";
 
 const toImageUrl = (p?: string | null): string => {
     if (!p) return "/images/placeholder-car.svg";
