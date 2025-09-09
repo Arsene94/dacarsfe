@@ -153,6 +153,15 @@ const AdminDashboard = () => {
         customer: string;
         phone: string;
         car: string;
+        days: number;
+        price_per_day: number;
+        sub_total: number;
+        total: number;
+        services: { id:number, name: string }[];
+        total_services: number;
+        coupon_amount: number;
+        with_deposit: boolean;
+        note: string | null;
         arrivalDate: string;
         arrivalTime: string;
         returnDate: string;
@@ -167,6 +176,15 @@ const AdminDashboard = () => {
         customer: string;
         phone: string;
         car: string;
+        days: number;
+        price_per_day: number;
+        sub_total: number;
+        total: number;
+        services: {  id: number, name: string }[];
+        total_services: number;
+        coupon_amount: number;
+        with_deposit: boolean;
+        note: string | null;
         arrivalDate: string;
         arrivalTime: string;
         returnDate: string;
@@ -519,6 +537,18 @@ const AdminDashboard = () => {
                                                                             customer: r.customer_name,
                                                                             phone: r.customer_phone,
                                                                             car: r.car?.license_plate || '',
+                                                                            days: r.days,
+                                                                            price_per_day: r.price_per_day,
+                                                                            sub_total: r.sub_total,
+                                                                            total: r.total,
+                                                                            services: (r.services ?? []).map((s: any) => ({
+                                                                                id: Number(s.id),
+                                                                                name: String(s.name),
+                                                                            })),
+                                                                            total_services: r.total_services,
+                                                                            coupon_amount: r.coupon_amount,
+                                                                            with_deposit: r.with_deposit,
+                                                                            note: r.note ?? null,
                                                                             arrivalDate: r.rental_start_date.slice(0, 10),
                                                                             arrivalTime: r.start_hour_group.slice(0, 5),
                                                                             returnDate: r.rental_end_date.slice(0, 10),
@@ -586,6 +616,22 @@ const AdminDashboard = () => {
                         <div className="text-sm font-dm-sans"><span className="font-semibold">Client:</span> {activityDetails.customer}</div>
                         <div className="text-sm font-dm-sans"><span className="font-semibold">Telefon:</span> {activityDetails.phone}</div>
                         <div className="text-sm font-dm-sans"><span className="font-semibold">Mașină:</span> {activityDetails.car}</div>
+                        <div className="text-sm font-dm-sans"><span className="font-semibold">Preț per zi:</span> {activityDetails.price_per_day}€ x {activityDetails.days}</div>
+                        {activityDetails.services.length > 0 && (
+                            <div className="text-sm font-dm-sans">
+                                <span className="font-semibold">Servicii:</span>
+                                <ul className="list-disc list-inside">
+                                    {activityDetails.services.map((s: { id: number; name: string }, index: number) => (
+                                        <li key={s.id ?? index}>{s.name}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                        {activityDetails.services.length > 0 && (<div className="text-sm font-dm-sans"><span className="font-semibold">Preț servicii:</span> {activityDetails.total_services}€</div>)}
+                        {activityDetails.coupon_amount > 0 && (<div className="text-sm font-dm-sans"><span className="font-semibold">Discount:</span> {activityDetails.coupon_amount}€</div>)}
+                        <div className="text-sm font-dm-sans"><span className="font-semibold">Total:</span> {activityDetails.total}€</div>
+                        {activityDetails.note && (<div className="text-sm font-dm-sans"><span className="font-semibold">Notițe:</span> {activityDetails.note}</div>)}
+
                     </div>
                     <div className="space-y-4">
                         <div>

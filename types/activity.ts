@@ -13,6 +13,13 @@ export interface ActivityReservation {
   note: string | null;
   status: string;
   car_id: number;
+  days: number;
+  price_per_day: number;
+  sub_total: number;
+  total: number;
+  total_services: number;
+  coupon_amount: number;
+  with_deposit: boolean;
   customer_id: number | null;
   rental_start_date: string;
   rental_end_date: string;
