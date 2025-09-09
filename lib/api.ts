@@ -145,6 +145,9 @@ class ApiClient {
             body: JSON.stringify(params),
         })
     }
+    async getBookingInfo(id: any) {
+        return this.request<any>(`/bookings/${id}`)
+    }
 
     async getBookings(params: {
         page?: number;
