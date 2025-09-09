@@ -25,6 +25,9 @@ export interface AdminReservation {
   discountCode?: string;
   notes?: string;
   createdAt?: string;
+  couponAmount: number;
+  subTotal: number;
+  taxAmount: number;
 }
 
 export interface AdminCar {

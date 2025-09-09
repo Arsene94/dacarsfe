@@ -76,6 +76,9 @@ const ReservationsPage = () => {
           hour: "2-digit",
           minute: "2-digit",
         }),
+        couponAmount: b.coupon_amount,
+        subTotal: b.sub_total,
+        taxAmount: b.tax_amount,
         location: b.location || "",
         status: mapStatus(b.status),
         total: b.total,
@@ -217,10 +220,10 @@ const ReservationsPage = () => {
         sortable: true,
         cell: (r) => (
           <div>
-            <div className="font-dm-sans font-semibold text-berkeley">
+            <div className="font-dm-sans font-semibold text-berkeley text-xs">
               {r.id}
             </div>
-            <div className="text-sm text-gray-500 font-dm-sans">
+            <div className="text-gray-500 font-dm-sans text-xs">
               {r.createdAt &&
                 new Date(r.createdAt).toLocaleDateString("ro-RO")}
             </div>
@@ -234,10 +237,10 @@ const ReservationsPage = () => {
         sortable: true,
         cell: (r) => (
           <div>
-            <div className="font-dm-sans font-semibold text-gray-900">
+            <div className="font-dm-sans font-semibold text-gray-900 text-xs">
               {r.customerName}
             </div>
-            <div className="text-sm text-gray-500 font-dm-sans">
+            <div className="text-gray-500 font-dm-sans text-xs">
               {r.phone}
             </div>
           </div>
@@ -248,7 +251,7 @@ const ReservationsPage = () => {
         header: "Mașină",
         accessor: (r) => r.carName,
         cell: (r) => (
-          <div className="font-dm-sans text-gray-900">{r.carName}</div>
+          <div className="font-dm-sans text-gray-900 text-xs">{r.carName}</div>
         ),
       },
       {
@@ -257,12 +260,12 @@ const ReservationsPage = () => {
         accessor: (r) => new Date(r.startDate).getTime(),
         cell: (r) => (
           <div>
-            <div className="font-dm-sans text-gray-900">
+            <div className="font-dm-sans text-gray-900 text-xs">
               {new Date(r.startDate).toLocaleDateString("ro-RO")} -
               {" "}
               {new Date(r.endDate).toLocaleDateString("ro-RO")}
             </div>
-            <div className="text-sm text-gray-500 font-dm-sans">
+            <div className="text-gray-500 font-dm-sans text-xs">
               {r.pickupTime} - {r.dropoffTime}
             </div>
           </div>
@@ -274,7 +277,7 @@ const ReservationsPage = () => {
           accessor: (r) => r.plan,
           cell: (r) => (
               <span
-                  className={`px-3 py-1 rounded-full text-sm font-dm-sans ${getPlanColor(
+                  className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getPlanColor(
                       r.plan,
                   )}`}
               >
@@ -288,7 +291,7 @@ const ReservationsPage = () => {
         accessor: (r) => r.status,
         cell: (r) => (
           <span
-            className={`px-3 py-1 rounded-full text-sm font-dm-sans ${getStatusColor(
+            className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
               r.status,
             )}`}
           >
@@ -302,10 +305,10 @@ const ReservationsPage = () => {
         accessor: (r) => r.total,
         sortable: true,
         cell: (r) => (
-          <div className="font-dm-sans font-semibold text-berkeley">
+          <div className="font-dm-sans font-semibold text-berkeley text-xs">
             {r.total}€
             {r.discountCode && (
-              <div className="text-sm text-jade font-dm-sans">
+              <div className="text-jade font-dm-sans text-xs">
                 Cod: {r.discountCode}
               </div>
             )}
@@ -347,20 +350,21 @@ const ReservationsPage = () => {
   const renderReservationDetails = (r: AdminReservation) => (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-700 font-dm-sans">
       <div className="flex items-center space-x-2">
-        <Mail className="h-4 w-4 text-gray-500" />
-        <span>{r.email}</span>
+        <span className="font-bold">Preț per zi:</span>
+        <span> {r.pricePerDay}€</span>
       </div>
       <div className="flex items-center space-x-2">
-        <Phone className="h-4 w-4 text-gray-500" />
-        <span>{r.phone}</span>
+          <span className="font-bold">Servicii:</span>
+          <span>{r.servicesPrice}€</span>
       </div>
       <div className="flex items-center space-x-2">
-        <MapPin className="h-4 w-4 text-gray-500" />
-        <span>{r.location}</span>
+        <span className="font-bold">Subtotal:</span>
+        <span>{r.subTotal}€</span>
       </div>
       {r.discountCode && (
         <div className="flex items-center space-x-2">
-          <span className="font-semibold">Cod: {r.discountCode}</span>
+          <span className="font-semibold">Reducere:</span>
+          <span>{r.couponAmount}€</span>
         </div>
       )}
       {r.notes && (
