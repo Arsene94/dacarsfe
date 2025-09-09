@@ -6,12 +6,12 @@ import {
     Calendar,
     Car,
     Users,
-    BarChart3,
-    Plus,
-    Filter,
-    Search,
-    ChevronLeft,
-    ChevronRight, Eye, Clock, User, Phone, Plane, Newspaper,
+    Eye,
+    Clock,
+    User,
+    Phone,
+    Plane,
+    Newspaper,
 } from "lucide-react";
 import Link from "next/link";
 import { Select } from "@/components/ui/select";
@@ -469,7 +469,7 @@ const AdminDashboard = () => {
                                                                 </div>
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <div className="flex items-center space-x-3">
+                                                                <div className="flex items-center flex-col md:flex-row space-x-3">
                                                                     <span
                                                                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                                                             isDeparture
