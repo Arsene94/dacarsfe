@@ -184,6 +184,7 @@ const AdminDashboard = () => {
     const [bookingInfo, setBookingInfo] = useState<any>(null);
     const [carSearch, setCarSearch] = useState("");
     const [carResults, setCarResults] = useState<any[]>([]);
+    const [carSearchActive, setCarSearchActive] = useState(false);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
     const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);
     const [bookingsTotalCount, setBookingsTotalCount] = useState<number>(0);
@@ -244,11 +245,11 @@ const AdminDashboard = () => {
         loadMetrics();
     }, []);
 
-    useEffect(() => {
-        const handler = setTimeout(async () => {
+    const fetchCars = useCallback(
+        async (query: string) => {
             try {
                 const resp = await apiClient.getCars({
-                    search: carSearch,
+                    search: query,
                     start_date: activityDetails?.arrivalDate + ' ' + activityDetails?.arrivalTime,
                     end_date: activityDetails?.returnDate + ' ' + activityDetails?.returnTime,
                     limit: 10,
@@ -264,9 +265,17 @@ const AdminDashboard = () => {
             } catch (error) {
                 console.error('Error searching cars:', error);
             }
+        },
+        [activityDetails]
+    );
+
+    useEffect(() => {
+        if (!carSearchActive) return;
+        const handler = setTimeout(() => {
+            fetchCars(carSearch);
         }, 300);
         return () => clearTimeout(handler);
-    }, [carSearch, activityDetails]);
+    }, [carSearch, fetchCars, carSearchActive]);
 
     // Mock data pentru demo
     useEffect(() => {
@@ -836,6 +845,10 @@ const AdminDashboard = () => {
                                     items={carResults}
                                     onSearch={setCarSearch}
                                     onSelect={handleSelectCar}
+                                    onOpen={() => {
+                                        setCarSearchActive(true);
+                                        fetchCars(carSearch);
+                                    }}
                                     placeholder="Selectează mașina"
                                     renderItem={(car) => (
                                         <>

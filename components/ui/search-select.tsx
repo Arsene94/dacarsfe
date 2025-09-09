@@ -22,6 +22,8 @@ interface SearchSelectProps<T> {
   renderValue?: (item: T) => React.ReactNode;
   /** Optional function to customize className for each option. */
   itemClassName?: (item: T) => string;
+  /** Called when the dropdown is opened. */
+  onOpen?: () => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export function SearchSelect<T>({
   renderItem,
   renderValue,
   itemClassName,
+  onOpen,
 }: SearchSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -63,7 +66,15 @@ export function SearchSelect<T>({
     <div className="relative" ref={ref}>
       <div
         className="relative w-full pl-4 pr-10 py-3 text-[#191919] border border-gray-300 rounded-lg bg-white flex items-center gap-3 cursor-pointer"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          setOpen((o) => {
+            const next = !o;
+            if (!o && next) {
+              onOpen?.();
+            }
+            return next;
+          });
+        }}
       >
         <div className="flex items-center gap-3 overflow-hidden">
           {display}
