@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Search,
-  Filter,
   Download,
   Eye,
   Edit,
@@ -21,21 +20,28 @@ import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 import {Input} from "@/components/ui/input";
+import DateRangePicker from "@/components/ui/date-range-picker";
+import { Popup } from "@/components/ui/popup";
 import apiClient from "@/lib/api";
 
 const ReservationsPage = () => {
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
-  const [filteredReservations, setFilteredReservations] = useState<
-    AdminReservation[]
-  >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
+  const [dateRange, setDateRange] = useState<{ startDate: Date | null; endDate: Date | null }>({
+    startDate: null,
+    endDate: null,
+  });
+  const [showCalendar, setShowCalendar] = useState(false);
   const [selectedReservation, setSelectedReservation] =
     useState<AdminReservation | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [totalReservations, setTotalReservations] = useState(0);
 
   const mapStatus = (status: string): AdminReservation["status"] => {
     switch (status) {
@@ -57,7 +63,19 @@ const ReservationsPage = () => {
 
   const fetchBookings = useCallback(async () => {
     try {
-      const res = await apiClient.getBookings({ page: currentPage });
+      const params: {
+        page: number;
+        perPage: number;
+        search?: string;
+        status?: string;
+        start_date?: string;
+        end_date?: string;
+      } = { page: currentPage, perPage };
+      if (searchTerm) params.search = searchTerm;
+      if (statusFilter !== "all") params.status = statusFilter;
+      if (startDateFilter) params.start_date = startDateFilter;
+      if (endDateFilter) params.end_date = endDateFilter;
+      const res = await apiClient.getBookings(params);
       const mapped: AdminReservation[] = res.data.map((b: any) => ({
         id: b.booking_number || b.id?.toString(),
         customerName: b.customer_name,
@@ -88,72 +106,38 @@ const ReservationsPage = () => {
         servicesPrice: b.total_services,
         discount: b.coupon_amount,
       }));
+      const meta = res?.meta || {};
+      const total = meta?.total ?? res?.total ?? mapped.length;
       setReservations(mapped);
-      setFilteredReservations(mapped);
-      setLastPage(res.meta?.last_page || 1);
+      setLastPage(meta?.last_page ?? res?.last_page ?? 1);
+      setTotalReservations(total);
     } catch (e) {
       console.error(e);
     }
-  }, [currentPage]);
+  }, [currentPage, perPage, searchTerm, statusFilter, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
 
-  // Filter reservations
-  useEffect(() => {
-    let filtered = reservations;
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (reservation) =>
-          reservation.customerName
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          reservation.phone.includes(searchTerm) ||
-          reservation.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          reservation.carName.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(
-        (reservation) => reservation.status === statusFilter,
-      );
-    }
-
-    // Date filter
-    if (dateFilter !== "all") {
-      const today = new Date();
-      const filterDate = new Date();
-
-      switch (dateFilter) {
-        case "today":
-          filterDate.setDate(today.getDate());
-          break;
-        case "week":
-          filterDate.setDate(today.getDate() + 7);
-          break;
-        case "month":
-          filterDate.setMonth(today.getMonth() + 1);
-          break;
-      }
-
-      filtered = filtered.filter((reservation) => {
-        const startDate = new Date(reservation.startDate);
-        return startDate <= filterDate;
-      });
-    }
-
-    setFilteredReservations(filtered);
-  }, [reservations, searchTerm, statusFilter, dateFilter]);
-
   const handleViewReservation = useCallback((reservation: AdminReservation) => {
     setSelectedReservation(reservation);
     setShowModal(true);
   }, []);
+
+  const handleDateRangeChange = useCallback(
+    (range: { startDate: Date | null; endDate: Date | null }) => {
+      setDateRange(range);
+      setStartDateFilter(
+        range.startDate ? range.startDate.toISOString().split("T")[0] : "",
+      );
+      setEndDateFilter(
+        range.endDate ? range.endDate.toISOString().split("T")[0] : "",
+      );
+      setCurrentPage(1);
+    },
+    [],
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -376,6 +360,13 @@ const ReservationsPage = () => {
     </div>
   );
 
+  const getPageNumbers = (): (number | "ellipsis")[] => {
+    if (lastPage <= 6) {
+      return Array.from({ length: lastPage }, (_, i) => i + 1);
+    }
+    return [1, 2, 3, "ellipsis", lastPage - 2, lastPage - 1, lastPage];
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -419,14 +410,20 @@ const ReservationsPage = () => {
                 placeholder="Caută rezervări..."
                 aria-label="Caută rezervări"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
               />
             </div>
 
             <Select
               value={statusFilter}
-              onValueChange={setStatusFilter}
+              onValueChange={(v) => {
+                setStatusFilter(v);
+                setCurrentPage(1);
+              }}
               placeholder="Toate statusurile"
               aria-label="Filtrează după status"
             >
@@ -439,57 +436,110 @@ const ReservationsPage = () => {
               <option value="cancelled">Anulat</option>
             </Select>
 
-            <Select
-              value={dateFilter}
-              onValueChange={setDateFilter}
-              placeholder="Toate perioadele"
-              aria-label="Filtrează după perioadă"
-            >
-              <option value="all">Toate perioadele</option>
-              <option value="today">Astăzi</option>
-              <option value="week">Următoarea săptămână</option>
-              <option value="month">Următoarea lună</option>
-            </Select>
+            <div className="relative">
+              <button
+                onClick={() => setShowCalendar(true)}
+                className="w-full flex items-center pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-left hover:bg-gray-50"
+                aria-label="Selectează perioada"
+              >
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                {startDateFilter && endDateFilter ? (
+                  <span>
+                    {new Date(startDateFilter).toLocaleDateString("ro-RO")} - {""}
+                    {new Date(endDateFilter).toLocaleDateString("ro-RO")}
+                  </span>
+                ) : (
+                  <span className="text-gray-500">Perioada</span>
+                )}
+              </button>
+            </div>
 
             <div className="flex items-center justify-between">
               <span className="font-dm-sans text-gray-600">
-                {filteredReservations.length} rezervări găsite
+                {totalReservations} rezervări găsite
               </span>
             </div>
           </div>
         </div>
+        <Popup
+          open={showCalendar}
+          onClose={() => setShowCalendar(false)}
+          className="p-0"
+        >
+          <DateRangePicker
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            onClose={() => setShowCalendar(false)}
+          />
+        </Popup>
 
         {/* Reservations Table */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <DataTable
-            data={filteredReservations}
+            data={reservations}
             columns={reservationColumns}
             renderRowDetails={renderReservationDetails}
           />
 
           <div className="flex items-center justify-between py-2 px-4 text-sm">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-2 py-1 text-gray-600 disabled:opacity-50"
-              aria-label="Pagina anterioară"
-            >
-              Anterior
-            </button>
-            <span className="text-gray-600">
-              Pagina {currentPage} din {lastPage}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, lastPage))}
-              disabled={currentPage === lastPage}
-              className="px-2 py-1 text-gray-600 disabled:opacity-50"
-              aria-label="Pagina următoare"
-            >
-              Următoarea
-            </button>
+            <div className="flex items-center space-x-2 w-[10rem]">
+              <span className="text-gray-600 w-full">Pe pagină:</span>
+              <Select
+                value={perPage.toString()}
+                onValueChange={(v) => {
+                  setPerPage(Number(v));
+                  setCurrentPage(1);
+                }}
+                aria-label="Rezervări pe pagină"
+                className="w-20"
+              >
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-2 py-1 text-gray-600 disabled:opacity-50"
+                aria-label="Pagina anterioară"
+              >
+                Anterior
+              </button>
+              {getPageNumbers().map((page, idx) =>
+                page === "ellipsis" ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 py-1">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page as number)}
+                    className={`px-2 py-1 rounded ${
+                      currentPage === page
+                        ? "bg-jade text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                    aria-label={`Pagina ${page}`}
+                  >
+                    {page}
+                  </button>
+                ),
+              )}
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, lastPage))}
+                disabled={currentPage === lastPage}
+                className="px-2 py-1 text-gray-600 disabled:opacity-50"
+                aria-label="Pagina următoare"
+              >
+                Următoarea
+              </button>
+            </div>
           </div>
 
-          {filteredReservations.length === 0 && (
+          {reservations.length === 0 && (
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-poppins font-semibold text-gray-600 mb-2">

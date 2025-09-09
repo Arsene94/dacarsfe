@@ -132,10 +132,21 @@ class ApiClient {
         });
     }
 
-    async getBookings(params: { page?: number; perPage?: number } = {}) {
+    async getBookings(params: {
+        page?: number;
+        perPage?: number;
+        search?: string;
+        status?: string;
+        start_date?: string;
+        end_date?: string;
+    } = {}) {
         const searchParams = new URLSearchParams();
         if (params.page) searchParams.append('page', params.page.toString());
         if (params.perPage) searchParams.append('per_page', params.perPage.toString());
+        if (params.search) searchParams.append('search', params.search);
+        if (params.status) searchParams.append('status', params.status);
+        if (params.start_date) searchParams.append('start_date', params.start_date);
+        if (params.end_date) searchParams.append('end_date', params.end_date);
         const query = searchParams.toString();
         return this.request<any>(`/bookings${query ? `?${query}` : ''}`);
     }

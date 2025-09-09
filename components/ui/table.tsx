@@ -94,12 +94,30 @@ export function DataTable<T extends Record<string, any>>({
           {paginatedData.map((row, i) => (
             <React.Fragment key={i}>
               <tr
-                className={`border-b hover:bg-gray-200 transition-colors ${i % 2 !== 0 ? 'bg-gray-100' : ''}`}
+                className={`border-b hover:bg-gray-200 transition-colors ${
+                  i % 2 !== 0 ? 'bg-gray-100' : ''
+                } ${renderRowDetails ? 'cursor-pointer' : ''}`}
+                onClick={
+                  renderRowDetails
+                    ? (e) => {
+                        const target = e.target as HTMLElement;
+                        if (
+                          target.closest('button, a, input, label, select')
+                        ) {
+                          return;
+                        }
+                        toggleRow(i);
+                      }
+                    : undefined
+                }
               >
                 {renderRowDetails && (
                   <td className="py-3 px-4">
                     <button
-                      onClick={() => toggleRow(i)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleRow(i);
+                      }}
                       aria-label="Afișează detalii"
                       className="flex items-center justify-center text-sm"
                     >

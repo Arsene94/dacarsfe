@@ -238,6 +238,9 @@ const AdminDashboard = () => {
                 plan: 0,
                 status: "pending",
                 total: 190,
+                couponAmount: 0,
+                subTotal: 0,
+                taxAmount: 0
             },
             {
                 id: "DC004",
@@ -250,6 +253,9 @@ const AdminDashboard = () => {
                 plan: 1,
                 status: "completed",
                 total: 180,
+                couponAmount: 0,
+                subTotal: 0,
+                taxAmount: 0
             },
             {
                 id: "DC005",
@@ -262,6 +268,9 @@ const AdminDashboard = () => {
                 endDate: "2025-02-12",
                 status: "cancelled",
                 total: 170,
+                couponAmount: 0,
+                subTotal: 0,
+                taxAmount: 0
             },
         ];
 
