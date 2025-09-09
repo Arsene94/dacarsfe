@@ -919,53 +919,24 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                         <div className="w-1/3 space-y-4">
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Preț/zi
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.price_per_day}
-                                </div>
+                            <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                                Preț per zi: {bookingInfo.price_per_day}€ x {bookingInfo.days} zile
                             </div>
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Reducere
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.coupon_amount}
+                            {bookingInfo.coupon_amount > 0 && (
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                                    Discount: {bookingInfo.coupon_amount}€
                                 </div>
+                            )}
+                            {bookingInfo.total_services > 0 && (
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                                    Total Servicii: {bookingInfo.total_services}€
+                                </div>
+                            )}
+                            <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                                Subtotal: {bookingInfo.sub_total}€
                             </div>
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Cod reducere
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.coupon_code}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Total servicii
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.total_services}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Subtotal
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.sub_total}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Total
-                                </label>
-                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
-                                    {bookingInfo.total}
-                                </div>
+                            <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                                Total: {bookingInfo.total}€
                             </div>
                         </div>
                     </div>
