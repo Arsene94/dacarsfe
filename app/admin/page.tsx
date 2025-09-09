@@ -252,7 +252,7 @@ const AdminDashboard = () => {
                     search: query,
                     start_date: activityDetails?.arrivalDate + ' ' + activityDetails?.arrivalTime,
                     end_date: activityDetails?.returnDate + ' ' + activityDetails?.returnTime,
-                    limit: 10,
+                    limit: 100,
                 });
                 const list = Array.isArray(resp?.data)
                     ? resp.data
