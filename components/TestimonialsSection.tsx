@@ -58,10 +58,10 @@ const TestimonialsSection = () => {
     <section className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 animate-fade-in">
-          <h2 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
+          <h2 className="text-4xl lg:text-5xl font-sans font-bold text-berkeley mb-6">
             Prietenul de nădejde <span className="text-jade">de la sosire</span>
           </h2>
-          <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl font-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Citește experiențele clienților noștri și descoperă de ce ne aleg an de an.
           </p>
         </div>
@@ -78,7 +78,7 @@ const TestimonialsSection = () => {
                 ))}
               </div>
 
-              <blockquote className="text-2xl lg:text-3xl font-dm-sans text-gray-800 text-center leading-relaxed mb-8">
+              <blockquote className="text-2xl lg:text-3xl font-sans text-gray-800 text-center leading-relaxed mb-8">
                   &quot;{testimonials[currentTestimonial].text}&quot;
               </blockquote>
 
@@ -91,10 +91,10 @@ const TestimonialsSection = () => {
                   className="rounded-full object-cover ring-4 ring-jade/20"
                 />
                 <div className="text-center">
-                  <div className="font-poppins font-semibold text-berkeley text-lg">
+                  <div className="font-sans font-semibold text-berkeley text-lg">
                     {testimonials[currentTestimonial].name}
                   </div>
-                  <div className="font-dm-sans text-gray-600">
+                  <div className="font-sans text-gray-600">
                     {testimonials[currentTestimonial].location}
                   </div>
                 </div>
@@ -157,7 +157,7 @@ const TestimonialsSection = () => {
                   className="rounded-full object-cover"
                 />
                 <div>
-                  <div className="font-poppins font-semibold text-berkeley">
+                  <div className="font-sans font-semibold text-berkeley">
                     {testimonial.name}
                   </div>
                   <div className="flex">
@@ -168,7 +168,7 @@ const TestimonialsSection = () => {
                 </div>
               </div>
 
-              <p className="text-gray-600 font-dm-sans text-sm line-clamp-3">
+              <p className="text-gray-600 font-sans text-sm line-clamp-3">
                 {testimonial.text}
               </p>
             </div>

@@ -53,7 +53,7 @@ const Header = () => {
               <Link
                 key={item.name}
                 href={item.href}
-                className="text-eefie font-dm-sans font-medium hover:text-jade transition-colors duration-300 relative group"
+                className="text-eefie font-sans font-medium hover:text-jade transition-colors duration-300 relative group"
                 aria-label={item.name}
               >
                 {item.name}
@@ -91,7 +91,7 @@ const Header = () => {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="block px-3 py-2 text-base font-dm-sans font-medium text-eefie hover:text-jade hover:bg-gray-50 rounded-md transition-colors duration-300"
+                  className="block px-3 py-2 text-base font-sans font-medium text-eefie hover:text-jade hover:bg-gray-50 rounded-md transition-colors duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
                   aria-label={item.name}
                 >

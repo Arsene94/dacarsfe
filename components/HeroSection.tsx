@@ -174,16 +174,16 @@ const HeroSection = () => {
           <div className="animate-slide-in-left">
             <div className="inline-flex items-center px-4 py-2 bg-jade/40 rounded-full mb-6">
               <Star className="h-4 w-4 text-white mr-2" />
-              <span className="text-white font-dm-sans font-medium">
+              <span className="text-white font-sans font-medium">
                 Te ținem aproape de casă
               </span>
             </div>
 
-            <h1 className="text-4xl lg:text-6xl font-poppins font-bold leading-tight mb-6">
+            <h1 className="text-4xl lg:text-6xl font-sans font-bold leading-tight mb-6">
                 Închiriere auto București - Otopeni{" "}
             </h1>
 
-            <p className="text-xl lg:text-2xl font-dm-sans text-gray-200 mb-8 leading-relaxed">
+            <p className="text-xl lg:text-2xl font-sans text-gray-200 mb-8 leading-relaxed">
               Predare în aeroport în sub 5 minute. <br />
               <span className="text-jadeLight font-semibold">
                 Fără taxe ascunse.
@@ -217,7 +217,7 @@ const HeroSection = () => {
                   <Clock className="h-5 w-5 text-jade" aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="font-dm-sans font-semibold">Sub 5 min</p>
+                  <p className="font-sans font-semibold">Sub 5 min</p>
                   <p className="text-sm text-gray-300">Predare rapidă</p>
                 </div>
               </div>
@@ -227,7 +227,7 @@ const HeroSection = () => {
                   <Shield className="h-5 w-5 text-jade" aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="font-dm-sans font-semibold">Fără taxe</p>
+                  <p className="font-sans font-semibold">Fără taxe</p>
                   <p className="text-sm text-gray-300">Preț transparent</p>
                 </div>
               </div>
@@ -237,7 +237,7 @@ const HeroSection = () => {
                   <Star className="h-5 w-5 text-jade" aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="font-dm-sans font-semibold">24/7</p>
+                  <p className="font-sans font-semibold">24/7</p>
                   <p className="text-sm text-gray-300">Disponibil non-stop</p>
                 </div>
               </div>
@@ -267,7 +267,7 @@ const HeroSection = () => {
             <div className="space-y-2">
               <Label
                 htmlFor="hero-pickup-date"
-                className="text-sm text-white font-medium font-['DM_Sans']"
+                className="text-sm text-white font-medium font-sans"
               >
                 Data ridicare
               </Label>
@@ -289,7 +289,7 @@ const HeroSection = () => {
             <div className="space-y-2">
               <Label
                 htmlFor="hero-return-date"
-                className="text-sm text-white font-medium font-['DM_Sans']"
+                className="text-sm text-white font-medium font-sans"
               >
                 Data returnare
               </Label>
@@ -311,7 +311,7 @@ const HeroSection = () => {
             <div className="space-y-2">
               <Label
                 htmlFor="hero-location"
-                className="text-sm text-white font-medium font-['DM_Sans']"
+                className="text-sm text-white font-medium font-sans"
               >
                 Locația
               </Label>
@@ -332,7 +332,7 @@ const HeroSection = () => {
             <div className="space-y-2">
               <Label
                 htmlFor="hero-car-type"
-                className="text-sm text-white font-medium font-['DM_Sans']"
+                className="text-sm text-white font-medium font-sans"
               >
                 Tip mașină
               </Label>

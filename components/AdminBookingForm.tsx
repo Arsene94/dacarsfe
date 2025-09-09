@@ -50,7 +50,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
         <div className="flex items-start gap-6">
             <div className="w-2/3 grid grid-cols-2 gap-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
                 <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         Mașină
                     </label>
                     <SearchSelect
@@ -88,7 +88,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                                     className="w-16 h-10 object-cover rounded"
                                 />
                                 <div className="text-left">
-                                    <div className="font-dm-sans font-semibold">{car.name}</div>
+                                    <div className="font-sans font-semibold">{car.name}</div>
                                     <div className="text-xs">
                                         {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
                                     </div>
@@ -117,7 +117,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                                     className="w-16 h-10 object-cover rounded"
                                 />
                                 <div className="text-left">
-                                    <div className="font-dm-sans font-semibold text-gray-700">
+                                    <div className="font-sans font-semibold text-gray-700">
                                         {car.name}
                                     </div>
                                     <div className="text-xs text-gray-600">
@@ -129,7 +129,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                     />
                 </div>
                 <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         ID client
                     </label>
                     <Input
@@ -141,7 +141,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                     />
                 </div>
                 <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         Nume client
                     </label>
                     <Input
@@ -153,7 +153,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                     />
                 </div>
                 <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         Email
                     </label>
                     <Input
@@ -165,7 +165,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                     />
                 </div>
                 <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         Telefon
                     </label>
                     <Input
@@ -177,7 +177,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                     />
                 </div>
                 <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         Vârsta client
                     </label>
                     <Input
@@ -189,7 +189,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                     />
                 </div>
                 <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         Data preluare
                     </label>
                     <Input
@@ -199,7 +199,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                     />
                 </div>
                 <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         Data returnare
                     </label>
                     <Input
@@ -219,12 +219,12 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                             })
                         }
                     />
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         Cu depozit
                     </label>
                 </div>
                 <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         Coupon
                     </label>
                     <Input
@@ -236,7 +236,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                     />
                 </div>
                 <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         Notițe
                     </label>
                     <Input
@@ -248,7 +248,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                     />
                 </div>
                 <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                    <label className="text-sm font-sans font-semibold text-gray-700">
                         Status
                     </label>
                     <Input
@@ -261,23 +261,23 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                 </div>
             </div>
             <div className="w-1/3 h-fit sticky top-0 space-y-2 p-4 border border-gray-300 rounded-lg bg-gray-50">
-                <div className="font-dm-sans text-sm">
+                <div className="font-sans text-sm">
                     Preț per zi: {bookingInfo.price_per_day}€ x {bookingInfo.days} zile
                 </div>
                 {bookingInfo.coupon_amount > 0 && (
-                    <div className="font-dm-sans text-sm">
+                    <div className="font-sans text-sm">
                         Discount: {bookingInfo.coupon_amount}€
                     </div>
                 )}
                 {bookingInfo.total_services > 0 && (
-                    <div className="font-dm-sans text-sm">
+                    <div className="font-sans text-sm">
                         Total Servicii: {bookingInfo.total_services}€
                     </div>
                 )}
-                <div className="font-dm-sans text-sm">
+                <div className="font-sans text-sm">
                     Subtotal: {bookingInfo.sub_total}€
                 </div>
-                <div className="font-dm-sans text-sm font-semibold">
+                <div className="font-sans text-sm font-semibold">
                     Total: {bookingInfo.total}€
                 </div>
             </div>

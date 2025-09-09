@@ -73,7 +73,7 @@ const reservationColumns: Column<AdminReservation>[] = [
         accessor: (r) => r.id,
         sortable: true,
         cell: (r) => (
-            <span className="font-dm-sans text-sm text-berkeley font-semibold">
+            <span className="font-sans text-sm text-berkeley font-semibold">
         {r.id}
       </span>
         ),
@@ -84,7 +84,7 @@ const reservationColumns: Column<AdminReservation>[] = [
         accessor: (r) => r.customerName,
         sortable: true,
         cell: (r) => (
-            <span className="font-dm-sans text-sm text-gray-900">
+            <span className="font-sans text-sm text-gray-900">
         {r.customerName}
       </span>
         ),
@@ -94,7 +94,7 @@ const reservationColumns: Column<AdminReservation>[] = [
         header: "Telefon",
         accessor: (r) => r.phone,
         cell: (r) => (
-            <span className="font-dm-sans text-sm text-gray-600">{r.phone}</span>
+            <span className="font-sans text-sm text-gray-600">{r.phone}</span>
         ),
     },
     {
@@ -102,7 +102,7 @@ const reservationColumns: Column<AdminReservation>[] = [
         header: "Mașină",
         accessor: (r) => r.carName,
         cell: (r) => (
-            <span className="font-dm-sans text-sm text-gray-900">{r.carName}</span>
+            <span className="font-sans text-sm text-gray-900">{r.carName}</span>
         ),
     },
     {
@@ -110,7 +110,7 @@ const reservationColumns: Column<AdminReservation>[] = [
         header: "Perioada",
         accessor: (r) => new Date(r.startDate).getTime(),
         cell: (r) => (
-            <span className="font-dm-sans text-sm text-gray-600">
+            <span className="font-sans text-sm text-gray-600">
         {new Date(r.startDate).toLocaleDateString("ro-RO")} -
                 {" "}
                 {new Date(r.endDate).toLocaleDateString("ro-RO")}
@@ -123,7 +123,7 @@ const reservationColumns: Column<AdminReservation>[] = [
         accessor: (r) => r.status,
         cell: (r) => (
             <span
-                className={`px-2 py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
+                className={`px-2 py-1 rounded-full text-xs font-sans ${getStatusColor(
                     r.status,
                 )}`}
             >
@@ -137,7 +137,7 @@ const reservationColumns: Column<AdminReservation>[] = [
         accessor: (r) => r.total,
         sortable: true,
         cell: (r) => (
-            <span className="font-dm-sans text-sm font-semibold text-berkeley">
+            <span className="font-sans text-sm font-semibold text-berkeley">
         {r.total}€
       </span>
         ),
@@ -473,10 +473,10 @@ const AdminDashboard = () => {
                     <div className="bg-white rounded-xl p-6 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-dm-sans text-gray-600">
+                                <p className="text-sm font-sans text-gray-600">
                                     Rezervări astăzi
                                 </p>
-                                <p className="text-2xl font-poppins font-bold text-berkeley">
+                                <p className="text-2xl font-sans font-bold text-berkeley">
                                     {bookingsTodayCount}
                                 </p>
                             </div>
@@ -487,10 +487,10 @@ const AdminDashboard = () => {
                     <div className="bg-white rounded-xl p-6 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-dm-sans text-gray-600">
+                                <p className="text-sm font-sans text-gray-600">
                                     Mașini disponibile
                                 </p>
-                                <p className="text-2xl font-poppins font-bold text-berkeley">
+                                <p className="text-2xl font-sans font-bold text-berkeley">
                                     {availableCarsCount}
                                 </p>
                             </div>
@@ -501,10 +501,10 @@ const AdminDashboard = () => {
                     <div className="bg-white rounded-xl p-6 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-dm-sans text-gray-600">
+                                <p className="text-sm font-sans text-gray-600">
                                     Total rezervări
                                 </p>
-                                <p className="text-2xl font-poppins font-bold text-berkeley">
+                                <p className="text-2xl font-sans font-bold text-berkeley">
                                     {bookingsTotalCount}
                                 </p>
                             </div>
@@ -518,17 +518,17 @@ const AdminDashboard = () => {
                     {/* Calendar */}
                     <div className="bg-white rounded-xl shadow-sm p-6">
                         <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl font-poppins font-semibold text-berkeley">
+                            <h2 className="text-xl font-sans font-semibold text-berkeley">
                                 Activitate Auto - {getCarActivityLabel(carActivityDay)}
                             </h2>
                             <div className="flex items-center space-x-4">
                                 <div className="flex items-center space-x-2">
                                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                                    <span className="text-sm font-dm-sans text-gray-600">Plecare</span>
+                                    <span className="text-sm font-sans text-gray-600">Plecare</span>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                                    <span className="text-sm font-dm-sans text-gray-600">Sosire</span>
+                                    <span className="text-sm font-sans text-gray-600">Sosire</span>
                                 </div>
                             </div>
                         </div>
@@ -537,7 +537,7 @@ const AdminDashboard = () => {
                         <div className="mb-6">
                             <div className="flex items-center space-x-3">
                                 <Calendar className="h-5 w-5 text-jade" />
-                                <label htmlFor="day-selector" className="text-sm font-dm-sans font-semibold text-gray-700">
+                                <label htmlFor="day-selector" className="text-sm font-sans font-semibold text-gray-700">
                                     Selectează ziua:
                                 </label>
                             </div>
@@ -575,8 +575,8 @@ const AdminDashboard = () => {
                                         <div className="bg-gradient-to-r from-berkeley/5 to-jade/5 px-6 py-4 border-b border-gray-200">
                                             <div className="flex items-center space-x-3">
                                                 <Clock className="h-5 w-5 text-berkeley" />
-                                                <h3 className="text-lg font-poppins font-semibold text-berkeley">{hour}</h3>
-                                                <span className="text-sm font-dm-sans text-gray-600">
+                                                <h3 className="text-lg font-sans font-semibold text-berkeley">{hour}</h3>
+                                                <span className="text-sm font-sans text-gray-600">
                                                     {events.length} activitate{events.length !== 1 ? 'i' : ''}
                                                 </span>
                                             </div>
@@ -615,7 +615,7 @@ const AdminDashboard = () => {
                                                                     >
                                                                         {isDeparture ? 'Plecare' : 'Sosire'}
                                                                     </span>
-                                                                    <span className="text-sm font-dm-sans font-semibold text-gray-900">
+                                                                    <span className="text-sm font-sans font-semibold text-gray-900">
                                                                         {r.car?.license_plate}
                                                                     </span>
                                                                     {r.child_seat_service_name && (
@@ -695,10 +695,10 @@ const AdminDashboard = () => {
                             {activityHours.length === 0 && (
                                 <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
                                     <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                    <h3 className="text-lg font-poppins font-semibold text-gray-600 mb-2">
+                                    <h3 className="text-lg font-sans font-semibold text-gray-600 mb-2">
                                         Nu există alte activități
                                     </h3>
-                                    <p className="text-gray-500 font-dm-sans">
+                                    <p className="text-gray-500 font-sans">
                                         Toate activitățile pentru ziua selectată sunt afișate mai sus.
                                     </p>
                                 </div>
@@ -711,12 +711,12 @@ const AdminDashboard = () => {
                 <div className="mt-8">
                     <div className="bg-white rounded-xl shadow-sm p-6">
                         <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl font-poppins font-semibold text-berkeley">
+                            <h2 className="text-xl font-sans font-semibold text-berkeley">
                                 Rezervări Recente
                             </h2>
                             <Link
                                 href="/admin/bookings"
-                                className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors"
+                                className="px-4 py-2 bg-jade text-white font-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors"
                                 aria-label="Vezi toate rezervările"
                             >
                                 Vezi toate
@@ -733,14 +733,14 @@ const AdminDashboard = () => {
                     onClose={() => setPopupOpen(false)}
                     className="max-w-xl"
                 >
-                    <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">Detalii rezervare</h3>
+                    <h3 className="text-lg font-sans font-semibold text-berkeley mb-4">Detalii rezervare</h3>
                     <div className="space-y-2 mb-4">
-                        <div className="text-sm font-dm-sans"><span className="font-semibold">Client:</span> {activityDetails.customer}</div>
-                        <div className="text-sm font-dm-sans"><span className="font-semibold">Telefon:</span> {activityDetails.phone}</div>
-                        <div className="text-sm font-dm-sans"><span className="font-semibold">Mașină:</span> {activityDetails.car}</div>
-                        <div className="text-sm font-dm-sans"><span className="font-semibold">Preț per zi:</span> {activityDetails.price_per_day}€ x {activityDetails.days}</div>
+                        <div className="text-sm font-sans"><span className="font-semibold">Client:</span> {activityDetails.customer}</div>
+                        <div className="text-sm font-sans"><span className="font-semibold">Telefon:</span> {activityDetails.phone}</div>
+                        <div className="text-sm font-sans"><span className="font-semibold">Mașină:</span> {activityDetails.car}</div>
+                        <div className="text-sm font-sans"><span className="font-semibold">Preț per zi:</span> {activityDetails.price_per_day}€ x {activityDetails.days}</div>
                         {activityDetails.services.length > 0 && (
-                            <div className="text-sm font-dm-sans">
+                            <div className="text-sm font-sans">
                                 <span className="font-semibold">Servicii:</span>
                                 <ul className="list-disc list-inside">
                                     {activityDetails.services.map((s: { id: number; name: string }, index: number) => (
@@ -749,15 +749,15 @@ const AdminDashboard = () => {
                                 </ul>
                             </div>
                         )}
-                        {activityDetails.services.length > 0 && (<div className="text-sm font-dm-sans"><span className="font-semibold">Preț servicii:</span> {activityDetails.total_services}€</div>)}
-                        {activityDetails.coupon_amount > 0 && (<div className="text-sm font-dm-sans"><span className="font-semibold">Discount:</span> {activityDetails.coupon_amount}€</div>)}
-                        <div className="text-sm font-dm-sans"><span className="font-semibold">Total:</span> {activityDetails.total}€</div>
-                        {activityDetails.note && (<div className="text-sm font-dm-sans"><span className="font-semibold">Notițe:</span> {activityDetails.note}</div>)}
+                        {activityDetails.services.length > 0 && (<div className="text-sm font-sans"><span className="font-semibold">Preț servicii:</span> {activityDetails.total_services}€</div>)}
+                        {activityDetails.coupon_amount > 0 && (<div className="text-sm font-sans"><span className="font-semibold">Discount:</span> {activityDetails.coupon_amount}€</div>)}
+                        <div className="text-sm font-sans"><span className="font-semibold">Total:</span> {activityDetails.total}€</div>
+                        {activityDetails.note && (<div className="text-sm font-sans"><span className="font-semibold">Notițe:</span> {activityDetails.note}</div>)}
 
                     </div>
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Sosire</label>
+                            <label className="text-sm font-sans font-semibold text-gray-700">Sosire</label>
                             <div className="flex gap-2">
                                 <Input
                                     type="date"
@@ -782,7 +782,7 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                         <div>
-                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Retur</label>
+                            <label className="text-sm font-sans font-semibold text-gray-700">Retur</label>
                             <div className="flex gap-2">
                                 <Input
                                     type="date"
@@ -822,7 +822,7 @@ const AdminDashboard = () => {
                     onClose={() => setEditPopupOpen(false)}
                     className="max-w-5xl w-full max-h-[80vh] overflow-y-auto"
                 >
-                    <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">
+                    <h3 className="text-lg font-sans font-semibold text-berkeley mb-4">
                         Editează rezervarea
                     </h3>
                     <AdminBookingForm

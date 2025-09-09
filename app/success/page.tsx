@@ -20,7 +20,7 @@ const SuccessPage = () => {
     return (
       <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600 font-dm-sans">Se încarcă detaliile rezervării...</p>
+          <p className="text-gray-600 font-sans">Se încarcă detaliile rezervării...</p>
         </div>
       </div>
     );
@@ -35,18 +35,18 @@ const SuccessPage = () => {
             <CheckCircle className="h-12 w-12 text-jade" />
           </div>
 
-          <h1 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
+          <h1 className="text-4xl lg:text-5xl font-sans font-bold text-berkeley mb-6">
             Rezervarea este <span className="text-jade">confirmată!</span>
           </h1>
 
-          <p className="text-xl lg:text-2xl font-dm-sans text-gray-700 leading-relaxed max-w-3xl mx-auto">
+          <p className="text-xl lg:text-2xl font-sans text-gray-700 leading-relaxed max-w-3xl mx-auto">
             Mulțumim, <strong>{reservationData.customer_name}</strong>! Mașina ta te așteaptă la aeroport.
             <br className="hidden sm:block" />
             <span className="text-jade font-semibold">Ne vedem acasă!</span>
           </p>
 
           <div className="mt-8 inline-flex items-center px-6 py-3 bg-jade/10 rounded-full">
-            <span className="text-jade font-dm-sans font-semibold">
+            <span className="text-jade font-sans font-semibold">
               Rezervarea #{reservationData.reservationId}
             </span>
           </div>
@@ -54,7 +54,7 @@ const SuccessPage = () => {
 
         {/* Reservation Details */}
         <div className="bg-white rounded-3xl shadow-xl p-8 lg:p-12 mb-12 animate-slide-up">
-          <h2 className="text-3xl font-poppins font-bold text-berkeley mb-8 text-center">
+          <h2 className="text-3xl font-sans font-bold text-berkeley mb-8 text-center">
             Detaliile rezervării tale
           </h2>
 
@@ -66,8 +66,8 @@ const SuccessPage = () => {
                   <Car className="h-6 w-6 text-jade" />
                 </div>
                 <div>
-                  <h3 className="font-poppins font-semibold text-berkeley text-lg">Mașina ta</h3>
-                  <p className="font-dm-sans text-gray-600 capitalize">
+                  <h3 className="font-sans font-semibold text-berkeley text-lg">Mașina ta</h3>
+                  <p className="font-sans text-gray-600 capitalize">
                     {reservationData.selectedCar.name}
                   </p>
                 </div>
@@ -78,11 +78,11 @@ const SuccessPage = () => {
                   <Calendar className="h-6 w-6 text-jade" />
                 </div>
                 <div>
-                  <h3 className="font-poppins font-semibold text-berkeley text-lg">Perioada</h3>
-                  <p className="font-dm-sans text-gray-600">
+                  <h3 className="font-sans font-semibold text-berkeley text-lg">Perioada</h3>
+                  <p className="font-sans text-gray-600">
                     <strong>Ridicare:</strong> {new Date(reservationData.rental_start_date).toLocaleDateString('ro-RO')} la {reservationData.rental_start_time}
                   </p>
-                  <p className="font-dm-sans text-gray-600">
+                  <p className="font-sans text-gray-600">
                     <strong>Returnare:</strong> {new Date(reservationData.rental_end_date).toLocaleDateString('ro-RO')} la {reservationData.rental_end_time}
                   </p>
                 </div>
@@ -93,8 +93,8 @@ const SuccessPage = () => {
                   <MapPin className="h-6 w-6 text-jade" />
                 </div>
                 <div>
-                  <h3 className="font-poppins font-semibold text-berkeley text-lg">Locația</h3>
-                  <p className="font-dm-sans text-gray-600">
+                  <h3 className="font-sans font-semibold text-berkeley text-lg">Locația</h3>
+                  <p className="font-sans text-gray-600">
                     {reservationData.location === 'aeroport' && 'Aeroport Henri Coandă, Otopeni'}
                     {reservationData.location === 'city' && 'Centrul Bucureștiului'}
                     {reservationData.location === 'other' && 'Altă locație'}
@@ -106,26 +106,26 @@ const SuccessPage = () => {
             {/* Right Column */}
             <div className="space-y-6">
               <div className="bg-jade/5 rounded-2xl p-6">
-                <h3 className="font-poppins font-semibold text-berkeley text-lg mb-4">
+                <h3 className="font-sans font-semibold text-berkeley text-lg mb-4">
                   Costul total
                 </h3>
-                <div className="text-lg font-dm-sans text-gray-600 mb-1">
+                <div className="text-lg font-sans text-gray-600 mb-1">
                   Subtotal: {reservationData.sub_total.toFixed(2)}€
                 </div>
                 {reservationData.total_services > 0 && (
-                  <div className="text-lg font-dm-sans text-gray-600 mb-1">
+                  <div className="text-lg font-sans text-gray-600 mb-1">
                     Servicii: +{reservationData.total_services.toFixed(2)}€
                   </div>
                 )}
                 {reservationData.coupon_amount > 0 && (
-                  <div className="text-lg font-dm-sans text-jade mb-2">
+                  <div className="text-lg font-sans text-jade mb-2">
                     Reducere: -{reservationData.coupon_amount.toFixed(2)}€
                   </div>
                 )}
-                <div className="text-4xl font-poppins font-bold text-jade mb-2">
+                <div className="text-4xl font-sans font-bold text-jade mb-2">
                   {reservationData.total.toFixed(2)}€
                 </div>
-                <p className="font-dm-sans text-gray-600 text-sm">
+                <p className="font-sans text-gray-600 text-sm">
                   *Preț final, fără taxe ascunse
                 </p>
               </div>
@@ -136,8 +136,8 @@ const SuccessPage = () => {
                     <Clock className="h-6 w-6 text-jade" />
                   </div>
                   <div>
-                    <h3 className="font-poppins font-semibold text-berkeley text-lg">Zborul tău</h3>
-                    <p className="font-dm-sans text-gray-600">
+                    <h3 className="font-sans font-semibold text-berkeley text-lg">Zborul tău</h3>
+                    <p className="font-sans text-gray-600">
                       {reservationData.flight_number}
                     </p>
                   </div>
@@ -149,37 +149,37 @@ const SuccessPage = () => {
 
         {/* Important Information */}
         <div className="bg-berkeley text-white rounded-3xl p-8 lg:p-12 mb-12 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-          <h2 className="text-3xl font-poppins font-bold mb-8 text-center">
+          <h2 className="text-3xl font-sans font-bold mb-8 text-center">
             Ce urmează?
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="bg-jade w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-poppins font-bold">1</span>
+                <span className="text-2xl font-sans font-bold">1</span>
               </div>
-              <h3 className="font-poppins font-semibold text-xl mb-2">La aterizare</h3>
-              <p className="font-dm-sans text-gray-300">
+              <h3 className="font-sans font-semibold text-xl mb-2">La aterizare</h3>
+              <p className="font-sans text-gray-300">
                 Sună-ne la numărul de telefon când ieși din terminal
               </p>
             </div>
 
             <div className="text-center">
               <div className="bg-jade w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-poppins font-bold">2</span>
+                <span className="text-2xl font-sans font-bold">2</span>
               </div>
-              <h3 className="font-poppins font-semibold text-xl mb-2">Te întâlnim</h3>
-              <p className="font-dm-sans text-gray-300">
+              <h3 className="font-sans font-semibold text-xl mb-2">Te întâlnim</h3>
+              <p className="font-sans text-gray-300">
                 Ajungem la tine în parcarea de scurtă durată în sub 5 minute
               </p>
             </div>
 
             <div className="text-center">
               <div className="bg-jade w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-poppins font-bold">3</span>
+                <span className="text-2xl font-sans font-bold">3</span>
               </div>
-              <h3 className="font-poppins font-semibold text-xl mb-2">Drum bun!</h3>
-              <p className="font-dm-sans text-gray-300">
+              <h3 className="font-sans font-semibold text-xl mb-2">Drum bun!</h3>
+              <p className="font-sans text-gray-300">
                 Primești cheile și poți pleca acasă în siguranță
               </p>
             </div>
@@ -187,15 +187,15 @@ const SuccessPage = () => {
 
           <div className="text-center mt-8 p-6 bg-jade/20 rounded-2xl">
             <Phone className="h-8 w-8 text-jade mx-auto mb-3" />
-            <p className="font-dm-sans text-lg mb-2">Contactează-ne oricând:</p>
+            <p className="font-sans text-lg mb-2">Contactează-ne oricând:</p>
             <a
               href="tel:+40722123456"
-              className="text-jade font-poppins font-bold text-2xl hover:text-jade/80 transition-colors duration-300"
+              className="text-jade font-sans font-bold text-2xl hover:text-jade/80 transition-colors duration-300"
               aria-label="Sună la +40 722 123 456"
             >
               +40 722 123 456
             </a>
-            <p className="font-dm-sans text-sm text-gray-300 mt-2">
+            <p className="font-sans text-sm text-gray-300 mt-2">
               Disponibili 24/7 pentru urgențe
             </p>
           </div>
@@ -226,7 +226,7 @@ const SuccessPage = () => {
 
         {/* Footer note */}
         <div className="text-center mt-12">
-          <p className="font-dm-sans text-gray-600">
+          <p className="font-sans text-gray-600">
             Vei primi o confirmare prin email cu toate detaliile rezervării.
           </p>
         </div>

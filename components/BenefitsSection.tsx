@@ -29,10 +29,10 @@ const BenefitsSection = () => {
     <section className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 animate-fade-in">
-          <h2 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
+          <h2 className="text-4xl lg:text-5xl font-sans font-bold text-berkeley mb-6">
             De ce să alegi <span className="text-jade">DaCars</span>?
           </h2>
-          <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl font-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Serviciu de încredere, creat special pentru românii care călătoresc și au nevoie de o mașină la întoarcerea acasă.
           </p>
         </div>
@@ -48,11 +48,11 @@ const BenefitsSection = () => {
                 <benefit.icon className="h-8 w-8 text-jade" />
               </div>
 
-              <h3 className="text-xl font-poppins font-semibold text-berkeley mb-4">
+              <h3 className="text-xl font-sans font-semibold text-berkeley mb-4">
                 {benefit.title}
               </h3>
 
-              <p className="text-gray-600 font-dm-sans leading-relaxed">
+              <p className="text-gray-600 font-sans leading-relaxed">
                 {benefit.description}
               </p>
 
@@ -64,20 +64,20 @@ const BenefitsSection = () => {
         {/* Stats */}
         <div className="mt-20 grid grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="text-center">
-            <div className="text-4xl font-poppins font-bold text-jade mb-2">500+</div>
-            <div className="text-gray-600 font-dm-sans">Clienți fericiți</div>
+            <div className="text-4xl font-sans font-bold text-jade mb-2">500+</div>
+            <div className="text-gray-600 font-sans">Clienți fericiți</div>
           </div>
           <div className="text-center">
-            <div className="text-4xl font-poppins font-bold text-jade mb-2">24/7</div>
-            <div className="text-gray-600 font-dm-sans">Disponibilitate</div>
+            <div className="text-4xl font-sans font-bold text-jade mb-2">24/7</div>
+            <div className="text-gray-600 font-sans">Disponibilitate</div>
           </div>
           <div className="text-center">
-            <div className="text-4xl font-poppins font-bold text-jade mb-2">&lt;5min</div>
-            <div className="text-gray-600 font-dm-sans">Timp predare</div>
+            <div className="text-4xl font-sans font-bold text-jade mb-2">&lt;5min</div>
+            <div className="text-gray-600 font-sans">Timp predare</div>
           </div>
           <div className="text-center">
-            <div className="text-4xl font-poppins font-bold text-jade mb-2">0</div>
-            <div className="text-gray-600 font-dm-sans">Taxe ascunse</div>
+            <div className="text-4xl font-sans font-bold text-jade mb-2">0</div>
+            <div className="text-gray-600 font-sans">Taxe ascunse</div>
           </div>
         </div>
       </div>

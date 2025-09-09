@@ -301,18 +301,18 @@ const FleetPage = () => {
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
                     sizes={isListView ? "(max-width: 768px) 100vw, 33vw" : "100vw"}
                 />
-                <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
+                <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-sans font-semibold">
                     {car.type}
                 </div>
             </div>
 
             <div className={`p-6 ${isListView ? "md:w-2/3 flex flex-col justify-between" : ""}`}>
                 <div>
-                    <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">{car.name}</h3>
-                    {isListView && <p className="text-gray-600 font-dm-sans mb-4 leading-relaxed">{car.description}</p>}
+                    <h3 className="text-xl font-sans font-semibold text-berkeley mb-2">{car.name}</h3>
+                    {isListView && <p className="text-gray-600 font-sans mb-4 leading-relaxed">{car.description}</p>}
 
                     <div className={`${isListView ? "grid grid-cols-2 gap-4 mb-4" : "space-y-2 mb-6"}`}>
-                        <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
+                        <div className="flex items-center justify-between text-sm text-gray-600 font-sans">
                             <div className="flex items-center space-x-2">
                                 <Users className="h-4 w-4 text-jade" />
                                 <span>{car.features.passengers} persoane</span>
@@ -325,12 +325,12 @@ const FleetPage = () => {
                             )}
                         </div>
                         {isListView && (
-                            <div className="flex items-center space-x-2 text-sm text-gray-600 font-dm-sans">
+                            <div className="flex items-center space-x-2 text-sm text-gray-600 font-sans">
                                 <Settings className="h-4 w-4 text-jade" />
                                 <span>{car.features.transmission}</span>
                             </div>
                         )}
-                        <div className="flex items-center space-x-2 text-sm text-gray-600 font-dm-sans">
+                        <div className="flex items-center space-x-2 text-sm text-gray-600 font-sans">
                             <Fuel className="h-4 w-4 text-jade" />
                             <span>{car.features.fuel}</span>
                         </div>
@@ -340,19 +340,19 @@ const FleetPage = () => {
                 <>
                     <div className="flex items-center justify-between mb-5">
                         <div className="me-1">
-                            <span className="text-jade font-bold font-dm-sans">Fără garanție </span>
-                            <span className="text-base font-poppins font-bold text-jade">{car.rental_rate_casco}€</span>
-                            <span className="text-jade font-bold font-dm-sans">/zi</span>
+                            <span className="text-jade font-bold font-sans">Fără garanție </span>
+                            <span className="text-base font-sans font-bold text-jade">{car.rental_rate_casco}€</span>
+                            <span className="text-jade font-bold font-sans">/zi</span>
                             {startDate && endDate && (
                                 <div>
-                                    <span className="text-jade font-bold font-dm-sans">x {car.days} zile = </span>
-                                    <span className="text-base font-poppins font-bold text-jade">{car.total_without_deposit}€</span>
+                                    <span className="text-jade font-bold font-sans">x {car.days} zile = </span>
+                                    <span className="text-base font-sans font-bold text-jade">{car.total_without_deposit}€</span>
                                 </div>
                             )}
                         </div>
                         <Button
                             onClick={startDate && endDate ? () => handleBooking(false, car) : undefined}
-                            className="px-2 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+                            className="px-2 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
                             aria-label="Rezervă"
                         >
                             Rezervă fără garanție
@@ -361,19 +361,19 @@ const FleetPage = () => {
 
                     <div className="flex items-center justify-between">
                         <div className="me-3">
-                            <span className="text-gray-600 font-dm-sans">Cu garanție </span>
-                            <span className="text-base font-poppins font-bold text-berkeley">{car.rental_rate}€</span>
-                            <span className="text-gray-600 font-dm-sans">/zi</span>
+                            <span className="text-gray-600 font-sans">Cu garanție </span>
+                            <span className="text-base font-sans font-bold text-berkeley">{car.rental_rate}€</span>
+                            <span className="text-gray-600 font-sans">/zi</span>
                             {startDate && endDate && (
                                 <div>
-                                    <span className="text-gray-600 font-bold font-dm-sans">x {car.days} zile = </span>
-                                    <span className="text-base font-poppins font-bold text-berkeley">{car.total_deposit}€</span>
+                                    <span className="text-gray-600 font-bold font-sans">x {car.days} zile = </span>
+                                    <span className="text-base font-sans font-bold text-berkeley">{car.total_deposit}€</span>
                                 </div>
                             )}
                         </div>
                         <Button
                             onClick={startDate && endDate ? () => handleBooking(true, car) : undefined}
-                            className="px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg hover:!bg-jade/90 hover:!text-white transition-colors duration-300"
+                            className="px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-sans font-semibold rounded-lg hover:!bg-jade/90 hover:!text-white transition-colors duration-300"
                             aria-label="Rezervă"
                         >
                             Rezervă cu garanție
@@ -397,10 +397,10 @@ const FleetPage = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     {/* Header */}
                     <div className="text-center mb-12 animate-fade-in">
-                        <h1 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
+                        <h1 className="text-4xl lg:text-5xl font-sans font-bold text-berkeley mb-6">
                             Flota noastră <span className="text-jade">completă</span>
                         </h1>
-                        <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                        <p className="text-xl font-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
                             Descoperă toate mașinile disponibile și alege cea potrivită pentru călătoria ta.
                         </p>
                     </div>
@@ -439,7 +439,7 @@ const FleetPage = () => {
                                     aria-label="Comută filtrele"
                                 >
                                     <SlidersHorizontal className="h-5 w-5" />
-                                    <span className="font-dm-sans">Filtre</span>
+                                    <span className="font-sans">Filtre</span>
                                 </button>
                             </div>
                         </div>
@@ -448,7 +448,7 @@ const FleetPage = () => {
                             <div className="border-t border-gray-200 pt-6 animate-slide-up">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                                     <div>
-                                        <Label htmlFor="filter-car-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Categorie</Label>
+                                        <Label htmlFor="filter-car-type" className="block text-sm font-sans font-semibold text-gray-700 mb-2">Categorie</Label>
                                         <Select
                                             id="filter-car-type"
                                             className="px-3 py-2 transition-all duration-300"
@@ -463,7 +463,7 @@ const FleetPage = () => {
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="filter-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Tip mașină</Label>
+                                        <Label htmlFor="filter-type" className="block text-sm font-sans font-semibold text-gray-700 mb-2">Tip mașină</Label>
                                         <Select id="filter-type" className="px-3 py-2" value={filters.type} onValueChange={(v) => handleFilterChange("type", v)}>
                                             <option value="all">Toate</option>
                                             {filterOptions.types.map(t => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
@@ -471,7 +471,7 @@ const FleetPage = () => {
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="filter-transmission" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Transmisie</Label>
+                                        <Label htmlFor="filter-transmission" className="block text-sm font-sans font-semibold text-gray-700 mb-2">Transmisie</Label>
                                         <Select id="filter-transmission" className="px-3 py-2" value={filters.transmission} onValueChange={(v) => handleFilterChange("transmission", v)}>
                                             <option value="all">Toate</option>
                                             {filterOptions.transmissions.map(t => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
@@ -479,7 +479,7 @@ const FleetPage = () => {
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="filter-fuel" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Combustibil</Label>
+                                        <Label htmlFor="filter-fuel" className="block text-sm font-sans font-semibold text-gray-700 mb-2">Combustibil</Label>
                                         <Select id="filter-fuel" className="px-3 py-2" value={filters.fuel} onValueChange={(v) => handleFilterChange("fuel", v)}>
                                             <option value="all">Toate</option>
                                             {filterOptions.fuels.map(f => <option key={f.id} value={String(f.id)}>{f.name}</option>)}
@@ -489,14 +489,14 @@ const FleetPage = () => {
 
                                 <div className="flex flex-wrap items-center gap-2">
                                     {activeFilters.map((f) => (
-                                        <span key={f.key} className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full">
+                                        <span key={f.key} className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-sans rounded-full">
                       {f.label}
                                             <button onClick={() => handleFilterChange(f.key, "all")} className="ml-2 hover:text-berkeley" aria-label={`Elimină filtrul ${f.label}`}>
                         <X className="h-4 w-4" />
                       </button>
                     </span>
                                     ))}
-                                    <button onClick={clearFilters} className="px-4 py-2 text-jade font-dm-sans font-semibold hover:bg-jade/10 rounded-lg transition-colors duration-300" aria-label="Resetează filtrele">
+                                    <button onClick={clearFilters} className="px-4 py-2 text-jade font-sans font-semibold hover:bg-jade/10 rounded-lg transition-colors duration-300" aria-label="Resetează filtrele">
                                         Resetează filtrele
                                     </button>
                                 </div>
@@ -506,7 +506,7 @@ const FleetPage = () => {
 
                     {/* Results Count */}
                     <div id="results-section" className="flex items-center mb-8">
-                        <p className="text-gray-600 font-dm-sans">
+                        <p className="text-gray-600 font-sans">
                             <span className="font-semibold text-berkeley">{totalCars}</span> mașini găsite
                         </p>
                     </div>
@@ -525,14 +525,14 @@ const FleetPage = () => {
                             <div className="bg-gray-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <Filter className="h-12 w-12 text-gray-400" />
                             </div>
-                            <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-4">Nu am găsit mașini</h3>
-                            <p className="text-gray-600 font-dm-sans mb-6 max-w-md mx-auto">
+                            <h3 className="text-2xl font-sans font-semibold text-berkeley mb-4">Nu am găsit mașini</h3>
+                            <p className="text-gray-600 font-sans mb-6 max-w-md mx-auto">
                                 Încearcă să modifici filtrele sau să cauți altceva.
                             </p>
                             <div className="flex flex-wrap items-center justify-center gap-2">
                                 <Button onClick={clearFilters} className="px-6 py-3" aria-label="Resetează filtrele">Resetează filtrele</Button>
                                 {activeFilters.map((f) => (
-                                    <span key={f.key} className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full">
+                                    <span key={f.key} className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-sans rounded-full">
                     {f.label}
                                         <button onClick={() => handleFilterChange(f.key, "all")} className="ml-2 hover:text-berkeley" aria-label={`Elimină filtrul ${f.label}`}>
                       <X className="h-4 w-4" />
@@ -548,8 +548,8 @@ const FleetPage = () => {
 
                     {/* CTA */}
                     <div className="mt-16 bg-gradient-to-r from-berkeley/5 to-jade/5 rounded-3xl p-8 lg:p-12 text-center">
-                        <h3 className="text-3xl font-poppins font-bold text-berkeley mb-4">Nu găsești mașina potrivită?</h3>
-                        <p className="text-xl font-dm-sans text-gray-600 mb-8 max-w-2xl mx-auto">
+                        <h3 className="text-3xl font-sans font-bold text-berkeley mb-4">Nu găsești mașina potrivită?</h3>
+                        <p className="text-xl font-sans text-gray-600 mb-8 max-w-2xl mx-auto">
                             Contactează-ne și te ajutăm să găsești soluția perfectă pentru călătoria ta.
                         </p>
                         <div className="flex flex-col sm:flex-row justify-center gap-4">

@@ -34,7 +34,7 @@ const LoginPage = () => {
         onSubmit={handleSubmit}
         className="bg-white p-8 shadow-md rounded w-full max-w-sm space-y-4"
       >
-        <h1 className="text-2xl font-poppins font-semibold text-center text-berkeley">
+        <h1 className="text-2xl font-sans font-semibold text-center text-berkeley">
           Autentificare Admin
         </h1>
         {error && (

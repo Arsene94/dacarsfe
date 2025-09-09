@@ -14,7 +14,7 @@ Website modern și funcțional pentru DaCars - serviciu de închirieri auto în 
 
 ### 🎨 Design & UX
 - **Identitate vizuală consistentă**: Berkeley Blue, Jade Green, Eefie Black
-- **Tipografie premium**: Poppins pentru titluri, DM Sans pentru text
+- **Tipografie premium**: Inter pentru toate textele
 - **Animații subtile** și micro-interacțiuni pentru engagement
 - **Layout aerisit** cu spațiu alb generos
 - **CTA-uri optimizate** pentru conversii maxime

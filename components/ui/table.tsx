@@ -74,7 +74,7 @@ export function DataTable<T extends Record<string, any>>({
                 key={col.id}
                 onClick={() => toggleSort(col)}
                 className={cn(
-                  'py-3 px-4 font-dm-sans font-semibold text-gray-600',
+                  'py-3 px-4 font-sans font-semibold text-gray-600',
                   col.sortable && 'cursor-pointer select-none'
                 )}
               >

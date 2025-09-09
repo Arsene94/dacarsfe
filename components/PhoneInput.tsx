@@ -106,7 +106,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
 
   return (
     <div className={cn('relative', className)}>
-      <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+      <label className="block text-sm font-sans font-semibold text-gray-700 mb-2">
         <Phone className="h-4 w-4 inline text-jade mr-1" />
         Telefon *
       </label>
@@ -118,7 +118,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
             className="flex items-center space-x-2 px-3 py-3 border border-gray-300 border-r-0 rounded-l-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 focus:ring-2 focus:ring-jade focus:border-transparent"
           >
             <span className="text-lg">{selectedCountry.flag}</span>
-            <span className="text-sm font-dm-sans font-medium text-gray-700">
+            <span className="text-sm font-sans font-medium text-gray-700">
               {selectedCountry.prefix}
             </span>
             <ChevronDown
@@ -157,7 +157,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
                     >
                       <span className="text-lg">{country.flag}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-dm-sans font-medium text-gray-900 truncate">
+                        <div className="text-sm font-sans font-medium text-gray-900 truncate">
                           {country.name}
                         </div>
                         <div className="text-xs text-gray-500">{country.prefix}</div>
@@ -165,7 +165,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
                     </button>
                   ))
                 ) : (
-                  <div className="px-3 py-4 text-center text-gray-500 text-sm font-dm-sans">
+                  <div className="px-3 py-4 text-center text-gray-500 text-sm font-sans">
                     Nu s-au găsit țări
                   </div>
                 )}
@@ -187,11 +187,11 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
         />
       </div>
       {!isValid && phoneNumber && (
-        <div className="mt-2 text-sm text-red-600 font-dm-sans">
+        <div className="mt-2 text-sm text-red-600 font-sans">
           Formatul numărului de telefon nu este valid pentru {selectedCountry.name}
         </div>
       )}
-      <div className="mt-2 text-xs text-gray-500 font-dm-sans">
+      <div className="mt-2 text-xs text-gray-500 font-sans">
         Exemplu: {selectedCountry.prefix} 722 123 456
       </div>
     </div>

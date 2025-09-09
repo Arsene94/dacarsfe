@@ -32,10 +32,10 @@ const ProcessSection = () => {
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 animate-fade-in">
-          <h2 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
+          <h2 className="text-4xl lg:text-5xl font-sans font-bold text-berkeley mb-6">
             Procesul nostru <span className="text-jade">simplu</span>
           </h2>
-          <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl font-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Doar 3 pași simpli te despart de mașina ta. Fără complicații, fără stres.
           </p>
         </div>
@@ -53,7 +53,7 @@ const ProcessSection = () => {
               >
                 {/* Step number background */}
                 <div className={`${step.color} w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10 group-hover:scale-110 transition-transform duration-300`}>
-                  <span className="text-2xl font-poppins font-bold text-white">{step.number}</span>
+                  <span className="text-2xl font-sans font-bold text-white">{step.number}</span>
                 </div>
 
                 {/* Icon */}
@@ -62,11 +62,11 @@ const ProcessSection = () => {
                 </div>
 
                 {/* Content */}
-                <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-4 group-hover:text-jade transition-colors duration-300">
+                <h3 className="text-2xl font-sans font-semibold text-berkeley mb-4 group-hover:text-jade transition-colors duration-300">
                   {step.title}
                 </h3>
                 
-                <p className="text-gray-600 font-dm-sans leading-relaxed max-w-sm mx-auto">
+                <p className="text-gray-600 font-sans leading-relaxed max-w-sm mx-auto">
                   {step.description}
                 </p>
 
@@ -80,10 +80,10 @@ const ProcessSection = () => {
         {/* CTA */}
         <div className="text-center mt-16">
           <div className="bg-gradient-to-r from-berkeley/5 to-jade/5 rounded-3xl p-8 lg:p-12">
-            <h3 className="text-3xl font-poppins font-bold text-berkeley mb-4">
+            <h3 className="text-3xl font-sans font-bold text-berkeley mb-4">
               Gata să începi?
             </h3>
-            <p className="text-xl font-dm-sans text-gray-600 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl font-sans text-gray-600 mb-8 max-w-2xl mx-auto">
               Rezervarea durează doar 2 minute. Mașina ta te așteaptă la aeroport!
             </p>
             

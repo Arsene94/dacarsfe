@@ -4,21 +4,26 @@ import PageTransition from "../components/PageTransition";
 import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingContext";
 import { AuthProvider } from "@/context/AuthContext";
-import { DM_Sans, Poppins } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const poppins = Poppins({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
+  variable: "--font-inter",
   display: "swap",
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-dm-sans",
-  display: "swap",
+  fallback: [
+    "ui-sans-serif",
+    "system-ui",
+    "-apple-system",
+    "system-ui",
+    "Segoe UI",
+    "Helvetica Neue",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+  ],
 });
 
 export const metadata = {
@@ -28,7 +33,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ro" className={`${poppins.variable} ${dmSans.variable}`}>
+    <html lang="ro" className={inter.variable}>
       <head>
         <link
           rel="preload"
@@ -50,7 +55,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           media="(min-width: 640px)"
         />
       </head>
-      <body className="min-h-screen bg-white">
+      <body className="min-h-screen bg-white font-sans">
         <AuthProvider>
           <BookingProvider>
             <Header />

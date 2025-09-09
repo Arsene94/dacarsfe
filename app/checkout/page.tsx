@@ -429,7 +429,7 @@ const ReservationPage = () => {
     if (!booking.startDate || !booking.endDate || !booking.selectedCar) {
         return (
             <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
-                <p className="text-xl font-dm-sans text-gray-600">
+                <p className="text-xl font-sans text-gray-600">
                     Trebuie să completezi datele și să selectezi mașina.
                 </p>
             </div>
@@ -504,10 +504,10 @@ const ReservationPage = () => {
         <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="text-center mb-12">
-                    <h1 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
+                    <h1 className="text-4xl lg:text-5xl font-sans font-bold text-berkeley mb-6">
                         Rezervă-ți <span className="text-jade">mașina</span>
                     </h1>
-                    <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto">
+                    <p className="text-xl font-sans text-gray-600 max-w-3xl mx-auto">
                         Completează formularul și te întâlnim la aeroport în sub 5 minute!
                     </p>
                 </div>
@@ -519,7 +519,7 @@ const ReservationPage = () => {
                             <form onSubmit={handleSubmit} className="space-y-8">
                                 {/* Personal Information */}
                                 <div>
-                                    <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">
+                                    <h3 className="text-2xl font-sans font-semibold text-berkeley mb-6 flex items-center">
                                         <User className="h-6 w-6 text-jade mr-3" />
                                         Informații personale
                                     </h3>
@@ -528,7 +528,7 @@ const ReservationPage = () => {
                                         <div>
                                             <Label
                                                 htmlFor="reservation-name"
-                                                className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                                                className="block text-sm font-sans font-semibold text-gray-700 mb-2"
                                             >
                                                 Nume *
                                             </Label>
@@ -547,7 +547,7 @@ const ReservationPage = () => {
                                         <div>
                                             <Label
                                                 htmlFor="reservation-email"
-                                                className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                                                className="block text-sm font-sans font-semibold text-gray-700 mb-2"
                                             >
                                                 Email *
                                             </Label>
@@ -575,7 +575,7 @@ const ReservationPage = () => {
                                         <div className="mt-6">
                                         <Label
                                             htmlFor="reservation-flight"
-                                            className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                                            className="block text-sm font-sans font-semibold text-gray-700 mb-2"
                                         >
                                             <Plane className="h-4 w-4 inline text-jade mr-1" />
                                             Zbor (opțional)
@@ -595,7 +595,7 @@ const ReservationPage = () => {
                                     <div className="mt-6">
                                         <Label
                                             htmlFor="reservation-discount"
-                                            className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                                            className="block text-sm font-sans font-semibold text-gray-700 mb-2"
                                         >
                                             <Gift className="h-4 w-4 inline text-jade mr-1" />
                                             Cod de reducere
@@ -614,7 +614,7 @@ const ReservationPage = () => {
                                                 <button
                                                     type="button"
                                                     onClick={handleRemoveDiscountCode}
-                                                    className="px-4 py-3 bg-red-500 text-white font-dm-sans font-semibold rounded-lg hover:bg-red-600 transition-all duration-300"
+                                                    className="px-4 py-3 bg-red-500 text-white font-sans font-semibold rounded-lg hover:bg-red-600 transition-all duration-300"
                                                 >
                                                     Șterge cod
                                                 </button>
@@ -636,7 +636,7 @@ const ReservationPage = () => {
                                                     disabled={
                                                         isValidatingCode || !formData.coupon_code.trim()
                                                     }
-                                                    className="px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                                                    className="px-4 py-3 bg-berkeley text-white font-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                                                     aria-label="Validează codul"
                                                 >
                                                     {isValidatingCode ? (
@@ -656,7 +656,7 @@ const ReservationPage = () => {
                                                         : "bg-red-50 text-red-600"
                                                 }`}
                                             >
-                                                <p className="text-sm font-dm-sans font-semibold">
+                                                <p className="text-sm font-sans font-semibold">
                                                     {discountStatus.message}
                                                 </p>
                                             </div>
@@ -666,7 +666,7 @@ const ReservationPage = () => {
 
                                 {/* Extra Services */}
                                 <div>
-                                    <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">
+                                    <h3 className="text-2xl font-sans font-semibold text-berkeley mb-6 flex items-center">
                                         <Gift className="h-6 w-6 text-jade mr-3" />
                                         Servicii Extra
                                     </h3>
@@ -682,13 +682,13 @@ const ReservationPage = () => {
                                                     onChange={() => toggleService(service)}
                                                     className="h-4 w-4 text-jade border-gray-300 rounded"
                                                 />
-                                                <span className="font-dm-sans text-gray-700">
+                                                <span className="font-sans text-gray-700">
                           {service.name} - {service.price}€
                         </span>
                                             </label>
                                         ))}
                                         {services.length === 0 && (
-                                            <p className="font-dm-sans text-gray-600">
+                                            <p className="font-sans text-gray-600">
                                                 Niciun serviciu disponibil
                                             </p>
                                         )}
@@ -697,7 +697,7 @@ const ReservationPage = () => {
 
                                 {/* Reservation Details */}
                                 <div>
-                                    <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">
+                                    <h3 className="text-2xl font-sans font-semibold text-berkeley mb-6 flex items-center">
                                         <Calendar className="h-6 w-6 text-jade mr-3" />
                                         Detalii rezervare
                                     </h3>
@@ -706,7 +706,7 @@ const ReservationPage = () => {
                                         <div>
                                             <Label
                                                 htmlFor="reservation-pickup-date"
-                                                className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                                                className="block text-sm font-sans font-semibold text-gray-700 mb-2"
                                             >
                                                 Dată ridicare *
                                             </Label>
@@ -725,7 +725,7 @@ const ReservationPage = () => {
                                         <div>
                                             <Label
                                                 htmlFor="reservation-pickup-time"
-                                                className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                                                className="block text-sm font-sans font-semibold text-gray-700 mb-2"
                                             >
                                                 Oră ridicare *
                                             </Label>
@@ -743,7 +743,7 @@ const ReservationPage = () => {
                                         <div>
                                             <Label
                                                 htmlFor="reservation-dropoff-date"
-                                                className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                                                className="block text-sm font-sans font-semibold text-gray-700 mb-2"
                                             >
                                                 Dată returnare *
                                             </Label>
@@ -765,7 +765,7 @@ const ReservationPage = () => {
                                         <div>
                                             <Label
                                                 htmlFor="reservation-dropoff-time"
-                                                className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                                                className="block text-sm font-sans font-semibold text-gray-700 mb-2"
                                             >
                                                 Oră returnare *
                                             </Label>
@@ -785,7 +785,7 @@ const ReservationPage = () => {
                                       )}
 
                                       <div className="mt-6">
-                                        <Label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                                        <Label className="block text-sm font-sans font-semibold text-gray-700 mb-2">
                                             Garanție
                                         </Label>
                                         <div className="flex items-center space-x-6">
@@ -797,7 +797,7 @@ const ReservationPage = () => {
                                                     onChange={() => handleDepositChange(false)}
                                                     className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
                                                 />
-                                                <span className="font-dm-sans text-gray-700">Fără garanție</span>
+                                                <span className="font-sans text-gray-700">Fără garanție</span>
                                             </label>
                                             <label className="flex items-center space-x-2">
                                                 <input
@@ -807,7 +807,7 @@ const ReservationPage = () => {
                                                     onChange={() => handleDepositChange(true)}
                                                     className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
                                                 />
-                                                <span className="font-dm-sans text-gray-700">Cu garanție</span>
+                                                <span className="font-sans text-gray-700">Cu garanție</span>
                                             </label>
                                         </div>
                                     </div>
@@ -816,7 +816,7 @@ const ReservationPage = () => {
                                 <button
                                     type="submit"
                                     disabled={isSubmitting || !!availabilityError}
-                                    className="w-full py-4 bg-jade text-white font-dm-sans font-semibold text-lg rounded-lg hover:bg-jade/90 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg flex items-center justify-center space-x-2"
+                                    className="w-full py-4 bg-jade text-white font-sans font-semibold text-lg rounded-lg hover:bg-jade/90 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg flex items-center justify-center space-x-2"
                                     aria-label="Finalizează rezervarea"
                                 >
                                     {isSubmitting ? (
@@ -835,15 +835,15 @@ const ReservationPage = () => {
                     {/* Reservation Summary */}
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-2xl shadow-lg p-8 sticky top-24">
-                            <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6">
+                            <h3 className="text-2xl font-sans font-semibold text-berkeley mb-6">
                                 Rezumatul rezervării
                             </h3>
 
                             <div className="space-y-4 mb-6">
                                 {selectedCar && (
                                     <div className="flex justify-between items-center">
-                                        <span className="font-dm-sans text-gray-600">Mașină:</span>
-                                        <span className="font-dm-sans font-semibold text-berkeley">
+                                        <span className="font-sans text-gray-600">Mașină:</span>
+                                        <span className="font-sans font-semibold text-berkeley">
                       {selectedCar.name.split(" - ")[0]}
                     </span>
                                     </div>
@@ -851,8 +851,8 @@ const ReservationPage = () => {
 
                                 {formData.rental_start_date && (
                                     <div className="flex justify-between items-center">
-                                        <span className="font-dm-sans text-gray-600">De la:</span>
-                                        <span className="font-dm-sans font-semibold text-berkeley">
+                                        <span className="font-sans text-gray-600">De la:</span>
+                                        <span className="font-sans font-semibold text-berkeley">
                       {new Date(formData.rental_start_date).toLocaleDateString(
                           "ro-RO",
                       )} {formData.rental_start_time}
@@ -862,8 +862,8 @@ const ReservationPage = () => {
 
                                 {formData.rental_end_date && (
                                     <div className="flex justify-between items-center">
-                                        <span className="font-dm-sans text-gray-600">Până la:</span>
-                                        <span className="font-dm-sans font-semibold text-berkeley">
+                                        <span className="font-sans text-gray-600">Până la:</span>
+                                        <span className="font-sans font-semibold text-berkeley">
                       {new Date(formData.rental_end_date).toLocaleDateString(
                           "ro-RO",
                       )} {formData.rental_end_time}
@@ -872,8 +872,8 @@ const ReservationPage = () => {
                                 )}
 
                                 <div className="flex justify-between items-center">
-                                    <span className="font-dm-sans text-gray-600">Locație:</span>
-                                    <span className="font-dm-sans font-semibold text-berkeley">
+                                    <span className="font-sans text-gray-600">Locație:</span>
+                                    <span className="font-sans font-semibold text-berkeley">
                     Aeroport Henri Coandă, Otopeni
                   </span>
                                 </div>
@@ -881,22 +881,22 @@ const ReservationPage = () => {
 
                             <div className="border-t border-gray-200 pt-4">
                                 <div className="flex justify-between items-center text-xl">
-                  <span className="font-poppins font-semibold text-berkeley">
+                  <span className="font-sans font-semibold text-berkeley">
                     Sumar:
                   </span>
-                                    <span className="font-poppins font-bold text-jade">
+                                    <span className="font-sans font-bold text-jade">
                     {booking.withDeposit ? booking.selectedCar.rental_rate : booking.selectedCar.rental_rate_casco}€ x {booking.selectedCar.days} zile
                   </span>
                                 </div>
                                 <div className="flex justify-between items-center mb-2">
-                                    <span className="font-dm-sans text-gray-600">Subtotal:</span>
-                                    <span className="font-dm-sans font-semibold text-berkeley">
+                                    <span className="font-sans text-gray-600">Subtotal:</span>
+                                    <span className="font-sans font-semibold text-berkeley">
                     {rentalSubtotal.toFixed(2)}€
                   </span>
                                 </div>
                                 {selectedServices.length > 0 && (
                                     <div className="mt-2">
-                    <span className="font-poppins font-semibold text-berkeley">
+                    <span className="font-sans font-semibold text-berkeley">
                       Servicii:
                     </span>
                                         <div className="mt-2 space-y-1">
@@ -905,10 +905,10 @@ const ReservationPage = () => {
                                                     key={service.id}
                                                     className="flex justify-between items-center"
                                                 >
-                          <span className="font-dm-sans text-gray-600">
+                          <span className="font-sans text-gray-600">
                             {service.name}
                           </span>
-                                                    <span className="font-dm-sans font-semibold text-berkeley">
+                                                    <span className="font-sans font-semibold text-berkeley">
                             {service.price.toFixed(2)}€
                           </span>
                                                 </div>
@@ -920,28 +920,28 @@ const ReservationPage = () => {
                                 {discountStatus?.isValid && discountAmount > 0 && (
                                     <>
                                         <div className="flex justify-between items-center mb-2">
-                        <span className="font-dm-sans text-gray-600">
+                        <span className="font-sans text-gray-600">
                           Total înainte de reducere:
                         </span>
-                                            <span className="font-dm-sans text-gray-600">
+                                            <span className="font-sans text-gray-600">
                           {originalTotal.toFixed(2)}€
                         </span>
                                         </div>
                                         <div className="flex justify-between items-center mb-2">
-                                            <span className="font-dm-sans text-jade">Reducere:</span>
-                                            <span className="font-dm-sans text-jade">
+                                            <span className="font-sans text-jade">Reducere:</span>
+                                            <span className="font-sans text-jade">
                           -{discountAmount.toFixed(2)}€
                         </span>
                                         </div>
                                     </>
                                 )}
                                 <div className="flex justify-between items-center text-xl">
-                  <span className="font-poppins font-semibold text-berkeley">
+                  <span className="font-sans font-semibold text-berkeley">
                     Total:
                   </span>
-                                    <span className="font-poppins font-bold text-jade">
+                                    <span className="font-sans font-bold text-jade">
                         {total.toFixed(2)}€ {booking.withDeposit && (
-                                        <span className=" text-xs font-dm-sans text-gray-600">
+                                        <span className=" text-xs font-sans text-gray-600">
                             (+{selectedCar.deposit}€ garanție)
                           </span>
                                     )}
@@ -949,25 +949,25 @@ const ReservationPage = () => {
                                 </div>
                                 {booking.withDeposit && (
                                     <div className="flex justify-between items-center text-xl">
-                        <span className="font-poppins font-semibold text-berkeley">
+                        <span className="font-sans font-semibold text-berkeley">
                             Garanție:
                         </span>
-                                        <span className="font-poppins font-bold text-jade">
+                                        <span className="font-sans font-bold text-jade">
                             {selectedCar.deposit}€
                         </span>
                                     </div>
                                 )}
-                                <p className="text-sm text-gray-600 font-dm-sans mt-2">
+                                <p className="text-sm text-gray-600 font-sans mt-2">
                                     *Preț final, fără taxe ascunse
                                 </p>
                             </div>
 
                             {/* Benefits reminder */}
                             <div className="mt-8 p-4 bg-jade/5 rounded-lg">
-                                <h4 className="font-poppins font-semibold text-berkeley mb-2">
+                                <h4 className="font-sans font-semibold text-berkeley mb-2">
                                     Include:
                                 </h4>
-                                <ul className="text-sm font-dm-sans text-gray-600 space-y-1">
+                                <ul className="text-sm font-sans text-gray-600 space-y-1">
                                     <li>✓ Predare în sub 5 minute</li>
                                     <li>✓ Disponibilitate 24/7</li>
                                     <li>✓ Fără taxe ascunse</li>

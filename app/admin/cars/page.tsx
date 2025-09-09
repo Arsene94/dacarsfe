@@ -300,7 +300,7 @@ const CarsPage = () => {
               >
                 <ArrowLeft className="h-5 w-5 text-gray-600" />
               </Link>
-              <h1 className="text-xl font-poppins font-semibold text-berkeley">
+              <h1 className="text-xl font-sans font-semibold text-berkeley">
                 Gestionare Flota Auto
               </h1>
             </div>
@@ -310,7 +310,7 @@ const CarsPage = () => {
               aria-label="Adaugă Mașină"
             >
               <Plus className="h-4 w-4" />
-              <span className="font-dm-sans font-semibold">Adaugă Mașină</span>
+              <span className="font-sans font-semibold">Adaugă Mașină</span>
             </button>
           </div>
         </div>
@@ -322,10 +322,10 @@ const CarsPage = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-dm-sans text-gray-600">
+                <p className="text-sm font-sans text-gray-600">
                   Total Mașini
                 </p>
-                <p className="text-2xl font-poppins font-bold text-berkeley">
+                <p className="text-2xl font-sans font-bold text-berkeley">
                   {cars.length}
                 </p>
               </div>
@@ -336,10 +336,10 @@ const CarsPage = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-dm-sans text-gray-600">
+                <p className="text-sm font-sans text-gray-600">
                   Disponibile
                 </p>
-                <p className="text-2xl font-poppins font-bold text-green-600">
+                <p className="text-2xl font-sans font-bold text-green-600">
                   {cars.filter((car) => car.status === "available").length}
                 </p>
               </div>
@@ -352,8 +352,8 @@ const CarsPage = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-dm-sans text-gray-600">În Service</p>
-                <p className="text-2xl font-poppins font-bold text-yellow-600">
+                <p className="text-sm font-sans text-gray-600">În Service</p>
+                <p className="text-2xl font-sans font-bold text-yellow-600">
                   {cars.filter((car) => car.status === "maintenance").length}
                 </p>
               </div>
@@ -366,8 +366,8 @@ const CarsPage = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-dm-sans text-gray-600">Indisponibile</p>
-                <p className="text-2xl font-poppins font-bold text-red-600">
+                <p className="text-sm font-sans text-gray-600">Indisponibile</p>
+                <p className="text-2xl font-sans font-bold text-red-600">
                   {cars.filter((car) => car.status === "out_of_service").length}
                 </p>
               </div>
@@ -421,7 +421,7 @@ const CarsPage = () => {
             </Select>
 
             <div className="flex items-center justify-between">
-              <span className="font-dm-sans text-gray-600">
+              <span className="font-sans text-gray-600">
                 {filteredCars.length} mașini găsite
               </span>
             </div>
@@ -442,32 +442,32 @@ const CarsPage = () => {
                   fill
                   className="object-cover"
                 />
-                <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
+                <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-sans font-semibold">
                   {car.type}
                 </div>
                 <div
-                  className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-dm-sans font-semibold ${getStatusColor(car.status)}`}
+                  className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-sans font-semibold ${getStatusColor(car.status)}`}
                 >
                   {getStatusText(car.status)}
                 </div>
                 {isServiceDue(car.nextService) && (
                   <div className="absolute bottom-4 left-4 bg-red-500 text-white px-2 py-1 rounded-lg flex items-center space-x-1">
                     <AlertTriangle className="h-3 w-3" />
-                    <span className="text-xs font-dm-sans">Service</span>
+                    <span className="text-xs font-sans">Service</span>
                   </div>
                 )}
               </div>
 
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-poppins font-semibold text-berkeley">
+                  <h3 className="text-xl font-sans font-semibold text-berkeley">
                     {car.name}
                   </h3>
                   <div className="flex items-center space-x-1"></div>
                 </div>
 
                 <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
+                  <div className="flex items-center justify-between text-sm text-gray-600 font-sans">
                     <div className="flex items-center space-x-2">
                       <Users className="h-4 w-4 text-jade" />
                       <span>{car?.features?.passengers} persoane</span>
@@ -477,7 +477,7 @@ const CarsPage = () => {
                       <span>{car?.features?.transmission}</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
+                  <div className="flex items-center justify-between text-sm text-gray-600 font-sans">
                     <div className="flex items-center space-x-2">
                       <Fuel className="h-4 w-4 text-jade" />
                       <span>{car?.features?.fuel}</span>
@@ -488,16 +488,16 @@ const CarsPage = () => {
 
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <span className="text-2xl font-poppins font-bold text-berkeley">
+                    <span className="text-2xl font-sans font-bold text-berkeley">
                       {car.price}€
                     </span>
-                    <span className="text-gray-600 font-dm-sans">/zi</span>
+                    <span className="text-gray-600 font-sans">/zi</span>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-600 font-dm-sans">
+                    <p className="text-sm text-gray-600 font-sans">
                       Anul {car.year}
                     </p>
-                    <p className="text-sm text-gray-600 font-dm-sans">
+                    <p className="text-sm text-gray-600 font-sans">
                       {car?.mileage?.toLocaleString()} km
                     </p>
                   </div>
@@ -506,7 +506,7 @@ const CarsPage = () => {
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleViewCar(car)}
-                    className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 border border-jade text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade hover:text-white transition-colors"
+                    className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 border border-jade text-jade font-sans font-semibold rounded-lg hover:bg-jade hover:text-white transition-colors"
                     aria-label="Vezi mașina"
                   >
                     <Eye className="h-4 w-4" />
@@ -533,10 +533,10 @@ const CarsPage = () => {
         {filteredCars.length === 0 && (
           <div className="text-center py-12">
             <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-poppins font-semibold text-gray-600 mb-2">
+            <h3 className="text-lg font-sans font-semibold text-gray-600 mb-2">
               Nu există mașini
             </h3>
-            <p className="text-gray-500 font-dm-sans">
+            <p className="text-gray-500 font-sans">
               Nu am găsit mașini care să corespundă criteriilor de căutare.
             </p>
           </div>
@@ -547,7 +547,7 @@ const CarsPage = () => {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-poppins font-bold text-berkeley">
+                <h3 className="text-2xl font-sans font-bold text-berkeley">
                   {selectedCar.name}
                 </h3>
                 <button
@@ -585,44 +585,44 @@ const CarsPage = () => {
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="font-dm-sans text-gray-600">
+                      <span className="font-sans text-gray-600">
                         Status:
                       </span>
                       <span
-                        className={`px-3 py-1 rounded-full text-sm font-dm-sans ${getStatusColor(selectedCar.status)}`}
+                        className={`px-3 py-1 rounded-full text-sm font-sans ${getStatusColor(selectedCar.status)}`}
                       >
                         {getStatusText(selectedCar.status)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-dm-sans text-gray-600">
+                      <span className="font-sans text-gray-600">
                         Număr înmatriculare:
                       </span>
-                      <span className="font-dm-sans font-semibold text-berkeley">
+                      <span className="font-sans font-semibold text-berkeley">
                         {selectedCar.licensePlate}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-dm-sans text-gray-600">
+                      <span className="font-sans text-gray-600">
                         An fabricație:
                       </span>
-                      <span className="font-dm-sans font-semibold text-berkeley">
+                      <span className="font-sans font-semibold text-berkeley">
                         {selectedCar.year}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-dm-sans text-gray-600">
+                      <span className="font-sans text-gray-600">
                         Kilometraj:
                       </span>
-                      <span className="font-dm-sans font-semibold text-berkeley">
+                      <span className="font-sans font-semibold text-berkeley">
                         {selectedCar?.mileage?.toLocaleString()} km
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-dm-sans text-gray-600">
+                      <span className="font-sans text-gray-600">
                         Preț/zi:
                       </span>
-                      <span className="font-dm-sans font-bold text-jade text-lg">
+                      <span className="font-sans font-bold text-jade text-lg">
                         {selectedCar.price}€
                       </span>
                     </div>
@@ -632,31 +632,31 @@ const CarsPage = () => {
                 {/* Detailed Info */}
                 <div className="space-y-6">
                   <div>
-                    <h4 className="font-poppins font-semibold text-berkeley text-lg mb-3">
+                    <h4 className="font-sans font-semibold text-berkeley text-lg mb-3">
                       Specificații
                     </h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex items-center space-x-2">
                         <Users className="h-4 w-4 text-jade" />
-                        <span className="font-dm-sans text-gray-600">
+                        <span className="font-sans text-gray-600">
                           {selectedCar?.features?.passengers} persoane
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Settings className="h-4 w-4 text-jade" />
-                        <span className="font-dm-sans text-gray-600">
+                        <span className="font-sans text-gray-600">
                           {selectedCar?.features?.transmission}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Fuel className="h-4 w-4 text-jade" />
-                        <span className="font-dm-sans text-gray-600">
+                        <span className="font-sans text-gray-600">
                           {selectedCar?.features?.fuel}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Car className="h-4 w-4 text-jade" />
-                        <span className="font-dm-sans text-gray-600">
+                        <span className="font-sans text-gray-600">
                           {selectedCar?.features?.doors} uși
                         </span>
                       </div>
@@ -664,14 +664,14 @@ const CarsPage = () => {
                   </div>
 
                   <div>
-                    <h4 className="font-poppins font-semibold text-berkeley text-lg mb-3">
+                    <h4 className="font-sans font-semibold text-berkeley text-lg mb-3">
                       Dotări
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {selectedCar?.specs?.map((spec, index) => (
                         <span
                           key={index}
-                          className="px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full"
+                          className="px-3 py-1 bg-jade/10 text-jade text-sm font-sans rounded-full"
                         >
                           {spec}
                         </span>
@@ -680,15 +680,15 @@ const CarsPage = () => {
                   </div>
 
                   <div>
-                    <h4 className="font-poppins font-semibold text-berkeley text-lg mb-3">
+                    <h4 className="font-sans font-semibold text-berkeley text-lg mb-3">
                       Service
                     </h4>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="font-dm-sans text-gray-600">
+                        <span className="font-sans text-gray-600">
                           Ultimul service:
                         </span>
-                        <span className="font-dm-sans text-gray-900">
+                        <span className="font-sans text-gray-900">
                           {selectedCar.lastService
                             ? new Date(selectedCar.lastService).toLocaleDateString(
                                 "ro-RO",
@@ -697,11 +697,11 @@ const CarsPage = () => {
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="font-dm-sans text-gray-600">
+                        <span className="font-sans text-gray-600">
                           Următorul service:
                         </span>
                         <span
-                          className={`font-dm-sans ${isServiceDue(selectedCar.nextService) ? "text-red-600 font-semibold" : "text-gray-900"}`}
+                          className={`font-sans ${isServiceDue(selectedCar.nextService) ? "text-red-600 font-semibold" : "text-gray-900"}`}
                         >
                           {selectedCar.nextService
                             ? new Date(selectedCar.nextService).toLocaleDateString(
@@ -719,10 +719,10 @@ const CarsPage = () => {
                   </div>
 
                   <div>
-                    <h4 className="font-poppins font-semibold text-berkeley text-lg mb-3">
+                    <h4 className="font-sans font-semibold text-berkeley text-lg mb-3">
                       Descriere
                     </h4>
-                    <p className="font-dm-sans text-gray-600 leading-relaxed">
+                    <p className="font-sans text-gray-600 leading-relaxed">
                       {selectedCar.description}
                     </p>
                   </div>
@@ -732,20 +732,20 @@ const CarsPage = () => {
               {/* Actions */}
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <button
-                  className="flex-1 bg-jade text-white py-3 rounded-lg font-semibold font-dm-sans hover:bg-jade/90 transition-colors"
+                  className="flex-1 bg-jade text-white py-3 rounded-lg font-semibold font-sans hover:bg-jade/90 transition-colors"
                   aria-label="Editează Mașina"
                 >
                   Editează Mașina
                 </button>
                 <button
-                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-gray-50 transition-colors"
+                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold font-sans hover:bg-gray-50 transition-colors"
                   aria-label="Vezi Rezervări"
                 >
                   Vezi Rezervări
                 </button>
                 {selectedCar.status === "available" && (
                   <button
-                    className="flex-1 border-2 border-yellow-300 text-yellow-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-yellow-50 transition-colors"
+                    className="flex-1 border-2 border-yellow-300 text-yellow-700 py-3 rounded-lg font-semibold font-sans hover:bg-yellow-50 transition-colors"
                     aria-label="Trimite la Service"
                   >
                     Trimite la Service

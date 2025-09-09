@@ -214,10 +214,10 @@ const ReservationsPage = () => {
         sortable: true,
         cell: (r) => (
           <div>
-            <div className="font-dm-sans font-semibold text-berkeley text-xs">
+            <div className="font-sans font-semibold text-berkeley text-xs">
               {r.id}
             </div>
-            <div className="text-gray-500 font-dm-sans text-xs">
+            <div className="text-gray-500 font-sans text-xs">
               {r.createdAt &&
                 new Date(r.createdAt).toLocaleDateString("ro-RO")}
             </div>
@@ -231,10 +231,10 @@ const ReservationsPage = () => {
         sortable: true,
         cell: (r) => (
           <div>
-            <div className="font-dm-sans font-semibold text-gray-900 text-xs">
+            <div className="font-sans font-semibold text-gray-900 text-xs">
               {r.customerName}
             </div>
-            <div className="text-gray-500 font-dm-sans text-xs">
+            <div className="text-gray-500 font-sans text-xs">
               {r.phone}
             </div>
           </div>
@@ -245,7 +245,7 @@ const ReservationsPage = () => {
         header: "Mașină",
         accessor: (r) => r.carName,
         cell: (r) => (
-          <div className="font-dm-sans text-gray-900 text-xs">{r.carName}</div>
+          <div className="font-sans text-gray-900 text-xs">{r.carName}</div>
         ),
       },
       {
@@ -254,12 +254,12 @@ const ReservationsPage = () => {
         accessor: (r) => new Date(r.startDate).getTime(),
         cell: (r) => (
           <div>
-            <div className="font-dm-sans text-gray-900 text-xs">
+            <div className="font-sans text-gray-900 text-xs">
               {new Date(r.startDate).toLocaleDateString("ro-RO")} -
               {" "}
               {new Date(r.endDate).toLocaleDateString("ro-RO")}
             </div>
-            <div className="text-gray-500 font-dm-sans text-xs">
+            <div className="text-gray-500 font-sans text-xs">
               {r.pickupTime} - {r.dropoffTime}
             </div>
           </div>
@@ -271,7 +271,7 @@ const ReservationsPage = () => {
           accessor: (r) => r.plan,
           cell: (r) => (
               <span
-                  className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getPlanColor(
+                  className={`px-3 py-1 rounded-full text-xs font-sans ${getPlanColor(
                       r.plan,
                   )}`}
               >
@@ -285,7 +285,7 @@ const ReservationsPage = () => {
         accessor: (r) => r.status,
         cell: (r) => (
           <span
-            className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
+            className={`px-3 py-1 rounded-full text-xs font-sans ${getStatusColor(
               r.status,
             )}`}
           >
@@ -299,10 +299,10 @@ const ReservationsPage = () => {
         accessor: (r) => r.total,
         sortable: true,
         cell: (r) => (
-          <div className="font-dm-sans font-semibold text-berkeley text-xs">
+          <div className="font-sans font-semibold text-berkeley text-xs">
             {r.total}€
             {r.discountCode && (
-              <div className="text-jade font-dm-sans text-xs">
+              <div className="text-jade font-sans text-xs">
                 Cod: {r.discountCode}
               </div>
             )}
@@ -342,7 +342,7 @@ const ReservationsPage = () => {
   );
 
   const renderReservationDetails = (r: AdminReservation) => (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-700 font-dm-sans">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-700 font-sans">
       <div className="flex items-center space-x-2">
         <span className="font-bold">Preț per zi:</span>
         <span> {r.pricePerDay}€</span>
@@ -391,7 +391,7 @@ const ReservationsPage = () => {
               >
                 <ArrowLeft className="h-5 w-5 text-gray-600" />
               </Link>
-              <h1 className="text-xl font-poppins font-semibold text-berkeley">
+              <h1 className="text-xl font-sans font-semibold text-berkeley">
                 Gestionare Rezervări
               </h1>
             </div>
@@ -402,7 +402,7 @@ const ReservationsPage = () => {
                 aria-label="Exportă rezervări"
               >
                 <Download className="h-4 w-4 text-gray-600" />
-                <span className="font-dm-sans text-gray-600">Export</span>
+                <span className="font-sans text-gray-600">Export</span>
               </button>
             </div>
           </div>
@@ -465,7 +465,7 @@ const ReservationsPage = () => {
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="font-dm-sans text-gray-600">
+              <span className="font-sans text-gray-600">
                 {totalReservations} rezervări găsite
               </span>
             </div>
@@ -612,10 +612,10 @@ const ReservationsPage = () => {
           {reservations.length === 0 && (
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-poppins font-semibold text-gray-600 mb-2">
+              <h3 className="text-lg font-sans font-semibold text-gray-600 mb-2">
                 Nu există rezervări
               </h3>
-              <p className="text-gray-500 font-dm-sans">
+              <p className="text-gray-500 font-sans">
                 Nu am găsit rezervări care să corespundă criteriilor de căutare.
               </p>
             </div>
@@ -627,7 +627,7 @@ const ReservationsPage = () => {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-poppins font-bold text-berkeley">
+                <h3 className="text-2xl font-sans font-bold text-berkeley">
                   Detalii Rezervare {selectedReservation.id}
                 </h3>
                 <button
@@ -654,7 +654,7 @@ const ReservationsPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Customer Info */}
                 <div className="space-y-4">
-                  <h4 className="font-poppins font-semibold text-berkeley text-lg">
+                  <h4 className="font-sans font-semibold text-berkeley text-lg">
                     Informații Client
                   </h4>
 
@@ -664,10 +664,10 @@ const ReservationsPage = () => {
                         <Phone className="h-4 w-4 text-jade" />
                       </div>
                       <div>
-                        <p className="font-dm-sans font-semibold text-gray-900">
+                        <p className="font-sans font-semibold text-gray-900">
                           {selectedReservation.customerName}
                         </p>
-                        <p className="text-sm text-gray-600 font-dm-sans">
+                        <p className="text-sm text-gray-600 font-sans">
                           {selectedReservation.phone}
                         </p>
                       </div>
@@ -678,10 +678,10 @@ const ReservationsPage = () => {
                         <Mail className="h-4 w-4 text-jade" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 font-dm-sans">
+                        <p className="text-sm text-gray-600 font-sans">
                           Email
                         </p>
-                        <p className="font-dm-sans text-gray-900">
+                        <p className="font-sans text-gray-900">
                           {selectedReservation.email}
                         </p>
                       </div>
@@ -691,7 +691,7 @@ const ReservationsPage = () => {
 
                 {/* Reservation Info */}
                 <div className="space-y-4">
-                  <h4 className="font-poppins font-semibold text-berkeley text-lg">
+                  <h4 className="font-sans font-semibold text-berkeley text-lg">
                     Detalii Rezervare
                   </h4>
 
@@ -701,10 +701,10 @@ const ReservationsPage = () => {
                         <Car className="h-4 w-4 text-jade" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 font-dm-sans">
+                        <p className="text-sm text-gray-600 font-sans">
                           Mașină
                         </p>
-                        <p className="font-dm-sans font-semibold text-gray-900">
+                        <p className="font-sans font-semibold text-gray-900">
                           {selectedReservation.carName}
                         </p>
                       </div>
@@ -715,10 +715,10 @@ const ReservationsPage = () => {
                         <Calendar className="h-4 w-4 text-jade" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 font-dm-sans">
+                        <p className="text-sm text-gray-600 font-sans">
                           Perioada
                         </p>
-                        <p className="font-dm-sans text-gray-900">
+                        <p className="font-sans text-gray-900">
                           {new Date(
                             selectedReservation.startDate,
                           ).toLocaleDateString("ro-RO")}{" "}
@@ -727,7 +727,7 @@ const ReservationsPage = () => {
                             selectedReservation.endDate,
                           ).toLocaleDateString("ro-RO")}
                         </p>
-                        <p className="text-sm text-gray-600 font-dm-sans">
+                        <p className="text-sm text-gray-600 font-sans">
                           {selectedReservation.pickupTime} -{" "}
                           {selectedReservation.dropoffTime}
                         </p>
@@ -739,10 +739,10 @@ const ReservationsPage = () => {
                         <MapPin className="h-4 w-4 text-jade" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 font-dm-sans">
+                        <p className="text-sm text-gray-600 font-sans">
                           Locație
                         </p>
-                        <p className="font-dm-sans text-gray-900">
+                        <p className="font-sans text-gray-900">
                           {selectedReservation.location}
                         </p>
                       </div>
@@ -755,51 +755,51 @@ const ReservationsPage = () => {
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="font-poppins font-semibold text-berkeley mb-3">
+                    <h4 className="font-sans font-semibold text-berkeley mb-3">
                       Status & Plată
                     </h4>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="font-dm-sans text-gray-600">
+                        <span className="font-sans text-gray-600">
                           Status:
                         </span>
                         <span
-                          className={`px-3 py-1 rounded-full text-sm font-dm-sans ${getStatusColor(selectedReservation.status)}`}
+                          className={`px-3 py-1 rounded-full text-sm font-sans ${getStatusColor(selectedReservation.status)}`}
                         >
                           {getStatusText(selectedReservation.status)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="font-dm-sans text-gray-600">
+                        <span className="font-sans text-gray-600">
                           Preț/zi:
                         </span>
-                        <span className="font-dm-sans text-gray-900">
+                        <span className="font-sans text-gray-900">
                           {selectedReservation.pricePerDay}€
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="font-dm-sans text-gray-600">
+                        <span className="font-sans text-gray-600">
                           Servicii:
                         </span>
-                        <span className="font-dm-sans text-gray-900">
+                        <span className="font-sans text-gray-900">
                           {selectedReservation.servicesPrice}€
                         </span>
                       </div>
                       {selectedReservation.discount && selectedReservation.discount > 0 && (
                         <div className="flex items-center justify-between">
-                          <span className="font-dm-sans text-gray-600">
+                          <span className="font-sans text-gray-600">
                             Discount:
                           </span>
-                          <span className="font-dm-sans text-gray-900">
+                          <span className="font-sans text-gray-900">
                             -{selectedReservation.discount}€
                           </span>
                         </div>
                       )}
                       <div className="flex items-center justify-between">
-                        <span className="font-dm-sans text-gray-600">
+                        <span className="font-sans text-gray-600">
                           Total:
                         </span>
-                        <span className="font-dm-sans font-bold text-berkeley text-lg">
+                        <span className="font-sans font-bold text-berkeley text-lg">
                           {selectedReservation.total}€
                         </span>
                       </div>
@@ -808,10 +808,10 @@ const ReservationsPage = () => {
 
                   {selectedReservation.notes && (
                     <div>
-                      <h4 className="font-poppins font-semibold text-berkeley mb-3">
+                      <h4 className="font-sans font-semibold text-berkeley mb-3">
                         Notițe
                       </h4>
-                      <p className="font-dm-sans text-gray-600 bg-gray-50 p-3 rounded-lg">
+                      <p className="font-sans text-gray-600 bg-gray-50 p-3 rounded-lg">
                         {selectedReservation.notes}
                       </p>
                     </div>
@@ -822,19 +822,19 @@ const ReservationsPage = () => {
               {/* Actions */}
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <button
-                  className="flex-1 bg-jade text-white py-3 rounded-lg font-semibold font-dm-sans hover:bg-jade/90 transition-colors"
+                  className="flex-1 bg-jade text-white py-3 rounded-lg font-semibold font-sans hover:bg-jade/90 transition-colors"
                   aria-label="Confirmă Rezervarea"
                 >
                   Confirmă Rezervarea
                 </button>
                 <button
-                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-gray-50 transition-colors"
+                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold font-sans hover:bg-gray-50 transition-colors"
                   aria-label="Editează rezervarea"
                 >
                   Editează
                 </button>
                 <button
-                  className="flex-1 border-2 border-red-300 text-red-600 py-3 rounded-lg font-semibold font-dm-sans hover:bg-red-50 transition-colors"
+                  className="flex-1 border-2 border-red-300 text-red-600 py-3 rounded-lg font-semibold font-sans hover:bg-red-50 transition-colors"
                   aria-label="Anulează rezervarea"
                 >
                   Anulează

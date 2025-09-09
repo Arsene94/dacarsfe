@@ -107,24 +107,24 @@ const FleetSection = () => {
                     loading={index < 2 ? "eager" : "lazy"}
                     priority={index < 2}
                 />
-                <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
+                <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-sans font-semibold">
                     {car.categories.name}
                 </div>
                 {/*<div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center space-x-1">*/}
                 {/*    <Star className="h-4 w-4 text-yellow-400 fill-current" />*/}
-                {/*    <span className="text-sm font-dm-sans font-semibold text-berkeley">*/}
+                {/*    <span className="text-sm font-sans font-semibold text-berkeley">*/}
                 {/*        {car.rating ?? "—"}*/}
                 {/*    </span>*/}
                 {/*</div>*/}
             </div>
 
             <div className="p-6">
-                <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">
+                <h3 className="text-xl font-sans font-semibold text-berkeley mb-2">
                     {car.name}
                 </h3>
 
                 <div className="space-y-2 mb-6">
-                    <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
+                    <div className="flex items-center justify-between text-sm text-gray-600 font-sans">
                         <div className="flex items-center space-x-2">
                             <Users className="h-4 w-4 text-jade" />
                             <span>{car.number_of_seats} persoane</span>
@@ -134,7 +134,7 @@ const FleetSection = () => {
                             <span>{car.transmission.name}</span>
                         </div>
                     </div>
-                    <div className="flex items-center space-x-2 text-sm text-gray-600 font-dm-sans">
+                    <div className="flex items-center space-x-2 text-sm text-gray-600 font-sans">
                         <Fuel className="h-4 w-4 text-jade" />
                         <span>{car.fuel.name}</span>
                     </div>
@@ -142,15 +142,15 @@ const FleetSection = () => {
 
                 <div className="flex items-center justify-between">
                     <div>
-                        <span className="text-2xl font-poppins font-bold text-berkeley">
+                        <span className="text-2xl font-sans font-bold text-berkeley">
                             {car.price != null ? ` de la ${car.price}€` : "—"}
                         </span>
-                        <span className="text-gray-600 font-dm-sans">/zi</span>
+                        <span className="text-gray-600 font-sans">/zi</span>
                     </div>
 
                     <Link
                         href="/checkout"
-                        className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+                        className="px-4 py-2 bg-jade text-white font-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
                         aria-label="Rezervă"
                     >
                         Rezervă
@@ -164,10 +164,10 @@ const FleetSection = () => {
         <section id="flota" className="py-20 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16 animate-fade-in">
-                    <h2 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
+                    <h2 className="text-4xl lg:text-5xl font-sans font-bold text-berkeley mb-6">
                         Flota noastră <span className="text-jade">premium</span>
                     </h2>
-                    <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                    <p className="text-xl font-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
                         Mașini moderne, verificate și întreținute cu grijă pentru confortul și siguranța ta.
                     </p>
                 </div>

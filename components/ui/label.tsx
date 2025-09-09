@@ -5,7 +5,7 @@ import { LabelProps } from '@/types/ui';
 const Label = React.forwardRef<HTMLLabelElement, LabelProps>(({ className, ...props }, ref) => (
   <label
     ref={ref}
-    className={cn('block text-sm font-dm-sans font-semibold text-gray-700', className)}
+    className={cn('block text-sm font-sans font-semibold text-gray-700', className)}
     {...props}
   />
 ));

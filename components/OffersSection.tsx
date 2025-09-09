@@ -29,10 +29,10 @@ const OffersSection = () => {
     <section id="oferte" className="py-20 bg-berkeley">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 animate-fade-in">
-          <h2 className="text-4xl lg:text-5xl font-poppins font-bold text-white mb-6">
+          <h2 className="text-4xl lg:text-5xl font-sans font-bold text-white mb-6">
             Oferte <span className="text-jadeLight">speciale</span>
           </h2>
-          <p className="text-xl font-dm-sans text-gray-300 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl font-sans text-gray-300 max-w-3xl mx-auto leading-relaxed">
             Promoții exclusive pentru momentele importante din viața ta.
           </p>
         </div>
@@ -54,12 +54,12 @@ const OffersSection = () => {
                     <offer.icon className="h-8 w-8" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-poppins font-bold">{offer.title}</h3>
-                    <div className="text-3xl font-poppins font-bold text-yellow-300">{offer.discount}</div>
+                    <h3 className="text-2xl font-sans font-bold">{offer.title}</h3>
+                    <div className="text-3xl font-sans font-bold text-yellow-300">{offer.discount}</div>
                   </div>
                 </div>
 
-                <p className="text-lg font-dm-sans mb-6 opacity-90 leading-relaxed">
+                <p className="text-lg font-sans mb-6 opacity-90 leading-relaxed">
                   {offer.description}
                 </p>
 
@@ -67,7 +67,7 @@ const OffersSection = () => {
                   {offer.features.map((feature, featureIndex) => (
                     <div key={featureIndex} className="flex items-center space-x-3">
                       <Gift className="h-4 w-4 text-yellow-300" />
-                      <span className="font-dm-sans">{feature}</span>
+                      <span className="font-sans">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -88,10 +88,10 @@ const OffersSection = () => {
         {/* Seasonal offer */}
         <div className="bg-gradient-to-r from-jade/20 to-jade/10 border border-jade/30 rounded-2xl p-8 text-center">
           <Calendar className="h-12 w-12 text-jade mx-auto mb-4" />
-          <h3 className="text-2xl font-poppins font-bold text-white mb-4">
+          <h3 className="text-2xl font-sans font-bold text-white mb-4">
             Ofertă limitată de sezon
           </h3>
-          <p className="text-gray-300 font-dm-sans mb-6 max-w-2xl mx-auto">
+          <p className="text-gray-300 font-sans mb-6 max-w-2xl mx-auto">
             Rezervă acum pentru perioada sărbătorilor și beneficiezi de tarife preferențiale și servicii premium incluse.
           </p>
             <Link href="/checkout" aria-label="Rezervă cu reducere">
