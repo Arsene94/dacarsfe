@@ -640,7 +640,11 @@ const AdminDashboard = () => {
                 </div>
             </div>
             {activityDetails && (
-                <Popup open={popupOpen} onClose={() => setPopupOpen(false)}>
+                <Popup
+                    open={popupOpen}
+                    onClose={() => setPopupOpen(false)}
+                    className="max-w-xl"
+                >
                     <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">Detalii rezervare</h3>
                     <div className="space-y-2 mb-4">
                         <div className="text-sm font-dm-sans"><span className="font-semibold">Client:</span> {activityDetails.customer}</div>
