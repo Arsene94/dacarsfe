@@ -23,6 +23,44 @@ import { AdminReservation } from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
 import apiClient from "@/lib/api";
 
+const getStatusColor = (status: string) => {
+    switch (status) {
+        case "reserved":
+            return "bg-green-100 text-green-800";
+        case "pending":
+            return "bg-yellow-100 text-yellow-800";
+        case "cancelled":
+            return "bg-red-100 text-red-800";
+        case "completed":
+            return "bg-blue-100 text-blue-800";
+        case "no_answer":
+            return "bg-orange-100 text-orange-800";
+        case "waiting_advance_payment":
+            return "bg-purple-100 text-purple-800";
+        default:
+            return "bg-gray-100 text-gray-800";
+    }
+};
+
+const getStatusText = (status: string) => {
+    switch (status) {
+        case "reserved":
+            return "Rezervat";
+        case "pending":
+            return "În așteptare";
+        case "cancelled":
+            return "Anulat";
+        case "completed":
+            return "Finalizat";
+        case "no_answer":
+            return "Fără răspuns";
+        case "waiting_advance_payment":
+            return "Așteaptă avans";
+        default:
+            return status;
+    }
+};
+
 const reservationColumns: Column<AdminReservation>[] = [
     {
         id: "id",
@@ -80,20 +118,12 @@ const reservationColumns: Column<AdminReservation>[] = [
         accessor: (r) => r.status,
         cell: (r) => (
             <span
-                className={`px-2 py-1 rounded-full text-xs font-dm-sans ${
-                    r.status === "confirmed"
-                        ? "bg-green-100 text-green-800"
-                        : r.status === "pending"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                }`}
+                className={`px-2 py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
+                    r.status,
+                )}`}
             >
-        {r.status === "confirmed"
-            ? "Confirmat"
-            : r.status === "pending"
-                ? "În așteptare"
-                : "Anulat"}
-      </span>
+                {getStatusText(r.status)}
+            </span>
         ),
     },
     {
@@ -182,7 +212,7 @@ const AdminDashboard = () => {
                 startDate: "2025-01-15",
                 endDate: "2025-01-18",
                 plan: 1,
-                status: "confirmed",
+                status: "reserved",
                 total: 135,
             },
             {
@@ -194,7 +224,7 @@ const AdminDashboard = () => {
                 startDate: "2025-01-20",
                 endDate: "2025-01-25",
                 plan: 0,
-                status: "confirmed",
+                status: "reserved",
                 total: 325,
             },
             {
@@ -218,7 +248,7 @@ const AdminDashboard = () => {
                 startDate: "2025-02-01",
                 endDate: "2025-02-05",
                 plan: 1,
-                status: "confirmed",
+                status: "completed",
                 total: 180,
             },
             {
@@ -230,7 +260,7 @@ const AdminDashboard = () => {
                 startDate: "2025-02-10",
                 plan: 1,
                 endDate: "2025-02-12",
-                status: "confirmed",
+                status: "cancelled",
                 total: 170,
             },
         ];

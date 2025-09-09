@@ -75,7 +75,7 @@ const CarsPage = () => {
           doors: 5,
           luggage: 3,
         },
-        status: "rented",
+        status: "out_of_service",
         rating: 4.9,
         description:
           "Mașină de clasă medie cu tehnologie avansată și confort superior.",
@@ -254,9 +254,9 @@ const CarsPage = () => {
     switch (status) {
       case "available":
         return "bg-green-100 text-green-800";
-      case "rented":
-        return "bg-yellow-100 text-yellow-800";
       case "maintenance":
+        return "bg-yellow-100 text-yellow-800";
+      case "out_of_service":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -267,10 +267,10 @@ const CarsPage = () => {
     switch (status) {
       case "available":
         return "Disponibilă";
-      case "rented":
-        return "Închiriată";
       case "maintenance":
-        return "Service";
+        return "În service";
+      case "out_of_service":
+        return "Indisponibilă";
       default:
         return status;
     }
@@ -352,9 +352,9 @@ const CarsPage = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-dm-sans text-gray-600">Închiriate</p>
+                <p className="text-sm font-dm-sans text-gray-600">În Service</p>
                 <p className="text-2xl font-poppins font-bold text-yellow-600">
-                  {cars.filter((car) => car.status === "rented").length}
+                  {cars.filter((car) => car.status === "maintenance").length}
                 </p>
               </div>
               <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
@@ -366,9 +366,9 @@ const CarsPage = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-dm-sans text-gray-600">În Service</p>
+                <p className="text-sm font-dm-sans text-gray-600">Indisponibile</p>
                 <p className="text-2xl font-poppins font-bold text-red-600">
-                  {cars.filter((car) => car.status === "maintenance").length}
+                  {cars.filter((car) => car.status === "out_of_service").length}
                 </p>
               </div>
               <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
@@ -402,8 +402,8 @@ const CarsPage = () => {
             >
               <option value="all">Toate statusurile</option>
               <option value="available">Disponibile</option>
-              <option value="rented">Închiriate</option>
               <option value="maintenance">În Service</option>
+              <option value="out_of_service">Indisponibile</option>
             </Select>
 
             <Select
