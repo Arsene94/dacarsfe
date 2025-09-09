@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -11,6 +11,8 @@ import {
   ChevronRight,
   ChevronDown,
   Folder,
+  Menu,
+  X,
 } from "lucide-react";
 
 const menuItems = [
@@ -30,28 +32,69 @@ const menuItems = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      setCollapsed(mobile);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const toggleMenu = (name: string) => {
     setOpenMenus((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
   return (
-    <aside
-      className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${
-        collapsed ? "w-20" : "w-64"
-      }`}
-    >
+    <>
+      {isMobile && collapsed && (
+        <button
+          onClick={() => setCollapsed(false)}
+          className="fixed top-20 left-4 z-40 p-2 rounded-md bg-white shadow-md"
+          aria-label="Deschide meniul de administrare"
+        >
+          <Menu className="h-5 w-5 text-gray-700" />
+        </button>
+      )}
+      <aside
+        className={`bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ${
+          isMobile
+            ? `fixed top-16 left-0 h-[calc(100vh-4rem)] z-50 w-64 transform ${
+                collapsed
+                  ? "-translate-x-full pointer-events-none"
+                  : "translate-x-0 shadow-lg"
+              }`
+            : collapsed
+            ? "w-20"
+            : "w-64"
+        }`}
+      >
       <div className="h-16 flex items-center justify-between px-4">
         {!collapsed && (
           <span className="text-lg font-semibold text-berkeley">Admin</span>
         )}
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => {
+            if (isMobile) setCollapsed(true);
+            else setCollapsed(!collapsed);
+          }}
           className="p-2 rounded-md hover:bg-gray-100"
-          aria-label={collapsed ? "Extinde meniul" : "Restrânge meniul"}
+          aria-label={
+            isMobile
+              ? "Închide meniul"
+              : collapsed
+              ? "Extinde meniul"
+              : "Restrânge meniul"
+          }
         >
-          {collapsed ? (
+          {isMobile ? (
+            <X className="h-5 w-5 text-gray-700" />
+          ) : collapsed ? (
             <ChevronRight className="h-5 w-5 text-gray-700" />
           ) : (
             <ChevronLeft className="h-5 w-5 text-gray-700" />
@@ -99,6 +142,7 @@ export default function AdminSidebar() {
                         <Link
                           key={sub.href}
                           href={sub.href}
+                          onClick={() => isMobile && setCollapsed(true)}
                           className={`block rounded-md px-2 py-2 text-sm transition-colors ${
                             subActive
                               ? "text-jade"
@@ -119,6 +163,7 @@ export default function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href!}
+              onClick={() => isMobile && setCollapsed(true)}
               className={`flex items-center rounded-md px-2 py-2 text-sm font-medium transition-colors ${
                 collapsed ? "justify-center" : ""
               } ${
@@ -134,6 +179,7 @@ export default function AdminSidebar() {
         })}
       </nav>
     </aside>
+    </>
   );
 }
 
