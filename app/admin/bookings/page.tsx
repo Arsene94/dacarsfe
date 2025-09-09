@@ -37,6 +37,7 @@ const ReservationsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
+  const [totalReservations, setTotalReservations] = useState(0);
 
   const mapStatus = (status: string): AdminReservation["status"] => {
     switch (status) {
@@ -89,9 +90,12 @@ const ReservationsPage = () => {
         servicesPrice: b.total_services,
         discount: b.coupon_amount,
       }));
+      const meta = res?.meta || {};
+      const total = meta?.total ?? res?.total ?? mapped.length;
       setReservations(mapped);
       setFilteredReservations(mapped);
-      setLastPage(res.meta?.last_page || 1);
+      setLastPage(meta?.last_page ?? res?.last_page ?? 1);
+      setTotalReservations(total);
     } catch (e) {
       console.error(e);
     }
@@ -461,7 +465,7 @@ const ReservationsPage = () => {
 
             <div className="flex items-center justify-between">
               <span className="font-dm-sans text-gray-600">
-                {filteredReservations.length} rezervări găsite
+                {totalReservations} rezervări găsite
               </span>
             </div>
           </div>
