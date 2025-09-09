@@ -45,6 +45,11 @@ export function SearchSelect<T>({
 }: SearchSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const onOpenRef = useRef(onOpen);
+
+  useEffect(() => {
+    onOpenRef.current = onOpen;
+  }, [onOpen]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -58,9 +63,9 @@ export function SearchSelect<T>({
 
   useEffect(() => {
     if (open) {
-      onOpen?.();
+      onOpenRef.current?.();
     }
-  }, [open, onOpen]);
+  }, [open]);
 
   const display = value
     ? renderValue

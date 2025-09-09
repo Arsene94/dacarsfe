@@ -461,6 +461,10 @@ const AdminDashboard = () => {
         setCarResults([]);
     };
 
+    const handleCarSearchOpen = useCallback(() => {
+        setCarSearchActive(true);
+    }, []);
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
@@ -845,10 +849,7 @@ const AdminDashboard = () => {
                                     items={carResults}
                                     onSearch={setCarSearch}
                                     onSelect={handleSelectCar}
-                                    onOpen={() => {
-                                        setCarSearchActive(true);
-                                        fetchCars(carSearch);
-                                    }}
+                                    onOpen={handleCarSearchOpen}
                                     placeholder="Selectează mașina"
                                     renderItem={(car) => (
                                         <>
