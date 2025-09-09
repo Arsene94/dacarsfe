@@ -30,7 +30,8 @@ const ReservationsPage = () => {
   >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
   const [selectedReservation, setSelectedReservation] =
     useState<AdminReservation | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -129,31 +130,22 @@ const ReservationsPage = () => {
       );
     }
 
-    // Date filter
-    if (dateFilter !== "all") {
-      const today = new Date();
-      const filterDate = new Date();
-
-      switch (dateFilter) {
-        case "today":
-          filterDate.setDate(today.getDate());
-          break;
-        case "week":
-          filterDate.setDate(today.getDate() + 7);
-          break;
-        case "month":
-          filterDate.setMonth(today.getMonth() + 1);
-          break;
-      }
-
+    // Date range filter
+    if (startDateFilter || endDateFilter) {
       filtered = filtered.filter((reservation) => {
         const startDate = new Date(reservation.startDate);
-        return startDate <= filterDate;
+        if (startDateFilter && startDate < new Date(startDateFilter)) {
+          return false;
+        }
+        if (endDateFilter && startDate > new Date(endDateFilter)) {
+          return false;
+        }
+        return true;
       });
     }
 
     setFilteredReservations(filtered);
-  }, [reservations, searchTerm, statusFilter, dateFilter]);
+  }, [reservations, searchTerm, statusFilter, startDateFilter, endDateFilter]);
 
   const handleViewReservation = useCallback((reservation: AdminReservation) => {
     setSelectedReservation(reservation);
@@ -451,17 +443,30 @@ const ReservationsPage = () => {
               <option value="cancelled">Anulat</option>
             </Select>
 
-            <Select
-              value={dateFilter}
-              onValueChange={setDateFilter}
-              placeholder="Toate perioadele"
-              aria-label="Filtrează după perioadă"
-            >
-              <option value="all">Toate perioadele</option>
-              <option value="today">Astăzi</option>
-              <option value="week">Următoarea săptămână</option>
-              <option value="month">Următoarea lună</option>
-            </Select>
+            <div className="flex space-x-2">
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input
+                  type="date"
+                  value={startDateFilter}
+                  onChange={(e) => setStartDateFilter(e.target.value)}
+                  placeholder="De la"
+                  aria-label="Data început"
+                  className="pl-10"
+                />
+              </div>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input
+                  type="date"
+                  value={endDateFilter}
+                  onChange={(e) => setEndDateFilter(e.target.value)}
+                  placeholder="Până la"
+                  aria-label="Data sfârșit"
+                  className="pl-10"
+                />
+              </div>
+            </div>
 
             <div className="flex items-center justify-between">
               <span className="font-dm-sans text-gray-600">
