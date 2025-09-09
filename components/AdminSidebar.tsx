@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -30,7 +30,19 @@ const menuItems = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      setCollapsed(mobile);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const toggleMenu = (name: string) => {
     setOpenMenus((prev) => ({ ...prev, [name]: !prev[name] }));
@@ -40,7 +52,9 @@ export default function AdminSidebar() {
     <aside
       className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${
         collapsed ? "w-20" : "w-64"
-      }`}
+      } ${
+        isMobile ? "fixed top-16 left-0 h-[calc(100vh-4rem)] z-50" : ""
+      } ${!collapsed && isMobile ? "shadow-lg" : ""}`}
     >
       <div className="h-16 flex items-center justify-between px-4">
         {!collapsed && (

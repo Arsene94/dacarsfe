@@ -35,6 +35,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           as="image"
           href="/images/bg-hero-mobile.webp"
         />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
           <link rel="dns-prefetch" href="//vercel.app" />
           <meta name="format-detection" content="telephone=no" />
           <meta name="mobile-web-app-capable" content="yes" />
