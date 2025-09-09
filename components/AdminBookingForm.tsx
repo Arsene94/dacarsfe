@@ -27,6 +27,25 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
     onSelectCar,
     onCarSearchOpen,
 }) => {
+    const updateDates = (changes: any) => {
+        const updated = { ...bookingInfo, ...changes };
+        if (updated.rental_start_date && updated.rental_end_date) {
+            const start = new Date(updated.rental_start_date);
+            const end = new Date(updated.rental_end_date);
+            const diffMs = end.getTime() - start.getTime();
+            const days = diffMs > 0 ? Math.ceil(diffMs / 86400000) : 0;
+            const subTotal = days * (updated.price_per_day || 0);
+            const total =
+                subTotal +
+                (updated.total_services || 0) -
+                (updated.coupon_amount || 0);
+            updated.days = days;
+            updated.sub_total = subTotal;
+            updated.total = total;
+        }
+        setBookingInfo(updated);
+    };
+
     return (
         <div className="flex items-start gap-6">
             <div className="w-2/3 grid grid-cols-2 gap-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
@@ -176,12 +195,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                     <Input
                         type="datetime-local"
                         value={bookingInfo.rental_start_date}
-                        onChange={(e) =>
-                            setBookingInfo({
-                                ...bookingInfo,
-                                rental_start_date: e.target.value,
-                            })
-                        }
+                        onChange={(e) => updateDates({ rental_start_date: e.target.value })}
                     />
                 </div>
                 <div>
@@ -191,12 +205,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                     <Input
                         type="datetime-local"
                         value={bookingInfo.rental_end_date}
-                        onChange={(e) =>
-                            setBookingInfo({
-                                ...bookingInfo,
-                                rental_end_date: e.target.value,
-                            })
-                        }
+                        onChange={(e) => updateDates({ rental_end_date: e.target.value })}
                     />
                 </div>
                 <div className="flex items-center gap-2">
@@ -224,29 +233,6 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
                         onChange={(e) =>
                             setBookingInfo({ ...bookingInfo, coupon_code: e.target.value })
                         }
-                    />
-                </div>
-                <div>
-                    <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                        Zile
-                    </label>
-                    <Input
-                        type="number"
-                        value={bookingInfo.days}
-                        onChange={(e) => {
-                            const days = parseInt(e.target.value, 10) || 0;
-                            const subTotal = days * (bookingInfo.price_per_day || 0);
-                            const total =
-                                subTotal +
-                                (bookingInfo.total_services || 0) -
-                                (bookingInfo.coupon_amount || 0);
-                            setBookingInfo({
-                                ...bookingInfo,
-                                days,
-                                sub_total: subTotal,
-                                total,
-                            });
-                        }}
                     />
                 </div>
                 <div>
