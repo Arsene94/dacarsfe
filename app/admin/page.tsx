@@ -184,6 +184,7 @@ const AdminDashboard = () => {
     const [bookingInfo, setBookingInfo] = useState<any>(null);
     const [carSearch, setCarSearch] = useState("");
     const [carResults, setCarResults] = useState<any[]>([]);
+    const [carSearchActive, setCarSearchActive] = useState(false);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
     const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);
     const [bookingsTotalCount, setBookingsTotalCount] = useState<number>(0);
@@ -244,14 +245,15 @@ const AdminDashboard = () => {
         loadMetrics();
     }, []);
 
-    useEffect(() => {
-        if (!carSearch) {
-            setCarResults([]);
-            return;
-        }
-        const handler = setTimeout(async () => {
+    const fetchCars = useCallback(
+        async (query: string) => {
             try {
-                const resp = await apiClient.getCars({ search: carSearch, start_date: activityDetails?.arrivalDate + ' ' + activityDetails?.arrivalTime, end_date: activityDetails?.returnDate + ' ' + activityDetails?.returnTime , limit: 10 });
+                const resp = await apiClient.getCars({
+                    search: query,
+                    start_date: activityDetails?.arrivalDate + ' ' + activityDetails?.arrivalTime,
+                    end_date: activityDetails?.returnDate + ' ' + activityDetails?.returnTime,
+                    limit: 100,
+                });
                 const list = Array.isArray(resp?.data)
                     ? resp.data
                     : Array.isArray(resp)
@@ -263,9 +265,17 @@ const AdminDashboard = () => {
             } catch (error) {
                 console.error('Error searching cars:', error);
             }
+        },
+        [activityDetails]
+    );
+
+    useEffect(() => {
+        if (!carSearchActive) return;
+        const handler = setTimeout(() => {
+            fetchCars(carSearch);
         }, 300);
         return () => clearTimeout(handler);
-    }, [carSearch]);
+    }, [carSearch, fetchCars, carSearchActive]);
 
     // Mock data pentru demo
     useEffect(() => {
@@ -450,6 +460,10 @@ const AdminDashboard = () => {
         setCarSearch("");
         setCarResults([]);
     };
+
+    const handleCarSearchOpen = useCallback(() => {
+        setCarSearchActive(true);
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -835,15 +849,46 @@ const AdminDashboard = () => {
                                     items={carResults}
                                     onSearch={setCarSearch}
                                     onSelect={handleSelectCar}
+                                    onOpen={handleCarSearchOpen}
                                     placeholder="Selectează mașina"
                                     renderItem={(car) => (
-                                        <div className={`w-full ${car.available ? 'bg-green-500' : 'bg-red-500' }`}>
+                                        <>
                                             <Image
                                                 src={
                                                     car.image_preview || car.image
-                                                        ? STORAGE_BASE +
-                                                          "/" +
-                                                          (car.image_preview || car.image)
+                                                        ?
+                                                              STORAGE_BASE +
+                                                              "/" +
+                                                              (car.image_preview || car.image)
+                                                        : "/images/placeholder-car.svg"
+                                                }
+                                                alt={car.name}
+                                                width={64}
+                                                height={40}
+                                                className="w-16 h-10 object-cover rounded"
+                                            />
+                                            <div className="text-left">
+                                                <div className="font-dm-sans font-semibold">{car.name}</div>
+                                                <div className="text-xs">
+                                                    {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                    itemClassName={(car) =>
+                                        car.available
+                                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                            : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                    }
+                                    renderValue={(car) => (
+                                        <div className="flex items-center gap-3">
+                                            <Image
+                                                src={
+                                                    car.image_preview || car.image
+                                                        ?
+                                                              STORAGE_BASE +
+                                                              "/" +
+                                                              (car.image_preview || car.image)
                                                         : "/images/placeholder-car.svg"
                                                 }
                                                 alt={car.name}
