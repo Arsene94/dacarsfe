@@ -765,7 +765,7 @@ const AdminDashboard = () => {
                     <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">
                         Editează rezervarea
                     </h3>
-                    <div className="flex gap-6">
+                    <div className="flex items-start gap-6">
                         <div className="w-2/3 space-y-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
@@ -918,7 +918,7 @@ const AdminDashboard = () => {
                                 />
                             </div>
                         </div>
-                        <div className="w-1/3 space-y-2 p-4 border border-gray-300 rounded-lg bg-gray-50">
+                        <div className="w-1/3 h-fit sticky top-0 space-y-2 p-4 border border-gray-300 rounded-lg bg-gray-50">
                             <div className="font-dm-sans text-sm">
                                 Preț per zi: {bookingInfo.price_per_day}€ x {bookingInfo.days} zile
                             </div>
