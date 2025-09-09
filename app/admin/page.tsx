@@ -140,6 +140,14 @@ const reservationColumns: Column<AdminReservation>[] = [
     },
 ];
 
+const toLocalDateTimeInput = (iso?: string | null) => {
+    if (!iso) return "";
+    const date = new Date(iso);
+    const tzOffset = date.getTimezoneOffset();
+    const local = new Date(date.getTime() - tzOffset * 60000);
+    return local.toISOString().slice(0, 16);
+};
+
 const AdminDashboard = () => {
     const router = useRouter();
     const [reservations, setReservations] = useState<AdminReservation[]>([]);
@@ -352,7 +360,13 @@ const AdminDashboard = () => {
         if (!activityDetails) return;
         try {
             const info = await getBookingInfo(activityDetails.id);
-            setBookingInfo(info);
+            const formatted = {
+                ...info,
+                rental_start_date: toLocalDateTimeInput(info.rental_start_date),
+                rental_end_date: toLocalDateTimeInput(info.rental_end_date),
+                coupon_amount: info.coupon_amount ?? 0,
+            };
+            setBookingInfo(formatted);
             setPopupOpen(false);
             setEditPopupOpen(true);
         } catch (err) {
@@ -739,6 +753,72 @@ const AdminDashboard = () => {
                                 value={bookingInfo.customer_phone}
                                 onChange={(e) =>
                                     setBookingInfo({ ...bookingInfo, customer_phone: e.target.value })
+                                }
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Data preluare</label>
+                            <Input
+                                type="datetime-local"
+                                value={bookingInfo.rental_start_date}
+                                onChange={(e) =>
+                                    setBookingInfo({ ...bookingInfo, rental_start_date: e.target.value })
+                                }
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Data returnare</label>
+                            <Input
+                                type="datetime-local"
+                                value={bookingInfo.rental_end_date}
+                                onChange={(e) =>
+                                    setBookingInfo({ ...bookingInfo, rental_end_date: e.target.value })
+                                }
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Zile</label>
+                            <Input
+                                type="number"
+                                value={bookingInfo.days}
+                                onChange={(e) => {
+                                    const days = parseInt(e.target.value, 10) || 0;
+                                    const total = days * (bookingInfo.price_per_day || 0) - (bookingInfo.coupon_amount || 0);
+                                    setBookingInfo({ ...bookingInfo, days, total });
+                                }}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Preț/zi</label>
+                            <Input
+                                type="number"
+                                value={bookingInfo.price_per_day}
+                                onChange={(e) => {
+                                    const price = parseFloat(e.target.value) || 0;
+                                    const total = (bookingInfo.days || 0) * price - (bookingInfo.coupon_amount || 0);
+                                    setBookingInfo({ ...bookingInfo, price_per_day: price, total });
+                                }}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Reducere</label>
+                            <Input
+                                type="number"
+                                value={bookingInfo.coupon_amount}
+                                onChange={(e) => {
+                                    const discount = parseFloat(e.target.value) || 0;
+                                    const total = (bookingInfo.days || 0) * (bookingInfo.price_per_day || 0) - discount;
+                                    setBookingInfo({ ...bookingInfo, coupon_amount: discount, total });
+                                }}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Total</label>
+                            <Input
+                                type="number"
+                                value={bookingInfo.total}
+                                onChange={(e) =>
+                                    setBookingInfo({ ...bookingInfo, total: parseFloat(e.target.value) || 0 })
                                 }
                             />
                         </div>
