@@ -456,7 +456,7 @@ const AdminDashboard = () => {
                                                                         </span>
                                                                     )}
                                                                 </div>
-                                                                <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
+                                                                <div className="mt-1 grid grid-cols-1 gap-4 text-sm text-gray-600">
                                                                     <div className="flex items-center space-x-1">
                                                                         <User className="h-4 w-4" />
                                                                         <span>{r.customer_name}</span>
@@ -465,17 +465,14 @@ const AdminDashboard = () => {
                                                                         <Phone className="h-4 w-4" />
                                                                         <span>{r.customer_phone}</span>
                                                                     </div>
-                                                                </div>
 
-                                                                {r.flight_number && (
-                                                                    <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
+                                                                    {r.flight_number && (
                                                                         <div className="flex items-center space-x-1">
                                                                             <Plane className="h-4 w-4" />
                                                                             <span>{r.flight_number}</span>
                                                                         </div>
-                                                                    </div>
-                                                                )}
-
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                             <div className="flex-shrink-0">
                                                                 <button
