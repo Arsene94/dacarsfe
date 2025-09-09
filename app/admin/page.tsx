@@ -824,7 +824,7 @@ const AdminDashboard = () => {
                                                 onClick={() => handleSelectCar(car)}
                                             >
                                                 <Image
-                                                    src={STORAGE_BASE + car.image_preview || STORAGE_BASE + car.image || "/images/placeholder-car.svg"}
+                                                    src={STORAGE_BASE + '/' + car.image_preview || STORAGE_BASE + '/' + car.image || "/images/placeholder-car.svg"}
                                                     alt={car.name}
                                                     width={64}
                                                     height={40}
