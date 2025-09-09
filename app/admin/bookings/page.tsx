@@ -14,6 +14,7 @@ import {
   Calendar,
   Car,
   MapPin,
+  X,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
@@ -123,6 +124,15 @@ const ReservationsPage = () => {
   const handleViewReservation = useCallback((reservation: AdminReservation) => {
     setSelectedReservation(reservation);
     setShowModal(true);
+  }, []);
+
+  const clearAllFilters = useCallback(() => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setStartDateFilter("");
+    setEndDateFilter("");
+    setDateRange({ startDate: null, endDate: null });
+    setCurrentPage(1);
   }, []);
 
   const handleDateRangeChange = useCallback(
@@ -460,6 +470,66 @@ const ReservationsPage = () => {
               </span>
             </div>
           </div>
+
+          {(searchTerm || statusFilter !== "all" || (startDateFilter && endDateFilter)) && (
+            <div className="flex items-center flex-wrap gap-2 mt-4">
+              {searchTerm && (
+                <span className="flex items-center bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                  Caută: {searchTerm}
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setCurrentPage(1);
+                    }}
+                    className="ml-2 text-gray-500 hover:text-gray-700"
+                    aria-label="Șterge filtrul de căutare"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {statusFilter !== "all" && (
+                <span className="flex items-center bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                  Status: {getStatusText(statusFilter)}
+                  <button
+                    onClick={() => {
+                      setStatusFilter("all");
+                      setCurrentPage(1);
+                    }}
+                    className="ml-2 text-gray-500 hover:text-gray-700"
+                    aria-label="Șterge filtrul de status"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {startDateFilter && endDateFilter && (
+                <span className="flex items-center bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                  {new Date(startDateFilter).toLocaleDateString("ro-RO")} - {""}
+                  {new Date(endDateFilter).toLocaleDateString("ro-RO")}
+                  <button
+                    onClick={() => {
+                      setStartDateFilter("");
+                      setEndDateFilter("");
+                      setDateRange({ startDate: null, endDate: null });
+                      setCurrentPage(1);
+                    }}
+                    className="ml-2 text-gray-500 hover:text-gray-700"
+                    aria-label="Șterge filtrul de perioadă"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              <button
+                onClick={clearAllFilters}
+                className="ml-auto text-sm text-red-600 hover:underline"
+                aria-label="Șterge toate filtrele"
+              >
+                Șterge filtrele
+              </button>
+            </div>
+          )}
         </div>
         <Popup
           open={showCalendar}
