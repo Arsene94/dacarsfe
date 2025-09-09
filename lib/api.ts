@@ -132,6 +132,20 @@ class ApiClient {
         });
     }
 
+    async updateBookingDate(id: any, params: { arrivalDate: string | undefined, arrivalTime: string | undefined, returnDate: string | undefined, returnTime: string | undefined }) {
+        return this.request<any>(`/bookings/${id}/update-date`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${this.token}`
+            },
+            credentials: 'include',
+            cache: 'no-cache',
+            body: JSON.stringify(params),
+        })
+    }
+
     async getBookings(params: {
         page?: number;
         perPage?: number;

@@ -308,6 +308,24 @@ const AdminDashboard = () => {
         }
     }
 
+    const updateDateTime = async () => {
+        try {
+            const payload = {
+                arrivalDate: activityDetails?.arrivalDate,
+                arrivalTime: activityDetails?.arrivalTime,
+                returnDate: activityDetails?.returnDate,
+                returnTime: activityDetails?.returnTime,
+            }
+
+            await apiClient.updateBookingDate(activityDetails?.id, payload);
+
+        } catch (err) {
+            console.log(err);
+        } finally {
+            setPopupOpen(false);
+        }
+    }
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
@@ -622,7 +640,7 @@ const AdminDashboard = () => {
                     <div className="flex justify-between mt-6">
                         <div className="space-x-2">
                             <Button variant="outline" onClick={() => setPopupOpen(false)}>Anulează</Button>
-                            <Button onClick={() => setPopupOpen(false)}>Salvează</Button>
+                            <Button onClick={() => updateDateTime()}>Salvează</Button>
                         </div>
                     </div>
                 </Popup>
