@@ -914,42 +914,17 @@ const AdminDashboard = () => {
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
                                     Reducere
                                 </label>
-                                <Input
-                                    type="number"
-                                    value={bookingInfo.coupon_amount}
-                                    onChange={(e) => {
-                                        const discount =
-                                            parseFloat(e.target.value) || 0;
-                                        const subTotal =
-                                            (bookingInfo.days || 0) *
-                                            (bookingInfo.price_per_day || 0);
-                                        const total =
-                                            subTotal +
-                                            (bookingInfo.total_services || 0) -
-                                            discount;
-                                        setBookingInfo({
-                                            ...bookingInfo,
-                                            coupon_amount: discount,
-                                            sub_total: subTotal,
-                                            total,
-                                        });
-                                    }}
-                                />
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.coupon_amount}
+                                </div>
                             </div>
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
                                     Cod reducere
                                 </label>
-                                <Input
-                                    type="text"
-                                    value={bookingInfo.coupon_code || ""}
-                                    onChange={(e) =>
-                                        setBookingInfo({
-                                            ...bookingInfo,
-                                            coupon_code: e.target.value,
-                                        })
-                                    }
-                                />
+                                <div className="px-4 py-2 border border-gray-300 rounded-lg">
+                                    {bookingInfo.coupon_code}
+                                </div>
                             </div>
                             <div>
                                 <label className="text-sm font-dm-sans font-semibold text-gray-700">
