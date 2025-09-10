@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
 import BookingForm from "@/components/admin/BookingForm";
+import { Label } from "@/components/ui/label";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
@@ -465,9 +466,9 @@ const AdminDashboard = () => {
                         <div className="mb-6">
                             <div className="flex items-center space-x-3">
                                 <Calendar className="h-5 w-5 text-jade" />
-                                <label htmlFor="day-selector" className="text-sm font-dm-sans font-semibold text-gray-700">
+                                <Label htmlFor="day-selector" className="text-sm font-dm-sans font-semibold text-gray-700">
                                     Selectează ziua:
-                                </label>
+                                </Label>
                             </div>
                             <div className="mt-2">
                                 <Select
@@ -686,9 +687,10 @@ const AdminDashboard = () => {
                     </div>
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Sosire</label>
+                            <Label htmlFor="activity-arrival-date">Sosire</Label>
                             <div className="flex gap-2">
                                 <Input
+                                    id="activity-arrival-date"
                                     type="date"
                                     value={activityDetails.arrivalDate}
                                     onChange={(e) =>
@@ -699,6 +701,7 @@ const AdminDashboard = () => {
                                     }
                                 />
                                 <Input
+                                    id="activity-arrival-time"
                                     type="time"
                                     value={activityDetails.arrivalTime}
                                     onChange={(e) =>
@@ -711,9 +714,10 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                         <div>
-                            <label className="text-sm font-dm-sans font-semibold text-gray-700">Retur</label>
+                            <Label htmlFor="activity-return-date">Retur</Label>
                             <div className="flex gap-2">
                                 <Input
+                                    id="activity-return-date"
                                     type="date"
                                     value={activityDetails.returnDate}
                                     onChange={(e) =>
@@ -724,6 +728,7 @@ const AdminDashboard = () => {
                                     }
                                 />
                                 <Input
+                                    id="activity-return-time"
                                     type="time"
                                     value={activityDetails.returnTime}
                                     onChange={(e) =>

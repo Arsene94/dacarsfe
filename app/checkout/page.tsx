@@ -672,20 +672,24 @@ const ReservationPage = () => {
                                     </h3>
                                     <div className="space-y-4">
                                         {services.map((service) => (
-                                            <label
+                                            <div
                                                 key={service.id}
                                                 className="flex items-center space-x-3"
                                             >
                                                 <input
+                                                    id={`service-${service.id}`}
                                                     type="checkbox"
                                                     checked={selectedServices.some((s) => s.id === service.id)}
                                                     onChange={() => toggleService(service)}
                                                     className="h-4 w-4 text-jade border-gray-300 rounded"
                                                 />
-                                                <span className="font-dm-sans text-gray-700">
-                          {service.name} - {service.price}€
-                        </span>
-                                            </label>
+                                                <Label
+                                                    htmlFor={`service-${service.id}`}
+                                                    className="font-dm-sans text-gray-700 font-normal"
+                                                >
+                                                    {service.name} - {service.price}€
+                                                </Label>
+                                            </div>
                                         ))}
                                         {services.length === 0 && (
                                             <p className="font-dm-sans text-gray-600">
@@ -785,33 +789,48 @@ const ReservationPage = () => {
                                       )}
 
                                       <div className="mt-6">
-                                        <Label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
-                                            Garanție
+                                        <Label
+                                          htmlFor="deposit-none"
+                                          className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
+                                        >
+                                          Garanție
                                         </Label>
                                         <div className="flex items-center space-x-6">
-                                            <label className="flex items-center space-x-2">
-                                                <input
-                                                    type="radio"
-                                                    name="depositOption"
-                                                    checked={!booking.withDeposit}
-                                                    onChange={() => handleDepositChange(false)}
-                                                    className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
-                                                />
-                                                <span className="font-dm-sans text-gray-700">Fără garanție</span>
-                                            </label>
-                                            <label className="flex items-center space-x-2">
-                                                <input
-                                                    type="radio"
-                                                    name="depositOption"
-                                                    checked={!!booking.withDeposit}
-                                                    onChange={() => handleDepositChange(true)}
-                                                    className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
-                                                />
-                                                <span className="font-dm-sans text-gray-700">Cu garanție</span>
-                                            </label>
+                                          <div className="flex items-center space-x-2">
+                                            <input
+                                              id="deposit-none"
+                                              type="radio"
+                                              name="depositOption"
+                                              checked={!booking.withDeposit}
+                                              onChange={() => handleDepositChange(false)}
+                                              className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
+                                            />
+                                            <Label
+                                              htmlFor="deposit-none"
+                                              className="font-dm-sans text-gray-700 font-normal"
+                                            >
+                                              Fără garanție
+                                            </Label>
+                                          </div>
+                                          <div className="flex items-center space-x-2">
+                                            <input
+                                              id="deposit-yes"
+                                              type="radio"
+                                              name="depositOption"
+                                              checked={!!booking.withDeposit}
+                                              onChange={() => handleDepositChange(true)}
+                                              className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
+                                            />
+                                            <Label
+                                              htmlFor="deposit-yes"
+                                              className="font-dm-sans text-gray-700 font-normal"
+                                            >
+                                              Cu garanție
+                                            </Label>
+                                          </div>
                                         </div>
+                                      </div>
                                     </div>
-                                </div>
 
                                 <button
                                     type="submit"

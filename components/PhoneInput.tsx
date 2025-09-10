@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useId } from 'react';
 import { ChevronDown, Search, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { countries } from '@/lib/phone-countries';
 import { Country, PhoneInputProps } from '@/types/phone';
+import { Label } from '@/components/ui/label';
 
 const PhoneInput: React.FC<PhoneInputProps> = ({
   value,
@@ -18,6 +19,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [phoneNumber, setPhoneNumber] = useState(countries[0].prefix);
   const [isValid, setIsValid] = useState(true);
+  const inputId = useId();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -106,10 +108,10 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
 
   return (
     <div className={cn('relative', className)}>
-      <label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+      <Label htmlFor={inputId} className="mb-2">
         <Phone className="h-4 w-4 inline text-jade mr-1" />
-        Telefon *
-      </label>
+        Telefon {required ? '*' : ''}
+      </Label>
       <div className="flex">
         <div className="relative" ref={dropdownRef}>
           <button
@@ -174,6 +176,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
           )}
         </div>
         <input
+          id={inputId}
           type="tel"
           value={phoneNumber}
           onChange={(e) => handlePhoneChange(e.target.value)}

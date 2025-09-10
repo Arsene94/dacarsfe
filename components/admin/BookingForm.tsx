@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SearchSelect } from "@/components/ui/search-select";
 import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
+import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api";
 
 const STORAGE_BASE =
@@ -28,6 +29,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [carSearch, setCarSearch] = useState("");
     const [carResults, setCarResults] = useState<any[]>([]);
     const [carSearchActive, setCarSearchActive] = useState(false);
+
+    const [customerSearch, setCustomerSearch] = useState("");
+    const [customerResults, setCustomerResults] = useState<any[]>([]);
+    const [customerSearchActive, setCustomerSearchActive] = useState(false);
 
     const fetchCars = useCallback(
         async (query: string) => {
@@ -53,6 +58,26 @@ const BookingForm: React.FC<BookingFormProps> = ({
         [bookingInfo?.rental_start_date, bookingInfo?.rental_end_date],
     );
 
+    const fetchCustomers = useCallback(async (query: string) => {
+        try {
+            const resp = await apiClient.searchCustomersByPhone(query);
+            const list = Array.isArray(resp)
+                ? resp.flatMap((row: any) =>
+                      (row.phones || []).map((phone: string) => {
+                          return {
+                              name: row.latest?.name || row.names?.[0] || "",
+                              email: row.email,
+                              phone,
+                          };
+                      })
+                  )
+                : [];
+            setCustomerResults(list);
+        } catch (error) {
+            console.error("Error searching customers:", error);
+        }
+    }, []);
+
     useEffect(() => {
         if (!carSearchActive) return;
 
@@ -63,37 +88,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
         return () => clearTimeout(handler);
     }, [carSearch, fetchCars, carSearchActive, bookingInfo.rental_start_date, bookingInfo.rental_end_date]);
 
-    const fetchedPhoneRef = useRef<string | null>(null);
-
     useEffect(() => {
-        if (!bookingInfo.customer_phone) {
-            fetchedPhoneRef.current = null;
+        if (!customerSearchActive) return;
+        if (customerSearch.trim().length === 0) {
+            setCustomerResults([]);
             return;
         }
-        if (fetchedPhoneRef.current === bookingInfo.customer_phone) return;
-        fetchedPhoneRef.current = bookingInfo.customer_phone;
-        const getUserByPhone = async () => {
-            const data = await apiClient.getClientByPhone(
-                bookingInfo.customer_phone,
-            );
-            if (data) {
-                setBookingInfo((prev: any) => {
-                    if (
-                        prev.customer_name === data.name &&
-                        prev.customer_email === data.email
-                    ) {
-                        return prev;
-                    }
-                    return {
-                        ...prev,
-                        customer_name: data.name,
-                        customer_email: data.email,
-                    };
-                });
-            }
-        };
-        getUserByPhone();
-    }, [bookingInfo.customer_phone, setBookingInfo]);
+        const handler = setTimeout(() => {
+            fetchCustomers(customerSearch);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [customerSearch, fetchCustomers, customerSearchActive]);
+
+    // Populate customer details only when a suggestion is selected
 
     const handleDiscount = (
         discountType: string,
@@ -145,9 +152,25 @@ const BookingForm: React.FC<BookingFormProps> = ({
         setCarResults([]);
     };
 
+    const handleSelectCustomer = (customer: any) => {
+        setBookingInfo({
+            ...bookingInfo,
+            customer_phone: customer.phone || "",
+            customer_name: customer.name || "",
+            customer_email: customer.email || "",
+            customer_id: customer.id ?? bookingInfo.customer_id,
+        });
+        setCustomerSearch("");
+        setCustomerResults([]);
+    };
+
     const handleCarSearchOpen = useCallback(() => {
 
         setCarSearchActive(true);
+    }, []);
+
+    const handleCustomerSearchOpen = useCallback(() => {
+        setCustomerSearchActive(true);
     }, []);
 
     useEffect(() => {
@@ -200,12 +223,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
             <div className="flex items-start gap-6">
                 <div className="w-2/3 grid grid-cols-2 gap-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Dată preluare
-                        </label>
+                        <Label htmlFor="rental-start-date">Dată preluare</Label>
                         <Input
+                            id="rental-start-date"
                             type="datetime-local"
-                            value={bookingInfo.rental_start_date}
+                            value={bookingInfo.rental_start_date || ""}
                             onChange={(e) =>
                                 setBookingInfo({
                                     ...bookingInfo,
@@ -216,12 +238,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Dată returnare
-                        </label>
+                        <Label htmlFor="rental-end-date">Dată returnare</Label>
                         <Input
+                            id="rental-end-date"
                             type="datetime-local"
-                            value={bookingInfo.rental_end_date}
+                            value={bookingInfo.rental_end_date || ""}
                             onChange={(e) =>
                                 setBookingInfo({
                                     ...bookingInfo,
@@ -231,10 +252,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         />
                     </div>
                     <div className="col-span-2">
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Mașină
-                        </label>
+                        <Label htmlFor="car-select">Mașină</Label>
                         <SearchSelect
+                            id="car-select"
                             value={
                                 bookingInfo.car_id
                                     ? {
@@ -316,12 +336,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Nume client
-                        </label>
+                        <Label htmlFor="customer-name">Nume client</Label>
                         <Input
+                            id="customer-name"
                             type="text"
-                            value={bookingInfo.customer_name}
+                            value={bookingInfo.customer_name || ""}
                             onChange={(e) =>
                                 setBookingInfo({
                                     ...bookingInfo,
@@ -332,12 +351,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Email
-                        </label>
+                        <Label htmlFor="customer-email">Email</Label>
                         <Input
+                            id="customer-email"
                             type="email"
-                            value={bookingInfo.customer_email}
+                            value={bookingInfo.customer_email || ""}
                             onChange={(e) =>
                                 setBookingInfo({
                                     ...bookingInfo,
@@ -348,44 +366,95 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Telefon
-                        </label>
-                        <Input
-                            type="text"
-                            value={bookingInfo.customer_phone}
-                            onChange={(e) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
-                                    customer_phone: e.target.value,
-                                })
+                        <Label htmlFor="customer-phone">Telefon</Label>
+                        <SearchSelect
+                            id="customer-phone"
+                            value={
+                                bookingInfo.customer_phone
+                                    ? {
+                                          id: bookingInfo.customer_id,
+                                          name: bookingInfo.customer_name,
+                                          phone: bookingInfo.customer_phone,
+                                          email: bookingInfo.customer_email,
+                                      }
+                                    : null
                             }
+                            search={customerSearch}
+                            items={customerResults}
+                            onSearch={(v) => {
+                                setCustomerSearch(v);
+                                if (!customerSearch && v === "") return;
+                                setBookingInfo((prev: any) => ({
+                                    ...prev,
+                                    customer_phone: v,
+                                    customer_id: undefined,
+                                }));
+                            }}
+                            onSelect={handleSelectCustomer}
+                            onOpen={handleCustomerSearchOpen}
+                            placeholder="Selectează clientul"
+                            renderItem={(user) => (
+                                <div>
+                                    <div className="font-dm-sans font-semibold">{user.name}</div>
+                                    <div className="text-xs">{user.phone} • {user.email}</div>
+                                </div>
+                            )}
+                            renderValue={(user) => <span>{user.phone}</span>}
                         />
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Cu depozit
-                        </label>
-                        <Select
-                            value={bookingInfo.with_deposit ? "1" : "0"}
-                            onValueChange={(v) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
-                                    with_deposit: v === "1",
-                                })
-                            }
-                        >
-                            <option value="0">Nu</option>
-                            <option value="1">Da</option>
-                        </Select>
+                        <Label htmlFor="with-deposit-no">Cu depozit</Label>
+                        <div className="flex items-center space-x-6 mt-1">
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    id="with-deposit-no"
+                                    type="radio"
+                                    name="withDeposit"
+                                    checked={!bookingInfo.with_deposit}
+                                    onChange={() =>
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            with_deposit: false,
+                                        })
+                                    }
+                                    className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
+                                />
+                                <Label
+                                    htmlFor="with-deposit-no"
+                                    className="font-dm-sans text-gray-700 font-normal"
+                                >
+                                    Nu
+                                </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    id="with-deposit-yes"
+                                    type="radio"
+                                    name="withDeposit"
+                                    checked={!!bookingInfo.with_deposit}
+                                    onChange={() =>
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            with_deposit: true,
+                                        })
+                                    }
+                                    className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
+                                />
+                                <Label
+                                    htmlFor="with-deposit-yes"
+                                    className="font-dm-sans text-gray-700 font-normal"
+                                >
+                                    Da
+                                </Label>
+                            </div>
+                        </div>
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Cod cupon
-                        </label>
+                        <Label htmlFor="coupon-code">Cod cupon</Label>
                         <Input
+                            id="coupon-code"
                             type="text"
                             value={bookingInfo.coupon_code || ""}
                             onChange={(e) =>

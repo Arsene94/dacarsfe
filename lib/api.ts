@@ -186,11 +186,19 @@ class ApiClient {
         return this.request<any>(`/bookings${query ? `?${query}` : ''}`);
     }
 
-    async getClientByPhone(phone: string) {
+    async getCustomers(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/customers${query ? `?${query}` : ''}`);
+    }
+
+    async searchCustomersByPhone(phone: string) {
         return this.request<any>(`/customers/get/byphone`, {
             method: 'POST',
-            body: JSON.stringify({phone})
-        })
+            body: JSON.stringify({ phone }),
+        });
     }
 
     // Authentication helpers
