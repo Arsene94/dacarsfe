@@ -403,7 +403,23 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         />
                     </div>
 
+
                     <div>
+                        <Label htmlFor="coupon-code">Cod cupon</Label>
+                        <Input
+                            id="coupon-code"
+                            type="text"
+                            value={bookingInfo.coupon_code || ""}
+                            onChange={(e) =>
+                                setBookingInfo({
+                                    ...bookingInfo,
+                                    coupon_code: e.target.value,
+                                })
+                            }
+                        />
+                    </div>
+
+                    <div className="col-span-2">
                         <Label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                             Plan de închiriere
                         </Label>
@@ -461,21 +477,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 </div>
                             </label>
                         </div>
-                    </div>
-
-                    <div>
-                        <Label htmlFor="coupon-code">Cod cupon</Label>
-                        <Input
-                            id="coupon-code"
-                            type="text"
-                            value={bookingInfo.coupon_code || ""}
-                            onChange={(e) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
-                                    coupon_code: e.target.value,
-                                })
-                            }
-                        />
                     </div>
                 </div>
 
