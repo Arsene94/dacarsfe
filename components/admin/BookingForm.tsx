@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/select";
 import { SearchSelect } from "@/components/ui/search-select";
 import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
+import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api";
 
 const STORAGE_BASE =
@@ -222,10 +223,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
             <div className="flex items-start gap-6">
                 <div className="w-2/3 grid grid-cols-2 gap-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Dată preluare
-                        </label>
+                        <Label htmlFor="rental-start-date">Dată preluare</Label>
                         <Input
+                            id="rental-start-date"
                             type="datetime-local"
                             value={bookingInfo.rental_start_date || ""}
                             onChange={(e) =>
@@ -238,10 +238,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Dată returnare
-                        </label>
+                        <Label htmlFor="rental-end-date">Dată returnare</Label>
                         <Input
+                            id="rental-end-date"
                             type="datetime-local"
                             value={bookingInfo.rental_end_date || ""}
                             onChange={(e) =>
@@ -253,10 +252,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         />
                     </div>
                     <div className="col-span-2">
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Mașină
-                        </label>
+                        <Label htmlFor="car-select">Mașină</Label>
                         <SearchSelect
+                            id="car-select"
                             value={
                                 bookingInfo.car_id
                                     ? {
@@ -338,10 +336,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Nume client
-                        </label>
+                        <Label htmlFor="customer-name">Nume client</Label>
                         <Input
+                            id="customer-name"
                             type="text"
                             value={bookingInfo.customer_name || ""}
                             onChange={(e) =>
@@ -354,10 +351,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Email
-                        </label>
+                        <Label htmlFor="customer-email">Email</Label>
                         <Input
+                            id="customer-email"
                             type="email"
                             value={bookingInfo.customer_email || ""}
                             onChange={(e) =>
@@ -370,10 +366,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Telefon
-                        </label>
+                        <Label htmlFor="customer-phone">Telefon</Label>
                         <SearchSelect
+                            id="customer-phone"
                             value={
                                 bookingInfo.customer_phone
                                     ? {
@@ -409,12 +404,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Cu depozit
-                        </label>
+                        <Label htmlFor="with-deposit-no">Cu depozit</Label>
                         <div className="flex items-center space-x-6 mt-1">
-                            <label className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2">
                                 <input
+                                    id="with-deposit-no"
                                     type="radio"
                                     name="withDeposit"
                                     checked={!bookingInfo.with_deposit}
@@ -426,10 +420,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     }
                                     className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
                                 />
-                                <span className="font-dm-sans text-gray-700">Nu</span>
-                            </label>
-                            <label className="flex items-center space-x-2">
+                                <Label
+                                    htmlFor="with-deposit-no"
+                                    className="font-dm-sans text-gray-700 font-normal"
+                                >
+                                    Nu
+                                </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
                                 <input
+                                    id="with-deposit-yes"
                                     type="radio"
                                     name="withDeposit"
                                     checked={!!bookingInfo.with_deposit}
@@ -441,16 +441,20 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     }
                                     className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
                                 />
-                                <span className="font-dm-sans text-gray-700">Da</span>
-                            </label>
+                                <Label
+                                    htmlFor="with-deposit-yes"
+                                    className="font-dm-sans text-gray-700 font-normal"
+                                >
+                                    Da
+                                </Label>
+                            </div>
                         </div>
                     </div>
 
                     <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Cod cupon
-                        </label>
+                        <Label htmlFor="coupon-code">Cod cupon</Label>
                         <Input
+                            id="coupon-code"
                             type="text"
                             value={bookingInfo.coupon_code || ""}
                             onChange={(e) =>

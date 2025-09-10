@@ -24,6 +24,8 @@ interface SearchSelectProps<T> {
   itemClassName?: (item: T) => string;
   /** Called when the dropdown is opened. */
   onOpen?: () => void;
+  /** Optional id to associate the trigger with a label. */
+  id?: string;
 }
 
 /**
@@ -42,6 +44,7 @@ export function SearchSelect<T>({
   renderValue,
   itemClassName,
   onOpen,
+  id,
 }: SearchSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -74,7 +77,7 @@ export function SearchSelect<T>({
     : <span className="text-gray-400">{placeholder}</span>;
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative" ref={ref} id={id}>
       <div
         className="relative w-full pl-4 pr-10 py-3 text-[#191919] border border-gray-300 rounded-lg bg-white flex items-center gap-3 cursor-pointer shadow-sm hover:border-gray-400 focus-within:ring-2 focus-within:ring-jade focus-within:border-transparent transition"
         onClick={() => {
