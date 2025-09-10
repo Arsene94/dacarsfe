@@ -24,6 +24,7 @@ import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
 import apiClient from "@/lib/api";
+import {getStatusText} from "@/lib/utils";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://backend.dacars.ro/storage';
@@ -44,25 +45,6 @@ const getStatusColor = (status: string) => {
             return "bg-purple-100 text-purple-800";
         default:
             return "bg-gray-100 text-gray-800";
-    }
-};
-
-const getStatusText = (status: string) => {
-    switch (status) {
-        case "reserved":
-            return "Rezervat";
-        case "pending":
-            return "În așteptare";
-        case "cancelled":
-            return "Anulat";
-        case "completed":
-            return "Finalizat";
-        case "no_answer":
-            return "Fără răspuns";
-        case "waiting_advance_payment":
-            return "Așteaptă avans";
-        default:
-            return status;
     }
 };
 
