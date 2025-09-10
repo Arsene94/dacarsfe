@@ -358,6 +358,11 @@ const AdminDashboard = () => {
                 coupon_amount: info.coupon_amount ?? 0,
                 coupon_type: info.coupon_type ?? null,
                 total_services: info.total_services ?? 0,
+                service_ids: Array.isArray(info.service_ids)
+                    ? info.service_ids
+                    : Array.isArray(info.services)
+                        ? info.services.map((s: any) => s.id)
+                        : [],
                 sub_total: info.sub_total ?? 0,
                 coupon_code: info.coupon_code ?? "",
                 customer_name: info.customer_name ?? "",
