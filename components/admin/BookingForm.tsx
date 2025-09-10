@@ -205,7 +205,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         </label>
                         <Input
                             type="datetime-local"
-                            value={bookingInfo.rental_start_date}
+                            value={bookingInfo.rental_start_date || ""}
                             onChange={(e) =>
                                 setBookingInfo({
                                     ...bookingInfo,
@@ -221,7 +221,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         </label>
                         <Input
                             type="datetime-local"
-                            value={bookingInfo.rental_end_date}
+                            value={bookingInfo.rental_end_date || ""}
                             onChange={(e) =>
                                 setBookingInfo({
                                     ...bookingInfo,
@@ -321,7 +321,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         </label>
                         <Input
                             type="text"
-                            value={bookingInfo.customer_name}
+                            value={bookingInfo.customer_name || ""}
                             onChange={(e) =>
                                 setBookingInfo({
                                     ...bookingInfo,
@@ -337,7 +337,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         </label>
                         <Input
                             type="email"
-                            value={bookingInfo.customer_email}
+                            value={bookingInfo.customer_email || ""}
                             onChange={(e) =>
                                 setBookingInfo({
                                     ...bookingInfo,
@@ -353,7 +353,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         </label>
                         <Input
                             type="text"
-                            value={bookingInfo.customer_phone}
+                            value={bookingInfo.customer_phone || ""}
                             onChange={(e) =>
                                 setBookingInfo({
                                     ...bookingInfo,
