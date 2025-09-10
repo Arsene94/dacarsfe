@@ -140,9 +140,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
     };
 
     const handleSelectCar = (car: any) => {
-        const price = bookingInfo.with_deposit
-            ? Number(car?.rental_rate ?? bookingInfo.price_per_day || 0)
-            : Number(car?.rental_rate_casco ?? bookingInfo.price_per_day || 0);
+        const price = car?.rental_rate
+            ? Number(car.rental_rate)
+            : bookingInfo.price_per_day || 0;
         const subTotal = (bookingInfo.days || 0) * price;
         const discountValue = handleDiscount(
             bookingInfo.coupon_type || "",
@@ -190,31 +190,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const handleCustomerSearchOpen = useCallback(() => {
         setCustomerSearchActive(true);
     }, []);
-
-    useEffect(() => {
-        if (!quote) return;
-        setBookingInfo((prev: any) => {
-            const price = prev.with_deposit ? quote.rental_rate : quote.rental_rate_casco;
-            const subTotal = prev.with_deposit ? quote.sub_total : quote.sub_total_casco;
-            const total = prev.with_deposit ? quote.total : quote.total_casco;
-            const discountValue = quote.discount;
-            if (
-                price === prev.price_per_day &&
-                subTotal === prev.sub_total &&
-                total === prev.total &&
-                discountValue === prev.discount_applied
-            ) {
-                return prev;
-            }
-            return {
-                ...prev,
-                price_per_day: price,
-                sub_total: subTotal,
-                total,
-                discount_applied: discountValue,
-            };
-        });
-    }, [quote, bookingInfo.with_deposit, setBookingInfo]);
 
     useEffect(() => {
         setBookingInfo((prev: any) => {
