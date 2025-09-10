@@ -392,8 +392,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 setBookingInfo((prev: any) => ({
                                     ...prev,
                                     customer_phone: v,
-                                    customer_name: "",
-                                    customer_email: "",
                                     customer_id: undefined,
                                 }));
                             }}
