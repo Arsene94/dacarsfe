@@ -33,6 +33,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [customerSearch, setCustomerSearch] = useState("");
     const [customerResults, setCustomerResults] = useState<any[]>([]);
     const [customerSearchActive, setCustomerSearchActive] = useState(false);
+    const [quote, setQuote] = useState<any | null>(null);
 
     const fetchCars = useCallback(
         async (query: string) => {
@@ -80,12 +81,17 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     useEffect(() => {
         const quotePrice = async () => {
-            const data = await apiClient.quotePrice(bookingInfo);
+            try {
+                const data = await apiClient.quotePrice(bookingInfo);
+                setQuote(data);
+            } catch (error) {
+                console.error("Error quoting price:", error);
+            }
+        };
 
-            console.log(data);
+        if (bookingInfo?.car_id && bookingInfo?.rental_start_date && bookingInfo?.rental_end_date) {
+            quotePrice();
         }
-
-        quotePrice();
     }, [bookingInfo]);
 
     useEffect(() => {
@@ -635,55 +641,52 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
                             Rezumat plată
                         </h4>
-                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                            <span>Preț per zi:</span> <span>{bookingInfo.price_per_day}€ x {bookingInfo.days} zile</span>
-                        </div>
-                        {bookingInfo.total_services > 0 && (
-                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                <span>Total Servicii:</span> <span>{bookingInfo.total_services}€</span>
-                            </div>
-                        )}
-                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                            <span>Subtotal:</span> <span>{bookingInfo.sub_total}€</span>
-                        </div>
-                        {bookingInfo.discount_applied > 0 && bookingInfo.coupon_type && (
-                            <div className="font-dm-sans text-sm">
-                                Detalii discount:
-                                {bookingInfo.coupon_type === 'per_day' || bookingInfo.coupon_type === 'fixed_per_day' ? (
-                                    <ul className="list-disc">
-                                        <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                            <span>Preț per zi:</span>{' '}
-                                            <span>
-                                                {bookingInfo.coupon_type === 'per_day'
-                                                    ? Math.round(bookingInfo.price_per_day - bookingInfo.coupon_amount)
-                                                    : bookingInfo.coupon_amount}
-                                                €
-                                            </span>
-                                        </li>
-                                        <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                            <span>Discount aplicat:</span> <span>{bookingInfo.discount_applied}€</span>
-                                        </li>
-                                    </ul>
-                                ) : (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Discount aplicat:</span> <span>{bookingInfo.discount_applied}€</span>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        {bookingInfo.advance_payment !== 0 && (
+                        {quote && (
                             <>
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                    <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
+                                    <span>Preț per zi:</span>
+                                    <span>
+                                        {bookingInfo.with_deposit ? quote.rental_rate : quote.rental_rate_casco}€ x {quote.days} zile
+                                    </span>
                                 </div>
-                                <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
-                                    <span>Rest de plată:</span> <span>{bookingInfo.total - bookingInfo.advance_payment}€</span>
+                                {bookingInfo.total_services > 0 && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Total Servicii:</span> <span>{bookingInfo.total_services}€</span>
+                                    </div>
+                                )}
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Subtotal:</span>
+                                    <span>
+                                        {bookingInfo.with_deposit ? quote.sub_total : quote.sub_total_casco}€
+                                    </span>
+                                </div>
+                                {quote.discount > 0 && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Discount:</span> <span>{quote.discount}€</span>
+                                    </div>
+                                )}
+                                {bookingInfo.advance_payment !== 0 && (
+                                    <>
+                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                            <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
+                                        </div>
+                                        <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
+                                            <span>Rest de plată:</span>
+                                            <span>
+                                                {(bookingInfo.with_deposit ? quote.total : quote.total_casco) -
+                                                    (bookingInfo.advance_payment || 0)}€
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
+                                <div className="font-dm-sans text-sm font-semibold flex justify-between">
+                                    <span>Total:</span>
+                                    <span>
+                                        {bookingInfo.with_deposit ? quote.total : quote.total_casco}€
+                                    </span>
                                 </div>
                             </>
                         )}
-                        <div className="font-dm-sans text-sm font-semibold flex justify-between">
-                            <span>Total:</span> <span>{bookingInfo.total}€</span>
-                        </div>
                     </div>
                 </div>
             </div>
