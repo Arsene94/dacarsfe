@@ -90,48 +90,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
         setCarSearchActive(true);
     }, []);
 
-    const calculateDays = (start: string, end: string) => {
-        if (!start || !end) return 0;
-        const startDate = new Date(start);
-        const endDate = new Date(end);
-        const diff = endDate.getTime() - startDate.getTime();
-        return diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
-    };
-
-    const handleStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const start = e.target.value;
-        const days = calculateDays(start, bookingInfo.rental_end_date);
-        const subTotal = days * (bookingInfo.price_per_day || 0);
-        const total =
-            subTotal +
-            (bookingInfo.total_services || 0) -
-            (bookingInfo.coupon_amount || 0);
-        setBookingInfo({
-            ...bookingInfo,
-            rental_start_date: start,
-            days,
-            sub_total: subTotal,
-            total,
-        });
-    };
-
-    const handleEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const end = e.target.value;
-        const days = calculateDays(bookingInfo.rental_start_date, end);
-        const subTotal = days * (bookingInfo.price_per_day || 0);
-        const total =
-            subTotal +
-            (bookingInfo.total_services || 0) -
-            (bookingInfo.coupon_amount || 0);
-        setBookingInfo({
-            ...bookingInfo,
-            rental_end_date: end,
-            days,
-            sub_total: subTotal,
-            total,
-        });
-    };
-
     if (!bookingInfo) return null;
 
     return (
@@ -145,6 +103,37 @@ const BookingForm: React.FC<BookingFormProps> = ({
             </h3>
             <div className="flex items-start gap-6">
                 <div className="w-2/3 grid grid-cols-2 gap-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
+                    <div>
+                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                            Dată preluare
+                        </label>
+                        <Input
+                            type="datetime-local"
+                            value={bookingInfo.rental_start_date}
+                            onChange={(e) =>
+                                setBookingInfo({
+                                    ...bookingInfo,
+                                    rental_start_date: e.target.value,
+                                })
+                            }
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
+                            Dataă returnare
+                        </label>
+                        <Input
+                            type="datetime-local"
+                            value={bookingInfo.rental_end_date}
+                            onChange={(e) =>
+                                setBookingInfo({
+                                    ...bookingInfo,
+                                    rental_end_date: e.target.value,
+                                })
+                            }
+                        />
+                    </div>
                     <div className="col-span-2">
                         <label className="text-sm font-dm-sans font-semibold text-gray-700">
                             Mașină
@@ -226,22 +215,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
                     <div>
                         <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            ID client
-                        </label>
-                        <Input
-                            type="text"
-                            value={bookingInfo.customer_id || ""}
-                            onChange={(e) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
-                                    customer_id: e.target.value,
-                                })
-                            }
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
                             Nume client
                         </label>
                         <Input
@@ -285,44 +258,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     customer_phone: e.target.value,
                                 })
                             }
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Vârsta client
-                        </label>
-                        <Input
-                            type="number"
-                            value={bookingInfo.customer_age || ""}
-                            onChange={(e) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
-                                    customer_age: e.target.value,
-                                })
-                            }
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Data preluare
-                        </label>
-                        <Input
-                            type="datetime-local"
-                            value={bookingInfo.rental_start_date}
-                            onChange={handleStartChange}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Data returnare
-                        </label>
-                        <Input
-                            type="datetime-local"
-                            value={bookingInfo.rental_end_date}
-                            onChange={handleEndChange}
                         />
                     </div>
 

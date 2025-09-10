@@ -891,7 +891,7 @@ const ReservationPage = () => {
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="font-dm-sans text-gray-600">Subtotal:</span>
                                     <span className="font-dm-sans font-semibold text-berkeley">
-                    {rentalSubtotal.toFixed(2)}€
+                    {rentalSubtotal}€
                   </span>
                                 </div>
                                 {selectedServices.length > 0 && (
@@ -909,7 +909,7 @@ const ReservationPage = () => {
                             {service.name}
                           </span>
                                                     <span className="font-dm-sans font-semibold text-berkeley">
-                            {service.price.toFixed(2)}€
+                            {service.price}€
                           </span>
                                                 </div>
                                             ))}
@@ -924,13 +924,13 @@ const ReservationPage = () => {
                           Total înainte de reducere:
                         </span>
                                             <span className="font-dm-sans text-gray-600">
-                          {originalTotal.toFixed(2)}€
+                          {originalTotal}€
                         </span>
                                         </div>
                                         <div className="flex justify-between items-center mb-2">
                                             <span className="font-dm-sans text-jade">Reducere:</span>
                                             <span className="font-dm-sans text-jade">
-                          -{discountAmount.toFixed(2)}€
+                          -{discountAmount}€
                         </span>
                                         </div>
                                     </>
@@ -940,7 +940,7 @@ const ReservationPage = () => {
                     Total:
                   </span>
                                     <span className="font-poppins font-bold text-jade">
-                        {total.toFixed(2)}€ {booking.withDeposit && (
+                        {total}€ {booking.withDeposit && (
                                         <span className=" text-xs font-dm-sans text-gray-600">
                             (+{selectedCar.deposit}€ garanție)
                           </span>

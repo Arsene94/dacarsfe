@@ -110,20 +110,20 @@ const SuccessPage = () => {
                   Costul total
                 </h3>
                 <div className="text-lg font-dm-sans text-gray-600 mb-1">
-                  Subtotal: {reservationData.sub_total.toFixed(2)}€
+                  Subtotal: {reservationData.sub_total}€
                 </div>
                 {reservationData.total_services > 0 && (
                   <div className="text-lg font-dm-sans text-gray-600 mb-1">
-                    Servicii: +{reservationData.total_services.toFixed(2)}€
+                    Servicii: +{reservationData.total_services}€
                   </div>
                 )}
                 {reservationData.coupon_amount > 0 && (
                   <div className="text-lg font-dm-sans text-jade mb-2">
-                    Reducere: -{reservationData.coupon_amount.toFixed(2)}€
+                    Reducere: -{reservationData.coupon_amount}€
                   </div>
                 )}
                 <div className="text-4xl font-poppins font-bold text-jade mb-2">
-                  {reservationData.total.toFixed(2)}€
+                  {reservationData.total}€
                 </div>
                 <p className="font-dm-sans text-gray-600 text-sm">
                   *Preț final, fără taxe ascunse

@@ -55,10 +55,12 @@ const nextConfig = {
             {
                 protocol: 'https',
                 hostname: 'backend.dacars.ro',
+                pathname: '/storage/**'
             },
             {
                 protocol: 'http',
                 hostname: 'backend.dacars.ro',
+                pathname: '/storage/**'
             },
             {
                 protocol: 'https',

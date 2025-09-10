@@ -43,12 +43,12 @@ const mapApiCar = (c: ApiCar): Car => ({
     price: parsePrice(
         Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco))
     ),
-    rental_rate: String(Number(c.rental_rate ?? 0).toFixed(2)),
-    rental_rate_casco: String(Number(c.rental_rate_casco ?? 0).toFixed(2)),
+    rental_rate: String(Number(c.rental_rate ?? 0)),
+    rental_rate_casco: String(Number(c.rental_rate_casco ?? 0)),
     days: Number(c.days ?? 0),
     deposit: Number(c.deposit ?? 0),
-    total_deposit: String(Number(c.total_deposit ?? 0).toFixed(2)),
-    total_without_deposit: String(Number(c.total_without_deposit ?? 0).toFixed(2)),
+    total_deposit: String(Number(c.total_deposit ?? 0)),
+    total_without_deposit: String(Number(c.total_without_deposit ?? 0)),
     features: {
         passengers: Number(c.number_of_seats) || 0,
         transmission: c.transmission?.name ?? "—",
