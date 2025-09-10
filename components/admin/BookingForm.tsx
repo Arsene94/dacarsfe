@@ -658,25 +658,40 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <span>Preț per zi:</span>
                                     <span>{baseRate}€ x {days} zile</span>
                                 </div>
-                                {showDiscountedRate && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Preț nou pe zi:</span>
-                                        <span>{discountedRate}€ x {days} zile</span>
-                                    </div>
-                                )}
                                 {bookingInfo.total_services > 0 && (
                                     <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                         <span>Total Servicii:</span> <span>{bookingInfo.total_services}€</span>
                                     </div>
                                 )}
-                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                    <span>Subtotal:</span>
-                                    <span>{subtotal}€</span>
-                                </div>
-                                {discount > 0 && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Discount:</span> <span>{discount}€</span>
+                                {discount > 0 && bookingInfo.coupon_type ? (
+                                    <div className="font-dm-sans text-sm">
+                                        Detalii discount:
+                                        <ul className="list-disc">
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Preț nou pe zi:</span>
+                                                <span>{Math.round(showDiscountedRate ? discountedRate : baseRate)}€ x {days} zile</span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Discount aplicat:</span>
+                                                <span>{discount}€</span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Subtotal:</span>
+                                                <span>{subtotal}€</span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Total:</span>
+                                                <span>{total}€</span>
+                                            </li>
+                                        </ul>
                                     </div>
+                                ) : (
+                                    <>
+                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                            <span>Subtotal:</span>
+                                            <span>{subtotal}€</span>
+                                        </div>
+                                    </>
                                 )}
                                 {bookingInfo.advance_payment !== 0 && (
                                     <>
