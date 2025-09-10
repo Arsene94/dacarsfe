@@ -381,7 +381,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         <div className="mt-2">
                             <Input
                                 type="checkbox"
-                                className="w-5 h-5" />
+                                className="w-5 h-5"
+                                checked={bookingInfo.keep_old_price ?? true}
+                                onChange={(e) =>
+                                    setBookingInfo({
+                                        ...bookingInfo,
+                                        keep_old_price: e.target.checked,
+                                    })
+                                }
+                            />
                         </div>
                     </div>
 
