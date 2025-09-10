@@ -29,6 +29,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [carResults, setCarResults] = useState<any[]>([]);
     const [carSearchActive, setCarSearchActive] = useState(false);
 
+    const [customerSearch, setCustomerSearch] = useState("");
+    const [customerResults, setCustomerResults] = useState<any[]>([]);
+    const [customerSearchActive, setCustomerSearchActive] = useState(false);
+
     const fetchCars = useCallback(
         async (query: string) => {
             try {
@@ -53,6 +57,28 @@ const BookingForm: React.FC<BookingFormProps> = ({
         [bookingInfo?.rental_start_date, bookingInfo?.rental_end_date],
     );
 
+    const fetchCustomers = useCallback(
+        async (query: string) => {
+            try {
+                const resp = await apiClient.getCustomers({
+                    search: query,
+                    limit: 100,
+                });
+                const list = Array.isArray(resp?.data)
+                    ? resp.data
+                    : Array.isArray(resp)
+                        ? resp
+                        : Array.isArray(resp?.items)
+                            ? resp.items
+                            : [];
+                setCustomerResults(list);
+            } catch (error) {
+                console.error("Error searching customers:", error);
+            }
+        },
+        [],
+    );
+
     useEffect(() => {
         if (!carSearchActive) return;
 
@@ -63,6 +89,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
         return () => clearTimeout(handler);
     }, [carSearch, fetchCars, carSearchActive, bookingInfo.rental_start_date, bookingInfo.rental_end_date]);
 
+    useEffect(() => {
+        if (!customerSearchActive) return;
+        if (customerSearch.trim().length === 0) {
+            setCustomerResults([]);
+            return;
+        }
+        const handler = setTimeout(() => {
+            fetchCustomers(customerSearch);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [customerSearch, fetchCustomers, customerSearchActive]);
+
     const fetchedPhoneRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -71,28 +109,31 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return;
         }
         if (fetchedPhoneRef.current === bookingInfo.customer_phone) return;
-        fetchedPhoneRef.current = bookingInfo.customer_phone;
-        const getUserByPhone = async () => {
-            const data = await apiClient.getClientByPhone(
-                bookingInfo.customer_phone,
-            );
-            if (data) {
-                setBookingInfo((prev: any) => {
-                    if (
-                        prev.customer_name === data.name &&
-                        prev.customer_email === data.email
-                    ) {
-                        return prev;
-                    }
-                    return {
-                        ...prev,
-                        customer_name: data.name,
-                        customer_email: data.email,
-                    };
-                });
-            }
-        };
-        getUserByPhone();
+        const handler = setTimeout(() => {
+            fetchedPhoneRef.current = bookingInfo.customer_phone;
+            const getUserByPhone = async () => {
+                const data = await apiClient.getClientByPhone(
+                    bookingInfo.customer_phone,
+                );
+                if (data) {
+                    setBookingInfo((prev: any) => {
+                        if (
+                            prev.customer_name === data.name &&
+                            prev.customer_email === data.email
+                        ) {
+                            return prev;
+                        }
+                        return {
+                            ...prev,
+                            customer_name: data.name,
+                            customer_email: data.email,
+                        };
+                    });
+                }
+            };
+            getUserByPhone();
+        }, 300);
+        return () => clearTimeout(handler);
     }, [bookingInfo.customer_phone, setBookingInfo]);
 
     const handleDiscount = (
@@ -145,9 +186,26 @@ const BookingForm: React.FC<BookingFormProps> = ({
         setCarResults([]);
     };
 
+    const handleSelectCustomer = (customer: any) => {
+        setBookingInfo({
+            ...bookingInfo,
+            customer_phone: customer.phone || "",
+            customer_name: customer.name || "",
+            customer_email: customer.email || "",
+            customer_id: customer.id ?? bookingInfo.customer_id,
+        });
+        fetchedPhoneRef.current = customer.phone || "";
+        setCustomerSearch("");
+        setCustomerResults([]);
+    };
+
     const handleCarSearchOpen = useCallback(() => {
 
         setCarSearchActive(true);
+    }, []);
+
+    const handleCustomerSearchOpen = useCallback(() => {
+        setCustomerSearchActive(true);
     }, []);
 
     useEffect(() => {
@@ -351,15 +409,39 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         <label className="text-sm font-dm-sans font-semibold text-gray-700">
                             Telefon
                         </label>
-                        <Input
-                            type="text"
-                            value={bookingInfo.customer_phone || ""}
-                            onChange={(e) =>
+                        <SearchSelect
+                            value={
+                                bookingInfo.customer_phone
+                                    ? {
+                                          id: bookingInfo.customer_id,
+                                          name: bookingInfo.customer_name,
+                                          phone: bookingInfo.customer_phone,
+                                          email: bookingInfo.customer_email,
+                                      }
+                                    : null
+                            }
+                            search={customerSearch}
+                            items={customerResults}
+                            onSearch={(v) => {
+                                setCustomerSearch(v);
                                 setBookingInfo({
                                     ...bookingInfo,
-                                    customer_phone: e.target.value,
-                                })
-                            }
+                                    customer_phone: v,
+                                    customer_name: "",
+                                    customer_email: "",
+                                    customer_id: undefined,
+                                });
+                            }}
+                            onSelect={handleSelectCustomer}
+                            onOpen={handleCustomerSearchOpen}
+                            placeholder="Selectează clientul"
+                            renderItem={(user) => (
+                                <div>
+                                    <div className="font-dm-sans font-semibold">{user.name}</div>
+                                    <div className="text-xs">{user.phone} • {user.email}</div>
+                                </div>
+                            )}
+                            renderValue={(user) => <span>{user.phone}</span>}
                         />
                     </div>
 
