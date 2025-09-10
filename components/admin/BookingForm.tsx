@@ -397,6 +397,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 </div>
 
                 <div className="w-1/3 h-fit sticky top-0 space-y-2 p-4 border border-gray-300 rounded-lg bg-gray-50">
+                    <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
+                        Rezumat plată
+                    </h4>
                     <div className="font-dm-sans text-sm">
                         Preț per zi: {bookingInfo.price_per_day}€ x {bookingInfo.days} zile
                     </div>
