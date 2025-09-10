@@ -57,27 +57,25 @@ const BookingForm: React.FC<BookingFormProps> = ({
         [bookingInfo?.rental_start_date, bookingInfo?.rental_end_date],
     );
 
-    const fetchCustomers = useCallback(
-        async (query: string) => {
-            try {
-                const resp = await apiClient.getCustomers({
-                    search: query,
-                    limit: 100,
-                });
-                const list = Array.isArray(resp?.data)
-                    ? resp.data
-                    : Array.isArray(resp)
-                        ? resp
-                        : Array.isArray(resp?.items)
-                            ? resp.items
-                            : [];
-                setCustomerResults(list);
-            } catch (error) {
-                console.error("Error searching customers:", error);
-            }
-        },
-        [],
-    );
+    const fetchCustomers = useCallback(async (query: string) => {
+        try {
+            const resp = await apiClient.searchCustomersByPhone(query);
+            const list = Array.isArray(resp)
+                ? resp.flatMap((row: any) =>
+                      (row.phones || []).map((phone: string) => {
+                          return {
+                              name: row.latest?.name || row.names?.[0] || "",
+                              email: row.email,
+                              phone,
+                          };
+                      })
+                  )
+                : [];
+            setCustomerResults(list);
+        } catch (error) {
+            console.error("Error searching customers:", error);
+        }
+    }, []);
 
     useEffect(() => {
         if (!carSearchActive) return;
@@ -112,23 +110,30 @@ const BookingForm: React.FC<BookingFormProps> = ({
         const handler = setTimeout(() => {
             fetchedPhoneRef.current = bookingInfo.customer_phone;
             const getUserByPhone = async () => {
-                const data = await apiClient.getClientByPhone(
+                const data = await apiClient.searchCustomersByPhone(
                     bookingInfo.customer_phone,
                 );
-                if (data) {
-                    setBookingInfo((prev: any) => {
-                        if (
-                            prev.customer_name === data.name &&
-                            prev.customer_email === data.email
-                        ) {
-                            return prev;
-                        }
-                        return {
-                            ...prev,
-                            customer_name: data.name,
-                            customer_email: data.email,
-                        };
-                    });
+                if (Array.isArray(data)) {
+                    const match = data.find((row: any) =>
+                        (row.phones || []).includes(bookingInfo.customer_phone),
+                    );
+                    if (match) {
+                        const name =
+                            match.latest?.name || match.names?.[0] || "";
+                        setBookingInfo((prev: any) => {
+                            if (
+                                prev.customer_name === name &&
+                                prev.customer_email === match.email
+                            ) {
+                                return prev;
+                            }
+                            return {
+                                ...prev,
+                                customer_name: name,
+                                customer_email: match.email,
+                            };
+                        });
+                    }
                 }
             };
             getUserByPhone();

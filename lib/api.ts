@@ -194,11 +194,11 @@ class ApiClient {
         return this.request<any>(`/customers${query ? `?${query}` : ''}`);
     }
 
-    async getClientByPhone(phone: string) {
+    async searchCustomersByPhone(phone: string) {
         return this.request<any>(`/customers/get/byphone`, {
             method: 'POST',
-            body: JSON.stringify({phone})
-        })
+            body: JSON.stringify({ phone }),
+        });
     }
 
     // Authentication helpers
