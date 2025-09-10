@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -63,19 +63,37 @@ const BookingForm: React.FC<BookingFormProps> = ({
         return () => clearTimeout(handler);
     }, [carSearch, fetchCars, carSearchActive, bookingInfo.rental_start_date, bookingInfo.rental_end_date]);
 
+    const fetchedPhoneRef = useRef<string | null>(null);
+
     useEffect(() => {
-        const getUserByPhone = async () => {
-            const data = await apiClient.getClientByPhone(bookingInfo.customer_phone)
-            if (data) {
-                setBookingInfo({
-                    ...bookingInfo,
-                    customer_name: data.name,
-                    customer_email: data.email
-                })
-            }
+        if (!bookingInfo.customer_phone) {
+            fetchedPhoneRef.current = null;
+            return;
         }
+        if (fetchedPhoneRef.current === bookingInfo.customer_phone) return;
+        fetchedPhoneRef.current = bookingInfo.customer_phone;
+        const getUserByPhone = async () => {
+            const data = await apiClient.getClientByPhone(
+                bookingInfo.customer_phone,
+            );
+            if (data) {
+                setBookingInfo((prev: any) => {
+                    if (
+                        prev.customer_name === data.name &&
+                        prev.customer_email === data.email
+                    ) {
+                        return prev;
+                    }
+                    return {
+                        ...prev,
+                        customer_name: data.name,
+                        customer_email: data.email,
+                    };
+                });
+            }
+        };
         getUserByPhone();
-    }, [bookingInfo, bookingInfo.customer_phone, setBookingInfo]);
+    }, [bookingInfo.customer_phone, setBookingInfo]);
 
     const handleDiscount = (
         discountType: string,
