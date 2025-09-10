@@ -29,6 +29,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [carSearch, setCarSearch] = useState("");
     const [carResults, setCarResults] = useState<any[]>([]);
     const [carSearchActive, setCarSearchActive] = useState(false);
+    const [services, setServices] = useState<any[]>([]);
 
     const [customerSearch, setCustomerSearch] = useState("");
     const [customerResults, setCustomerResults] = useState<any[]>([]);
@@ -93,6 +94,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
             quotePrice();
         }
     }, [bookingInfo]);
+
+    useEffect(() => {
+        const fetchServices = async () => {
+            const data = await apiClient.getServices();
+            console.log(data);
+            setServices(data);
+        }
+
+        fetchServices();
+    }, []);
 
     useEffect(() => {
         if (!carSearchActive) return;
