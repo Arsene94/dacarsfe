@@ -154,6 +154,7 @@ const AdminDashboard = () => {
         services: { id:number, name: string }[];
         total_services: number;
         coupon_amount: number;
+        coupon_type: string;
         with_deposit: boolean;
         note: string | null;
         arrivalDate: string;
@@ -179,6 +180,7 @@ const AdminDashboard = () => {
         services: {  id: number, name: string }[];
         total_services: number;
         coupon_amount: number;
+        coupon_type: string;
         with_deposit: boolean;
         note: string | null;
         arrivalDate: string;
@@ -353,6 +355,7 @@ const AdminDashboard = () => {
                 rental_start_date: toLocalDateTimeInput(info.rental_start_date),
                 rental_end_date: toLocalDateTimeInput(info.rental_end_date),
                 coupon_amount: info.coupon_amount ?? 0,
+                coupon_type: info.coupon_type ?? null,
                 total_services: info.total_services ?? 0,
                 sub_total: info.sub_total ?? 0,
                 coupon_code: info.coupon_code ?? "",
@@ -376,6 +379,7 @@ const AdminDashboard = () => {
                 currency_id: info.currency_id ?? "",
                 status: info.status ?? "",
                 total: info.total ?? 0,
+                advance_payment: info.advance_payment ?? 0
             };
             setBookingInfo(formatted);
             setPopupOpen(false);
@@ -587,6 +591,7 @@ const AdminDashboard = () => {
                                                                             })),
                                                                             total_services: r.total_services,
                                                                             coupon_amount: r.coupon_amount,
+                                                                            coupon_type: r.coupon_type,
                                                                             with_deposit: r.with_deposit,
                                                                             note: r.note ?? null,
                                                                             arrivalDate: r.rental_start_date.slice(0, 10),

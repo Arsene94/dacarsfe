@@ -19,6 +19,7 @@ export interface ActivityReservation {
   total: number;
   total_services: number;
   coupon_amount: number;
+  coupon_type: string;
   with_deposit: boolean;
   customer_id: number | null;
   rental_start_date: string;

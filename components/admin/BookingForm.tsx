@@ -61,6 +61,23 @@ const BookingForm: React.FC<BookingFormProps> = ({
         return () => clearTimeout(handler);
     }, [carSearch, fetchCars, carSearchActive]);
 
+    const handleDiscount = (
+        discountType: string,
+        discount: number,
+        price_per_day: number,
+        days: number,
+        total: number
+    ): number => {
+        if (discountType === 'per_day') {
+            return Math.round(discount * days); // total discount value
+        } else if (discountType === 'days') {
+            return Math.round(price_per_day * discount); // value of free days
+        } else if (discountType === 'per_total' || discountType === 'code') {
+            return Math.round(discount); // flat discount
+        }
+        return 0;
+    };
+
     const handleSelectCar = (car: any) => {
         const price = car?.rental_rate
             ? Number(car.rental_rate)
@@ -85,7 +102,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         setCarSearch("");
         setCarResults([]);
     };
-
+console.log(bookingInfo)
     const handleCarSearchOpen = useCallback(() => {
         setCarSearchActive(true);
     }, []);
@@ -121,7 +138,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
                     <div>
                         <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Dataă returnare
+                            Dată returnare
                         </label>
                         <Input
                             type="datetime-local"
@@ -352,6 +369,49 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     <div className="font-dm-sans text-sm">
                         Subtotal: {bookingInfo.sub_total}€
                     </div>
+                    {bookingInfo.coupon_amount > 0 && bookingInfo.coupon_type && (
+                        <div className="font-dm-sans text-sm">
+                            Detalii discount:
+                            {bookingInfo.coupon_type === 'per_day' ? (
+                                <ul className="list-disc">
+                                    <li className="ms-5">
+                                        Preț per zi: {Math.round(bookingInfo.price_per_day - bookingInfo.coupon_amount)}€
+                                    </li>
+                                    <li className="ms-5">
+                                        Discount aplicat:{" "}
+                                        {handleDiscount(
+                                            bookingInfo.coupon_type,
+                                            bookingInfo.coupon_amount,
+                                            bookingInfo.price_per_day,
+                                            bookingInfo.days,
+                                            bookingInfo.total
+                                        )}€
+                                    </li>
+                                </ul>
+                            ) : (
+                                <div>
+                                    Discount aplicat:{" "}
+                                    {handleDiscount(
+                                        bookingInfo.coupon_type,
+                                        bookingInfo.coupon_amount,
+                                        bookingInfo.price_per_day,
+                                        bookingInfo.days,
+                                        bookingInfo.total
+                                    )}€
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {bookingInfo.advance_payment !== 0 && (
+                        <>
+                            <div className="font-dm-sans text-sm">
+                                Avans: {bookingInfo.advance_payment}€
+                            </div>
+                            <div className="font-dm-sans text-sm font-semibold">
+                                Rest de plată: {bookingInfo.total - bookingInfo.advance_payment}€
+                            </div>
+                        </>
+                    )}
                     <div className="font-dm-sans text-sm font-semibold">
                         Total: {bookingInfo.total}€
                     </div>
