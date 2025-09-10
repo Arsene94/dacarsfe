@@ -64,18 +64,21 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }, [carSearch, fetchCars, carSearchActive, bookingInfo.rental_start_date, bookingInfo.rental_end_date]);
 
     useEffect(() => {
+        if (!bookingInfo.customer_phone) return;
         const getUserByPhone = async () => {
-            const data = await apiClient.getClientByPhone(bookingInfo.customer_phone)
+            const data = await apiClient.getClientByPhone(
+                bookingInfo.customer_phone,
+            );
             if (data) {
-                setBookingInfo({
-                    ...bookingInfo,
+                setBookingInfo((prev: any) => ({
+                    ...prev,
                     customer_name: data.name,
-                    customer_email: data.email
-                })
+                    customer_email: data.email,
+                }));
             }
-        }
+        };
         getUserByPhone();
-    }, [bookingInfo, bookingInfo.customer_phone, setBookingInfo]);
+    }, [bookingInfo.customer_phone, setBookingInfo]);
 
     const handleDiscount = (
         discountType: string,
