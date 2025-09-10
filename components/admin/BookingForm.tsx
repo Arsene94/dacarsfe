@@ -91,7 +91,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
     useEffect(() => {
         const quotePrice = async () => {
             try {
-                const data = await apiClient.quotePrice(bookingInfo);
+                const data = await apiClient.quotePrice({
+                    car_id: bookingInfo.car_id,
+                    rental_start_date: bookingInfo.rental_start_date,
+                    rental_end_date: bookingInfo.rental_end_date,
+                    service_ids: bookingInfo.service_ids || [],
+                    total_services: bookingInfo.total_services || 0,
+                });
                 setQuote(data);
             } catch (error) {
                 console.error("Error quoting price:", error);
@@ -101,7 +107,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
         if (bookingInfo?.car_id && bookingInfo?.rental_start_date && bookingInfo?.rental_end_date) {
             quotePrice();
         }
-    }, [bookingInfo]);
+    }, [
+        bookingInfo.car_id,
+        bookingInfo.rental_start_date,
+        bookingInfo.rental_end_date,
+        bookingInfo.service_ids,
+        bookingInfo.total_services,
+    ]);
 
     useEffect(() => {
         const fetchServices = async () => {
