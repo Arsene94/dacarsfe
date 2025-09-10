@@ -229,6 +229,17 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     if (!bookingInfo) return null;
 
+    const days = bookingInfo.days || quote?.days || 0;
+    const baseRate = bookingInfo.price_per_day || 0;
+    const discountedRate = bookingInfo.with_deposit
+        ? quote?.rental_rate
+        : quote?.rental_rate_casco;
+    const showDiscountedRate =
+        typeof discountedRate === "number" && discountedRate !== baseRate;
+    const subtotal = (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0);
+    const discount = bookingInfo.discount_applied || 0;
+    const total = subtotal - discount;
+
     return (
         <Popup
             open={open}
@@ -645,10 +656,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             <>
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Preț per zi:</span>
-                                    <span>
-                                        {bookingInfo.with_deposit ? quote.rental_rate : quote.rental_rate_casco}€ x {quote.days} zile
-                                    </span>
+                                    <span>{baseRate}€ x {days} zile</span>
                                 </div>
+                                {showDiscountedRate && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Preț nou pe zi:</span>
+                                        <span>{discountedRate}€ x {days} zile</span>
+                                    </div>
+                                )}
                                 {bookingInfo.total_services > 0 && (
                                     <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                         <span>Total Servicii:</span> <span>{bookingInfo.total_services}€</span>
@@ -656,13 +671,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 )}
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Subtotal:</span>
-                                    <span>
-                                        {bookingInfo.with_deposit ? quote.sub_total : quote.sub_total_casco}€
-                                    </span>
+                                    <span>{subtotal}€</span>
                                 </div>
-                                {quote.discount > 0 && (
+                                {discount > 0 && (
                                     <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Discount:</span> <span>{quote.discount}€</span>
+                                        <span>Discount:</span> <span>{discount}€</span>
                                     </div>
                                 )}
                                 {bookingInfo.advance_payment !== 0 && (
@@ -672,18 +685,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         </div>
                                         <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
                                             <span>Rest de plată:</span>
-                                            <span>
-                                                {(bookingInfo.with_deposit ? quote.total : quote.total_casco) -
-                                                    (bookingInfo.advance_payment || 0)}€
-                                            </span>
+                                            <span>{total - (bookingInfo.advance_payment || 0)}€</span>
                                         </div>
                                     </>
                                 )}
                                 <div className="font-dm-sans text-sm font-semibold flex justify-between">
                                     <span>Total:</span>
-                                    <span>
-                                        {bookingInfo.with_deposit ? quote.total : quote.total_casco}€
-                                    </span>
+                                    <span>{total}€</span>
                                 </div>
                             </>
                         )}
