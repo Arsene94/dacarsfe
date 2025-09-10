@@ -404,30 +404,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
                     <div>
-                        <Label htmlFor="with-deposit-no">Cu depozit</Label>
-                        <div className="flex items-center space-x-6 mt-1">
-                            <div className="flex items-center space-x-2">
-                                <input
-                                    id="with-deposit-no"
-                                    type="radio"
-                                    name="withDeposit"
-                                    checked={!bookingInfo.with_deposit}
-                                    onChange={() =>
-                                        setBookingInfo({
-                                            ...bookingInfo,
-                                            with_deposit: false,
-                                        })
-                                    }
-                                    className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
-                                />
-                                <Label
-                                    htmlFor="with-deposit-no"
-                                    className="font-dm-sans text-gray-700 font-normal"
-                                >
-                                    Nu
-                                </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
+                        <Label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
+                            Plan de închiriere
+                        </Label>
+                        <div className="mt-1 rounded-md border divide-y">
+                            <label
+                                htmlFor="with-deposit-yes"
+                                className="flex cursor-pointer items-start space-x-3 p-4"
+                            >
                                 <input
                                     id="with-deposit-yes"
                                     type="radio"
@@ -439,15 +423,43 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                             with_deposit: true,
                                         })
                                     }
-                                    className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
+                                    className="mt-1 h-4 w-4 text-jade focus:ring-jade border-gray-300"
                                 />
-                                <Label
-                                    htmlFor="with-deposit-yes"
-                                    className="font-dm-sans text-gray-700 font-normal"
-                                >
-                                    Da
-                                </Label>
-                            </div>
+                                <div>
+                                    <div className="font-dm-sans font-medium text-gray-900">
+                                        Plan cu Garanție
+                                    </div>
+                                    <p className="text-sm text-gray-500">
+                                        Alege acest plan și achită o garanție în valoare de: {bookingInfo.deposit ?? 0}€ pentru închiriere.
+                                    </p>
+                                </div>
+                            </label>
+                            <label
+                                htmlFor="with-deposit-no"
+                                className="flex cursor-pointer items-start space-x-3 p-4"
+                            >
+                                <input
+                                    id="with-deposit-no"
+                                    type="radio"
+                                    name="withDeposit"
+                                    checked={!bookingInfo.with_deposit}
+                                    onChange={() =>
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            with_deposit: false,
+                                        })
+                                    }
+                                    className="mt-1 h-4 w-4 text-jade focus:ring-jade border-gray-300"
+                                />
+                                <div>
+                                    <div className="font-dm-sans font-medium text-gray-900">
+                                        Plan fără garanție
+                                    </div>
+                                    <p className="text-sm text-gray-500">
+                                        Alege acest plan dacă nu vrei să plătești garanție pentru închiriere.
+                                    </p>
+                                </div>
+                            </label>
                         </div>
                     </div>
 
