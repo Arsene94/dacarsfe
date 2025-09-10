@@ -76,7 +76,7 @@ export function SearchSelect<T>({
   return (
     <div className="relative" ref={ref}>
       <div
-        className="relative w-full pl-4 pr-10 py-3 text-[#191919] border border-gray-300 rounded-lg bg-white flex items-center gap-3 cursor-pointer"
+        className="relative w-full pl-4 pr-10 py-3 text-[#191919] border border-gray-300 rounded-lg bg-white flex items-center gap-3 cursor-pointer shadow-sm hover:border-gray-400 focus-within:ring-2 focus-within:ring-jade focus-within:border-transparent transition"
         onClick={() => {
           setOpen((o) => !o);
         }}
