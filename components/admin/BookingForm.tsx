@@ -66,13 +66,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
         discount: number,
         price_per_day: number,
         days: number,
-        total: number
+        total: number,
     ): number => {
-        if (discountType === 'per_day') {
+        if (discountType === "per_day") {
             return Math.round(discount * days); // total discount value
-        } else if (discountType === 'days') {
+        } else if (discountType === "days") {
             return Math.round(price_per_day * discount); // value of free days
-        } else if (discountType === 'per_total' || discountType === 'code') {
+        } else if (discountType === "per_total") {
+            return Math.round(total * (discount / 100)); // percentage of total
+        } else if (discountType === "code") {
             return Math.round(discount); // flat discount
         }
         return 0;
@@ -83,10 +85,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
             ? Number(car.rental_rate)
             : bookingInfo.price_per_day || 0;
         const subTotal = (bookingInfo.days || 0) * price;
+        const discountValue = handleDiscount(
+            bookingInfo.coupon_type || "",
+            bookingInfo.coupon_amount || 0,
+            price,
+            bookingInfo.days || 0,
+            subTotal + (bookingInfo.total_services || 0),
+        );
         const total =
-            subTotal +
-            (bookingInfo.total_services || 0) -
-            (bookingInfo.coupon_amount || 0);
+            subTotal + (bookingInfo.total_services || 0) - discountValue;
         setBookingInfo({
             ...bookingInfo,
             car_id: car.id,
@@ -97,15 +104,52 @@ const BookingForm: React.FC<BookingFormProps> = ({
             car_fuel: car.fuel?.name || "",
             price_per_day: price,
             sub_total: subTotal,
+            discount_applied: discountValue,
             total,
         });
         setCarSearch("");
         setCarResults([]);
     };
-console.log(bookingInfo)
+
     const handleCarSearchOpen = useCallback(() => {
         setCarSearchActive(true);
     }, []);
+
+    useEffect(() => {
+        setBookingInfo((prev: any) => {
+            const subTotal =
+                (prev.price_per_day || 0) * (prev.days || 0);
+            const discountValue = handleDiscount(
+                prev.coupon_type || "",
+                prev.coupon_amount || 0,
+                prev.price_per_day || 0,
+                prev.days || 0,
+                subTotal + (prev.total_services || 0),
+            );
+            const total =
+                subTotal + (prev.total_services || 0) - discountValue;
+            if (
+                subTotal === prev.sub_total &&
+                total === prev.total &&
+                discountValue === prev.discount_applied
+            ) {
+                return prev;
+            }
+            return {
+                ...prev,
+                sub_total: subTotal,
+                total,
+                discount_applied: discountValue,
+            };
+        });
+    }, [
+        bookingInfo.price_per_day,
+        bookingInfo.days,
+        bookingInfo.coupon_type,
+        bookingInfo.coupon_amount,
+        bookingInfo.total_services,
+        setBookingInfo,
+    ]);
 
     if (!bookingInfo) return null;
 
@@ -353,12 +397,15 @@ console.log(bookingInfo)
                 </div>
 
                 <div className="w-1/3 h-fit sticky top-0 space-y-2 p-4 border border-gray-300 rounded-lg bg-gray-50">
+                    <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
+                        Rezumat plată
+                    </h4>
                     <div className="font-dm-sans text-sm">
                         Preț per zi: {bookingInfo.price_per_day}€ x {bookingInfo.days} zile
                     </div>
-                    {bookingInfo.coupon_amount > 0 && (
+                    {bookingInfo.discount_applied > 0 && (
                         <div className="font-dm-sans text-sm">
-                            Discount: {bookingInfo.coupon_amount}€
+                            Discount: {bookingInfo.discount_applied}€
                         </div>
                     )}
                     {bookingInfo.total_services > 0 && (
@@ -369,7 +416,7 @@ console.log(bookingInfo)
                     <div className="font-dm-sans text-sm">
                         Subtotal: {bookingInfo.sub_total}€
                     </div>
-                    {bookingInfo.coupon_amount > 0 && bookingInfo.coupon_type && (
+                    {bookingInfo.discount_applied > 0 && bookingInfo.coupon_type && (
                         <div className="font-dm-sans text-sm">
                             Detalii discount:
                             {bookingInfo.coupon_type === 'per_day' ? (
@@ -378,26 +425,12 @@ console.log(bookingInfo)
                                         Preț per zi: {Math.round(bookingInfo.price_per_day - bookingInfo.coupon_amount)}€
                                     </li>
                                     <li className="ms-5">
-                                        Discount aplicat:{" "}
-                                        {handleDiscount(
-                                            bookingInfo.coupon_type,
-                                            bookingInfo.coupon_amount,
-                                            bookingInfo.price_per_day,
-                                            bookingInfo.days,
-                                            bookingInfo.total
-                                        )}€
+                                        Discount aplicat: {bookingInfo.discount_applied}€
                                     </li>
                                 </ul>
                             ) : (
                                 <div>
-                                    Discount aplicat:{" "}
-                                    {handleDiscount(
-                                        bookingInfo.coupon_type,
-                                        bookingInfo.coupon_amount,
-                                        bookingInfo.price_per_day,
-                                        bookingInfo.days,
-                                        bookingInfo.total
-                                    )}€
+                                    Discount aplicat: {bookingInfo.discount_applied}€
                                 </div>
                             )}
                         </div>
