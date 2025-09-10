@@ -412,18 +412,38 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         <label className="text-sm font-dm-sans font-semibold text-gray-700">
                             Cu depozit
                         </label>
-                        <Select
-                            value={bookingInfo.with_deposit ? "1" : "0"}
-                            onValueChange={(v) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
-                                    with_deposit: v === "1",
-                                })
-                            }
-                        >
-                            <option value="0">Nu</option>
-                            <option value="1">Da</option>
-                        </Select>
+                        <div className="flex items-center space-x-6 mt-1">
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="radio"
+                                    name="withDeposit"
+                                    checked={!bookingInfo.with_deposit}
+                                    onChange={() =>
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            with_deposit: false,
+                                        })
+                                    }
+                                    className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
+                                />
+                                <span className="font-dm-sans text-gray-700">Nu</span>
+                            </label>
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="radio"
+                                    name="withDeposit"
+                                    checked={!!bookingInfo.with_deposit}
+                                    onChange={() =>
+                                        setBookingInfo({
+                                            ...bookingInfo,
+                                            with_deposit: true,
+                                        })
+                                    }
+                                    className="h-4 w-4 text-jade focus:ring-jade border-gray-300"
+                                />
+                                <span className="font-dm-sans text-gray-700">Da</span>
+                            </label>
+                        </div>
                     </div>
 
                     <div>
