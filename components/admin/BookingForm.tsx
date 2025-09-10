@@ -113,10 +113,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return Math.round(discount * days);
         } else if (discountType === "days") {
             return Math.round(price_per_day * discount);
-        } else if (discountType === "per_total") {
+        } else if (discountType === "from_total") {
             return Math.round(total * (discount / 100));
         } else if (discountType === "code") {
             return Math.round(discount);
+        } else if (discountType === "fixed_per_day") {
+            return Math.round((price_per_day - discount) * days);
         }
         return 0;
     };
@@ -405,15 +407,45 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
 
                     <div>
-                        <Label htmlFor="coupon-code">Cod cupon</Label>
+                        <Label htmlFor="coupon-type">Tip discount</Label>
+                        <Select
+                            id="coupon-type"
+                            value={bookingInfo.coupon_type || ""}
+                            onValueChange={(value) =>
+                                setBookingInfo({
+                                    ...bookingInfo,
+                                    coupon_type: value,
+                                    coupon_amount: 0,
+                                    coupon_code: "",
+                                })
+                            }
+                            placeholder="Selectează"
+                        >
+                            <option value="fixed_per_day">Pret fix pe zi</option>
+                            <option value="per_day">Reducere pret pe zi</option>
+                            <option value="days">Zile</option>
+                            <option value="from_total">Din total</option>
+                            <option value="code">Cupon</option>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label htmlFor="coupon-value">
+                            {bookingInfo.coupon_type === "code" ? "Cod cupon" : "Valoare"}
+                        </Label>
                         <Input
-                            id="coupon-code"
-                            type="text"
-                            value={bookingInfo.coupon_code || ""}
+                            id="coupon-value"
+                            type={bookingInfo.coupon_type === "code" ? "text" : "number"}
+                            value={
+                                bookingInfo.coupon_type === "code"
+                                    ? bookingInfo.coupon_code || ""
+                                    : bookingInfo.coupon_amount || ""
+                            }
                             onChange={(e) =>
                                 setBookingInfo({
                                     ...bookingInfo,
-                                    coupon_code: e.target.value,
+                                    ...(bookingInfo.coupon_type === "code"
+                                        ? { coupon_code: e.target.value }
+                                        : { coupon_amount: Number(e.target.value) }),
                                 })
                             }
                         />
@@ -593,10 +625,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         {bookingInfo.discount_applied > 0 && bookingInfo.coupon_type && (
                             <div className="font-dm-sans text-sm">
                                 Detalii discount:
-                                {bookingInfo.coupon_type === 'per_day' ? (
+                                {bookingInfo.coupon_type === 'per_day' || bookingInfo.coupon_type === 'fixed_per_day' ? (
                                     <ul className="list-disc">
                                         <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                            <span>Preț per zi:</span> <span>{Math.round(bookingInfo.price_per_day - bookingInfo.coupon_amount)}€</span>
+                                            <span>Preț per zi:</span>{' '}
+                                            <span>
+                                                {bookingInfo.coupon_type === 'per_day'
+                                                    ? Math.round(bookingInfo.price_per_day - bookingInfo.coupon_amount)
+                                                    : bookingInfo.coupon_amount}
+                                                €
+                                            </span>
                                         </li>
                                         <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                             <span>Discount aplicat:</span> <span>{bookingInfo.discount_applied}€</span>
