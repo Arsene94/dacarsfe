@@ -186,6 +186,13 @@ class ApiClient {
         return this.request<any>(`/bookings${query ? `?${query}` : ''}`);
     }
 
+    async quotePrice(payload: any) {
+        return this.request<any>(`/bookings/quote`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        })
+    }
+
     async getCustomers(params: { search?: string; limit?: number } = {}) {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);

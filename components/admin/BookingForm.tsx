@@ -79,6 +79,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }, []);
 
     useEffect(() => {
+        const quotePrice = async () => {
+            const data = await apiClient.quotePrice(bookingInfo);
+
+            console.log(data);
+        }
+
+        quotePrice();
+    }, [bookingInfo]);
+
+    useEffect(() => {
         if (!carSearchActive) return;
 
         if (bookingInfo.rental_start_date.trim().length < 0 || bookingInfo.rental_end_date.trim().length < 0) return;
