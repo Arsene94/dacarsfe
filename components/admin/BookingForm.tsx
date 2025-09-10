@@ -55,11 +55,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     useEffect(() => {
         if (!carSearchActive) return;
+        if (bookingInfo.rental_start_date.trim().length > 0 || bookingInfo.rental_end_date.trim().length > 0) return;
         const handler = setTimeout(() => {
             fetchCars(carSearch);
         }, 300);
         return () => clearTimeout(handler);
-    }, [carSearch, fetchCars, carSearchActive]);
+    }, [carSearch, fetchCars, carSearchActive, bookingInfo.rental_start_date, bookingInfo.rental_end_date]);
 
     const handleDiscount = (
         discountType: string,
@@ -69,13 +70,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
         total: number,
     ): number => {
         if (discountType === "per_day") {
-            return Math.round(discount * days); // total discount value
+            return Math.round(discount * days);
         } else if (discountType === "days") {
-            return Math.round(price_per_day * discount); // value of free days
+            return Math.round(price_per_day * discount);
         } else if (discountType === "per_total") {
-            return Math.round(total * (discount / 100)); // percentage of total
+            return Math.round(total * (discount / 100));
         } else if (discountType === "code") {
-            return Math.round(discount); // flat discount
+            return Math.round(discount);
         }
         return 0;
     };
@@ -112,6 +113,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     };
 
     const handleCarSearchOpen = useCallback(() => {
+
         setCarSearchActive(true);
     }, []);
 
@@ -355,110 +357,140 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             }
                         />
                     </div>
-
-                    <div className="col-span-2">
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Notițe
-                        </label>
-                        <Input
-                            type="text"
-                            value={bookingInfo.note || ""}
-                            onChange={(e) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
-                                    note: e.target.value,
-                                })
-                            }
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-sm font-dm-sans font-semibold text-gray-700">
-                            Status
-                        </label>
-                        <Select
-                            value={bookingInfo.status || ""}
-                            onValueChange={(v) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
-                                    status: v,
-                                })
-                            }
-                            placeholder="Selectează status"
-                        >
-                            <option value="reserved">Rezervat</option>
-                            <option value="pending">În așteptare</option>
-                            <option value="cancelled">Anulat</option>
-                            <option value="completed">Finalizat</option>
-                            <option value="no_answer">Fără răspuns</option>
-                            <option value="waiting_advance_payment">Așteaptă avans</option>
-                        </Select>
-                    </div>
                 </div>
 
-                <div className="w-1/3 h-fit sticky top-0 space-y-2 p-4 border border-gray-300 rounded-lg bg-gray-50">
-                    <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
-                        Rezumat plată
-                    </h4>
-                    <div className="font-dm-sans text-sm">
-                        Preț per zi: {bookingInfo.price_per_day}€ x {bookingInfo.days} zile
+                <div className="w-1/3 h-fit space-y-2">
+                    <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
+                        <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
+                            Publicare
+                        </h4>
+                        <div className="mt-2 space-x-2">
+                            <Button className="!px-4 py-4" onClick={onClose}>
+                                Salvează
+                            </Button>
+                            <Button className="!px-4 py-4" variant="danger" onClick={onClose}>
+                                Anulează
+                            </Button>
+                        </div>
                     </div>
-                    {bookingInfo.discount_applied > 0 && (
-                        <div className="font-dm-sans text-sm">
-                            Discount: {bookingInfo.discount_applied}€
+
+                    <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
+                        <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
+                            Păstrează prețul vechi
+                        </h4>
+                        <div className="mt-2">
+                            <Input
+                                type="checkbox"
+                                className="w-5 h-5" />
                         </div>
-                    )}
-                    {bookingInfo.total_services > 0 && (
-                        <div className="font-dm-sans text-sm">
-                            Total Servicii: {bookingInfo.total_services}€
-                        </div>
-                    )}
-                    <div className="font-dm-sans text-sm">
-                        Subtotal: {bookingInfo.sub_total}€
                     </div>
-                    {bookingInfo.discount_applied > 0 && bookingInfo.coupon_type && (
-                        <div className="font-dm-sans text-sm">
-                            Detalii discount:
-                            {bookingInfo.coupon_type === 'per_day' ? (
-                                <ul className="list-disc">
-                                    <li className="ms-5">
-                                        Preț per zi: {Math.round(bookingInfo.price_per_day - bookingInfo.coupon_amount)}€
-                                    </li>
-                                    <li className="ms-5">
-                                        Discount aplicat: {bookingInfo.discount_applied}€
-                                    </li>
-                                </ul>
-                            ) : (
-                                <div>
-                                    Discount aplicat: {bookingInfo.discount_applied}€
-                                </div>
-                            )}
+
+                    <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
+                        <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
+                            Trimite email de confirmare
+                        </h4>
+                        <div className="mt-2">
+                            <Input
+                                type="checkbox"
+                                className="w-5 h-5" />
                         </div>
-                    )}
-                    {bookingInfo.advance_payment !== 0 && (
-                        <>
+                    </div>
+
+                    <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
+                        <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
+                            Status
+                        </h4>
+                        <div className="mt-2">
+                            <Select
+                                value={bookingInfo.status || ""}
+                                onValueChange={(v) =>
+                                    setBookingInfo({
+                                        ...bookingInfo,
+                                        status: v,
+                                    })
+                                }
+                                placeholder="Selectează status"
+                            >
+                                <option value="reserved">Rezervat</option>
+                                <option value="pending">În așteptare</option>
+                                <option value="cancelled">Anulat</option>
+                                <option value="completed">Finalizat</option>
+                                <option value="no_answer">Fără răspuns</option>
+                                <option value="waiting_advance_payment">Așteaptă avans</option>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
+                        <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
+                            Notițe
+                        </h4>
+                        <div className="mt-2">
+                            <Input
+                                type="text"
+                                value={bookingInfo.note || ""}
+                                onChange={(e) =>
+                                    setBookingInfo({
+                                        ...bookingInfo,
+                                        note: e.target.value,
+                                    })
+                                }
+                            />
+                        </div>
+                    </div>
+
+                    <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
+                        <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
+                            Rezumat plată
+                        </h4>
+                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                            <span>Preț per zi:</span> <span>{bookingInfo.price_per_day}€ x {bookingInfo.days} zile</span>
+                        </div>
+                        {bookingInfo.total_services > 0 && (
+                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                <span>Total Servicii:</span> <span>{bookingInfo.total_services}€</span>
+                            </div>
+                        )}
+                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                            <span>Subtotal:</span> <span>{bookingInfo.sub_total}€</span>
+                        </div>
+                        {bookingInfo.discount_applied > 0 && bookingInfo.coupon_type && (
                             <div className="font-dm-sans text-sm">
-                                Avans: {bookingInfo.advance_payment}€
+                                Detalii discount:
+                                {bookingInfo.coupon_type === 'per_day' ? (
+                                    <ul className="list-disc">
+                                        <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                            <span>Preț per zi:</span> <span>{Math.round(bookingInfo.price_per_day - bookingInfo.coupon_amount)}€</span>
+                                        </li>
+                                        <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                            <span>Discount aplicat:</span> <span>{bookingInfo.discount_applied}€</span>
+                                        </li>
+                                    </ul>
+                                ) : (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Discount aplicat:</span> <span>{bookingInfo.discount_applied}€</span>
+                                    </div>
+                                )}
                             </div>
-                            <div className="font-dm-sans text-sm font-semibold">
-                                Rest de plată: {bookingInfo.total - bookingInfo.advance_payment}€
-                            </div>
-                        </>
-                    )}
-                    <div className="font-dm-sans text-sm font-semibold">
-                        Total: {bookingInfo.total}€
+                        )}
+                        {bookingInfo.advance_payment !== 0 && (
+                            <>
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
+                                </div>
+                                <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
+                                    <span>Rest de plată:</span> <span>{bookingInfo.total - bookingInfo.advance_payment}€</span>
+                                </div>
+                            </>
+                        )}
+                        <div className="font-dm-sans text-sm font-semibold flex justify-between">
+                            <span>Total:</span> <span>{bookingInfo.total}€</span>
+                        </div>
                     </div>
                 </div>
             </div>
             <div className="flex justify-between mt-6">
-                <div className="space-x-2">
-                    <Button className="!px-4 py-4" variant="danger" onClick={onClose}>
-                        Anulează
-                    </Button>
-                    <Button className="!px-4 py-4" onClick={onClose}>
-                        Salvează
-                    </Button>
-                </div>
+
             </div>
         </Popup>
     );
