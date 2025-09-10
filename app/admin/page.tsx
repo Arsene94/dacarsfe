@@ -375,6 +375,7 @@ const AdminDashboard = () => {
                 days: info.days ?? 0,
                 price_per_day: info.price_per_day ?? 0,
                 keep_old_price: info.keep_old_price ?? true,
+                send_email: info.send_email ?? false,
                 with_deposit: info.with_deposit ?? false,
                 tax_amount: info.tax_amount ?? 0,
                 currency_id: info.currency_id ?? "",

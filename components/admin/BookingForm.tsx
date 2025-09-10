@@ -55,12 +55,27 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     useEffect(() => {
         if (!carSearchActive) return;
-        if (bookingInfo.rental_start_date.trim().length > 0 || bookingInfo.rental_end_date.trim().length > 0) return;
+
+        if (bookingInfo.rental_start_date.trim().length < 0 || bookingInfo.rental_end_date.trim().length < 0) return;
         const handler = setTimeout(() => {
             fetchCars(carSearch);
         }, 300);
         return () => clearTimeout(handler);
     }, [carSearch, fetchCars, carSearchActive, bookingInfo.rental_start_date, bookingInfo.rental_end_date]);
+
+    useEffect(() => {
+        const getUserByPhone = async () => {
+            const data = await apiClient.getClientByPhone(bookingInfo.customer_phone)
+            if (data) {
+                setBookingInfo({
+                    ...bookingInfo,
+                    customer_name: data.name,
+                    customer_email: data.email
+                })
+            }
+        }
+        getUserByPhone();
+    }, [bookingInfo, bookingInfo.customer_phone, setBookingInfo]);
 
     const handleDiscount = (
         discountType: string,
@@ -236,10 +251,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         height={40}
                                         className="w-16 h-10 object-cover rounded"
                                     />
-                                    <div className="text-left">
-                                        <div className="font-dm-sans font-semibold">{car.name}</div>
-                                        <div className="text-xs">
-                                            {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
+                                    <div className="flex justify-between items-end w-full">
+                                        <div>
+                                            <div className="font-dm-sans font-semibold">{car.name}</div>
+                                            <div className="text-xs">
+                                                {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs">Preț cu garanție: {car.rental_rate}€ x {car.days} zile = {car.total_deposit}€</div>
+                                            <div className="text-xs">Preț fără garanție: {car.rental_rate_casco}€ x {car.days} zile = {car.total_without_deposit}€</div>
                                         </div>
                                     </div>
                                 </>
@@ -400,7 +421,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         <div className="mt-2">
                             <Input
                                 type="checkbox"
-                                className="w-5 h-5" />
+                                className="w-5 h-5"
+                                checked={bookingInfo.send_email ?? true}
+                                onChange={(e) =>
+                                    setBookingInfo({
+                                        ...bookingInfo,
+                                        send_email: e.target.checked,
+                                    })
+                                }/>
                         </div>
                     </div>
 

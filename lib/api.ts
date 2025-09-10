@@ -186,6 +186,13 @@ class ApiClient {
         return this.request<any>(`/bookings${query ? `?${query}` : ''}`);
     }
 
+    async getClientByPhone(phone: string) {
+        return this.request<any>(`/customers/get/byphone`, {
+            method: 'POST',
+            body: JSON.stringify({phone})
+        })
+    }
+
     // Authentication helpers
 
     async login(payload: { login: string; password: string }): Promise<AuthResponse> {
