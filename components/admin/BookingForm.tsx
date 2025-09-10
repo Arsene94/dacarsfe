@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -99,47 +99,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         return () => clearTimeout(handler);
     }, [customerSearch, fetchCustomers, customerSearchActive]);
 
-    const fetchedPhoneRef = useRef<string | null>(null);
-
-    useEffect(() => {
-        if (!bookingInfo.customer_phone) {
-            fetchedPhoneRef.current = null;
-            return;
-        }
-        if (fetchedPhoneRef.current === bookingInfo.customer_phone) return;
-        const handler = setTimeout(() => {
-            fetchedPhoneRef.current = bookingInfo.customer_phone;
-            const getUserByPhone = async () => {
-                const data = await apiClient.searchCustomersByPhone(
-                    bookingInfo.customer_phone,
-                );
-                if (Array.isArray(data)) {
-                    const match = data.find((row: any) =>
-                        (row.phones || []).includes(bookingInfo.customer_phone),
-                    );
-                    if (match) {
-                        const name =
-                            match.latest?.name || match.names?.[0] || "";
-                        setBookingInfo((prev: any) => {
-                            if (
-                                prev.customer_name === name &&
-                                prev.customer_email === match.email
-                            ) {
-                                return prev;
-                            }
-                            return {
-                                ...prev,
-                                customer_name: name,
-                                customer_email: match.email,
-                            };
-                        });
-                    }
-                }
-            };
-            getUserByPhone();
-        }, 300);
-        return () => clearTimeout(handler);
-    }, [bookingInfo.customer_phone, setBookingInfo]);
+    // Populate customer details only when a suggestion is selected
 
     const handleDiscount = (
         discountType: string,
@@ -199,7 +159,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
             customer_email: customer.email || "",
             customer_id: customer.id ?? bookingInfo.customer_id,
         });
-        fetchedPhoneRef.current = customer.phone || "";
         setCustomerSearch("");
         setCustomerResults([]);
     };
@@ -429,13 +388,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             items={customerResults}
                             onSearch={(v) => {
                                 setCustomerSearch(v);
-                                setBookingInfo({
-                                    ...bookingInfo,
+                                if (!customerSearch && v === "") return;
+                                setBookingInfo((prev: any) => ({
+                                    ...prev,
                                     customer_phone: v,
                                     customer_name: "",
                                     customer_email: "",
                                     customer_id: undefined,
-                                });
+                                }));
                             }}
                             onSelect={handleSelectCustomer}
                             onOpen={handleCustomerSearchOpen}
