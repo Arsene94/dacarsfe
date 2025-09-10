@@ -28,10 +28,10 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         };
 
         return (
-            <select
+                <select
                 ref={ref}
                 className={cn(
-                    "w-full appearance-none pl-4 pr-10 py-3 text-[#191919] border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent font-dm-sans disabled:cursor-not-allowed disabled:opacity-50",
+                    "w-full appearance-none pl-4 pr-10 py-3 text-[#191919] placeholder:text-gray-500 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-jade focus:border-transparent focus:shadow-md transition font-dm-sans disabled:cursor-not-allowed disabled:opacity-50",
                     className,
                 )}
                 style={{
