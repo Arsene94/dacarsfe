@@ -371,6 +371,7 @@ const AdminDashboard = () => {
                 car_license_plate: info.car_license_plate ?? info.license_plate ?? "",
                 car_transmission: info.car_transmission ?? info.transmission_name ?? "",
                 car_fuel: info.car_fuel ?? info.fuel_name ?? "",
+                car_deposit: info.car.deposit,
                 booking_number: info.booking_number ?? "",
                 note: info.note ?? "",
                 days: info.days ?? 0,

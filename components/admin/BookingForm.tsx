@@ -338,6 +338,20 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
                     <div>
+                        <Label htmlFor="car-deposit">Garantie</Label>
+                        <Input id="car-deposit"
+                               type="text"
+                               value={bookingInfo.car_deposit || 0}
+                               onChange={(e) =>
+                                    setBookingInfo({
+                                        ...bookingInfo,
+                                        car_deposit: e.target.value,
+                                    })
+                               }
+                               />
+                    </div>
+
+                    <div>
                         <Label htmlFor="customer-name">Nume client</Label>
                         <Input
                             id="customer-name"
@@ -478,7 +492,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         Plan cu Garanție
                                     </div>
                                     <p className="text-sm text-gray-500">
-                                        Alege acest plan și achită o garanție în valoare de: {bookingInfo.deposit ?? 0}€ pentru închiriere.
+                                        Alege acest plan și achită o garanție în valoare de: {bookingInfo.car_deposit ?? 0}€ pentru închiriere.
                                     </p>
                                 </div>
                             </label>
