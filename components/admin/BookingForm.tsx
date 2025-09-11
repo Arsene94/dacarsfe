@@ -753,7 +753,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         <span>Total Servicii:</span> <span>{bookingInfo.total_services}€</span>
                                     </div>
                                 )}
-                                {discount > 0 && bookingInfo.coupon_type ? (
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Subtotal:</span>
+                                    <span>{subtotal}€</span>
+                                </div>
+                                {discount > 0 && bookingInfo.coupon_type && (
                                     <div className="font-dm-sans text-sm">
                                         Detalii discount:
                                         <ul className="list-disc">
@@ -767,7 +771,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                             </li>
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Subtotal:</span>
-                                                <span>{subtotal}€</span>
+                                                <span>{total}€</span>
                                             </li>
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Total:</span>
@@ -775,13 +779,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                             </li>
                                         </ul>
                                     </div>
-                                ) : (
-                                    <>
-                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                            <span>Subtotal:</span>
-                                            <span>{subtotal}€</span>
-                                        </div>
-                                    </>
                                 )}
                                 {bookingInfo.advance_payment !== 0 && (
                                     <>
