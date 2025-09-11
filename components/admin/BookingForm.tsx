@@ -106,7 +106,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
     useEffect(() => {
         const quotePrice = async () => {
             try {
-                const data = await apiClient.quotePrice(bookingInfo);
+                const data = await apiClient.quotePrice({
+                    ...bookingInfo,
+                    base_price:
+                        bookingInfo.original_price_per_day,
+                    base_price_casco:
+                        bookingInfo.original_price_per_day + Math.round(bookingInfo.original_price_per_day * (20/100)),
+                });
                 setQuote(data);
             } catch (error) {
                 console.error("Error quoting price:", error);
@@ -256,6 +262,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             ? car.fuel
                             : car.fuel?.name || car.fuel_name || "",
                     price_per_day: price,
+                    base_price: parsePrice(car.rental_rate),
+                    base_price_casco: parsePrice(car.rental_rate_casco),
                 };
                 setBookingInfo((prev: any) =>
                     recalcTotals({ ...prev, ...updated }),
@@ -301,6 +309,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
             car_fuel:
                 typeof car.fuel === "string" ? car.fuel : car.fuel?.name || "",
             price_per_day: price,
+            base_price: parsePrice(car.rental_rate),
+            base_price_casco: parsePrice(car.rental_rate_casco),
         });
         setBookingInfo(updated);
         setCarSearch("");
