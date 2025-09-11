@@ -256,6 +256,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             ? car.fuel
                             : car.fuel?.name || car.fuel_name || "",
                     price_per_day: price,
+                    base_price: parsePrice(car.rental_rate),
+                    base_price_casco: parsePrice(car.rental_rate_casco),
                 };
                 setBookingInfo((prev: any) =>
                     recalcTotals({ ...prev, ...updated }),
@@ -301,6 +303,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
             car_fuel:
                 typeof car.fuel === "string" ? car.fuel : car.fuel?.name || "",
             price_per_day: price,
+            base_price: parsePrice(car.rental_rate),
+            base_price_casco: parsePrice(car.rental_rate_casco),
         });
         setBookingInfo(updated);
         setCarSearch("");
