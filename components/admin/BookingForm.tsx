@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -43,6 +43,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [customerResults, setCustomerResults] = useState<any[]>([]);
     const [customerSearchActive, setCustomerSearchActive] = useState(false);
     const [quote, setQuote] = useState<any | null>(null);
+    const originalTotals = useRef<{ subtotal: number; total: number }>({
+        subtotal: 0,
+        total: 0,
+    });
 
     const fetchCars = useCallback(
         async (query: string) => {
@@ -60,7 +64,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         : Array.isArray(resp?.items)
                             ? resp.items
                             : [];
-                setCarResults(list);
+                const normalized = list.map((c: any) => ({
+                    ...c,
+                    license_plate:
+                        c.license_plate || c.licensePlate || c.plate || "",
+                    transmission: c.transmission?.name
+                        ? c.transmission
+                        : { name: c.transmission_name || c.transmission || "" },
+                    fuel: c.fuel?.name
+                        ? c.fuel
+                        : { name: c.fuel_name || c.fuel || "" },
+                }));
+                setCarResults(normalized);
             } catch (error) {
                 console.error("Error searching cars:", error);
             }
@@ -150,7 +165,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     // Populate customer details only when a suggestion is selected
 
-    const handleDiscount = (
+    const handleDiscount = useCallback((
         discountType: string,
         discount: number,
         price_per_day: number,
@@ -161,7 +176,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return Math.round(discount * days);
         } else if (discountType === "days") {
             return Math.round(price_per_day * discount);
-        } else if (discountType === "from_total") {
+        } else if (discountType === "from_total" || discountType === "per_total") {
             return Math.round(total * (discount / 100));
         } else if (discountType === "code") {
             return Math.round(discount);
@@ -169,35 +184,125 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return Math.round((price_per_day - discount) * days);
         }
         return 0;
-    };
+    }, []);
+
+    const recalcTotals = useCallback((info: any) => {
+        const type = info.coupon_type === "per_total"
+            ? "from_total"
+            : info.coupon_type || "fixed_per_day";
+        const subTotal = (info.price_per_day || 0) * (info.days || 0);
+        const discountValue = handleDiscount(
+            type,
+            type === "code" ? 0 : info.coupon_amount || 0,
+            info.price_per_day || 0,
+            info.days || 0,
+            subTotal + (info.total_services || 0),
+        );
+        const total = subTotal + (info.total_services || 0) - discountValue;
+        return {
+            ...info,
+            coupon_type: type,
+            sub_total: subTotal,
+            total,
+            discount_applied: discountValue,
+        };
+    }, [handleDiscount]);
+
+    useEffect(() => {
+        if (!open || !bookingInfo.car_id) return;
+        if (
+            bookingInfo.car_license_plate &&
+            bookingInfo.car_transmission &&
+            bookingInfo.car_fuel
+        )
+            return;
+        let ignore = false;
+        const load = async () => {
+            try {
+                const res = await apiClient.getCarForBooking({
+                    car_id: bookingInfo.car_id,
+                    start_date: bookingInfo.rental_start_date,
+                    end_date: bookingInfo.rental_end_date,
+                });
+                const car = Array.isArray(res?.data)
+                    ? res.data[0]
+                    : Array.isArray(res)
+                        ? res[0]
+                        : res;
+                if (!car || ignore) return;
+                const price = parsePrice(
+                    car.rental_rate ?? bookingInfo.price_per_day,
+                );
+                const updated = {
+                    car_name: car.name ?? bookingInfo.car_name,
+                    car_image:
+                        car.image_preview ||
+                        car.image ||
+                        bookingInfo.car_image ||
+                        "",
+                    car_license_plate:
+                        car.license_plate ||
+                        car.licensePlate ||
+                        car.plate ||
+                        "",
+                    car_transmission:
+                        typeof car.transmission === "string"
+                            ? car.transmission
+                            : car.transmission?.name ||
+                              car.transmission_name ||
+                              "",
+                    car_fuel:
+                        typeof car.fuel === "string"
+                            ? car.fuel
+                            : car.fuel?.name || car.fuel_name || "",
+                    price_per_day: price,
+                };
+                setBookingInfo((prev: any) =>
+                    recalcTotals({ ...prev, ...updated }),
+                );
+            } catch (err) {
+                console.error("Error loading car:", err);
+            }
+        };
+        load();
+        return () => {
+            ignore = true;
+        };
+    }, [
+        open,
+        bookingInfo.car_id,
+        bookingInfo.car_license_plate,
+        bookingInfo.car_transmission,
+        bookingInfo.car_fuel,
+        bookingInfo.car_image,
+        bookingInfo.car_name,
+        bookingInfo.price_per_day,
+        bookingInfo.rental_start_date,
+        bookingInfo.rental_end_date,
+        recalcTotals,
+        setBookingInfo,
+    ]);
 
     const handleSelectCar = (car: any) => {
         const price = car?.rental_rate
             ? Number(car.rental_rate)
             : bookingInfo.price_per_day || 0;
-        const subTotal = (bookingInfo.days || 0) * price;
-        const discountValue = handleDiscount(
-            bookingInfo.coupon_type || "",
-            bookingInfo.coupon_amount || 0,
-            price,
-            bookingInfo.days || 0,
-            subTotal + (bookingInfo.total_services || 0),
-        );
-        const total =
-            subTotal + (bookingInfo.total_services || 0) - discountValue;
-        setBookingInfo({
+        const updated = recalcTotals({
             ...bookingInfo,
             car_id: car.id,
             car_name: car.name,
             car_image: car.image_preview || car.image || "",
-            car_license_plate: car.license_plate || "",
-            car_transmission: car.transmission?.name || "",
-            car_fuel: car.fuel?.name || "",
+            car_license_plate:
+                car.license_plate || car.licensePlate || car.plate || "",
+            car_transmission:
+                typeof car.transmission === "string"
+                    ? car.transmission
+                    : car.transmission?.name || "",
+            car_fuel:
+                typeof car.fuel === "string" ? car.fuel : car.fuel?.name || "",
             price_per_day: price,
-            sub_total: subTotal,
-            discount_applied: discountValue,
-            total,
         });
+        setBookingInfo(updated);
         setCarSearch("");
         setCarResults([]);
     };
@@ -234,12 +339,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
             const svc = services.find((s: any) => s.id === id);
             return sum + (svc?.price || 0);
         }, 0);
-        setBookingInfo((prev: any) => ({
-            ...prev,
-            service_ids: selectedServices,
-            total_services: total,
-        }));
-    }, [selectedServices, services, setBookingInfo]);
+        setBookingInfo((prev: any) =>
+            recalcTotals({
+                ...prev,
+                service_ids: selectedServices,
+                total_services: total,
+            }),
+        );
+    }, [selectedServices, services, recalcTotals, setBookingInfo]);
 
     useEffect(() => {
         if (!open) return;
@@ -257,48 +364,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     useEffect(() => {
         if (!open) return;
-        if (bookingInfo?.coupon_type) return;
-        setBookingInfo((prev: any) => ({
-            ...prev,
-            coupon_type: "fixed_per_day",
-        }));
-    }, [open, bookingInfo?.coupon_type, setBookingInfo]);
-
-    useEffect(() => {
-        setBookingInfo((prev: any) => {
-            const subTotal =
-                (prev.price_per_day || 0) * (prev.days || 0);
-            const discountValue = handleDiscount(
-                prev.coupon_type || "",
-                prev.coupon_amount || 0,
-                prev.price_per_day || 0,
-                prev.days || 0,
-                subTotal + (prev.total_services || 0),
-            );
-            const total =
-                subTotal + (prev.total_services || 0) - discountValue;
-            if (
-                subTotal === prev.sub_total &&
-                total === prev.total &&
-                discountValue === prev.discount_applied
-            ) {
-                return prev;
-            }
-            return {
-                ...prev,
-                sub_total: subTotal,
-                total,
-                discount_applied: discountValue,
-            };
-        });
-    }, [
-        bookingInfo.price_per_day,
-        bookingInfo.days,
-        bookingInfo.coupon_type,
-        bookingInfo.coupon_amount,
-        bookingInfo.total_services,
-        setBookingInfo,
-    ]);
+        originalTotals.current = {
+            subtotal: (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0),
+            total:
+                bookingInfo.total ||
+                (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0),
+        };
+        setBookingInfo((prev: any) => recalcTotals(prev));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, recalcTotals, setBookingInfo]);
 
     if (!bookingInfo) return null;
 
@@ -309,10 +383,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
         : quote?.rental_rate_casco;
     const showDiscountedRate =
         typeof discountedRate === "number" && discountedRate !== baseRate;
-    const subtotal = (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0);
+    const discountedSubtotal =
+        (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0);
     const discount = bookingInfo.discount_applied || 0;
-    const total = subtotal - discount;
-
+    const discountedTotal = discountedSubtotal - discount;
+    const originalSubtotal =
+        originalTotals.current.subtotal || discountedSubtotal;
+    const originalTotal = originalTotals.current.total || discountedTotal;
+    const restToPay = originalTotal - (bookingInfo.advance_payment || 0);
+console.log(bookingInfo)
     return (
         <Popup
             open={open}
@@ -395,7 +474,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         <div>
                                             <div className="font-dm-sans font-semibold">{car.name}</div>
                                             <div className="text-xs">
-                                                {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
+                                                {car.license_plate} • {typeof car.transmission === "string"
+                                                    ? car.transmission
+                                                    : car.transmission?.name} • {typeof car.fuel === "string"
+                                                    ? car.fuel
+                                                    : car.fuel?.name}
                                             </div>
                                         </div>
                                         <div>
@@ -429,7 +512,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <div className="text-left">
                                         <div className="font-dm-sans font-semibold text-gray-700">{car.name}</div>
                                         <div className="text-xs text-gray-600">
-                                            {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
+                                            {car.license_plate} • {typeof car.transmission === "string"
+                                                ? car.transmission
+                                                : car.transmission?.name} • {typeof car.fuel === "string"
+                                                ? car.fuel
+                                                : car.fuel?.name}
                                         </div>
                                     </div>
                                 </div>
@@ -550,12 +637,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             id="coupon-type"
                             value={bookingInfo.coupon_type || ""}
                             onValueChange={(value) =>
-                                setBookingInfo((prev: any) => ({
-                                    ...prev,
-                                    coupon_type: value,
-                                    coupon_amount: 0,
-                                    coupon_code: "",
-                                }))
+                                setBookingInfo((prev: any) =>
+                                    recalcTotals({
+                                        ...prev,
+                                        coupon_type: value,
+                                        coupon_amount: 0,
+                                        coupon_code: "",
+                                    }),
+                                )
                             }
                             placeholder="Selectează"
                         >
@@ -583,33 +672,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     bookingInfo.coupon_type === "code"
                                         ? e.target.value
                                         : Number(e.target.value);
-                                setBookingInfo((prev: any) => {
-                                    const type = prev.coupon_type || "fixed_per_day";
-                                    const next = {
+                                setBookingInfo((prev: any) =>
+                                    recalcTotals({
                                         ...prev,
-                                        coupon_type: type,
-                                        ...(type === "code"
+                                        coupon_type: prev.coupon_type || "fixed_per_day",
+                                        ...((prev.coupon_type || "fixed_per_day") === "code"
                                             ? { coupon_code: val }
                                             : { coupon_amount: val }),
-                                    };
-                                    const subTotal =
-                                        (next.price_per_day || 0) * (next.days || 0);
-                                    const discountValue = handleDiscount(
-                                        type,
-                                        type === "code" ? 0 : next.coupon_amount || 0,
-                                        next.price_per_day || 0,
-                                        next.days || 0,
-                                        subTotal + (next.total_services || 0),
-                                    );
-                                    const total =
-                                        subTotal + (next.total_services || 0) - discountValue;
-                                    return {
-                                        ...next,
-                                        sub_total: subTotal,
-                                        total,
-                                        discount_applied: discountValue,
-                                    };
-                                });
+                                    }),
+                                );
                             }}
                         />
                     </div>
@@ -629,10 +700,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     name="withDeposit"
                                     checked={!!bookingInfo.with_deposit}
                                     onChange={() =>
-                                        setBookingInfo({
-                                            ...bookingInfo,
-                                            with_deposit: true,
-                                        })
+                                        setBookingInfo((prev: any) =>
+                                            recalcTotals({
+                                                ...prev,
+                                                with_deposit: true,
+                                                price_per_day:
+                                                    quote?.rental_rate != null
+                                                        ? parsePrice(quote.rental_rate)
+                                                        : prev.price_per_day,
+                                            }),
+                                        )
                                     }
                                     className="mt-1 h-4 w-4 text-jade focus:ring-jade border-gray-300"
                                 />
@@ -655,10 +732,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     name="withDeposit"
                                     checked={!bookingInfo.with_deposit}
                                     onChange={() =>
-                                        setBookingInfo({
-                                            ...bookingInfo,
-                                            with_deposit: false,
-                                        })
+                                        setBookingInfo((prev: any) =>
+                                            recalcTotals({
+                                                ...prev,
+                                                with_deposit: false,
+                                                price_per_day:
+                                                    quote?.rental_rate_casco != null
+                                                        ? parsePrice(quote.rental_rate_casco)
+                                                        : prev.price_per_day,
+                                            }),
+                                        )
                                     }
                                     className="mt-1 h-4 w-4 text-jade focus:ring-jade border-gray-300"
                                 />
@@ -785,7 +868,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         <span>Total Servicii:</span> <span>{bookingInfo.total_services}€</span>
                                     </div>
                                 )}
-                                {discount > 0 && bookingInfo.coupon_type ? (
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Subtotal:</span>
+                                    <span>{originalSubtotal}€</span>
+                                </div>
+                                {discount > 0 && bookingInfo.coupon_type && (
                                     <div className="font-dm-sans text-sm">
                                         Detalii discount:
                                         <ul className="list-disc">
@@ -799,21 +886,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                             </li>
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Subtotal:</span>
-                                                <span>{subtotal}€</span>
+                                                <span>{discountedTotal}€</span>
                                             </li>
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Total:</span>
-                                                <span>{total}€</span>
+                                                <span>{discountedTotal}€</span>
                                             </li>
                                         </ul>
                                     </div>
-                                ) : (
-                                    <>
-                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                            <span>Subtotal:</span>
-                                            <span>{subtotal}€</span>
-                                        </div>
-                                    </>
                                 )}
                                 {bookingInfo.advance_payment !== 0 && (
                                     <>
@@ -822,13 +902,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         </div>
                                         <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
                                             <span>Rest de plată:</span>
-                                            <span>{total - (bookingInfo.advance_payment || 0)}€</span>
+                                            <span>{restToPay}€</span>
                                         </div>
                                     </>
                                 )}
                                 <div className="font-dm-sans text-sm font-semibold flex justify-between">
                                     <span>Total:</span>
-                                    <span>{total}€</span>
+                                    <span>{originalTotal}€</span>
                                 </div>
                             </>
                         )}
