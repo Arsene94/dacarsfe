@@ -208,6 +208,81 @@ const BookingForm: React.FC<BookingFormProps> = ({
         };
     }, [handleDiscount]);
 
+    useEffect(() => {
+        if (!open || !bookingInfo.car_id) return;
+        if (
+            bookingInfo.car_license_plate &&
+            bookingInfo.car_transmission &&
+            bookingInfo.car_fuel
+        )
+            return;
+        let ignore = false;
+        const load = async () => {
+            try {
+                const res = await apiClient.getCarForBooking({
+                    car_id: bookingInfo.car_id,
+                    start_date: bookingInfo.rental_start_date,
+                    end_date: bookingInfo.rental_end_date,
+                });
+                const car = Array.isArray(res?.data)
+                    ? res.data[0]
+                    : Array.isArray(res)
+                        ? res[0]
+                        : res;
+                if (!car || ignore) return;
+                const price = parsePrice(
+                    car.rental_rate ?? bookingInfo.price_per_day,
+                );
+                const updated = {
+                    car_name: car.name ?? bookingInfo.car_name,
+                    car_image:
+                        car.image_preview ||
+                        car.image ||
+                        bookingInfo.car_image ||
+                        "",
+                    car_license_plate:
+                        car.license_plate ||
+                        car.licensePlate ||
+                        car.plate ||
+                        "",
+                    car_transmission:
+                        typeof car.transmission === "string"
+                            ? car.transmission
+                            : car.transmission?.name ||
+                              car.transmission_name ||
+                              "",
+                    car_fuel:
+                        typeof car.fuel === "string"
+                            ? car.fuel
+                            : car.fuel?.name || car.fuel_name || "",
+                    price_per_day: price,
+                };
+                setBookingInfo((prev: any) =>
+                    recalcTotals({ ...prev, ...updated }),
+                );
+            } catch (err) {
+                console.error("Error loading car:", err);
+            }
+        };
+        load();
+        return () => {
+            ignore = true;
+        };
+    }, [
+        open,
+        bookingInfo.car_id,
+        bookingInfo.car_license_plate,
+        bookingInfo.car_transmission,
+        bookingInfo.car_fuel,
+        bookingInfo.car_image,
+        bookingInfo.car_name,
+        bookingInfo.price_per_day,
+        bookingInfo.rental_start_date,
+        bookingInfo.rental_end_date,
+        recalcTotals,
+        setBookingInfo,
+    ]);
+
     const handleSelectCar = (car: any) => {
         const price = car?.rental_rate
             ? Number(car.rental_rate)
