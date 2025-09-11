@@ -590,10 +590,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     name="withDeposit"
                                     checked={!!bookingInfo.with_deposit}
                                     onChange={() =>
-                                        setBookingInfo({
-                                            ...bookingInfo,
-                                            with_deposit: true,
-                                        })
+                                        setBookingInfo((prev: any) =>
+                                            recalcTotals({
+                                                ...prev,
+                                                with_deposit: true,
+                                                price_per_day:
+                                                    quote?.rental_rate != null
+                                                        ? parsePrice(quote.rental_rate)
+                                                        : prev.price_per_day,
+                                            }),
+                                        )
                                     }
                                     className="mt-1 h-4 w-4 text-jade focus:ring-jade border-gray-300"
                                 />
@@ -616,10 +622,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     name="withDeposit"
                                     checked={!bookingInfo.with_deposit}
                                     onChange={() =>
-                                        setBookingInfo({
-                                            ...bookingInfo,
-                                            with_deposit: false,
-                                        })
+                                        setBookingInfo((prev: any) =>
+                                            recalcTotals({
+                                                ...prev,
+                                                with_deposit: false,
+                                                price_per_day:
+                                                    quote?.rental_rate_casco != null
+                                                        ? parsePrice(quote.rental_rate_casco)
+                                                        : prev.price_per_day,
+                                            }),
+                                        )
                                     }
                                     className="mt-1 h-4 w-4 text-jade focus:ring-jade border-gray-300"
                                 />
