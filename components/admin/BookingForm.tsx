@@ -235,12 +235,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
             const svc = services.find((s: any) => s.id === id);
             return sum + (svc?.price || 0);
         }, 0);
-        setBookingInfo((prev: any) => ({
-            ...prev,
-            service_ids: selectedServices,
-            total_services: total,
-        }));
-    }, [selectedServices, services, setBookingInfo]);
+        setBookingInfo((prev: any) =>
+            recalcTotals({
+                ...prev,
+                service_ids: selectedServices,
+                total_services: total,
+            }),
+        );
+    }, [selectedServices, services, recalcTotals, setBookingInfo]);
 
     useEffect(() => {
         if (!open) return;
@@ -259,23 +261,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
     useEffect(() => {
         if (!open) return;
         if (bookingInfo?.coupon_type) return;
-        setBookingInfo((prev: any) => ({
-            ...prev,
-            coupon_type: "fixed_per_day",
-        }));
-    }, [open, bookingInfo?.coupon_type, setBookingInfo]);
-
-    useEffect(() => {
-        setBookingInfo((prev: any) => recalcTotals(prev));
-    }, [
-        bookingInfo.price_per_day,
-        bookingInfo.days,
-        bookingInfo.coupon_type,
-        bookingInfo.coupon_amount,
-        bookingInfo.total_services,
-        recalcTotals,
-        setBookingInfo,
-    ]);
+        setBookingInfo((prev: any) =>
+            recalcTotals({
+                ...prev,
+                coupon_type: "fixed_per_day",
+            }),
+        );
+    }, [open, bookingInfo?.coupon_type, recalcTotals, setBookingInfo]);
 
     if (!bookingInfo) return null;
 
