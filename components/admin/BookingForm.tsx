@@ -109,9 +109,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 const data = await apiClient.quotePrice({
                     ...bookingInfo,
                     base_price:
-                        bookingInfo.base_price ?? bookingInfo.price_per_day,
+                        bookingInfo.original_price_per_day,
                     base_price_casco:
-                        bookingInfo.base_price_casco ?? bookingInfo.price_per_day,
+                        bookingInfo.original_price_per_day + Math.round(bookingInfo.original_price_per_day * (20/100)),
                 });
                 setQuote(data);
             } catch (error) {
