@@ -394,7 +394,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const showDiscountedRate =
         typeof discountedRate === "number" && discountedRate !== baseRate;
     const discountedSubtotal =
-        (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0);
+        (bookingInfo.sub_total || 0) ;
     const discount = bookingInfo.discount_applied || 0;
     const discountedTotal = discountedSubtotal - discount;
     const originalSubtotal =
@@ -882,7 +882,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <span>Subtotal:</span>
                                     <span>{originalSubtotal}€</span>
                                 </div>
-                                {discount > 0 && bookingInfo.coupon_type && (
+                                {discount !== 0 && discountedTotal > 0 && bookingInfo.coupon_type && (
                                     <div className="font-dm-sans text-sm">
                                         Detalii discount:
                                         <ul className="list-disc">
@@ -890,14 +890,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 <span>Preț nou pe zi:</span>
                                                 <span>{Math.round(showDiscountedRate ? discountedRate : baseRate)}€ x {days} zile</span>
                                             </li>
-                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                            {discount > 0 && (<li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Discount aplicat:</span>
                                                 <span>{discount}€</span>
-                                            </li>
-                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Subtotal:</span>
-                                                <span>{discountedTotal}€</span>
-                                            </li>
+                                            </li>)}
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Total:</span>
                                                 <span>{discountedTotal}€</span>
