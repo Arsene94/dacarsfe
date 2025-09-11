@@ -13,6 +13,13 @@ import apiClient from "@/lib/api";
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
 
+const parsePrice = (raw: any): number => {
+    if (raw == null) return 0;
+    if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
+    const parsed = parseFloat(String(raw).replace(/[^\d.,]/g, "").replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
 interface BookingFormProps {
     open: boolean;
     onClose: () => void;
@@ -30,6 +37,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [carResults, setCarResults] = useState<any[]>([]);
     const [carSearchActive, setCarSearchActive] = useState(false);
     const [services, setServices] = useState<any[]>([]);
+    const [selectedServices, setSelectedServices] = useState<number[]>([]);
 
     const [customerSearch, setCustomerSearch] = useState("");
     const [customerResults, setCustomerResults] = useState<any[]>([]);
@@ -97,10 +105,23 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     useEffect(() => {
         const fetchServices = async () => {
-            const data = await apiClient.getServices();
-            console.log(data);
-            setServices(data);
-        }
+            try {
+                const res = await apiClient.getServices();
+                const list = Array.isArray(res?.data)
+                    ? res.data
+                    : Array.isArray(res)
+                        ? res
+                        : [];
+                const mapped = list.map((s: any) => ({
+                    id: s.id,
+                    name: s.name ?? "",
+                    price: parsePrice(s.price),
+                }));
+                setServices(mapped);
+            } catch (error) {
+                console.error("Error fetching services:", error);
+            }
+        };
 
         fetchServices();
     }, []);
@@ -201,6 +222,47 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const handleCustomerSearchOpen = useCallback(() => {
         setCustomerSearchActive(true);
     }, []);
+
+    const toggleService = (id: number) => {
+        setSelectedServices((prev) =>
+            prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id],
+        );
+    };
+
+    useEffect(() => {
+        const total = selectedServices.reduce((sum, id) => {
+            const svc = services.find((s: any) => s.id === id);
+            return sum + (svc?.price || 0);
+        }, 0);
+        setBookingInfo((prev: any) => ({
+            ...prev,
+            service_ids: selectedServices,
+            total_services: total,
+        }));
+    }, [selectedServices, services, setBookingInfo]);
+
+    useEffect(() => {
+        if (!open) return;
+        const ids = Array.isArray(bookingInfo?.service_ids)
+            ? bookingInfo.service_ids
+            : Array.isArray(bookingInfo?.services)
+                ? bookingInfo.services.map((s: any) => s.id)
+                : [];
+        setSelectedServices((prev) =>
+            ids.length === prev.length && ids.every((id: any) => prev.includes(id))
+                ? prev
+                : ids,
+        );
+    }, [open, bookingInfo?.service_ids, bookingInfo?.services]);
+
+    useEffect(() => {
+        if (!open) return;
+        if (bookingInfo?.coupon_type) return;
+        setBookingInfo((prev: any) => ({
+            ...prev,
+            coupon_type: "fixed_per_day",
+        }));
+    }, [open, bookingInfo?.coupon_type, setBookingInfo]);
 
     useEffect(() => {
         setBookingInfo((prev: any) => {
@@ -375,26 +437,50 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         />
                     </div>
 
-                    <div>
-                        <Label htmlFor="car-deposit">Garantie</Label>
-                        <Input id="car-deposit"
-                               type="text"
-                               value={bookingInfo.car_deposit || 0}
-                               onChange={(e) =>
-                                    setBookingInfo({
-                                        ...bookingInfo,
-                                        car_deposit: e.target.value,
-                                    })
-                               }
-                               />
-                    </div>
+                      <div>
+                          <Label htmlFor="car-deposit">Garantie</Label>
+                          <Input id="car-deposit"
+                                 type="text"
+                                 value={bookingInfo.car_deposit || 0}
+                                 onChange={(e) =>
+                                      setBookingInfo({
+                                          ...bookingInfo,
+                                          car_deposit: e.target.value,
+                                      })
+                                 }
+                                 />
+                      </div>
 
-                    <div>
-                        <Label htmlFor="customer-name">Nume client</Label>
-                        <Input
-                            id="customer-name"
-                            type="text"
-                            value={bookingInfo.customer_name || ""}
+                      <div className="col-span-2">
+                          <h4 className="font-dm-sans text-base font-semibold text-gray-700 mb-2">
+                              Servicii suplimentare
+                          </h4>
+                          <div className="space-y-2">
+                              {services.map((s) => (
+                                  <label key={s.id} className="flex items-center gap-2">
+                                      <input
+                                          type="checkbox"
+                                          className="h-4 w-4 rounded border-gray-300 text-jade"
+                                          checked={selectedServices.includes(s.id)}
+                                          onChange={() => toggleService(s.id)}
+                                      />
+                                      <span className="text-sm text-gray-700">
+                                          {s.name} - {s.price}€
+                                      </span>
+                                  </label>
+                              ))}
+                              {services.length === 0 && (
+                                  <p className="text-sm text-gray-600">Niciun serviciu disponibil</p>
+                              )}
+                          </div>
+                      </div>
+
+                      <div>
+                          <Label htmlFor="customer-name">Nume client</Label>
+                          <Input
+                              id="customer-name"
+                              type="text"
+                              value={bookingInfo.customer_name || ""}
                             onChange={(e) =>
                                 setBookingInfo({
                                     ...bookingInfo,
@@ -464,12 +550,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             id="coupon-type"
                             value={bookingInfo.coupon_type || ""}
                             onValueChange={(value) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
+                                setBookingInfo((prev: any) => ({
+                                    ...prev,
                                     coupon_type: value,
                                     coupon_amount: 0,
                                     coupon_code: "",
-                                })
+                                }))
                             }
                             placeholder="Selectează"
                         >
@@ -492,14 +578,39 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     ? bookingInfo.coupon_code || ""
                                     : bookingInfo.coupon_amount || ""
                             }
-                            onChange={(e) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
-                                    ...(bookingInfo.coupon_type === "code"
-                                        ? { coupon_code: e.target.value }
-                                        : { coupon_amount: Number(e.target.value) }),
-                                })
-                            }
+                            onChange={(e) => {
+                                const val =
+                                    bookingInfo.coupon_type === "code"
+                                        ? e.target.value
+                                        : Number(e.target.value);
+                                setBookingInfo((prev: any) => {
+                                    const type = prev.coupon_type || "fixed_per_day";
+                                    const next = {
+                                        ...prev,
+                                        coupon_type: type,
+                                        ...(type === "code"
+                                            ? { coupon_code: val }
+                                            : { coupon_amount: val }),
+                                    };
+                                    const subTotal =
+                                        (next.price_per_day || 0) * (next.days || 0);
+                                    const discountValue = handleDiscount(
+                                        type,
+                                        type === "code" ? 0 : next.coupon_amount || 0,
+                                        next.price_per_day || 0,
+                                        next.days || 0,
+                                        subTotal + (next.total_services || 0),
+                                    );
+                                    const total =
+                                        subTotal + (next.total_services || 0) - discountValue;
+                                    return {
+                                        ...next,
+                                        sub_total: subTotal,
+                                        total,
+                                        discount_applied: discountValue,
+                                    };
+                                });
+                            }}
                         />
                     </div>
 
