@@ -410,7 +410,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const originalSubtotal =
         originalTotals.current.subtotal || discountedSubtotal;
     const originalTotal = originalTotals.current.total || discountedTotal;
-    const restToPay = originalTotal - (bookingInfo.advance_payment || 0);
+    const restToPay = discountedTotal - (bookingInfo.advance_payment || 0);
 
     return (
         <Popup
@@ -918,15 +918,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             <span>{originalSubtotal}€</span>
                         </div>
                                 {bookingInfo.advance_payment !== 0 && (
-                                    <>
-                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                            <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
-                                        </div>
-                                        <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
-                                            <span>Rest de plată:</span>
-                                            <span>{restToPay}€</span>
-                                        </div>
-                                    </>
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
+                                    </div>
                                 )}
                                 {discount !== 0 && discountedTotal > 0 && (
                                     <div className="font-dm-sans text-sm">
@@ -947,6 +941,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 <span>{discountedTotal}€</span>
                                             </li>
                                         </ul>
+                                    </div>
+                                )}
+                                {bookingInfo.advance_payment !== 0 && (
+                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
+                                        <span>Rest de plată:</span>
+                                        <span>{restToPay}€</span>
                                     </div>
                                 )}
                                 <div className="font-dm-sans text-sm font-semibold flex justify-between">
