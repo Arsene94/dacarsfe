@@ -391,7 +391,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         originalTotals.current.subtotal || discountedSubtotal;
     const originalTotal = originalTotals.current.total || discountedTotal;
     const restToPay = originalTotal - (bookingInfo.advance_payment || 0);
-
+console.log(bookingInfo)
     return (
         <Popup
             open={open}
