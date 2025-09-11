@@ -161,7 +161,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return Math.round(discount * days);
         } else if (discountType === "days") {
             return Math.round(price_per_day * discount);
-        } else if (discountType === "from_total") {
+        } else if (discountType === "from_total" || discountType === "per_total") {
             return Math.round(total * (discount / 100));
         } else if (discountType === "code") {
             return Math.round(discount);
@@ -172,16 +172,25 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }, []);
 
     const recalcTotals = useCallback((info: any) => {
+        const type = info.coupon_type === "per_total"
+            ? "from_total"
+            : info.coupon_type || "fixed_per_day";
         const subTotal = (info.price_per_day || 0) * (info.days || 0);
         const discountValue = handleDiscount(
-            info.coupon_type || "",
-            info.coupon_type === "code" ? 0 : info.coupon_amount || 0,
+            type,
+            type === "code" ? 0 : info.coupon_amount || 0,
             info.price_per_day || 0,
             info.days || 0,
             subTotal + (info.total_services || 0),
         );
         const total = subTotal + (info.total_services || 0) - discountValue;
-        return { ...info, sub_total: subTotal, total, discount_applied: discountValue };
+        return {
+            ...info,
+            coupon_type: type,
+            sub_total: subTotal,
+            total,
+            discount_applied: discountValue,
+        };
     }, [handleDiscount]);
 
     const handleSelectCar = (car: any) => {
@@ -260,14 +269,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     useEffect(() => {
         if (!open) return;
-        if (bookingInfo?.coupon_type) return;
-        setBookingInfo((prev: any) =>
-            recalcTotals({
-                ...prev,
-                coupon_type: "fixed_per_day",
-            }),
-        );
-    }, [open, bookingInfo?.coupon_type, recalcTotals, setBookingInfo]);
+        setBookingInfo((prev: any) => recalcTotals(prev));
+    }, [open, recalcTotals, setBookingInfo]);
 
     if (!bookingInfo) return null;
 
