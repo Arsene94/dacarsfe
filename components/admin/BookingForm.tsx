@@ -249,7 +249,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 ? bookingInfo.services.map((s: any) => s.id)
                 : [];
         setSelectedServices((prev) =>
-            ids.length === prev.length && ids.every((id) => prev.includes(id))
+            ids.length === prev.length && ids.every((id: any) => prev.includes(id))
                 ? prev
                 : ids,
         );
