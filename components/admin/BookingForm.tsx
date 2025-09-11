@@ -578,14 +578,39 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     ? bookingInfo.coupon_code || ""
                                     : bookingInfo.coupon_amount || ""
                             }
-                            onChange={(e) =>
-                                setBookingInfo((prev: any) => ({
-                                    ...prev,
-                                    ...(prev.coupon_type === "code"
-                                        ? { coupon_code: e.target.value }
-                                        : { coupon_amount: Number(e.target.value) }),
-                                }))
-                            }
+                            onChange={(e) => {
+                                const val =
+                                    bookingInfo.coupon_type === "code"
+                                        ? e.target.value
+                                        : Number(e.target.value);
+                                setBookingInfo((prev: any) => {
+                                    const next = {
+                                        ...prev,
+                                        ...(prev.coupon_type === "code"
+                                            ? { coupon_code: val }
+                                            : { coupon_amount: val }),
+                                    };
+                                    const subTotal =
+                                        (next.price_per_day || 0) * (next.days || 0);
+                                    const discountValue = handleDiscount(
+                                        next.coupon_type || "",
+                                        next.coupon_type === "code"
+                                            ? 0
+                                            : next.coupon_amount || 0,
+                                        next.price_per_day || 0,
+                                        next.days || 0,
+                                        subTotal + (next.total_services || 0),
+                                    );
+                                    const total =
+                                        subTotal + (next.total_services || 0) - discountValue;
+                                    return {
+                                        ...next,
+                                        sub_total: subTotal,
+                                        total,
+                                        discount_applied: discountValue,
+                                    };
+                                });
+                            }}
                         />
                     </div>
 
