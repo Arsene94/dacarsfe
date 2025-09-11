@@ -150,7 +150,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     // Populate customer details only when a suggestion is selected
 
-    const handleDiscount = (
+    const handleDiscount = useCallback((
         discountType: string,
         discount: number,
         price_per_day: number,
@@ -169,23 +169,26 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return Math.round((price_per_day - discount) * days);
         }
         return 0;
-    };
+    }, []);
+
+    const recalcTotals = useCallback((info: any) => {
+        const subTotal = (info.price_per_day || 0) * (info.days || 0);
+        const discountValue = handleDiscount(
+            info.coupon_type || "",
+            info.coupon_type === "code" ? 0 : info.coupon_amount || 0,
+            info.price_per_day || 0,
+            info.days || 0,
+            subTotal + (info.total_services || 0),
+        );
+        const total = subTotal + (info.total_services || 0) - discountValue;
+        return { ...info, sub_total: subTotal, total, discount_applied: discountValue };
+    }, [handleDiscount]);
 
     const handleSelectCar = (car: any) => {
         const price = car?.rental_rate
             ? Number(car.rental_rate)
             : bookingInfo.price_per_day || 0;
-        const subTotal = (bookingInfo.days || 0) * price;
-        const discountValue = handleDiscount(
-            bookingInfo.coupon_type || "",
-            bookingInfo.coupon_amount || 0,
-            price,
-            bookingInfo.days || 0,
-            subTotal + (bookingInfo.total_services || 0),
-        );
-        const total =
-            subTotal + (bookingInfo.total_services || 0) - discountValue;
-        setBookingInfo({
+        const updated = recalcTotals({
             ...bookingInfo,
             car_id: car.id,
             car_name: car.name,
@@ -194,10 +197,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
             car_transmission: car.transmission?.name || "",
             car_fuel: car.fuel?.name || "",
             price_per_day: price,
-            sub_total: subTotal,
-            discount_applied: discountValue,
-            total,
         });
+        setBookingInfo(updated);
         setCarSearch("");
         setCarResults([]);
     };
@@ -265,38 +266,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }, [open, bookingInfo?.coupon_type, setBookingInfo]);
 
     useEffect(() => {
-        setBookingInfo((prev: any) => {
-            const subTotal =
-                (prev.price_per_day || 0) * (prev.days || 0);
-            const discountValue = handleDiscount(
-                prev.coupon_type || "",
-                prev.coupon_amount || 0,
-                prev.price_per_day || 0,
-                prev.days || 0,
-                subTotal + (prev.total_services || 0),
-            );
-            const total =
-                subTotal + (prev.total_services || 0) - discountValue;
-            if (
-                subTotal === prev.sub_total &&
-                total === prev.total &&
-                discountValue === prev.discount_applied
-            ) {
-                return prev;
-            }
-            return {
-                ...prev,
-                sub_total: subTotal,
-                total,
-                discount_applied: discountValue,
-            };
-        });
+        setBookingInfo((prev: any) => recalcTotals(prev));
     }, [
         bookingInfo.price_per_day,
         bookingInfo.days,
         bookingInfo.coupon_type,
         bookingInfo.coupon_amount,
         bookingInfo.total_services,
+        recalcTotals,
         setBookingInfo,
     ]);
 
@@ -550,12 +527,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             id="coupon-type"
                             value={bookingInfo.coupon_type || ""}
                             onValueChange={(value) =>
-                                setBookingInfo((prev: any) => ({
-                                    ...prev,
-                                    coupon_type: value,
-                                    coupon_amount: 0,
-                                    coupon_code: "",
-                                }))
+                                setBookingInfo((prev: any) =>
+                                    recalcTotals({
+                                        ...prev,
+                                        coupon_type: value,
+                                        coupon_amount: 0,
+                                        coupon_code: "",
+                                    }),
+                                )
                             }
                             placeholder="Selectează"
                         >
@@ -583,33 +562,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     bookingInfo.coupon_type === "code"
                                         ? e.target.value
                                         : Number(e.target.value);
-                                setBookingInfo((prev: any) => {
-                                    const type = prev.coupon_type || "fixed_per_day";
-                                    const next = {
+                                setBookingInfo((prev: any) =>
+                                    recalcTotals({
                                         ...prev,
-                                        coupon_type: type,
-                                        ...(type === "code"
+                                        coupon_type: prev.coupon_type || "fixed_per_day",
+                                        ...((prev.coupon_type || "fixed_per_day") === "code"
                                             ? { coupon_code: val }
                                             : { coupon_amount: val }),
-                                    };
-                                    const subTotal =
-                                        (next.price_per_day || 0) * (next.days || 0);
-                                    const discountValue = handleDiscount(
-                                        type,
-                                        type === "code" ? 0 : next.coupon_amount || 0,
-                                        next.price_per_day || 0,
-                                        next.days || 0,
-                                        subTotal + (next.total_services || 0),
-                                    );
-                                    const total =
-                                        subTotal + (next.total_services || 0) - discountValue;
-                                    return {
-                                        ...next,
-                                        sub_total: subTotal,
-                                        total,
-                                        discount_applied: discountValue,
-                                    };
-                                });
+                                    }),
+                                );
                             }}
                         />
                     </div>
