@@ -584,19 +584,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         ? e.target.value
                                         : Number(e.target.value);
                                 setBookingInfo((prev: any) => {
+                                    const type = prev.coupon_type || "fixed_per_day";
                                     const next = {
                                         ...prev,
-                                        ...(prev.coupon_type === "code"
+                                        coupon_type: type,
+                                        ...(type === "code"
                                             ? { coupon_code: val }
                                             : { coupon_amount: val }),
                                     };
                                     const subTotal =
                                         (next.price_per_day || 0) * (next.days || 0);
                                     const discountValue = handleDiscount(
-                                        next.coupon_type || "",
-                                        next.coupon_type === "code"
-                                            ? 0
-                                            : next.coupon_amount || 0,
+                                        type,
+                                        type === "code" ? 0 : next.coupon_amount || 0,
                                         next.price_per_day || 0,
                                         next.days || 0,
                                         subTotal + (next.total_services || 0),
