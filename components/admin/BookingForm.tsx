@@ -107,11 +107,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
         const quotePrice = async () => {
             try {
                 const data = await apiClient.quotePrice({
-                    ...bookingInfo,
-                    base_price:
-                        bookingInfo.original_price_per_day,
+                    car_id: bookingInfo.car_id,
+                    rental_start_date: bookingInfo.rental_start_date,
+                    rental_end_date: bookingInfo.rental_end_date,
+                    base_price: bookingInfo.original_price_per_day,
                     base_price_casco:
-                        bookingInfo.original_price_per_day + Math.round(bookingInfo.original_price_per_day * (20/100)),
+                        bookingInfo.original_price_per_day +
+                        Math.round(bookingInfo.original_price_per_day * (20 / 100)),
                 });
                 setQuote(data);
             } catch (error) {
@@ -119,10 +121,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
             }
         };
 
-        if (bookingInfo?.car_id && bookingInfo?.rental_start_date && bookingInfo?.rental_end_date) {
+        if (
+            bookingInfo?.car_id &&
+            bookingInfo?.rental_start_date &&
+            bookingInfo?.rental_end_date
+        ) {
             quotePrice();
         }
-    }, [bookingInfo]);
+    }, [
+        bookingInfo.car_id,
+        bookingInfo.rental_start_date,
+        bookingInfo.rental_end_date,
+        bookingInfo.original_price_per_day,
+    ]);
 
     useEffect(() => {
         const fetchServices = async () => {
@@ -387,12 +398,20 @@ const BookingForm: React.FC<BookingFormProps> = ({
     if (!bookingInfo) return null;
 
     const days = bookingInfo.days || quote?.days || 0;
-    const baseRate = bookingInfo.price_per_day || 0;
-    const discountedRate = bookingInfo.with_deposit
-        ? quote?.rental_rate
-        : quote?.rental_rate_casco;
-    const showDiscountedRate =
-        typeof discountedRate === "number" && discountedRate !== baseRate;
+    const baseRate =
+        bookingInfo.original_price_per_day || bookingInfo.price_per_day || 0;
+    const discountedRate = (() => {
+        const couponAmount = bookingInfo.coupon_amount || 0;
+        switch (bookingInfo.coupon_type) {
+            case "fixed_per_day":
+                return couponAmount;
+            case "per_day":
+                return baseRate - couponAmount;
+            default:
+                return baseRate;
+        }
+    })();
+    const showDiscountedRate = discountedRate !== baseRate;
     const discountedSubtotal =
         (bookingInfo.sub_total || 0) ;
     const discount = bookingInfo.discount_applied || 0;
@@ -718,6 +737,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                     quote?.rental_rate != null
                                                         ? parsePrice(quote.rental_rate)
                                                         : prev.price_per_day,
+                                                original_price_per_day:
+                                                    quote?.rental_rate != null
+                                                        ? parsePrice(quote.rental_rate)
+                                                        : prev.original_price_per_day,
                                             }),
                                         )
                                     }
@@ -750,6 +773,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                     quote?.rental_rate_casco != null
                                                         ? parsePrice(quote.rental_rate_casco)
                                                         : prev.price_per_day,
+                                                original_price_per_day:
+                                                    quote?.rental_rate_casco != null
+                                                        ? parsePrice(quote.rental_rate_casco)
+                                                        : prev.original_price_per_day,
                                             }),
                                         )
                                     }
