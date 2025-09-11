@@ -139,8 +139,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         : data.sub_total_casco,
                     total: prev.with_deposit ? data.total : data.total_casco,
                     discount_applied: data.discount,
-                    coupon_amount: data.coupon_amount,
-                    coupon_code: data.coupon_code,
                     total_services: data.total_services,
                 }));
             } catch (error) {
