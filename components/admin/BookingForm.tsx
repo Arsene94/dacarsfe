@@ -256,6 +256,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }, [open, bookingInfo?.service_ids, bookingInfo?.services]);
 
     useEffect(() => {
+        if (!open) return;
+        if (bookingInfo?.coupon_type) return;
+        setBookingInfo((prev: any) => ({
+            ...prev,
+            coupon_type: "fixed_per_day",
+        }));
+    }, [open, bookingInfo?.coupon_type, setBookingInfo]);
+
+    useEffect(() => {
         setBookingInfo((prev: any) => {
             const subTotal =
                 (prev.price_per_day || 0) * (prev.days || 0);
