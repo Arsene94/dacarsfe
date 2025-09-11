@@ -48,6 +48,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
         total: 0,
     });
 
+    const {
+        car_id,
+        rental_start_date,
+        rental_end_date,
+        service_ids,
+        coupon_code,
+        coupon_amount,
+        coupon_type,
+        with_deposit,
+        advance_payment,
+        original_price_per_day,
+    } = bookingInfo || {};
+
     const fetchCars = useCallback(
         async (query: string) => {
             try {
@@ -107,11 +120,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
         const quotePrice = async () => {
             try {
                 const data = await apiClient.quotePrice({
-                    ...bookingInfo,
-                    base_price:
-                        bookingInfo.original_price_per_day,
+                    car_id,
+                    start_date: rental_start_date,
+                    end_date: rental_end_date,
+                    service_ids,
+                    coupon_code,
+                    coupon_amount,
+                    coupon_type,
+                    with_deposit,
+                    advance_payment,
+                    base_price: original_price_per_day,
                     base_price_casco:
-                        bookingInfo.original_price_per_day + Math.round(bookingInfo.original_price_per_day * (20/100)),
+                        original_price_per_day +
+                        Math.round(original_price_per_day * (20 / 100)),
                 });
                 setQuote(data);
             } catch (error) {
@@ -119,10 +140,45 @@ const BookingForm: React.FC<BookingFormProps> = ({
             }
         };
 
-        if (bookingInfo?.car_id && bookingInfo?.rental_start_date && bookingInfo?.rental_end_date) {
+        if (car_id && rental_start_date && rental_end_date) {
             quotePrice();
         }
-    }, [bookingInfo]);
+    }, [
+        car_id,
+        rental_start_date,
+        rental_end_date,
+        service_ids,
+        coupon_code,
+        coupon_amount,
+        coupon_type,
+        with_deposit,
+        advance_payment,
+        original_price_per_day,
+    ]);
+
+    useEffect(() => {
+        if (!quote) return;
+        const subTotal = bookingInfo.with_deposit
+            ? parsePrice(quote.total_deposit)
+            : parsePrice(quote.total_without_deposit);
+        const pricePerDay = bookingInfo.with_deposit
+            ? parsePrice(quote.rental_rate)
+            : parsePrice(quote.rental_rate_casco);
+        const discountValue = parsePrice(quote.discount);
+        const total = subTotal - discountValue;
+        originalTotals.current = {
+            subtotal: subTotal,
+            total,
+        };
+        setBookingInfo((prev: any) => ({
+            ...prev,
+            days: quote.days,
+            price_per_day: pricePerDay,
+            sub_total: subTotal,
+            total,
+            discount_applied: discountValue,
+        }));
+    }, [quote, bookingInfo.with_deposit, setBookingInfo]);
 
     useEffect(() => {
         const fetchServices = async () => {
@@ -386,15 +442,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     if (!bookingInfo) return null;
 
-    const days = bookingInfo.days || quote?.days || 0;
-    const baseRate = bookingInfo.price_per_day || 0;
-    const discountedRate = bookingInfo.with_deposit
-        ? quote?.rental_rate
-        : quote?.rental_rate_casco;
-    const showDiscountedRate =
-        typeof discountedRate === "number" && discountedRate !== baseRate;
-    const discountedSubtotal =
-        (bookingInfo.sub_total || 0) ;
+    const days = quote?.days || bookingInfo.days || 0;
+    const baseRate = bookingInfo.original_price_per_day || 0;
+    const discountedRate = bookingInfo.price_per_day || 0;
+    const showDiscountedRate = discountedRate !== baseRate;
+    const discountedSubtotal = bookingInfo.sub_total || 0;
     const discount = bookingInfo.discount_applied || 0;
     const discountedTotal = discountedSubtotal - discount;
     const originalSubtotal =
