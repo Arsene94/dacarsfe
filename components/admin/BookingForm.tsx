@@ -142,7 +142,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     coupon_amount: data.coupon_amount,
                     coupon_code: data.coupon_code,
                     total_services: data.total_services,
-                    service_ids: data.service_ids,
                 }));
             } catch (error) {
                 console.error("Error quoting price:", error);
@@ -156,19 +155,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
         ) {
             quotePrice();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         bookingInfo.car_id,
         bookingInfo.rental_start_date,
         bookingInfo.rental_end_date,
-        bookingInfo.original_price_per_day,
-        bookingInfo.base_price,
-        bookingInfo.base_price_casco,
         bookingInfo.coupon_type,
         bookingInfo.coupon_amount,
         bookingInfo.coupon_code,
         bookingInfo.service_ids,
         bookingInfo.with_deposit,
-        setBookingInfo,
     ]);
 
     useEffect(() => {
