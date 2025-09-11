@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -43,6 +43,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [customerResults, setCustomerResults] = useState<any[]>([]);
     const [customerSearchActive, setCustomerSearchActive] = useState(false);
     const [quote, setQuote] = useState<any | null>(null);
+    const originalTotals = useRef<{ subtotal: number; total: number }>({
+        subtotal: 0,
+        total: 0,
+    });
 
     const fetchCars = useCallback(
         async (query: string) => {
@@ -269,7 +273,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     useEffect(() => {
         if (!open) return;
+        originalTotals.current = {
+            subtotal: (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0),
+            total:
+                bookingInfo.total ||
+                (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0),
+        };
         setBookingInfo((prev: any) => recalcTotals(prev));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, recalcTotals, setBookingInfo]);
 
     if (!bookingInfo) return null;
@@ -281,9 +292,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
         : quote?.rental_rate_casco;
     const showDiscountedRate =
         typeof discountedRate === "number" && discountedRate !== baseRate;
-    const subtotal = (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0);
+    const discountedSubtotal =
+        (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0);
     const discount = bookingInfo.discount_applied || 0;
-    const total = subtotal - discount;
+    const discountedTotal = discountedSubtotal - discount;
+    const originalSubtotal =
+        originalTotals.current.subtotal || discountedSubtotal;
+    const originalTotal = originalTotals.current.total || discountedTotal;
+    const restToPay = originalTotal - (bookingInfo.advance_payment || 0);
 
     return (
         <Popup
@@ -755,7 +771,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 )}
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Subtotal:</span>
-                                    <span>{subtotal}€</span>
+                                    <span>{originalSubtotal}€</span>
                                 </div>
                                 {discount > 0 && bookingInfo.coupon_type && (
                                     <div className="font-dm-sans text-sm">
@@ -771,11 +787,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                             </li>
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Subtotal:</span>
-                                                <span>{total}€</span>
+                                                <span>{discountedTotal}€</span>
                                             </li>
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Total:</span>
-                                                <span>{total}€</span>
+                                                <span>{discountedTotal}€</span>
                                             </li>
                                         </ul>
                                     </div>
@@ -787,13 +803,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         </div>
                                         <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
                                             <span>Rest de plată:</span>
-                                            <span>{total - (bookingInfo.advance_payment || 0)}€</span>
+                                            <span>{restToPay}€</span>
                                         </div>
                                     </>
                                 )}
                                 <div className="font-dm-sans text-sm font-semibold flex justify-between">
                                     <span>Total:</span>
-                                    <span>{total}€</span>
+                                    <span>{originalTotal}€</span>
                                 </div>
                             </>
                         )}
