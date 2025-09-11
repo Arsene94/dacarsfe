@@ -106,7 +106,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
     useEffect(() => {
         const quotePrice = async () => {
             try {
-                const data = await apiClient.quotePrice(bookingInfo);
+                const data = await apiClient.quotePrice({
+                    ...bookingInfo,
+                    base_price:
+                        bookingInfo.base_price ?? bookingInfo.price_per_day,
+                    base_price_casco:
+                        bookingInfo.base_price_casco ?? bookingInfo.price_per_day,
+                });
                 setQuote(data);
             } catch (error) {
                 console.error("Error quoting price:", error);
