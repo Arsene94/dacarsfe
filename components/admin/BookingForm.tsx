@@ -64,7 +64,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         : Array.isArray(resp?.items)
                             ? resp.items
                             : [];
-                setCarResults(list);
+                const normalized = list.map((c: any) => ({
+                    ...c,
+                    license_plate:
+                        c.license_plate || c.licensePlate || c.plate || "",
+                    transmission: c.transmission?.name
+                        ? c.transmission
+                        : { name: c.transmission_name || c.transmission || "" },
+                    fuel: c.fuel?.name
+                        ? c.fuel
+                        : { name: c.fuel_name || c.fuel || "" },
+                }));
+                setCarResults(normalized);
             } catch (error) {
                 console.error("Error searching cars:", error);
             }
@@ -206,9 +217,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
             car_id: car.id,
             car_name: car.name,
             car_image: car.image_preview || car.image || "",
-            car_license_plate: car.license_plate || "",
-            car_transmission: car.transmission?.name || "",
-            car_fuel: car.fuel?.name || "",
+            car_license_plate:
+                car.license_plate || car.licensePlate || car.plate || "",
+            car_transmission:
+                typeof car.transmission === "string"
+                    ? car.transmission
+                    : car.transmission?.name || "",
+            car_fuel:
+                typeof car.fuel === "string" ? car.fuel : car.fuel?.name || "",
             price_per_day: price,
         });
         setBookingInfo(updated);
@@ -383,7 +399,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         <div>
                                             <div className="font-dm-sans font-semibold">{car.name}</div>
                                             <div className="text-xs">
-                                                {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
+                                                {car.license_plate} • {typeof car.transmission === "string"
+                                                    ? car.transmission
+                                                    : car.transmission?.name} • {typeof car.fuel === "string"
+                                                    ? car.fuel
+                                                    : car.fuel?.name}
                                             </div>
                                         </div>
                                         <div>
@@ -417,7 +437,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <div className="text-left">
                                         <div className="font-dm-sans font-semibold text-gray-700">{car.name}</div>
                                         <div className="text-xs text-gray-600">
-                                            {car.license_plate} • {car.transmission?.name} • {car.fuel?.name}
+                                            {car.license_plate} • {typeof car.transmission === "string"
+                                                ? car.transmission
+                                                : car.transmission?.name} • {typeof car.fuel === "string"
+                                                ? car.fuel
+                                                : car.fuel?.name}
                                         </div>
                                     </div>
                                 </div>
