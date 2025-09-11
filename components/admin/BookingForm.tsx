@@ -550,12 +550,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             id="coupon-type"
                             value={bookingInfo.coupon_type || ""}
                             onValueChange={(value) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
+                                setBookingInfo((prev: any) => ({
+                                    ...prev,
                                     coupon_type: value,
                                     coupon_amount: 0,
                                     coupon_code: "",
-                                })
+                                }))
                             }
                             placeholder="Selectează"
                         >
@@ -579,12 +579,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     : bookingInfo.coupon_amount || ""
                             }
                             onChange={(e) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
-                                    ...(bookingInfo.coupon_type === "code"
+                                setBookingInfo((prev: any) => ({
+                                    ...prev,
+                                    ...(prev.coupon_type === "code"
                                         ? { coupon_code: e.target.value }
                                         : { coupon_amount: Number(e.target.value) }),
-                                })
+                                }))
                             }
                         />
                     </div>
