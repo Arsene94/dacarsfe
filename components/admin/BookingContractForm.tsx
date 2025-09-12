@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { SearchSelect } from "@/components/ui/search-select";
 import apiClient from "@/lib/api";
 
-interface ContractPopupProps {
+interface BookingContractFormProps {
   open: boolean;
   onClose: () => void;
   reservation?: any;
@@ -20,6 +20,8 @@ const EMPTY_FORM = {
   license: "",
   bookingNumber: "",
   name: "",
+  phone: "",
+  email: "",
   start: "",
   end: "",
   car: null as any,
@@ -34,17 +36,23 @@ const EMPTY_FORM = {
 const STORAGE_BASE =
   process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
 
-const ContractPopup: React.FC<ContractPopupProps> = ({ open, onClose, reservation }) => {
+const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose, reservation }) => {
   const [form, setForm] = useState<any>(EMPTY_FORM);
   const [carSearch, setCarSearch] = useState("");
   const [carResults, setCarResults] = useState<any[]>([]);
   const [carSearchActive, setCarSearchActive] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerResults, setCustomerResults] = useState<any[]>([]);
+  const [customerSearchActive, setCustomerSearchActive] = useState(false);
 
   useEffect(() => {
     setForm(EMPTY_FORM);
     setCarSearch("");
     setCarResults([]);
     setCarSearchActive(false);
+    setCustomerSearch("");
+    setCustomerResults([]);
+    setCustomerSearchActive(false);
   }, [reservation, open]);
 
   const fetchCars = useCallback(
@@ -81,20 +89,64 @@ const ContractPopup: React.FC<ContractPopupProps> = ({ open, onClose, reservatio
     [form.start, form.end]
   );
 
+  const fetchCustomers = useCallback(async (query: string) => {
+    try {
+      const resp = await apiClient.searchCustomersByPhone(query);
+      const list = Array.isArray(resp)
+        ? resp.flatMap((row: any) =>
+            (row.phones || []).map((phone: string) => ({
+              id: row.id,
+              name: row.latest?.name || row.names?.[0] || "",
+              email: row.email,
+              phone,
+            }))
+          )
+        : [];
+      setCustomerResults(list);
+    } catch (error) {
+      console.error("Error searching customers:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (!carSearchActive) return;
     const handler = setTimeout(() => fetchCars(carSearch), 300);
     return () => clearTimeout(handler);
   }, [carSearch, carSearchActive, fetchCars]);
 
+  useEffect(() => {
+    if (!customerSearchActive) return;
+    if (customerSearch.trim().length === 0) {
+      setCustomerResults([]);
+      return;
+    }
+    const handler = setTimeout(() => fetchCustomers(customerSearch), 300);
+    return () => clearTimeout(handler);
+  }, [customerSearch, fetchCustomers, customerSearchActive]);
+
   const handleSelectCar = (car: any) => {
     setForm((prev: any) => ({ ...prev, car }));
+  };
+
+  const handleSelectCustomer = (customer: any) => {
+    setForm((prev: any) => ({
+      ...prev,
+      name: customer.name || "",
+      phone: customer.phone || "",
+      email: customer.email || "",
+    }));
+    setCustomerSearch("");
+    setCustomerResults([]);
   };
 
   const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setForm((prev: any) => ({ ...prev, [field]: value }));
   };
+
+  const handleCustomerSearchOpen = useCallback(() => {
+    setCustomerSearchActive(true);
+  }, []);
 
   return (
     <Popup
@@ -137,6 +189,38 @@ const ContractPopup: React.FC<ContractPopupProps> = ({ open, onClose, reservatio
           <div>
             <Label htmlFor="name">Nume</Label>
             <Input id="name" value={form.name} onChange={handleChange("name")} />
+          </div>
+          <div>
+            <Label htmlFor="phone">Număr telefon</Label>
+            <SearchSelect
+              id="phone"
+              value={
+                form.phone
+                  ? { name: form.name, phone: form.phone, email: form.email }
+                  : null
+              }
+              search={customerSearch}
+              items={customerResults}
+              onSearch={(v) => {
+                setCustomerSearch(v);
+                if (!customerSearch && v === "") return;
+                setForm((prev: any) => ({ ...prev, phone: v }));
+              }}
+              onSelect={handleSelectCustomer}
+              onOpen={handleCustomerSearchOpen}
+              placeholder="Selectează clientul"
+              renderItem={(user: any) => (
+                <div>
+                  <div className="font-dm-sans font-semibold">{user.name}</div>
+                  <div className="text-xs">{user.phone} • {user.email}</div>
+                </div>
+              )}
+              renderValue={(user: any) => <span>{user.phone}</span>}
+            />
+          </div>
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" value={form.email} onChange={handleChange("email")} />
           </div>
           <div>
             <Label htmlFor="start">Data început</Label>
@@ -312,5 +396,5 @@ const ContractPopup: React.FC<ContractPopupProps> = ({ open, onClose, reservatio
   );
 };
 
-export default ContractPopup;
+export default BookingContractForm;
 

@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
 import BookingForm from "@/components/admin/BookingForm";
-import ContractPopup from "@/components/admin/ContractPopup";
+import BookingContractForm from "@/components/admin/BookingContractForm";
 import { Label } from "@/components/ui/label";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
@@ -784,7 +784,7 @@ const AdminDashboard = () => {
                     onUpdated={loadActivity}
                 />
             )}
-            <ContractPopup
+            <BookingContractForm
                 open={contractOpen}
                 onClose={() => setContractOpen(false)}
                 reservation={contractReservation}
