@@ -150,7 +150,7 @@ class ApiClient {
         });
     }
 
-    async updateBooking(id: any, payload: any) {
+    updateBooking = async (id: any, payload: any) => {
         return this.request<any>(`/bookings/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
