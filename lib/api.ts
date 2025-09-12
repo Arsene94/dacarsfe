@@ -154,6 +154,13 @@ class ApiClient {
         return this.request<any>(`/bookings/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${this.token}`
+            },
+            credentials: 'include',
+            cache: 'no-cache',
         });
     }
 

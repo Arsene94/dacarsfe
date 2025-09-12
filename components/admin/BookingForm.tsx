@@ -419,8 +419,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const restToPay = discountedTotal - (bookingInfo.advance_payment || 0);
 
     const handleUpdateBooking = async () => {
-        await apiClient.updateBooking(bookingInfo.id, bookingInfo);
-        onClose();
+        try {
+            await apiClient.updateBooking(bookingInfo.id, bookingInfo);
+            onClose();
+        } catch (error) {
+            console.error("Failed to update booking:", error);
+        }
     }
 
     return (
