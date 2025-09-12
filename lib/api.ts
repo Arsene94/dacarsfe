@@ -167,7 +167,7 @@ class ApiClient {
     }
 
     async generateContract(payload: any) {
-        return this.request<Blob>(`/bookings/contract`, {
+        return this.request<any>(`/bookings/contract`, {
             method: 'POST',
             body: JSON.stringify(payload),
             headers: {
