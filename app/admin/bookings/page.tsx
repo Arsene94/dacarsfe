@@ -95,6 +95,7 @@ const ReservationsPage = () => {
           hour: "2-digit",
           minute: "2-digit",
         }),
+        days: b.days,
         couponAmount: b.coupon_amount,
         subTotal: b.sub_total,
         taxAmount: b.tax_amount,
@@ -346,6 +347,10 @@ const ReservationsPage = () => {
       <div className="flex items-center space-x-2">
         <span className="font-bold">Preț per zi:</span>
         <span> {r.pricePerDay}€</span>
+      </div>
+      <div className="flex items-center space-x-2">
+          <span className="font-bold">Zile:</span>
+          <span> {r.days}</span>
       </div>
       <div className="flex items-center space-x-2">
           <span className="font-bold">Servicii:</span>

@@ -19,6 +19,7 @@ export interface AdminReservation {
   servicesPrice?: number;
   discount?: number;
   email?: string;
+  days: number;
   pickupTime?: string;
   dropoffTime?: string;
   location?: string;
