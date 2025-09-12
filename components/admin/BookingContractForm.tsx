@@ -135,7 +135,8 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   }, [customerSearch, fetchCustomers, customerSearchActive]);
 
   const handleSelectCar = (car: any) => {
-    setForm((prev: any) => ({ ...prev, car }));
+    // clone to avoid retaining read-only properties from fetch response
+    setForm((prev: any) => ({ ...prev, car: { ...car } }));
   };
 
   const handleSelectCustomer = (customer: any) => {
@@ -178,7 +179,8 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
         balance: form.balance,
         withDeposit: form.withDeposit,
       };
-      const res = await apiClient.generateContract(payload);
+      const cleanPayload = JSON.parse(JSON.stringify(payload));
+      const res = await apiClient.generateContract(cleanPayload);
       const url = URL.createObjectURL(res);
       setPdfUrl(url);
     } catch (error) {
@@ -201,6 +203,12 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
           printWindow?.print();
       }
   };
+
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    };
+  }, [pdfUrl]);
 
   return (
     <Popup

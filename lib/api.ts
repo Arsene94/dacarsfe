@@ -39,14 +39,14 @@ class ApiClient {
         const url = `${this.baseURL}${endpoint}`;
 
         const config: RequestInit = {
+            credentials: 'include',
+            ...options,
             headers: {
                 'Content-Type': 'application/json',
                 ...(this.token && { Authorization: `Bearer ${this.token}` }),
                 'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
-                ...options.headers,
+                ...(options.headers || {}),
             },
-            credentials: 'include',
-            ...options,
         };
 
         try {
