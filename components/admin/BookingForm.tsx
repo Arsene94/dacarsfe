@@ -217,10 +217,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
             info.coupon_type === "per_total"
                 ? "from_total"
                 : info.coupon_type || "fixed_per_day";
-        return {
+
+        const updated: any = {
             ...info,
             coupon_type: type,
         };
+
+        if (type === "fixed_per_day" && info.coupon_amount != null) {
+            const amount = parsePrice(info.coupon_amount);
+            updated.base_price = amount;
+            updated.base_price_casco = amount;
+        }
+
+        return updated;
     }, []);
 
     useEffect(() => {
