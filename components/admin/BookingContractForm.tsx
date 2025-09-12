@@ -46,7 +46,11 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const [customerSearchActive, setCustomerSearchActive] = useState(false);
 
   useEffect(() => {
-    setForm(EMPTY_FORM);
+    setForm(
+      reservation
+        ? { ...EMPTY_FORM, bookingNumber: reservation.id }
+        : EMPTY_FORM
+    );
     setCarSearch("");
     setCarResults([]);
     setCarSearchActive(false);
@@ -160,6 +164,10 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     >
       {reservation ? (
         <div className="space-y-4">
+          <div>
+            <Label htmlFor="booking-number">Număr rezervare</Label>
+            <Input id="booking-number" value={form.bookingNumber} disabled />
+          </div>
           <div>
             <Label htmlFor="cnp">CNP</Label>
             <Input id="cnp" value={form.cnp} onChange={handleChange("cnp")} />
