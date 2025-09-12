@@ -170,7 +170,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
+          <div>
             <Label htmlFor="cnp">CNP</Label>
             <Input id="cnp" value={form.cnp} onChange={handleChange("cnp")} />
           </div>
@@ -388,7 +388,9 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
             </div>
           </div>
           <div className="col-span-2 flex justify-end gap-2">
-            <Button onClick={onClose}>Închide</Button>
+              <Button variant="outline" onClick={onClose}>Generează contract</Button>
+              <Button variant="blue" onClick={onClose}>Salvează rezervare & Generează contract</Button>
+              <Button variant="danger" onClick={onClose}>Închide</Button>
           </div>
         </div>
       )}
