@@ -763,6 +763,7 @@ const AdminDashboard = () => {
                     onClose={() => setEditPopupOpen(false)}
                     bookingInfo={bookingInfo}
                     setBookingInfo={setBookingInfo}
+                    onUpdated={loadActivity}
                 />
             )}
         </div>

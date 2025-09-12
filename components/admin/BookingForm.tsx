@@ -25,6 +25,7 @@ interface BookingFormProps {
     onClose: () => void;
     bookingInfo: any;
     setBookingInfo: (info: any) => void;
+    onUpdated?: () => void;
 }
 
 const BookingForm: React.FC<BookingFormProps> = ({
@@ -32,6 +33,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     onClose,
     bookingInfo,
     setBookingInfo,
+    onUpdated,
 }) => {
     const [carSearch, setCarSearch] = useState("");
     const [carResults, setCarResults] = useState<any[]>([]);
@@ -421,7 +423,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const handleUpdateBooking = async () => {
         await apiClient.updateBooking(bookingInfo.id, bookingInfo);
         onClose();
-    }
+        onUpdated?.();
+    };
 
     return (
         <Popup
