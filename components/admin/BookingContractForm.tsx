@@ -182,8 +182,8 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       let blob: Blob;
       if (res instanceof Blob) {
         blob = res;
-      } else if (res?.data) {
-        const byteCharacters = atob(res.data);
+      } else if (res) {
+        const byteCharacters = atob(res);
         const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
         const byteArray = new Uint8Array(byteNumbers);
         blob = new Blob([byteArray], { type: 'application/pdf' });
