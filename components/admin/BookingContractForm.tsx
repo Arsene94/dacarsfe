@@ -8,10 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { SearchSelect } from "@/components/ui/search-select";
 import apiClient from "@/lib/api";
-import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+import {
+  PDFViewer,
+  Document as PDFDocument,
+  Page as PDFPage,
+  Text,
+  View,
+  StyleSheet,
+  pdf,
+} from "@react-pdf/renderer"; // eslint-disable-line import/no-unresolved
 
 interface BookingContractFormProps {
   open: boolean;
@@ -39,6 +44,39 @@ const EMPTY_FORM = {
 
 const STORAGE_BASE =
   process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
+
+const styles = StyleSheet.create({
+  page: { padding: 24, fontSize: 12, lineHeight: 1.5 },
+  section: { marginBottom: 8 },
+  heading: { fontSize: 16, marginBottom: 12 },
+});
+
+const ContractDocument: React.FC<{ data: any }> = ({ data }) => (
+  <PDFDocument>
+    <PDFPage size="A4" style={styles.page}>
+      <View style={styles.section}>
+        <Text style={styles.heading}>Contract de închiriere</Text>
+      </View>
+      <View style={styles.section}>
+        <Text>CNP: {data.cnp}</Text>
+        <Text>Număr permis: {data.license}</Text>
+        <Text>Număr rezervare: {data.bookingNumber}</Text>
+        <Text>Nume: {data.name}</Text>
+        <Text>Telefon: {data.phone}</Text>
+        <Text>Email: {data.email}</Text>
+        <Text>Data început: {data.start}</Text>
+        <Text>Data sfârșit: {data.end}</Text>
+        {data.car && <Text>Mașină: {data.car.name}</Text>}
+        <Text>Garanție: {data.deposit}</Text>
+        <Text>Preț per zi: {data.pricePerDay}</Text>
+        <Text>Avans plătit: {data.advance}</Text>
+        <Text>Servicii suplimentare: {data.services}</Text>
+        <Text>Rest de plată: {data.balance}</Text>
+        <Text>Plan: {data.withDeposit ? "Cu garanție" : "Fără garanție"}</Text>
+      </View>
+    </PDFPage>
+  </PDFDocument>
+);
 
 const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose, reservation }) => {
   const [form, setForm] = useState<any>(EMPTY_FORM);
@@ -161,27 +199,8 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
 
   const generateContract = async () => {
     try {
-      // build payload explicitly to avoid carrying over read-only properties
-      const payload = {
-        cnp: form.cnp,
-        license: form.license,
-        bookingNumber: form.bookingNumber,
-        name: form.name,
-        phone: form.phone,
-        email: form.email,
-        start: form.start,
-        end: form.end,
-        car_id: form.car?.id,
-        deposit: form.deposit,
-        pricePerDay: form.pricePerDay,
-        advance: form.advance,
-        services: form.services,
-        balance: form.balance,
-        withDeposit: form.withDeposit,
-      };
-      const cleanPayload = JSON.parse(JSON.stringify(payload));
-      const res = await apiClient.generateContract(cleanPayload);
-      const url = URL.createObjectURL(res);
+      const blob = await pdf(<ContractDocument data={form} />).toBlob();
+      const url = URL.createObjectURL(blob);
       setPdfUrl(url);
     } catch (error) {
       console.error(error);
@@ -463,9 +482,9 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
             <Button variant="outline" onClick={handleDownload}>Descarcă</Button>
             <Button variant="outline" onClick={handlePrint}>Printează</Button>
           </div>
-          <Document file={pdfUrl}>
-            <Page pageNumber={1} />
-          </Document>
+          <PDFViewer width="100%" height={600}>
+            <ContractDocument data={form} />
+          </PDFViewer>
         </div>
       )}
     </Popup>
