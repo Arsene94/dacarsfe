@@ -121,6 +121,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     (bookingInfo.base_price_casco ??bookingInfo.original_price_per_day) * (20 / 100),
                                 ))
                             : bookingInfo.base_price_casco ?? bookingInfo.original_price_per_day,
+                    original_price_per_day: bookingInfo.original_price_per_day ?? 0,
                     coupon_type: bookingInfo.coupon_type,
                     coupon_amount: bookingInfo.coupon_amount,
                     coupon_code: bookingInfo.coupon_code,
@@ -132,9 +133,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     ...prev,
                     days: data.days,
                     price_per_day: data.price_per_day,
-                    original_price_per_day: prev.with_deposit
-                        ? data.rental_rate
-                        : data.rental_rate_casco,
                     base_price: data.rental_rate,
                     base_price_casco: data.rental_rate_casco,
                     sub_total: prev.with_deposit
