@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
 import BookingForm from "@/components/admin/BookingForm";
+import ReservationPopup from "@/components/admin/ReservationPopup";
 import { Label } from "@/components/ui/label";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
@@ -165,6 +166,8 @@ const AdminDashboard = () => {
     } | null>(null);
     const [editPopupOpen, setEditPopupOpen] = useState(false);
     const [bookingInfo, setBookingInfo] = useState<any>(null);
+    const [contractOpen, setContractOpen] = useState(false);
+    const [contractReservation, setContractReservation] = useState<any | null>(null);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
     const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);
     const [bookingsTotalCount, setBookingsTotalCount] = useState<number>(0);
@@ -616,6 +619,10 @@ const AdminDashboard = () => {
                                                                 </button>
 
                                                                 <button
+                                                                    onClick={() => {
+                                                                        setContractReservation(r);
+                                                                        setContractOpen(true);
+                                                                    }}
                                                                     className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
                                                                 >
                                                                     <Newspaper className="h-4 w-4" />
@@ -766,6 +773,11 @@ const AdminDashboard = () => {
                     onUpdated={loadActivity}
                 />
             )}
+            <ReservationPopup
+                open={contractOpen}
+                onClose={() => setContractOpen(false)}
+                reservation={contractReservation}
+            />
         </div>
     );
 };
