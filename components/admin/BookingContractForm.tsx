@@ -208,8 +208,15 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
 
   const handlePrint = () => {
       if (pdfUrl) {
-          const printWindow = window.open(pdfUrl);
-          printWindow?.print();
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = pdfUrl;
+          iframe.onload = () => {
+              iframe.contentWindow?.focus();
+              iframe.contentWindow?.print();
+              document.body.removeChild(iframe);
+          };
+          document.body.appendChild(iframe);
       }
   };
 
