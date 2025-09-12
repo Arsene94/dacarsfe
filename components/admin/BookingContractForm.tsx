@@ -153,7 +153,11 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   }, []);
 
   const generateContract = async () => {
-      console.log(form);
+      try {
+          const res = await apiClient.generateContract(form);
+      } catch (error) {
+          console.error(error);
+      }
   }
 
   return (
@@ -164,10 +168,6 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     >
       {reservation ? (
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="booking-number">Număr rezervare</Label>
-            <Input id="booking-number" value={form.bookingNumber} disabled />
-          </div>
           <div>
             <Label htmlFor="cnp">CNP</Label>
             <Input id="cnp" value={form.cnp} onChange={handleChange("cnp")} />
@@ -401,7 +401,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
             </div>
           </div>
           <div className="col-span-2 flex justify-end gap-2">
-              <Button variant="outline" onClick={onClose}>Generează contract</Button>
+              <Button variant="outline" onClick={generateContract}>Generează contract</Button>
               <Button variant="blue" onClick={onClose}>Salvează rezervare & Generează contract</Button>
               <Button variant="danger" onClick={onClose}>Închide</Button>
           </div>
