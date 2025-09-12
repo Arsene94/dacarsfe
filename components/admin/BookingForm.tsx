@@ -424,6 +424,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         try {
             await apiClient.updateBooking(bookingInfo.id, bookingInfo);
             onClose();
+            onUpdated?.();
         } catch (error) {
             console.error("Failed to update booking:", error);
         }
