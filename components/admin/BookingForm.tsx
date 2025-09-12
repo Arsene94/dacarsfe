@@ -410,7 +410,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const originalSubtotal =
         originalTotals.current.subtotal || discountedSubtotal;
     const originalTotal = originalTotals.current.total || discountedTotal;
-    const restToPay = originalTotal - (bookingInfo.advance_payment || 0);
+    const restToPay = discountedTotal - (bookingInfo.advance_payment || 0);
 
     return (
         <Popup
@@ -546,40 +546,17 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
                       <div>
                           <Label htmlFor="car-deposit">Garantie</Label>
-                          <Input id="car-deposit"
-                                 type="text"
-                                 value={bookingInfo.car_deposit || 0}
-                                 onChange={(e) =>
-                                      setBookingInfo({
-                                          ...bookingInfo,
-                                          car_deposit: e.target.value,
-                                      })
-                                 }
-                                 />
-                      </div>
-
-                      <div className="col-span-2">
-                          <h4 className="font-dm-sans text-base font-semibold text-gray-700 mb-2">
-                              Servicii suplimentare
-                          </h4>
-                          <div className="space-y-2">
-                              {services.map((s) => (
-                                  <label key={s.id} className="flex items-center gap-2">
-                                      <input
-                                          type="checkbox"
-                                          className="h-4 w-4 rounded border-gray-300 text-jade"
-                                          checked={selectedServices.includes(s.id)}
-                                          onChange={() => toggleService(s.id)}
-                                      />
-                                      <span className="text-sm text-gray-700">
-                                          {s.name} - {s.price}€
-                                      </span>
-                                  </label>
-                              ))}
-                              {services.length === 0 && (
-                                  <p className="text-sm text-gray-600">Niciun serviciu disponibil</p>
-                              )}
-                          </div>
+                          <Input
+                              id="car-deposit"
+                              type="text"
+                              value={bookingInfo.car_deposit || 0}
+                              onChange={(e) =>
+                                  setBookingInfo({
+                                      ...bookingInfo,
+                                      car_deposit: e.target.value,
+                                  })
+                              }
+                          />
                       </div>
 
                       <div>
@@ -651,7 +628,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
 
-                    <div>
+                    <div className="col-span-2">
                         <Label htmlFor="coupon-type">Tip discount</Label>
                         <Select
                             id="coupon-type"
@@ -703,6 +680,46 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 );
                             }}
                         />
+                    </div>
+                    <div>
+                        <Label htmlFor="advance-payment">Plată în avans</Label>
+                        <Input
+                            id="advance-payment"
+                            type="number"
+                            value={bookingInfo.advance_payment || 0}
+                            onChange={(e) =>
+                                setBookingInfo((prev: any) =>
+                                    recalcTotals({
+                                        ...prev,
+                                        advance_payment: Number(e.target.value) || 0,
+                                    }),
+                                )
+                            }
+                        />
+                    </div>
+
+                    <div className="col-span-2">
+                        <h4 className="font-dm-sans text-base font-semibold text-gray-700 mb-2">
+                            Servicii suplimentare
+                        </h4>
+                        <div className="space-y-2">
+                            {services.map((s) => (
+                                <label key={s.id} className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        className="h-4 w-4 rounded border-gray-300 text-jade"
+                                        checked={selectedServices.includes(s.id)}
+                                        onChange={() => toggleService(s.id)}
+                                    />
+                                    <span className="text-sm text-gray-700">
+                                        {s.name} - {s.price}€
+                                    </span>
+                                </label>
+                            ))}
+                            {services.length === 0 && (
+                                <p className="text-sm text-gray-600">Niciun serviciu disponibil</p>
+                            )}
+                        </div>
                     </div>
 
                     <div className="col-span-2">
@@ -896,10 +913,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         <span>Total Servicii:</span> <span>{quote.total_services}€</span>
                                     </div>
                                 )}
-                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                    <span>Subtotal:</span>
-                                    <span>{originalSubtotal}€</span>
-                                </div>
+                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                            <span>Subtotal:</span>
+                            <span>{originalSubtotal}€</span>
+                        </div>
+                                {bookingInfo.advance_payment !== 0 && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
+                                    </div>
+                                )}
                                 {discount !== 0 && discountedTotal > 0 && (
                                     <div className="font-dm-sans text-sm">
                                         Detalii discount:
@@ -922,15 +944,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     </div>
                                 )}
                                 {bookingInfo.advance_payment !== 0 && (
-                                    <>
-                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                            <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
-                                        </div>
-                                        <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
-                                            <span>Rest de plată:</span>
-                                            <span>{restToPay}€</span>
-                                        </div>
-                                    </>
+                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
+                                        <span>Rest de plată:</span>
+                                        <span>{restToPay}€</span>
+                                    </div>
                                 )}
                                 <div className="font-dm-sans text-sm font-semibold flex justify-between">
                                     <span>Total:</span>
