@@ -148,6 +148,10 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     setCustomerSearchActive(true);
   }, []);
 
+  const generateContract = async () => {
+      console.log(form);
+  }
+
   return (
     <Popup
       open={open}
@@ -165,7 +169,8 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
             <Input id="license" value={form.license} onChange={handleChange("license")} />
           </div>
           <div className="flex justify-end gap-2 mt-4">
-            <Button onClick={onClose}>Închide</Button>
+              <Button variant="outline" onClick={generateContract}>Generează contract</Button>
+              <Button variant="danger" onClick={onClose}>Închide</Button>
           </div>
         </div>
       ) : (
