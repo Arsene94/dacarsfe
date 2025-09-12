@@ -220,6 +220,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
             const amount = parsePrice(info.coupon_amount);
             updated.base_price = amount;
             updated.base_price_casco = amount;
+        } else if (info.original_price_per_day != null) {
+            const original = parsePrice(info.original_price_per_day);
+            updated.base_price = original;
+            updated.base_price_casco = original;
         }
 
         return updated;
