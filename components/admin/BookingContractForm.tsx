@@ -8,6 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { SearchSelect } from "@/components/ui/search-select";
 import apiClient from "@/lib/api";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import "react-pdf/dist/esm/Page/TextLayer.css";
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface BookingContractFormProps {
   open: boolean;
@@ -44,6 +48,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerResults, setCustomerResults] = useState<any[]>([]);
   const [customerSearchActive, setCustomerSearchActive] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setForm(
@@ -57,6 +62,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     setCustomerSearch("");
     setCustomerResults([]);
     setCustomerSearchActive(false);
+    setPdfUrl(null);
   }, [reservation, open]);
 
   const fetchCars = useCallback(
@@ -155,10 +161,28 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const generateContract = async () => {
       try {
           const res = await apiClient.generateContract(form);
+          const url = URL.createObjectURL(res);
+          setPdfUrl(url);
       } catch (error) {
           console.error(error);
       }
-  }
+  };
+
+  const handleDownload = () => {
+      if (pdfUrl) {
+          const link = document.createElement('a');
+          link.href = pdfUrl;
+          link.download = 'contract.pdf';
+          link.click();
+      }
+  };
+
+  const handlePrint = () => {
+      if (pdfUrl) {
+          const printWindow = window.open(pdfUrl);
+          printWindow?.print();
+      }
+  };
 
   return (
     <Popup
@@ -405,6 +429,17 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
               <Button variant="blue" onClick={onClose}>Salvează rezervare & Generează contract</Button>
               <Button variant="danger" onClick={onClose}>Închide</Button>
           </div>
+        </div>
+      )}
+      {pdfUrl && (
+        <div className="mt-4">
+          <div className="flex gap-2 mb-2">
+            <Button variant="outline" onClick={handleDownload}>Descarcă</Button>
+            <Button variant="outline" onClick={handlePrint}>Printează</Button>
+          </div>
+          <Document file={pdfUrl}>
+            <Page pageNumber={1} />
+          </Document>
         </div>
       )}
     </Popup>
