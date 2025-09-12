@@ -159,13 +159,16 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   }, []);
 
   const generateContract = async () => {
-      try {
-          const res = await apiClient.generateContract(form);
-          const url = URL.createObjectURL(res);
-          setPdfUrl(url);
-      } catch (error) {
-          console.error(error);
-      }
+    try {
+      // send only primitive values expected by backend
+      const { car, ...rest } = form;
+      const payload = { ...rest, car_id: car?.id };
+      const res = await apiClient.generateContract(payload);
+      const url = URL.createObjectURL(res);
+      setPdfUrl(url);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleDownload = () => {
