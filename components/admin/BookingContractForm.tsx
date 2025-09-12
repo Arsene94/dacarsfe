@@ -49,11 +49,18 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const [customerResults, setCustomerResults] = useState<any[]>([]);
   const [customerSearchActive, setCustomerSearchActive] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [localReservation, setLocalReservation] = useState(
+    reservation ? { ...reservation } : null
+  );
+
+  useEffect(() => {
+    setLocalReservation(reservation ? { ...reservation } : null);
+  }, [reservation]);
 
   useEffect(() => {
     setForm(
-      reservation
-        ? { ...EMPTY_FORM, bookingNumber: reservation.id }
+      localReservation
+        ? { ...EMPTY_FORM, bookingNumber: localReservation.id }
         : EMPTY_FORM
     );
     setCarSearch("");
@@ -63,7 +70,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     setCustomerResults([]);
     setCustomerSearchActive(false);
     setPdfUrl(null);
-  }, [reservation, open]);
+  }, [localReservation, open]);
 
   const fetchCars = useCallback(
     async (query: string) => {
@@ -216,7 +223,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       onClose={onClose}
       className="max-w-2xl max-h-[90vh] overflow-y-auto"
     >
-      {reservation ? (
+      {localReservation ? (
         <div className="space-y-4">
           <div>
             <Label htmlFor="cnp">CNP</Label>

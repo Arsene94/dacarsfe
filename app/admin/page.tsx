@@ -196,6 +196,11 @@ const AdminDashboard = () => {
         setPopupOpen(true);
     };
 
+    const handleOpenContract = (res: any | null) => {
+        setContractReservation(res ? { ...res } : null);
+        setContractOpen(true);
+    };
+
     const loadActivity = useCallback(async () => {
         try {
             const res = await apiClient.fetchWidgetActivity(carActivityDay);
@@ -482,10 +487,7 @@ const AdminDashboard = () => {
                                     </Label>
                                 </div>
                                 <button
-                                    onClick={() => {
-                                        setContractReservation(null);
-                                        setContractOpen(true);
-                                    }}
+                                    onClick={() => handleOpenContract(null)}
                                     className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
                                 >
                                     <Newspaper className="h-4 w-4" />
@@ -630,10 +632,7 @@ const AdminDashboard = () => {
                                                                 </button>
 
                                                                 <button
-                                                                    onClick={() => {
-                                                                        setContractReservation(r);
-                                                                        setContractOpen(true);
-                                                                    }}
+                                                                    onClick={() => handleOpenContract(r)}
                                                                     className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
                                                                 >
                                                                     <Newspaper className="h-4 w-4" />
