@@ -8,10 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { SearchSelect } from "@/components/ui/search-select";
 import apiClient from "@/lib/api";
-import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface BookingContractFormProps {
   open: boolean;
@@ -470,9 +466,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
             <Button variant="outline" onClick={handleDownload}>Descarcă</Button>
             <Button variant="outline" onClick={handlePrint}>Printează</Button>
           </div>
-          <Document file={pdfUrl}>
-            <Page pageNumber={1} />
-          </Document>
+          <iframe src={pdfUrl} className="w-full h-96" />
         </div>
       )}
     </Popup>
