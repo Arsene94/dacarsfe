@@ -10,6 +10,13 @@ import { SearchSelect } from "@/components/ui/search-select";
 import apiClient from "@/lib/api";
 import { Worker as PdfWorker, Viewer } from "@react-pdf-viewer/core";
 import "@react-pdf-viewer/core/lib/styles/index.css";
+import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
+
+// Import styles
+import '@react-pdf-viewer/core/lib/styles/index.css';
+import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+
+
 
 interface BookingContractFormProps {
   open: boolean;
@@ -47,6 +54,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const [customerResults, setCustomerResults] = useState<any[]>([]);
   const [customerSearchActive, setCustomerSearchActive] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+    const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
   useEffect(() => {
     setForm(
@@ -211,7 +219,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     <Popup
       open={open}
       onClose={onClose}
-      className="max-w-2xl max-h-[90vh] overflow-y-auto"
+      className="max-w-5xl max-h-[95vh] overflow-y-auto"
     >
       {reservation ? (
         <div className="space-y-4">
@@ -456,13 +464,17 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       )}
       {pdfUrl && (
         <div className="mt-4">
-          <div className="flex gap-2 mb-2">
-            <Button variant="outline" onClick={handleDownload}>Descarcă</Button>
-            <Button variant="outline" onClick={handlePrint}>Printează</Button>
-          </div>
+          {/*<div className="flex gap-2 mb-2">*/}
+          {/*  <Button variant="outline" onClick={handleDownload}>Descarcă</Button>*/}
+          {/*  <Button variant="outline" onClick={handlePrint}>Printează</Button>*/}
+          {/*</div>*/}
           <div className="h-[800px]">
             <PdfWorker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-              <Viewer fileUrl={pdfUrl} />
+              <Viewer fileUrl={pdfUrl}
+                      plugins={[
+                          // Register plugins
+                          defaultLayoutPluginInstance,
+                      ]}/>
             </PdfWorker>
           </div>
         </div>
