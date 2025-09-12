@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
-import apiClient from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import {getStatusText} from "@/lib/utils";
 
 const STORAGE_BASE =
