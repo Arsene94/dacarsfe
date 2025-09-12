@@ -179,19 +179,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       };
       const cleanPayload = JSON.parse(JSON.stringify(payload));
       const res = await apiClient.generateContract(cleanPayload);
-      // let blob: Blob;
-      // if (res instanceof Blob) {
-      //   blob = res;
-      // } else if (res) {
-      //   const byteCharacters = atob(res);
-      //   const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
-      //   const byteArray = new Uint8Array(byteNumbers);
-      //   blob = new Blob([byteArray], { type: 'application/pdf' });
-      // } else {
-      //   throw new Error('Invalid contract response');
-      // }
-      // const url = URL.createObjectURL(blob);
-      setPdfUrl('http://127.0.0.1:8000' + res.url);
+      setPdfUrl(`/api/proxy?url=${res.url}`);
     } catch (error) {
       console.error(error);
     }
