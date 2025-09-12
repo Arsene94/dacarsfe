@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { Popup } from "@/components/ui/popup";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +31,9 @@ const EMPTY_FORM = {
   withDeposit: true,
 };
 
+const STORAGE_BASE =
+  process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
+
 const ContractPopup: React.FC<ContractPopupProps> = ({ open, onClose, reservation }) => {
   const [form, setForm] = useState<any>(EMPTY_FORM);
   const [carSearch, setCarSearch] = useState("");
@@ -56,8 +60,20 @@ const ContractPopup: React.FC<ContractPopupProps> = ({ open, onClose, reservatio
           ? resp.data
           : Array.isArray(resp)
           ? resp
+          : Array.isArray(resp?.items)
+          ? resp.items
           : [];
-        setCarResults(list);
+        const normalized = list.map((c: any) => ({
+          ...c,
+          license_plate: c.license_plate || c.licensePlate || c.plate || "",
+          transmission: c.transmission?.name
+            ? c.transmission
+            : { name: c.transmission_name || c.transmission || "" },
+          fuel: c.fuel?.name
+            ? c.fuel
+            : { name: c.fuel_name || c.fuel || "" },
+        }));
+        setCarResults(normalized);
       } catch (error) {
         console.error("Error searching cars:", error);
       }
@@ -81,7 +97,11 @@ const ContractPopup: React.FC<ContractPopupProps> = ({ open, onClose, reservatio
   };
 
   return (
-    <Popup open={open} onClose={onClose} className="max-w-2xl">
+    <Popup
+      open={open}
+      onClose={onClose}
+      className="max-w-2xl max-h-[90vh] overflow-y-auto"
+    >
       {reservation ? (
         <div className="space-y-4">
           <div>
@@ -147,8 +167,77 @@ const ContractPopup: React.FC<ContractPopupProps> = ({ open, onClose, reservatio
               onSelect={handleSelectCar}
               onOpen={() => setCarSearchActive(true)}
               placeholder="Selectează mașina"
-              renderItem={(car) => <div>{car.name}</div>}
-              renderValue={(car) => <span>{car.name}</span>}
+              renderItem={(car: any) => (
+                <>
+                  <Image
+                    src={
+                      car.image_preview || car.image
+                        ? STORAGE_BASE + "/" + (car.image_preview || car.image)
+                        : "/images/placeholder-car.svg"
+                    }
+                    alt={car.name}
+                    width={64}
+                    height={40}
+                    className="w-16 h-10 object-cover rounded"
+                  />
+                  <div className="flex justify-between items-end w-full">
+                    <div>
+                      <div className="font-dm-sans font-semibold">{car.name}</div>
+                      <div className="text-xs">
+                        {car.license_plate} • {typeof car.transmission === "string"
+                          ? car.transmission
+                          : car.transmission?.name} • {typeof car.fuel === "string"
+                          ? car.fuel
+                          : car.fuel?.name}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs">
+                        Preț cu garanție: {car.rental_rate}€ x {car.days} zile =
+                        {" "}
+                        {car.total_deposit}€
+                      </div>
+                      <div className="text-xs">
+                        Preț fără garanție: {car.rental_rate_casco}€ x {car.days} zile =
+                        {" "}
+                        {car.total_without_deposit}€
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+              itemClassName={(car: any) =>
+                car.available
+                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-red-100 text-red-700 hover:bg-red-200"
+              }
+              renderValue={(car: any) => (
+                <div className="flex items-center gap-3">
+                  <Image
+                    src={
+                      car.image_preview || car.image
+                        ? STORAGE_BASE + "/" + (car.image_preview || car.image)
+                        : "/images/placeholder-car.svg"
+                    }
+                    alt={car.name}
+                    width={64}
+                    height={40}
+                    className="w-16 h-10 object-cover rounded"
+                  />
+                  <div className="text-left">
+                    <div className="font-dm-sans font-semibold text-gray-700">
+                      {car.name}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {car.license_plate} • {typeof car.transmission === "string"
+                        ? car.transmission
+                        : car.transmission?.name} • {typeof car.fuel === "string"
+                        ? car.fuel
+                        : car.fuel?.name}
+                    </div>
+                  </div>
+                </div>
+              )}
             />
           </div>
           <div>
