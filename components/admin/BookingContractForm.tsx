@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { SearchSelect } from "@/components/ui/search-select";
 import apiClient from "@/lib/api";
-import { Worker, Viewer } from "@react-pdf-viewer/core";
+import { Worker as PdfWorker, Viewer } from "@react-pdf-viewer/core";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 
 interface BookingContractFormProps {
@@ -473,9 +473,9 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
             <Button variant="outline" onClick={handlePrint}>Printează</Button>
           </div>
           <div className="h-[800px]">
-            <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
+            <PdfWorker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
               <Viewer fileUrl={pdfUrl} />
-            </Worker>
+            </PdfWorker>
           </div>
         </div>
       )}
