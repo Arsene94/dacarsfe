@@ -110,18 +110,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     car_id: bookingInfo.car_id,
                     rental_start_date: bookingInfo.rental_start_date,
                     rental_end_date: bookingInfo.rental_end_date,
-                    base_price:
-                        bookingInfo.with_deposit ? (bookingInfo.base_price ?? bookingInfo.original_price_per_day)
-                            : ((bookingInfo.base_price ?? bookingInfo.original_price_per_day) ?? Math.round((bookingInfo.base_price ?? bookingInfo.original_price_per_day) - (bookingInfo.base_price ?? bookingInfo.original_price_per_day) * (20 / 100))),
-                    base_price_casco:
-                        bookingInfo.with_deposit ?
-                            ((bookingInfo.base_price_casco ??
-                                    bookingInfo.original_price_per_day) +
-                                Math.round(
-                                    (bookingInfo.base_price_casco ??bookingInfo.original_price_per_day) * (20 / 100),
-                                ))
-                            : bookingInfo.base_price_casco ?? bookingInfo.original_price_per_day,
-                    original_price_per_day: bookingInfo.original_price_per_day ?? 0,
+                    base_price: bookingInfo.base_price,
+                    base_price_casco: bookingInfo.base_price_casco,
+                    original_price_per_day: bookingInfo.original_price_per_day,
                     coupon_type: bookingInfo.coupon_type,
                     coupon_amount: bookingInfo.coupon_amount,
                     coupon_code: bookingInfo.coupon_code,
@@ -165,6 +156,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo.service_ids,
         bookingInfo.with_deposit,
     ]);
+
 
     useEffect(() => {
         const fetchServices = async () => {
