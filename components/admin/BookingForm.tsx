@@ -111,16 +111,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     rental_start_date: bookingInfo.rental_start_date,
                     rental_end_date: bookingInfo.rental_end_date,
                     base_price:
-                        bookingInfo.with_deposit ? (bookingInfo.base_price ?? bookingInfo.original_price_per_day)
-                            : ((bookingInfo.base_price ?? bookingInfo.original_price_per_day) ?? Math.round((bookingInfo.base_price ?? bookingInfo.original_price_per_day) - (bookingInfo.base_price ?? bookingInfo.original_price_per_day) * (20 / 100))),
+                        bookingInfo.base_price ??
+                        bookingInfo.original_price_per_day,
                     base_price_casco:
-                        bookingInfo.with_deposit ?
-                            ((bookingInfo.base_price_casco ??
-                                    bookingInfo.original_price_per_day) +
-                                Math.round(
-                                    (bookingInfo.base_price_casco ??bookingInfo.original_price_per_day) * (20 / 100),
-                                ))
-                            : bookingInfo.base_price_casco ?? bookingInfo.original_price_per_day,
+                        bookingInfo.base_price_casco ??
+                        bookingInfo.original_price_per_day,
                     original_price_per_day: bookingInfo.original_price_per_day ?? 0,
                     coupon_type: bookingInfo.coupon_type,
                     coupon_amount: bookingInfo.coupon_amount,
