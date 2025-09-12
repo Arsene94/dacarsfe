@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
 import BookingForm from "@/components/admin/BookingForm";
-import ReservationPopup from "@/components/admin/ReservationPopup";
+import ContractPopup from "@/components/admin/ContractPopup";
 import { Label } from "@/components/ui/label";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
@@ -474,11 +474,22 @@ const AdminDashboard = () => {
 
                         {/* Day Selector */}
                         <div className="mb-6">
-                            <div className="flex items-center space-x-3">
-                                <Calendar className="h-5 w-5 text-jade" />
-                                <Label htmlFor="day-selector" className="text-sm font-dm-sans font-semibold text-gray-700">
-                                    Selectează ziua:
-                                </Label>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <Calendar className="h-5 w-5 text-jade" />
+                                    <Label htmlFor="day-selector" className="text-sm font-dm-sans font-semibold text-gray-700">
+                                        Selectează ziua:
+                                    </Label>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setContractReservation(null);
+                                        setContractOpen(true);
+                                    }}
+                                    className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                >
+                                    <Newspaper className="h-4 w-4" />
+                                </button>
                             </div>
                             <div className="mt-2">
                                 <Select
@@ -773,7 +784,7 @@ const AdminDashboard = () => {
                     onUpdated={loadActivity}
                 />
             )}
-            <ReservationPopup
+            <ContractPopup
                 open={contractOpen}
                 onClose={() => setContractOpen(false)}
                 reservation={contractReservation}

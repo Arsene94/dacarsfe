@@ -8,13 +8,13 @@ import { Button } from "@/components/ui/button";
 import { SearchSelect } from "@/components/ui/search-select";
 import apiClient from "@/lib/api";
 
-interface ReservationPopupProps {
+interface ContractPopupProps {
   open: boolean;
   onClose: () => void;
   reservation?: any;
 }
 
-const ReservationPopup: React.FC<ReservationPopupProps> = ({ open, onClose, reservation }) => {
+const ContractPopup: React.FC<ContractPopupProps> = ({ open, onClose, reservation }) => {
   const [form, setForm] = useState<any>({
     cnp: "",
     license: "",
@@ -237,5 +237,5 @@ const ReservationPopup: React.FC<ReservationPopupProps> = ({ open, onClose, rese
   );
 };
 
-export default ReservationPopup;
+export default ContractPopup;
 
