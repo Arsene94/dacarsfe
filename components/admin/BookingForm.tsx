@@ -418,6 +418,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const originalTotal = originalTotals.current.total || discountedTotal;
     const restToPay = discountedTotal - (bookingInfo.advance_payment || 0);
 
+    const handleUpdateBooking = async () => {
+        await apiClient.updateBooking(bookingInfo.id, bookingInfo);
+        onClose();
+    }
+
     return (
         <Popup
             open={open}
@@ -815,7 +820,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             Publicare
                         </h4>
                         <div className="mt-2 space-x-2">
-                            <Button className="!px-4 py-4" onClick={onClose}>
+                            <Button className="!px-4 py-4" onClick={handleUpdateBooking}>
                                 Salvează
                             </Button>
                             <Button className="!px-4 py-4" variant="danger" onClick={onClose}>

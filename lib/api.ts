@@ -150,6 +150,13 @@ class ApiClient {
         });
     }
 
+    async updateBooking(id: any, payload: any) {
+        return this.request<any>(`/bookings/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    }
+
     async updateBookingDate(id: any, params: { arrivalDate: string | undefined, arrivalTime: string | undefined, returnDate: string | undefined, returnTime: string | undefined }) {
         return this.request<any>(`/bookings/${id}/update-date`, {
             method: 'PUT',
