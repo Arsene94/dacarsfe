@@ -923,11 +923,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             <span>Subtotal:</span>
                             <span>{originalSubtotal}€</span>
                         </div>
-                                {bookingInfo.advance_payment !== 0 && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
-                                    </div>
-                                )}
+                        {bookingInfo.advance_payment !== 0 && (
+                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
+                            </div>
+                        )}
+                        <div className="font-dm-sans text-sm font-semibold flex justify-between">
+                            <span>Total:</span>
+                            <span>{originalTotal}€</span>
+                        </div>
                                 {discount !== 0 && discountedTotal > 0 && (
                                     <div className="font-dm-sans text-sm">
                                         Detalii discount:
@@ -955,10 +959,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         <span>{restToPay}€</span>
                                     </div>
                                 )}
-                                <div className="font-dm-sans text-sm font-semibold flex justify-between">
-                                    <span>Total:</span>
-                                    <span>{originalTotal}€</span>
-                                </div>
                             </>
                         )}
                     </div>
