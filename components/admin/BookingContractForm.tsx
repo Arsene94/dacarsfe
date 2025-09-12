@@ -160,9 +160,24 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
 
   const generateContract = async () => {
     try {
-      // send only primitive values expected by backend
-      const { car, ...rest } = form;
-      const payload = { ...rest, car_id: car?.id };
+      // build payload explicitly to avoid carrying over read-only properties
+      const payload = {
+        cnp: form.cnp,
+        license: form.license,
+        bookingNumber: form.bookingNumber,
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        start: form.start,
+        end: form.end,
+        car_id: form.car?.id,
+        deposit: form.deposit,
+        pricePerDay: form.pricePerDay,
+        advance: form.advance,
+        services: form.services,
+        balance: form.balance,
+        withDeposit: form.withDeposit,
+      };
       const res = await apiClient.generateContract(payload);
       const url = URL.createObjectURL(res);
       setPdfUrl(url);
