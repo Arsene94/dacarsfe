@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
     // Performance optimizations
     compress: true,
@@ -23,6 +25,9 @@ const nextConfig = {
                 loaders: ['@svgr/webpack'],
                 as: '*.js',
             },
+        },
+        resolveAlias: {
+            canvas: './lib/empty.js',
         },
     },
 
@@ -123,6 +128,14 @@ const nextConfig = {
 
     // Generate source maps for client bundles in production
     productionBrowserSourceMaps: true,
+
+    webpack: (config) => {
+        config.resolve.alias = {
+            ...(config.resolve.alias || {}),
+            canvas: path.resolve(__dirname, 'lib/empty.js'),
+        };
+        return config;
+    },
 
     // Modern headers with security optimizations
     async headers() {
