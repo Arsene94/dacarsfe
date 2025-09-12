@@ -87,7 +87,9 @@ const nextConfig = {
     experimental: {
         // CSS optimization
         optimizeCss: true,
-        reactCompiler: true,
+        // React Compiler can cause runtime errors (e.g., read-only params)
+        // disable until stable
+        reactCompiler: false,
 
         // Package imports optimization
         optimizePackageImports: [
