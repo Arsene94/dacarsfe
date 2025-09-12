@@ -14,47 +14,33 @@ interface ContractPopupProps {
   reservation?: any;
 }
 
-const ContractPopup: React.FC<ContractPopupProps> = ({ open, onClose, reservation }) => {
-  const [form, setForm] = useState<any>({
-    cnp: "",
-    license: "",
-    bookingNumber: "",
-    name: "",
-    start: "",
-    end: "",
-    car: null,
-    deposit: "",
-    pricePerDay: "",
-    advance: "",
-    services: "",
-    balance: "",
-    withDeposit: true,
-  });
+const EMPTY_FORM = {
+  cnp: "",
+  license: "",
+  bookingNumber: "",
+  name: "",
+  start: "",
+  end: "",
+  car: null as any,
+  deposit: "",
+  pricePerDay: "",
+  advance: "",
+  services: "",
+  balance: "",
+  withDeposit: true,
+};
 
+const ContractPopup: React.FC<ContractPopupProps> = ({ open, onClose, reservation }) => {
+  const [form, setForm] = useState<any>(EMPTY_FORM);
   const [carSearch, setCarSearch] = useState("");
   const [carResults, setCarResults] = useState<any[]>([]);
   const [carSearchActive, setCarSearchActive] = useState(false);
 
   useEffect(() => {
-    if (reservation) {
-      setForm({ cnp: "", license: "" });
-    } else {
-      setForm({
-        cnp: "",
-        license: "",
-        bookingNumber: "",
-        name: "",
-        start: "",
-        end: "",
-        car: null,
-        deposit: "",
-        pricePerDay: "",
-        advance: "",
-        services: "",
-        balance: "",
-        withDeposit: true,
-      });
-    }
+    setForm(EMPTY_FORM);
+    setCarSearch("");
+    setCarResults([]);
+    setCarSearchActive(false);
   }, [reservation, open]);
 
   const fetchCars = useCallback(
