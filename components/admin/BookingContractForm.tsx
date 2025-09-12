@@ -8,8 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { SearchSelect } from "@/components/ui/search-select";
 import apiClient from "@/lib/api";
-import { Worker, Viewer } from "@react-pdf-viewer/core";
+import { Worker as PdfWorker, Viewer } from "@react-pdf-viewer/core";
 import "@react-pdf-viewer/core/lib/styles/index.css";
+import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
+
+// Import styles
+import '@react-pdf-viewer/core/lib/styles/index.css';
+import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+
+
 
 interface BookingContractFormProps {
   open: boolean;
@@ -47,6 +54,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const [customerResults, setCustomerResults] = useState<any[]>([]);
   const [customerSearchActive, setCustomerSearchActive] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+    const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
   useEffect(() => {
     setForm(
@@ -179,19 +187,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       };
       const cleanPayload = JSON.parse(JSON.stringify(payload));
       const res = await apiClient.generateContract(cleanPayload);
-      // let blob: Blob;
-      // if (res instanceof Blob) {
-      //   blob = res;
-      // } else if (res) {
-      //   const byteCharacters = atob(res);
-      //   const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
-      //   const byteArray = new Uint8Array(byteNumbers);
-      //   blob = new Blob([byteArray], { type: 'application/pdf' });
-      // } else {
-      //   throw new Error('Invalid contract response');
-      // }
-      // const url = URL.createObjectURL(blob);
-      setPdfUrl('http://127.0.0.1:8000' + res.url);
+      setPdfUrl(`/api/proxy?url=${res.url}`);
     } catch (error) {
       console.error(error);
     }
@@ -223,7 +219,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     <Popup
       open={open}
       onClose={onClose}
-      className="max-w-2xl max-h-[90vh] overflow-y-auto"
+      className="max-w-5xl max-h-[95vh] overflow-y-auto"
     >
       {reservation ? (
         <div className="space-y-4">
@@ -468,14 +464,18 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       )}
       {pdfUrl && (
         <div className="mt-4">
-          <div className="flex gap-2 mb-2">
-            <Button variant="outline" onClick={handleDownload}>Descarcă</Button>
-            <Button variant="outline" onClick={handlePrint}>Printează</Button>
-          </div>
+          {/*<div className="flex gap-2 mb-2">*/}
+          {/*  <Button variant="outline" onClick={handleDownload}>Descarcă</Button>*/}
+          {/*  <Button variant="outline" onClick={handlePrint}>Printează</Button>*/}
+          {/*</div>*/}
           <div className="h-[800px]">
-            <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-              <Viewer fileUrl={pdfUrl} />
-            </Worker>
+            <PdfWorker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
+              <Viewer fileUrl={pdfUrl}
+                      plugins={[
+                          // Register plugins
+                          defaultLayoutPluginInstance,
+                      ]}/>
+            </PdfWorker>
           </div>
         </div>
       )}
