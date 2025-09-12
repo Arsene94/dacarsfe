@@ -198,7 +198,16 @@ const nextConfig = {
 
     // Rewrites for better SEO
     async rewrites() {
+        const proxyTarget = process.env.API_PROXY_URL || 'http://127.0.0.1:8000/api/v1';
         return [
+            // Proxy API requests during development to avoid CORS issues
+            // when the backend runs on a different origin.
+            ...(process.env.NEXT_PUBLIC_API_URL
+                ? []
+                : [{
+                    source: '/api/v1/:path*',
+                    destination: `${proxyTarget}/:path*`,
+                }]),
             {
                 source: '/sitemap.xml',
                 destination: '/api/sitemap',

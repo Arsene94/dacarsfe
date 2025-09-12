@@ -3,7 +3,11 @@ import { toQuery } from "@/lib/qs";
 import type { AuthResponse, User } from "@/types/auth";
 import type { WidgetActivityResponse } from "@/types/activity";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+// Use a relative path by default so Next.js can proxy API requests during
+// development, avoiding local CORS issues. The destination can still be
+// overridden via NEXT_PUBLIC_API_URL in environments where absolute URLs are
+// required.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 class ApiClient {
     private baseURL: string;
