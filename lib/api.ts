@@ -39,14 +39,14 @@ class ApiClient {
         const url = `${this.baseURL}${endpoint}`;
 
         const config: RequestInit = {
+            credentials: 'include',
+            ...options,
             headers: {
                 'Content-Type': 'application/json',
                 ...(this.token && { Authorization: `Bearer ${this.token}` }),
                 'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
-                ...options.headers,
+                ...(options.headers || {}),
             },
-            credentials: 'include',
-            ...options,
         };
 
         try {
@@ -64,11 +64,13 @@ class ApiClient {
             }
 
             const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
+            if (contentType?.includes('application/json')) {
                 return await response.json();
-            } else {
-                return {} as T;
             }
+            if (contentType?.includes('application/pdf')) {
+                return await response.blob() as T;
+            }
+            return {} as T;
         } catch (error) {
             console.error('API request failed:', error);
             throw error;
@@ -165,17 +167,17 @@ class ApiClient {
     }
 
     async generateContract(payload: any) {
-        return this.request<any>(`/bookings/contract`, {
+        return this.request<Blob>(`/bookings/contract`, {
             method: 'POST',
             body: JSON.stringify(payload),
             headers: {
                 'Content-Type': 'application/json',
-                Accept: 'application/json',
+                Accept: 'application/pdf',
                 Authorization: `Bearer ${this.token}`
             },
             credentials: 'include',
             cache: 'no-cache',
-        })
+        });
     }
 
     async updateBookingDate(id: any, params: { arrivalDate: string | undefined, arrivalTime: string | undefined, returnDate: string | undefined, returnTime: string | undefined }) {

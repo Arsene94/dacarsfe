@@ -8,6 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { SearchSelect } from "@/components/ui/search-select";
 import apiClient from "@/lib/api";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface BookingContractFormProps {
   open: boolean;
@@ -44,6 +48,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerResults, setCustomerResults] = useState<any[]>([]);
   const [customerSearchActive, setCustomerSearchActive] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setForm(
@@ -57,6 +62,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     setCustomerSearch("");
     setCustomerResults([]);
     setCustomerSearchActive(false);
+    setPdfUrl(null);
   }, [reservation, open]);
 
   const fetchCars = useCallback(
@@ -129,7 +135,8 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   }, [customerSearch, fetchCustomers, customerSearchActive]);
 
   const handleSelectCar = (car: any) => {
-    setForm((prev: any) => ({ ...prev, car }));
+    // clone to avoid retaining read-only properties from fetch response
+    setForm((prev: any) => ({ ...prev, car: { ...car } }));
   };
 
   const handleSelectCustomer = (customer: any) => {
@@ -153,12 +160,55 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   }, []);
 
   const generateContract = async () => {
-      try {
-          const res = await apiClient.generateContract(form);
-      } catch (error) {
-          console.error(error);
+    try {
+      // build payload explicitly to avoid carrying over read-only properties
+      const payload = {
+        cnp: form.cnp,
+        license: form.license,
+        bookingNumber: form.bookingNumber,
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        start: form.start,
+        end: form.end,
+        car_id: form.car?.id,
+        deposit: form.deposit,
+        pricePerDay: form.pricePerDay,
+        advance: form.advance,
+        services: form.services,
+        balance: form.balance,
+        withDeposit: form.withDeposit,
+      };
+      const cleanPayload = JSON.parse(JSON.stringify(payload));
+      const res = await apiClient.generateContract(cleanPayload);
+      const url = URL.createObjectURL(res);
+      setPdfUrl(url);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDownload = () => {
+      if (pdfUrl) {
+          const link = document.createElement('a');
+          link.href = pdfUrl;
+          link.download = 'contract.pdf';
+          link.click();
       }
-  }
+  };
+
+  const handlePrint = () => {
+      if (pdfUrl) {
+          const printWindow = window.open(pdfUrl);
+          printWindow?.print();
+      }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    };
+  }, [pdfUrl]);
 
   return (
     <Popup
@@ -405,6 +455,17 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
               <Button variant="blue" onClick={onClose}>Salvează rezervare & Generează contract</Button>
               <Button variant="danger" onClick={onClose}>Închide</Button>
           </div>
+        </div>
+      )}
+      {pdfUrl && (
+        <div className="mt-4">
+          <div className="flex gap-2 mb-2">
+            <Button variant="outline" onClick={handleDownload}>Descarcă</Button>
+            <Button variant="outline" onClick={handlePrint}>Printează</Button>
+          </div>
+          <Document file={pdfUrl}>
+            <Page pageNumber={1} />
+          </Document>
         </div>
       )}
     </Popup>
