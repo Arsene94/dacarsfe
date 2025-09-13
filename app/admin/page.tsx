@@ -481,15 +481,17 @@ const AdminDashboard = () => {
                                         Selectează ziua:
                                     </Label>
                                 </div>
-                                <button
+                                <Button
+                                    variant="yellow"
                                     onClick={() => {
                                         setContractReservation(null);
                                         setContractOpen(true);
                                     }}
                                     className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
                                 >
-                                    <Newspaper className="h-4 w-4" />
-                                </button>
+                                    <Newspaper className="h-4 w-4 me-1" />
+                                    Crează contract
+                                </Button>
                             </div>
                             <div className="mt-2">
                                 <Select
@@ -629,7 +631,7 @@ const AdminDashboard = () => {
                                                                     <Eye className="h-4 w-4" />
                                                                 </button>
 
-                                                                <button
+                                                                {isDeparture && (<button
                                                                     onClick={() => {
                                                                         setContractReservation(r);
                                                                         setContractOpen(true);
@@ -637,7 +639,7 @@ const AdminDashboard = () => {
                                                                     className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
                                                                 >
                                                                     <Newspaper className="h-4 w-4" />
-                                                                </button>
+                                                                </button>)}
                                                             </div>
                                                         </div>
                                                     </div>

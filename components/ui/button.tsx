@@ -9,6 +9,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           outline: "border-2 bg-jade text-white",
           danger: "border-2 bg-red-500 text-white",
           blue: "border-2 bg-blue-400 text-white",
+          yellow: "border-2 bg-yellow-400 hover:bg-yellow-600 text-white"
       };
 
       const variantClasses = variants[variant] ?? "";

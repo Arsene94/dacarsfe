@@ -38,7 +38,6 @@ const EMPTY_FORM = {
   pricePerDay: "",
   advance: "",
   services: "",
-  balance: "",
   withDeposit: true,
 };
 
@@ -182,7 +181,6 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
         pricePerDay: form.pricePerDay,
         advance: form.advance,
         services: form.services,
-        balance: form.balance,
         withDeposit: form.withDeposit,
       };
       const cleanPayload = JSON.parse(JSON.stringify(payload));
@@ -208,9 +206,8 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
               car_id: form.car?.id,
               deposit: form.deposit,
               price_per_day: form.pricePerDay,
-              advance: form.advance,
+              advance_payment: form.advance,
               services: form.services,
-              balance: form.balance,
               withDeposit: form.withDeposit,
           };
           const cleanPayload = JSON.parse(JSON.stringify(payload));
@@ -435,10 +432,6 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
           <div>
             <Label htmlFor="services">Servicii suplimentare</Label>
             <Input id="services" value={form.services} onChange={handleChange("services")} />
-          </div>
-          <div>
-            <Label htmlFor="balance">Rest de plată</Label>
-            <Input id="balance" value={form.balance} onChange={handleChange("balance")} />
           </div>
           <div className="col-span-2">
             <Label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
