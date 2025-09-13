@@ -46,6 +46,10 @@ const CarRentalCalendar: React.FC = () => {
     const [cars, setCars] = useState<Car[]>([]);
     const [reservations, setReservations] = useState<Reservation[]>([]);
 
+    const [nextCarsPage, setNextCarsPage] = useState(1);
+    const [hasMoreCars, setHasMoreCars] = useState(true);
+    const loadingCarsRef = useRef(false);
+
     const [nextBookingsPage, setNextBookingsPage] = useState(1);
     const [hasMoreBookings, setHasMoreBookings] = useState(true);
     const loadingBookingsRef = useRef(false);
@@ -59,25 +63,40 @@ const CarRentalCalendar: React.FC = () => {
         return () => window.removeEventListener('mouseup', onUp);
     }, []);
 
-    useEffect(() => {
-        const fetchCars = async () => {
-            try {
-                const res = await apiClient.getCars({ perPage: 500 });
-                const mapped: Car[] = (res.data || []).map((c: any) => ({
-                    id: c.id?.toString() ?? '',
-                    model: c.name ?? '',
-                    license: c.license_plate ?? '',
-                    year: c.year ? Number(c.year) : undefined,
-                    type: c.type?.name ?? '',
-                    color: c.color ?? '',
-                }));
-                setCars(mapped);
-            } catch (e) {
-                console.error('Error fetching cars', e);
+    const fetchCars = async (page: number) => {
+        if (loadingCarsRef.current || (!hasMoreCars && page !== 1)) return;
+        loadingCarsRef.current = true;
+        try {
+            const res = await apiClient.getCars({ page, perPage: 50 });
+            const mapped: Car[] = (res.data || []).map((c: any) => ({
+                id: c.id?.toString() ?? '',
+                model: c.name ?? '',
+                license: c.license_plate ?? '',
+                year: c.year ? Number(c.year) : undefined,
+                type: c.type?.name ?? '',
+                color: c.color ?? '',
+            }));
+            setCars((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
+            const meta = res?.meta ?? {};
+            const lastPage = meta?.last_page ?? res?.last_page ?? 1;
+            if (page >= lastPage || mapped.length === 0) {
+                setHasMoreCars(false);
+            } else {
+                setNextCarsPage(page + 1);
             }
-        };
-        fetchCars();
-    }, []);
+        } catch (e) {
+            console.error('Error fetching cars', e);
+        } finally {
+            loadingCarsRef.current = false;
+        }
+    };
+
+    useEffect(() => {
+        setCars([]);
+        setNextCarsPage(1);
+        setHasMoreCars(true);
+        fetchCars(1);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchBookings = async (page: number) => {
         if (loadingBookingsRef.current || (!hasMoreBookings && page !== 1)) return;
@@ -141,6 +160,13 @@ const CarRentalCalendar: React.FC = () => {
         if (!hasMoreBookings || loadingBookingsRef.current) return;
         if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 200) {
             fetchBookings(nextBookingsPage);
+        }
+    };
+
+    const maybeLoadMoreCars = (el: HTMLDivElement) => {
+        if (!hasMoreCars || loadingCarsRef.current) return;
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+            fetchCars(nextCarsPage);
         }
     };
 
@@ -279,6 +305,7 @@ const CarRentalCalendar: React.FC = () => {
             if (targetElement) {
                 targetElement.scrollTop = sourceElement.scrollTop;
             }
+            maybeLoadMoreCars(sourceElement);
         }
 
         const syncHorizontal = (scrollLeft: number) => {
