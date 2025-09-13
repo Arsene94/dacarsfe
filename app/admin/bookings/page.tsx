@@ -15,15 +15,43 @@ import {
   Car,
   MapPin,
   X,
+  Newspaper,
+  Plus,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
-import {Input} from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import DateRangePicker from "@/components/ui/date-range-picker";
 import { Popup } from "@/components/ui/popup";
+import BookingForm from "@/components/admin/BookingForm";
+import BookingContractForm from "@/components/admin/BookingContractForm";
+import { Button } from "@/components/ui/button";
 import apiClient from "@/lib/api";
+
+const EMPTY_BOOKING = {
+  rental_start_date: "",
+  rental_end_date: "",
+  with_deposit: true,
+  service_ids: [] as number[],
+  total_services: 0,
+  coupon_type: "",
+  coupon_amount: "",
+  coupon_code: "",
+  customer_name: "",
+  customer_phone: "",
+  customer_email: "",
+  car_id: null as number | null,
+  car_name: "",
+  car_image: "",
+  car_license_plate: "",
+  car_transmission: "",
+  car_fuel: "",
+  sub_total: 0,
+  total: 0,
+  price_per_day: 0,
+};
 
 const ReservationsPage = () => {
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
@@ -43,6 +71,11 @@ const ReservationsPage = () => {
   const [lastPage, setLastPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [totalReservations, setTotalReservations] = useState(0);
+  const [contractOpen, setContractOpen] = useState(false);
+  const [contractReservation, setContractReservation] =
+    useState<AdminReservation | null>(null);
+  const [editPopupOpen, setEditPopupOpen] = useState(false);
+  const [bookingInfo, setBookingInfo] = useState<any>(null);
 
   const mapStatus = (status: string): AdminReservation["status"] => {
     switch (status) {
@@ -402,6 +435,27 @@ const ReservationsPage = () => {
             </div>
 
             <div className="flex items-center space-x-4">
+              <Button
+                variant="yellow"
+                onClick={() => {
+                  setContractReservation(null);
+                  setContractOpen(true);
+                }}
+                className="flex items-center space-x-2 px-4 py-2"
+              >
+                <Newspaper className="h-4 w-4" />
+                Crează contract
+              </Button>
+              <Button
+                onClick={() => {
+                  setBookingInfo({ ...EMPTY_BOOKING });
+                  setEditPopupOpen(true);
+                }}
+                className="flex items-center space-x-2 px-4 py-2"
+              >
+                <Plus className="h-4 w-4" />
+                Crează rezervare
+              </Button>
               <button
                 className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 aria-label="Exportă rezervări"
@@ -848,9 +902,25 @@ const ReservationsPage = () => {
             </div>
           </div>
         )}
+        </div>
+        {bookingInfo && (
+          <BookingForm
+            open={editPopupOpen}
+            onClose={() => {
+              setEditPopupOpen(false);
+              setBookingInfo(null);
+            }}
+            bookingInfo={bookingInfo}
+            setBookingInfo={setBookingInfo}
+          />
+        )}
+        <BookingContractForm
+          open={contractOpen}
+          onClose={() => setContractOpen(false)}
+          reservation={contractReservation}
+        />
       </div>
-    </div>
-  );
+    );
 };
 
 export default ReservationsPage;
