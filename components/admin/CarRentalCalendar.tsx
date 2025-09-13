@@ -546,7 +546,7 @@ const CarRentalCalendar: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex-1 w-full flex overflow-hidden">
+            <div className="flex-1 w-full flex overflow-hidden min-w-0">
                 <div className="w-40 md:w-80 bg-white border-r border-gray-200 flex flex-col">
                     <div className="p-4 border-b border-gray-200 bg-gray-50">
                         <h2 className="text-lg font-semibold text-gray-900">Fleet Vehicles</h2>
@@ -590,7 +590,7 @@ const CarRentalCalendar: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 w-full flex flex-col bg-white overflow-x-hidden">
+                <div className="flex-1 w-full flex flex-col bg-white overflow-x-hidden min-w-0">
                     {viewMode === 'year' && (
                         <div
                             ref={monthHeaderRef}
