@@ -474,6 +474,26 @@ const CarRentalCalendar: React.FC = () => {
         return laneCount > 1 ? Math.max(BASE_ROW_HEIGHT, stackedHeight) : LANE_HEIGHT;
     }, [laneLayoutByCar]);
 
+    const initialScrollDone = useRef(false);
+    useEffect(() => {
+        if (initialScrollDone.current) return;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayKey = today.toISOString().split('T')[0];
+        const idx = indexByDateKey.get(todayKey);
+        setSelectedItems([{ type: 'date', date: today }]);
+        setLastSelectedDate(today);
+        if (idx !== undefined) {
+            const scrollPos = idx * cellWidth - (rightPanelRef.current ? rightPanelRef.current.clientWidth / 2 - cellWidth / 2 : 0);
+            if (rightPanelRef.current) {
+                rightPanelRef.current.scrollLeft = scrollPos;
+            }
+            if (monthHeaderRef.current) monthHeaderRef.current.scrollLeft = scrollPos;
+            if (dateHeaderRef.current) dateHeaderRef.current.scrollLeft = scrollPos;
+        }
+        initialScrollDone.current = true;
+    }, [cellWidth, indexByDateKey]);
+
     return (
         <div
             className="h-screen w-full flex flex-col bg-gray-50 overflow-hidden"
