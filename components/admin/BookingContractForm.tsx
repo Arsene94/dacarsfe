@@ -200,14 +200,14 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
               cnp: form.cnp,
               license: form.license,
               bookingNumber: form.bookingNumber,
-              name: form.name,
-              phone: form.phone,
-              email: form.email,
-              start: form.start,
-              end: form.end,
+              customer_name: form.name,
+              customer_phone: form.phone,
+              customer_email: form.email,
+              rental_start_date: form.start,
+              rental_end_date: form.end,
               car_id: form.car?.id,
               deposit: form.deposit,
-              pricePerDay: form.pricePerDay,
+              price_per_day: form.pricePerDay,
               advance: form.advance,
               services: form.services,
               balance: form.balance,
@@ -215,7 +215,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
           };
           const cleanPayload = JSON.parse(JSON.stringify(payload));
           const res = await apiClient.storeAndGenerateContract(cleanPayload);
-          setPdfUrl(`/api/proxy?url=${res.url}`);
+          setPdfUrl(`/api/proxy?url=${res.contract_url}`);
       } catch (error) {
           console.error('Eroare:', error);
       }
