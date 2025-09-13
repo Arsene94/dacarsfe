@@ -186,12 +186,40 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
         withDeposit: form.withDeposit,
       };
       const cleanPayload = JSON.parse(JSON.stringify(payload));
-      const res = await apiClient.generateContract(cleanPayload);
+      const res = form.name.trim() > 0 && form.email.trim() > 0 ? await apiClient.generateContract(cleanPayload) : await apiClient.generateContract(cleanPayload, form.bookingNumber);
       setPdfUrl(`/api/proxy?url=${res.url}`);
     } catch (error) {
       console.error(error);
     }
   };
+
+  const storeAndGenerateContract = async () => {
+      try {
+          // build payload explicitly to avoid carrying over read-only properties
+          const payload = {
+              cnp: form.cnp,
+              license: form.license,
+              bookingNumber: form.bookingNumber,
+              name: form.name,
+              phone: form.phone,
+              email: form.email,
+              start: form.start,
+              end: form.end,
+              car_id: form.car?.id,
+              deposit: form.deposit,
+              pricePerDay: form.pricePerDay,
+              advance: form.advance,
+              services: form.services,
+              balance: form.balance,
+              withDeposit: form.withDeposit,
+          };
+          const cleanPayload = JSON.parse(JSON.stringify(payload));
+          const res = await apiClient.storeAndGenerateContract(cleanPayload);
+          setPdfUrl(`/api/proxy?url=${res.url}`);
+      } catch (error) {
+          console.error('Eroare:', error);
+      }
+  }
 
   const handleDownload = () => {
       if (pdfUrl) {
@@ -457,7 +485,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
           </div>
           <div className="col-span-2 flex justify-end gap-2">
               <Button variant="outline" onClick={generateContract}>Generează contract</Button>
-              <Button variant="blue" onClick={onClose}>Salvează rezervare & Generează contract</Button>
+              <Button variant="blue" onClick={storeAndGenerateContract}>Salvează rezervare & Generează contract</Button>
               <Button variant="danger" onClick={onClose}>Închide</Button>
           </div>
         </div>

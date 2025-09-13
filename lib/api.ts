@@ -166,8 +166,22 @@ class ApiClient {
         });
     }
 
-    async generateContract(payload: any) {
-        return this.request<any>(`/bookings/contract`, {
+    async generateContract(payload: any, id?: any) {
+        return this.request<any>(`/bookings/contract/${id}`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/pdf',
+                Authorization: `Bearer ${this.token}`
+            },
+            credentials: 'include',
+            cache: 'no-cache',
+        });
+    }
+
+    async storeAndGenerateContract(payload: any) {
+        return this.request<any>(`/bookings/store-contract`, {
             method: 'POST',
             body: JSON.stringify(payload),
             headers: {
