@@ -39,8 +39,8 @@ class ApiClient {
         const url = `${this.baseURL}${endpoint}`;
 
         const config: RequestInit = {
-            credentials: 'include',
             ...options,
+            credentials: options.credentials ?? 'omit',
             headers: {
                 'Content-Type': 'application/json',
                 ...(this.token && { Authorization: `Bearer ${this.token}` }),
@@ -161,7 +161,6 @@ class ApiClient {
                 Accept: 'application/json',
                 Authorization: `Bearer ${this.token}`
             },
-            credentials: 'include',
             cache: 'no-cache',
         });
     }
@@ -175,7 +174,6 @@ class ApiClient {
                 Accept: 'application/pdf',
                 Authorization: `Bearer ${this.token}`
             },
-            credentials: 'include',
             cache: 'no-cache',
         });
     }
@@ -189,7 +187,6 @@ class ApiClient {
                 Accept: 'application/pdf',
                 Authorization: `Bearer ${this.token}`
             },
-            credentials: 'include',
             cache: 'no-cache',
         });
     }
@@ -202,7 +199,6 @@ class ApiClient {
                 Accept: 'application/json',
                 Authorization: `Bearer ${this.token}`
             },
-            credentials: 'include',
             cache: 'no-cache',
             body: JSON.stringify(params),
         })
@@ -282,7 +278,6 @@ class ApiClient {
                 Accept: 'application/json',
                 Authorization: `Bearer ${this.token}`
             },
-            credentials: 'include',
             cache: 'no-cache',
         });
     }
