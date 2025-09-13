@@ -77,9 +77,7 @@ const CarRentalCalendar: React.FC = () => {
                 color: c.color ?? '',
             }));
             setCars((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
-            const meta = res?.meta ?? {};
-            const lastPage = meta?.last_page ?? res?.last_page ?? 1;
-            if (page >= lastPage || mapped.length === 0) {
+            if (mapped.length < 50) {
                 setHasMoreCars(false);
             } else {
                 setNextCarsPage(page + 1);
@@ -122,9 +120,7 @@ const CarRentalCalendar: React.FC = () => {
                 totalDays: b.days ?? 0,
             }));
             setReservations((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
-            const meta = res?.meta ?? {};
-            const lastPage = meta?.last_page ?? res?.last_page ?? 1;
-            if (page >= lastPage || mapped.length === 0) {
+            if (mapped.length < 200) {
                 setHasMoreBookings(false);
             } else {
                 setNextBookingsPage(page + 1);
@@ -305,10 +301,13 @@ const CarRentalCalendar: React.FC = () => {
             if (targetElement) {
                 targetElement.scrollTop = sourceElement.scrollTop;
             }
-            maybeLoadMoreCars(sourceElement);
+            if (leftPanelRef.current) {
+                maybeLoadMoreCars(leftPanelRef.current);
+            }
         }
 
-        const syncHorizontal = (scrollLeft: number) => {
+        if (source === 'right' || source === 'header') {
+            const scrollLeft = sourceElement.scrollLeft;
             if (rightPanelRef.current && sourceElement !== rightPanelRef.current) {
                 rightPanelRef.current.scrollLeft = scrollLeft;
             }
@@ -318,11 +317,9 @@ const CarRentalCalendar: React.FC = () => {
             if (dateHeaderRef.current && sourceElement !== dateHeaderRef.current) {
                 dateHeaderRef.current.scrollLeft = scrollLeft;
             }
-        };
-
-        if (source === 'right' || source === 'header') {
-            syncHorizontal(sourceElement.scrollLeft);
-            maybeLoadMoreBookings(sourceElement);
+            if (rightPanelRef.current) {
+                maybeLoadMoreBookings(rightPanelRef.current);
+            }
         }
 
         requestAnimationFrame(() => {
