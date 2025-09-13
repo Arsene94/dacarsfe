@@ -105,6 +105,8 @@ const CarRentalCalendar: React.FC = () => {
 
     const leftPanelRef = useRef<HTMLDivElement>(null);
     const rightPanelRef = useRef<HTMLDivElement>(null);
+    const monthHeaderRef = useRef<HTMLDivElement>(null);
+    const dateHeaderRef = useRef<HTMLDivElement>(null);
     const isScrolling = useRef(false);
 
     const rowDragRef = useRef<{ down: boolean; selecting: boolean; startIdx: number; startClientX: number }>({
@@ -239,23 +241,37 @@ const CarRentalCalendar: React.FC = () => {
         return idx;
     };
 
-    const handleScroll = (source: 'left' | 'right') => (e: React.UIEvent<HTMLDivElement>) => {
+    const handleScroll = (source: 'left' | 'right' | 'header') => (e: React.UIEvent<HTMLDivElement>) => {
         if (isScrolling.current) return;
         isScrolling.current = true;
-        const sourceElement = e.currentTarget;
-        const targetElement = source === 'left' ? rightPanelRef.current : leftPanelRef.current;
-        if (targetElement) {
-            targetElement.scrollTop = (sourceElement as HTMLDivElement).scrollTop;
-        }
-        if (source === 'right') {
-            const monthHeader = document.querySelector('.month-header-scroll') as HTMLElement | null;
-            const dateHeader = document.querySelector('.date-header-scroll') as HTMLElement | null;
-            if (monthHeader && dateHeader) {
-                monthHeader.scrollLeft = (sourceElement as HTMLDivElement).scrollLeft;
-                dateHeader.scrollLeft = (sourceElement as HTMLDivElement).scrollLeft;
+        const sourceElement = e.currentTarget as HTMLDivElement;
+
+        if (source === 'left' || source === 'right') {
+            const targetElement = source === 'left' ? rightPanelRef.current : leftPanelRef.current;
+            if (targetElement) {
+                targetElement.scrollTop = sourceElement.scrollTop;
             }
         }
-        requestAnimationFrame(() => { isScrolling.current = false; });
+
+        const syncHorizontal = (scrollLeft: number) => {
+            if (rightPanelRef.current && sourceElement !== rightPanelRef.current) {
+                rightPanelRef.current.scrollLeft = scrollLeft;
+            }
+            if (monthHeaderRef.current && sourceElement !== monthHeaderRef.current) {
+                monthHeaderRef.current.scrollLeft = scrollLeft;
+            }
+            if (dateHeaderRef.current && sourceElement !== dateHeaderRef.current) {
+                dateHeaderRef.current.scrollLeft = scrollLeft;
+            }
+        };
+
+        if (source === 'right' || source === 'header') {
+            syncHorizontal(sourceElement.scrollLeft);
+        }
+
+        requestAnimationFrame(() => {
+            isScrolling.current = false;
+        });
     };
 
     const handleCarSelect = (carId: string, event: React.MouseEvent) => {
@@ -556,7 +572,7 @@ const CarRentalCalendar: React.FC = () => {
 
                 <div className="flex-1 flex flex-col bg-white overflow-x-auto">
                     {viewMode === 'year' && (
-                        <div className="border-b border-gray-200 bg-gray-50 overflow-x-auto month-header-scroll" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        <div ref={monthHeaderRef} onScroll={handleScroll('header')} className="border-b border-gray-200 bg-gray-50 overflow-x-auto month-header-scroll" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                             <div className="flex" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px` }}>
                                 {getMonthGroups().map((month, index) => (
                                     <div
@@ -573,7 +589,7 @@ const CarRentalCalendar: React.FC = () => {
                         </div>
                     )}
 
-                    <div className={`border-b border-gray-200 bg-gray-50 ${getHeaderHeight()} overflow-x-auto date-header-scroll select-none`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <div ref={dateHeaderRef} onScroll={handleScroll('header')} className={`border-b border-gray-200 bg-gray-50 ${getHeaderHeight()} overflow-x-auto date-header-scroll select-none`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                         <div className="flex h-full" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px`, ...weekBgStyle }}>
                             {dates.map((date, index) => (
                                 <div
