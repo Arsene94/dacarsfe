@@ -37,6 +37,7 @@ const BASE_ROW_HEIGHT = 64;  // Tailwind h-16
 const LANE_HEIGHT = 34;
 const ROW_VPAD = 8;
 const BAR_VINSET = 4;
+const BOOKINGS_SCROLL_THRESHOLD = 0.8;
 
 const CarRentalCalendar: React.FC = () => {
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -154,7 +155,8 @@ const CarRentalCalendar: React.FC = () => {
 
     const maybeLoadMoreBookings = (el: HTMLDivElement) => {
         if (!hasMoreBookings || loadingBookingsRef.current) return;
-        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 200) {
+        const scrollRatio = (el.scrollLeft + el.clientWidth) / el.scrollWidth;
+        if (scrollRatio >= BOOKINGS_SCROLL_THRESHOLD) {
             fetchBookings(nextBookingsPage);
         }
     };
