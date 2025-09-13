@@ -476,7 +476,7 @@ const CarRentalCalendar: React.FC = () => {
 
     return (
         <div
-            className="h-screen flex flex-col bg-gray-50"
+            className="h-screen w-full flex flex-col bg-gray-50 overflow-hidden"
             onMouseDownCapture={handleGlobalMouseDown}
         >
             <div className="bg-white shadow-sm border-b border-gray-200 p-4">
@@ -526,7 +526,7 @@ const CarRentalCalendar: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 w-full flex overflow-hidden">
                 <div className="w-40 md:w-80 bg-white border-r border-gray-200 flex flex-col">
                     <div className="p-4 border-b border-gray-200 bg-gray-50">
                         <h2 className="text-lg font-semibold text-gray-900">Fleet Vehicles</h2>
@@ -570,9 +570,14 @@ const CarRentalCalendar: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 flex flex-col bg-white overflow-x-auto">
+                <div className="flex-1 w-full flex flex-col bg-white overflow-x-hidden">
                     {viewMode === 'year' && (
-                        <div ref={monthHeaderRef} onScroll={handleScroll('header')} className="border-b border-gray-200 bg-gray-50 overflow-x-auto month-header-scroll" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        <div
+                            ref={monthHeaderRef}
+                            onScroll={handleScroll('header')}
+                            className="w-full border-b border-gray-200 bg-gray-50 overflow-x-auto month-header-scroll"
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        >
                             <div className="flex" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px` }}>
                                 {getMonthGroups().map((month, index) => (
                                     <div
@@ -589,7 +594,12 @@ const CarRentalCalendar: React.FC = () => {
                         </div>
                     )}
 
-                    <div ref={dateHeaderRef} onScroll={handleScroll('header')} className={`border-b border-gray-200 bg-gray-50 ${getHeaderHeight()} overflow-x-auto date-header-scroll select-none`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <div
+                        ref={dateHeaderRef}
+                        onScroll={handleScroll('header')}
+                        className={`w-full border-b border-gray-200 bg-gray-50 ${getHeaderHeight()} overflow-x-auto date-header-scroll select-none`}
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
                         <div className="flex h-full" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px`, ...weekBgStyle }}>
                             {dates.map((date, index) => (
                                 <div
