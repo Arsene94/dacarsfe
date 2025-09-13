@@ -46,6 +46,10 @@ const CarRentalCalendar: React.FC = () => {
     const [cars, setCars] = useState<Car[]>([]);
     const [reservations, setReservations] = useState<Reservation[]>([]);
 
+    const [nextBookingsPage, setNextBookingsPage] = useState(1);
+    const [hasMoreBookings, setHasMoreBookings] = useState(true);
+    const loadingBookingsRef = useRef(false);
+
     const [lastSelectedDate, setLastSelectedDate] = useState<Date | null>(null);
     const [dateDrag, setDateDrag] = useState<{ active: boolean; start: Date | null }>({ active: false, start: null });
 
@@ -75,33 +79,50 @@ const CarRentalCalendar: React.FC = () => {
         fetchCars();
     }, []);
 
-    useEffect(() => {
-        const fetchBookings = async () => {
-            try {
-                const params = {
-                    perPage: 1000,
-                    start_date: `${currentYear}-01-01`,
-                    end_date: `${currentYear}-12-31`,
-                };
-                const res = await apiClient.getBookings(params);
-                const mapped: Reservation[] = (res.data || []).map((b: any) => ({
-                    id: b.booking_number || b.id?.toString(),
-                    carId: b.car_id ? b.car_id.toString() : '',
-                    startDate: new Date(b.rental_start_date),
-                    endDate: new Date(b.rental_end_date),
-                    customerName: b.customer_name,
-                    customerPhone: b.customer_phone,
-                    customerEmail: b.customer_email,
-                    status: b.status === 'reserved' ? 'confirmed' : b.status === 'completed' ? 'completed' : 'pending',
-                    totalDays: b.days ?? 0,
-                }));
-                setReservations(mapped);
-            } catch (e) {
-                console.error('Error fetching bookings', e);
+    const fetchBookings = async (page: number) => {
+        if (loadingBookingsRef.current || (!hasMoreBookings && page !== 1)) return;
+        loadingBookingsRef.current = true;
+        try {
+            const params = {
+                page,
+                perPage: 200,
+                status: 'reserved,completed',
+                start_date: `${currentYear}-01-01`,
+                end_date: `${currentYear}-12-31`,
+            };
+            const res = await apiClient.getBookings(params);
+            const mapped: Reservation[] = (res.data || []).map((b: any) => ({
+                id: b.booking_number || b.id?.toString(),
+                carId: b.car_id ? b.car_id.toString() : '',
+                startDate: new Date(b.rental_start_date),
+                endDate: new Date(b.rental_end_date),
+                customerName: b.customer_name,
+                customerPhone: b.customer_phone,
+                customerEmail: b.customer_email,
+                status: b.status === 'reserved' ? 'confirmed' : b.status === 'completed' ? 'completed' : 'pending',
+                totalDays: b.days ?? 0,
+            }));
+            setReservations((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
+            const meta = res?.meta ?? {};
+            const lastPage = meta?.last_page ?? res?.last_page ?? 1;
+            if (page >= lastPage || mapped.length === 0) {
+                setHasMoreBookings(false);
+            } else {
+                setNextBookingsPage(page + 1);
             }
-        };
-        fetchBookings();
-    }, [currentYear]);
+        } catch (e) {
+            console.error('Error fetching bookings', e);
+        } finally {
+            loadingBookingsRef.current = false;
+        }
+    };
+
+    useEffect(() => {
+        setReservations([]);
+        setNextBookingsPage(1);
+        setHasMoreBookings(true);
+        fetchBookings(1);
+    }, [currentYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const leftPanelRef = useRef<HTMLDivElement>(null);
     const rightPanelRef = useRef<HTMLDivElement>(null);
@@ -115,6 +136,13 @@ const CarRentalCalendar: React.FC = () => {
         startIdx: -1,
         startClientX: 0,
     });
+
+    const maybeLoadMoreBookings = (el: HTMLDivElement) => {
+        if (!hasMoreBookings || loadingBookingsRef.current) return;
+        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 200) {
+            fetchBookings(nextBookingsPage);
+        }
+    };
 
     const handleGlobalMouseDown = (e: React.MouseEvent) => {
         if (e.button !== 0) return;
@@ -265,7 +293,10 @@ const CarRentalCalendar: React.FC = () => {
             }
         };
 
-        if (source === 'right' || source === 'header') {
+        if (source === 'right') {
+            syncHorizontal(sourceElement.scrollLeft);
+            maybeLoadMoreBookings(sourceElement);
+        } else if (source === 'header') {
             syncHorizontal(sourceElement.scrollLeft);
         }
 
