@@ -293,11 +293,9 @@ const CarRentalCalendar: React.FC = () => {
             }
         };
 
-        if (source === 'right') {
+        if (source === 'right' || source === 'header') {
             syncHorizontal(sourceElement.scrollLeft);
             maybeLoadMoreBookings(sourceElement);
-        } else if (source === 'header') {
-            syncHorizontal(sourceElement.scrollLeft);
         }
 
         requestAnimationFrame(() => {
