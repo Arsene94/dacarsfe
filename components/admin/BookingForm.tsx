@@ -935,7 +935,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             <span>Subtotal:</span>
                             <span>{originalSubtotal}€</span>
                         </div>
-                        {bookingInfo.advance_payment !== 0 && (
+                        {bookingInfo.advance_payment > 0 && (
                             <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                 <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
                             </div>

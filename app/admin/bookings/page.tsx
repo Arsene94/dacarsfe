@@ -443,7 +443,7 @@ const ReservationsPage = () => {
                 }}
                 className="flex items-center space-x-2 px-4 py-2"
               >
-                <Newspaper className="h-4 w-4" />
+                <Newspaper className="h-4 w-4 me-1" />
                 Crează contract
               </Button>
               <Button
@@ -453,7 +453,7 @@ const ReservationsPage = () => {
                 }}
                 className="flex items-center space-x-2 px-4 py-2"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4 me-1" />
                 Crează rezervare
               </Button>
               <button
