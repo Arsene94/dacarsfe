@@ -51,9 +51,14 @@ const CarRentalCalendar: React.FC = () => {
     const [hasMoreCars, setHasMoreCars] = useState(true);
     const loadingCarsRef = useRef(false);
 
-    const [nextBookingsPage, setNextBookingsPage] = useState(1);
-    const [hasMoreBookings, setHasMoreBookings] = useState(true);
+    const [nextBookingsPage, setNextBookingsPage] = useState(2);
+    const [hasMoreNextBookings, setHasMoreNextBookings] = useState(true);
+    const [prevBookingsPage, setPrevBookingsPage] = useState(0);
+    const [hasPrevBookings, setHasPrevBookings] = useState(false);
     const loadingBookingsRef = useRef(false);
+    const loadedBookingPages = useRef<Set<number>>(new Set());
+    const minBookingPage = useRef(1);
+    const maxBookingPage = useRef(1);
 
     const [lastSelectedDate, setLastSelectedDate] = useState<Date | null>(null);
     const [dateDrag, setDateDrag] = useState<{ active: boolean; start: Date | null }>({ active: false, start: null });
@@ -97,8 +102,10 @@ const CarRentalCalendar: React.FC = () => {
         fetchCars(1);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const fetchBookings = async (page: number) => {
-        if (loadingBookingsRef.current || (!hasMoreBookings && page !== 1)) return;
+    const fetchBookings = async (page: number, direction: 'next' | 'prev' = 'next') => {
+        if (loadingBookingsRef.current) return;
+        if (direction === 'next' && !hasMoreNextBookings) return;
+        if (direction === 'prev' && (!hasPrevBookings || page < 1)) return;
         loadingBookingsRef.current = true;
         try {
             const params = {
@@ -120,11 +127,23 @@ const CarRentalCalendar: React.FC = () => {
                 status: b.status === 'reserved' ? 'confirmed' : b.status === 'completed' ? 'completed' : 'pending',
                 totalDays: b.days ?? 0,
             }));
-            setReservations((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
-            if (mapped.length < 200) {
-                setHasMoreBookings(false);
+            setReservations((prev) =>
+                direction === 'next' ? (page === 1 ? mapped : [...prev, ...mapped]) : [...mapped, ...prev]
+            );
+            loadedBookingPages.current.add(page);
+            minBookingPage.current = Math.min(minBookingPage.current, page);
+            maxBookingPage.current = Math.max(maxBookingPage.current, page);
+            setPrevBookingsPage(minBookingPage.current - 1);
+            setHasPrevBookings(minBookingPage.current > 1);
+            setNextBookingsPage(maxBookingPage.current + 1);
+            if (direction === 'next') {
+                if (mapped.length < 200) {
+                    setHasMoreNextBookings(false);
+                }
             } else {
-                setNextBookingsPage(page + 1);
+                if (mapped.length < 200 || page <= 1) {
+                    setHasPrevBookings(false);
+                }
             }
         } catch (e) {
             console.error('Error fetching bookings', e);
@@ -135,8 +154,13 @@ const CarRentalCalendar: React.FC = () => {
 
     useEffect(() => {
         setReservations([]);
-        setNextBookingsPage(1);
-        setHasMoreBookings(true);
+        loadedBookingPages.current = new Set();
+        minBookingPage.current = 1;
+        maxBookingPage.current = 1;
+        setNextBookingsPage(2);
+        setHasMoreNextBookings(true);
+        setPrevBookingsPage(0);
+        setHasPrevBookings(false);
         fetchBookings(1);
     }, [currentYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -154,10 +178,13 @@ const CarRentalCalendar: React.FC = () => {
     });
 
     const maybeLoadMoreBookings = (el: HTMLDivElement) => {
-        if (!hasMoreBookings || loadingBookingsRef.current) return;
-        const scrollRatio = (el.scrollLeft + el.clientWidth) / el.scrollWidth;
-        if (scrollRatio >= BOOKINGS_SCROLL_THRESHOLD) {
-            fetchBookings(nextBookingsPage);
+        if (loadingBookingsRef.current) return;
+        const rightRatio = (el.scrollLeft + el.clientWidth) / el.scrollWidth;
+        const leftRatio = el.scrollLeft / el.scrollWidth;
+        if (hasMoreNextBookings && rightRatio >= BOOKINGS_SCROLL_THRESHOLD) {
+            fetchBookings(nextBookingsPage, 'next');
+        } else if (hasPrevBookings && leftRatio <= 1 - BOOKINGS_SCROLL_THRESHOLD) {
+            fetchBookings(prevBookingsPage, 'prev');
         }
     };
 
