@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Calendar,
+  CalendarDays,
   Car,
   ChevronLeft,
   ChevronRight,
@@ -18,6 +19,7 @@ import {
 const menuItems = [
   { name: "Dashboard", href: "/admin", icon: BarChart3 },
   { name: "Rezervări", href: "/admin/bookings", icon: Calendar },
+  { name: "Calendar", href: "/admin/calendar", icon: CalendarDays },
   { name: "Mașini", href: "/admin/cars", icon: Car },
   {
     name: "Mockup",
