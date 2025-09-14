@@ -1,13 +1,18 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Car as CarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Car as CarIcon, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import BookingForm from '@/components/admin/BookingForm';
 import apiClient from '@/lib/api';
 
 interface Car {
     id: string;
     model: string;
     license?: string;
+    image?: string;
+    transmission?: string;
+    fuel?: string;
     year?: number;
     type?: string;
     color?: string;
@@ -39,10 +44,36 @@ const ROW_VPAD = 8;
 const BAR_VINSET = 4;
 const BOOKINGS_SCROLL_THRESHOLD = 0.8;
 
+const EMPTY_BOOKING = {
+    rental_start_date: '',
+    rental_end_date: '',
+    with_deposit: true,
+    service_ids: [] as number[],
+    total_services: 0,
+    coupon_type: '',
+    coupon_amount: '',
+    coupon_code: '',
+    customer_name: '',
+    customer_phone: '',
+    customer_email: '',
+    car_id: null as number | null,
+    car_name: '',
+    car_image: '',
+    car_license_plate: '',
+    car_transmission: '',
+    car_fuel: '',
+    sub_total: 0,
+    total: 0,
+    price_per_day: 0,
+};
+
 const CarRentalCalendar: React.FC = () => {
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
     const [viewMode, setViewMode] = useState<'month' | 'quarter' | 'year'>('year');
     const [selectedItems, setSelectedItems] = useState<Selection[]>([]);
+
+    const [bookingInfo, setBookingInfo] = useState<any>(null);
+    const [editPopupOpen, setEditPopupOpen] = useState(false);
 
     const [cars, setCars] = useState<Car[]>([]);
     const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -78,6 +109,15 @@ const CarRentalCalendar: React.FC = () => {
                 id: c.id?.toString() ?? '',
                 model: c.name ?? '',
                 license: c.license_plate ?? '',
+                image: c.image_preview || c.image || '',
+                transmission:
+                    typeof c.transmission === 'string'
+                        ? c.transmission
+                        : c.transmission?.name || c.transmission_name || '',
+                fuel:
+                    typeof c.fuel === 'string'
+                        ? c.fuel
+                        : c.fuel?.name || c.fuel_name || '',
                 year: c.year ? Number(c.year) : undefined,
                 type: c.type?.name ?? '',
                 color: c.color ?? '',
@@ -164,6 +204,18 @@ const CarRentalCalendar: React.FC = () => {
         fetchBookings(1);
     }, [currentYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    const reloadBookings = () => {
+        setReservations([]);
+        loadedBookingPages.current = new Set();
+        minBookingPage.current = 1;
+        maxBookingPage.current = 1;
+        setNextBookingsPage(2);
+        setHasMoreNextBookings(true);
+        setPrevBookingsPage(0);
+        setHasPrevBookings(false);
+        fetchBookings(1);
+    };
+
     const leftPanelRef = useRef<HTMLDivElement>(null);
     const rightPanelRef = useRef<HTMLDivElement>(null);
     const monthHeaderRef = useRef<HTMLDivElement>(null);
@@ -201,7 +253,8 @@ const CarRentalCalendar: React.FC = () => {
         if (!selectedItems.length) return;
         const target = e.target as HTMLElement;
         const insideSelected = target.closest('[data-selected="true"]');
-        if (insideSelected) return;
+        const keepSelection = target.closest('[data-keep-selection="true"]');
+        if (insideSelected || keepSelection) return;
         setSelectedItems([]);
     };
 
@@ -436,6 +489,36 @@ const CarRentalCalendar: React.FC = () => {
     const navigateYear = (direction: 'prev' | 'next') => setCurrentYear((prev) => prev + (direction === 'next' ? 1 : -1));
     const goToCurrentYear = () => setCurrentYear(new Date().getFullYear());
 
+    const formatDateInput = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}T10:00`;
+    };
+
+    const handleAddReservation = () => {
+        const dateSelections = selectedItems
+            .filter((it) => it.type === 'date' && it.date)
+            .map((it) => it.date as Date)
+            .sort((a, b) => a.getTime() - b.getTime());
+        const start = dateSelections[0];
+        const end = dateSelections[dateSelections.length - 1];
+        const selectedCarId = selectedItems.find((it) => it.type === 'car')?.carId;
+        const car = cars.find((c) => c.id === selectedCarId);
+        setBookingInfo({
+            ...EMPTY_BOOKING,
+            rental_start_date: start ? formatDateInput(start) : '',
+            rental_end_date: end ? formatDateInput(end) : '',
+            car_id: selectedCarId ? Number(selectedCarId) : null,
+            car_name: car?.model ?? '',
+            car_image: car?.image ?? '',
+            car_license_plate: car?.license ?? '',
+            car_transmission: car?.transmission ?? '',
+            car_fuel: car?.fuel ?? '',
+        });
+        setEditPopupOpen(true);
+    };
+
     const formatDate = (date: Date) => {
         if (viewMode === 'year') return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         if (viewMode === 'quarter') return `W${Math.ceil(date.getDate() / 7)}`;
@@ -615,6 +698,14 @@ const CarRentalCalendar: React.FC = () => {
                         >
                             Current Year
                         </button>
+                        <Button
+                            data-keep-selection="true"
+                            onClick={handleAddReservation}
+                            className="flex items-center space-x-2 px-4 py-2"
+                        >
+                            <Plus className="h-4 w-4 me-1" />
+                            Add Reservation
+                        </Button>
                         <div className="hidden md:flex items-center space-x-2">
                             <button onClick={() => navigateYear('prev')} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md">
                                 <ChevronLeft className="h-5 w-5" />
@@ -1006,6 +1097,18 @@ const CarRentalCalendar: React.FC = () => {
                     </div>
                 </div>
             </div>
+            {bookingInfo && (
+                <BookingForm
+                    open={editPopupOpen}
+                    onClose={() => {
+                        setEditPopupOpen(false);
+                        setBookingInfo(null);
+                    }}
+                    bookingInfo={bookingInfo}
+                    setBookingInfo={setBookingInfo}
+                    onUpdated={reloadBookings}
+                />
+            )}
         </div>
     );
 };
