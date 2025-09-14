@@ -241,7 +241,8 @@ const CarRentalCalendar: React.FC = () => {
         if (!selectedItems.length) return;
         const target = e.target as HTMLElement;
         const insideSelected = target.closest('[data-selected="true"]');
-        if (insideSelected) return;
+        const keepSelection = target.closest('[data-keep-selection="true"]');
+        if (insideSelected || keepSelection) return;
         setSelectedItems([]);
     };
 
@@ -682,7 +683,11 @@ const CarRentalCalendar: React.FC = () => {
                         >
                             Current Year
                         </button>
-                        <Button onClick={handleAddReservation} className="flex items-center space-x-2 px-4 py-2">
+                        <Button
+                            data-keep-selection="true"
+                            onClick={handleAddReservation}
+                            className="flex items-center space-x-2 px-4 py-2"
+                        >
                             <Plus className="h-4 w-4 me-1" />
                             Add Reservation
                         </Button>
