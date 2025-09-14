@@ -595,6 +595,12 @@ const CarRentalCalendar: React.FC = () => {
         }
     };
 
+    const getNameFontSize = (name: string, width: number) => {
+        const approx = width / (name.length * 0.6);
+        const clamped = Math.max(8, Math.min(14, approx));
+        return `${clamped}px`;
+    };
+
     const isCarSelected = (carId: string) => selectedCarIds.has(carId);
     const isDateSelected = (date: Date) => selectedDateKeys.has(date.toISOString().split('T')[0]);
     const isReservationSelected = (reservationId: string) => selectedReservationIds.has(reservationId);
@@ -1069,7 +1075,7 @@ const CarRentalCalendar: React.FC = () => {
                                                         {middleWidth > 0 && (
                                                             <div
                                                                 data-selected={barSelected ? 'true' : undefined}
-                                                                className={`absolute shadow-sm ${getStatusColor(res.status)} text-white text-xs items-center
+                                                                className={`absolute shadow-sm ${getStatusColor(res.status)} text-white items-center
                 flex ${isStacked ? 'items-start py-0.5' : ''}
                 ps-1 pe-2
                 ${isStacked ? 'whitespace-normal leading-tight' : 'whitespace-nowrap'}
@@ -1084,7 +1090,12 @@ const CarRentalCalendar: React.FC = () => {
                                                                 title={`${res.customerName} • ${res.status} • ${res.totalDays}d`}
                                                                 onClick={(e) => handleReservationSelect(res.id, e)}
                                                             >
-                                                                <span className="font-medium whitespace-normal">{res.customerName}</span>
+                                                                <span
+                                                                    className="font-medium whitespace-normal"
+                                                                    style={{ fontSize: getNameFontSize(res.customerName, middleWidth) }}
+                                                                >
+                                                                    {res.customerName}
+                                                                </span>
                                                             </div>
                                                         )}
 
