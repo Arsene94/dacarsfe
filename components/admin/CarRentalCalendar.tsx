@@ -20,6 +20,7 @@ interface Car {
 
 interface Reservation {
     id: string;
+    bookingNumber?: string;
     carId: string;
     startDate: Date;
     endDate: Date;
@@ -157,7 +158,8 @@ const CarRentalCalendar: React.FC = () => {
             };
             const res = await apiClient.getBookings(params);
             const mapped: Reservation[] = (res.data || []).map((b: any) => ({
-                id: b.booking_number || b.id?.toString(),
+                id: b.id?.toString() ?? '',
+                bookingNumber: b.booking_number ?? '',
                 carId: b.car_id ? b.car_id.toString() : '',
                 startDate: new Date(b.rental_start_date),
                 endDate: new Date(b.rental_end_date),
@@ -456,15 +458,74 @@ const CarRentalCalendar: React.FC = () => {
         setDateSelection([date], false);
     };
 
-    const handleReservationSelect = (reservationId: string, event: React.MouseEvent) => {
+    const toLocalDateTimeInput = (iso?: string | null) => {
+        if (!iso) return '';
+        const date = new Date(iso);
+        const tzOffset = date.getTimezoneOffset();
+        const local = new Date(date.getTime() - tzOffset * 60000);
+        return local.toISOString().slice(0, 16);
+    };
+
+    const handleReservationSelect = async (reservationId: string, event: React.MouseEvent) => {
         event.stopPropagation();
         const isSelected = selectedItems.some((item) => item.type === 'reservation' && item.reservationId === reservationId);
         if (event.ctrlKey || event.metaKey) {
             setSelectedItems((prev) =>
-                isSelected ? prev.filter((item) => !(item.type === 'reservation' && item.reservationId === reservationId)) : [...prev, { type: 'reservation', reservationId } as Selection]
+                isSelected
+                    ? prev.filter((item) => !(item.type === 'reservation' && item.reservationId === reservationId))
+                    : [...prev, { type: 'reservation', reservationId } as Selection]
             );
-        } else {
-            setSelectedItems([{ type: 'reservation', reservationId } as Selection]);
+            return;
+        }
+        setSelectedItems([{ type: 'reservation', reservationId } as Selection]);
+        try {
+            const res = await apiClient.getBookingInfo(reservationId);
+            const info = res.data;
+            const formatted = {
+                ...info,
+                id: info.id ?? reservationId,
+                rental_start_date: toLocalDateTimeInput(info.rental_start_date),
+                rental_end_date: toLocalDateTimeInput(info.rental_end_date),
+                coupon_amount: info.coupon_amount ?? 0,
+                coupon_type: info.coupon_type ?? null,
+                total_services: info.total_services ?? 0,
+                service_ids: Array.isArray(info.service_ids)
+                    ? info.service_ids
+                    : Array.isArray(info.services)
+                        ? info.services.map((s: any) => s.id)
+                        : [],
+                sub_total: info.sub_total ?? 0,
+                coupon_code: info.coupon_code ?? '',
+                customer_name: info.customer_name ?? '',
+                customer_email: info.customer_email ?? '',
+                customer_phone: info.customer_phone ?? '',
+                customer_age: info.customer_age ?? '',
+                customer_id: info.customer_id ?? '',
+                car_id: info.car_id ?? 0,
+                car_name: info.car_name ?? '',
+                car_image: info.car_image ?? info.image_preview ?? '',
+                car_license_plate: info.car?.license_plate ?? info.license_plate ?? '',
+                car_transmission: info.car?.transmission?.name ?? info.transmission_name ?? '',
+                car_fuel: info.car?.fuel?.name ?? info.fuel_name ?? '',
+                car_deposit: info.car?.deposit,
+                booking_number: info.booking_number ?? '',
+                note: info.note ?? '',
+                days: info.days ?? 0,
+                price_per_day: info.price_per_day ?? 0,
+                original_price_per_day: info.price_per_day ?? 0,
+                keep_old_price: info.keep_old_price ?? true,
+                send_email: info.send_email ?? false,
+                with_deposit: info.with_deposit ?? false,
+                tax_amount: info.tax_amount ?? 0,
+                currency_id: info.currency_id ?? '',
+                status: info.status ?? '',
+                total: info.total ?? 0,
+                advance_payment: info.advance_payment ?? 0,
+            };
+            setBookingInfo(formatted);
+            setEditPopupOpen(true);
+        } catch (err) {
+            console.error('Error fetching booking info', err);
         }
     };
 
@@ -532,6 +593,12 @@ const CarRentalCalendar: React.FC = () => {
             case 'completed': return 'bg-green-500';
             default:          return 'bg-gray-500';
         }
+    };
+
+    const getNameFontSize = (name: string, width: number) => {
+        const approx = width / (name.length * 0.6);
+        const clamped = Math.max(8, Math.min(14, approx));
+        return `${clamped}px`;
     };
 
     const isCarSelected = (carId: string) => selectedCarIds.has(carId);
@@ -1008,7 +1075,7 @@ const CarRentalCalendar: React.FC = () => {
                                                         {middleWidth > 0 && (
                                                             <div
                                                                 data-selected={barSelected ? 'true' : undefined}
-                                                                className={`absolute shadow-sm ${getStatusColor(res.status)} text-white text-xs items-center
+                                                                className={`absolute shadow-sm ${getStatusColor(res.status)} text-white items-center
                 flex ${isStacked ? 'items-start py-0.5' : ''}
                 ps-1 pe-2
                 ${isStacked ? 'whitespace-normal leading-tight' : 'whitespace-nowrap'}
@@ -1023,7 +1090,12 @@ const CarRentalCalendar: React.FC = () => {
                                                                 title={`${res.customerName} • ${res.status} • ${res.totalDays}d`}
                                                                 onClick={(e) => handleReservationSelect(res.id, e)}
                                                             >
-                                                                <span className="font-medium whitespace-normal">{res.customerName}</span>
+                                                                <span
+                                                                    className="font-medium whitespace-normal"
+                                                                    style={{ fontSize: getNameFontSize(res.customerName, middleWidth) }}
+                                                                >
+                                                                    {res.customerName}
+                                                                </span>
                                                             </div>
                                                         )}
 
