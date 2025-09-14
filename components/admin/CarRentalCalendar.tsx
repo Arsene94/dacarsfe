@@ -456,15 +456,73 @@ const CarRentalCalendar: React.FC = () => {
         setDateSelection([date], false);
     };
 
-    const handleReservationSelect = (reservationId: string, event: React.MouseEvent) => {
+    const toLocalDateTimeInput = (iso?: string | null) => {
+        if (!iso) return '';
+        const date = new Date(iso);
+        const tzOffset = date.getTimezoneOffset();
+        const local = new Date(date.getTime() - tzOffset * 60000);
+        return local.toISOString().slice(0, 16);
+    };
+
+    const handleReservationSelect = async (reservationId: string, event: React.MouseEvent) => {
         event.stopPropagation();
         const isSelected = selectedItems.some((item) => item.type === 'reservation' && item.reservationId === reservationId);
         if (event.ctrlKey || event.metaKey) {
             setSelectedItems((prev) =>
-                isSelected ? prev.filter((item) => !(item.type === 'reservation' && item.reservationId === reservationId)) : [...prev, { type: 'reservation', reservationId } as Selection]
+                isSelected
+                    ? prev.filter((item) => !(item.type === 'reservation' && item.reservationId === reservationId))
+                    : [...prev, { type: 'reservation', reservationId } as Selection]
             );
-        } else {
-            setSelectedItems([{ type: 'reservation', reservationId } as Selection]);
+            return;
+        }
+        setSelectedItems([{ type: 'reservation', reservationId } as Selection]);
+        try {
+            const res = await apiClient.getBookingInfo(reservationId);
+            const info = res.data;
+            const formatted = {
+                ...info,
+                rental_start_date: toLocalDateTimeInput(info.rental_start_date),
+                rental_end_date: toLocalDateTimeInput(info.rental_end_date),
+                coupon_amount: info.coupon_amount ?? 0,
+                coupon_type: info.coupon_type ?? null,
+                total_services: info.total_services ?? 0,
+                service_ids: Array.isArray(info.service_ids)
+                    ? info.service_ids
+                    : Array.isArray(info.services)
+                        ? info.services.map((s: any) => s.id)
+                        : [],
+                sub_total: info.sub_total ?? 0,
+                coupon_code: info.coupon_code ?? '',
+                customer_name: info.customer_name ?? '',
+                customer_email: info.customer_email ?? '',
+                customer_phone: info.customer_phone ?? '',
+                customer_age: info.customer_age ?? '',
+                customer_id: info.customer_id ?? '',
+                car_id: info.car_id ?? 0,
+                car_name: info.car_name ?? '',
+                car_image: info.car_image ?? info.image_preview ?? '',
+                car_license_plate: info.car?.license_plate ?? info.license_plate ?? '',
+                car_transmission: info.car?.transmission?.name ?? info.transmission_name ?? '',
+                car_fuel: info.car?.fuel?.name ?? info.fuel_name ?? '',
+                car_deposit: info.car?.deposit,
+                booking_number: info.booking_number ?? '',
+                note: info.note ?? '',
+                days: info.days ?? 0,
+                price_per_day: info.price_per_day ?? 0,
+                original_price_per_day: info.price_per_day ?? 0,
+                keep_old_price: info.keep_old_price ?? true,
+                send_email: info.send_email ?? false,
+                with_deposit: info.with_deposit ?? false,
+                tax_amount: info.tax_amount ?? 0,
+                currency_id: info.currency_id ?? '',
+                status: info.status ?? '',
+                total: info.total ?? 0,
+                advance_payment: info.advance_payment ?? 0,
+            };
+            setBookingInfo(formatted);
+            setEditPopupOpen(true);
+        } catch (err) {
+            console.error('Error fetching booking info', err);
         }
     };
 
