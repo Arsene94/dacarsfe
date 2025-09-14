@@ -786,7 +786,7 @@ const CarRentalCalendar: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex-1 w-full flex overflow-hidden min-w-0">
+            <div className="flex-1 flex overflow-hidden min-w-0">
                 <div className="w-40 md:w-80 bg-white border-r border-gray-200 flex flex-col">
                     <div className="p-4 border-b border-gray-200 bg-gray-50">
                         <h2 className="text-lg font-semibold text-gray-900">Fleet Vehicles</h2>
@@ -830,7 +830,7 @@ const CarRentalCalendar: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 w-full flex flex-col bg-white overflow-x-hidden min-w-0">
+                <div className="flex-1 flex flex-col bg-white overflow-x-hidden min-w-0">
                     {viewMode === 'year' && (
                         <div
                             ref={monthHeaderRef}
@@ -1047,6 +1047,8 @@ const CarRentalCalendar: React.FC = () => {
                                                 const middleRight = singleCell ? left : endCapLeft;
                                                 const middleWidth = Math.max(0, middleRight - middleLeft);
 
+                                                const totalWidth = (endCapLeft + endCapWidth) - startCapLeft;
+
                                                 const isStacked = (layout?.laneCount ?? 1) > 1;
                                                 const laneIndex = (layout?.laneByResId.get(res.id) ?? 0);
                                                 const top = isStacked ? (ROW_VPAD + laneIndex * LANE_HEIGHT + BAR_VINSET) : undefined;
@@ -1089,15 +1091,24 @@ const CarRentalCalendar: React.FC = () => {
                                                                 }}
                                                                 title={`${res.customerName} • ${res.status} • ${res.totalDays}d`}
                                                                 onClick={(e) => handleReservationSelect(res.id, e)}
-                                                            >
-                                                                <span
-                                                                    className="font-medium whitespace-normal"
-                                                                    style={{ fontSize: getNameFontSize(res.customerName, middleWidth) }}
-                                                                >
-                                                                    {res.customerName}
-                                                                </span>
-                                                            </div>
+                                                            />
                                                         )}
+
+                                                        <div
+                                                            className="absolute pointer-events-none flex items-center text-white text-xs overflow-hidden text-ellipsis z-30"
+                                                            style={{
+                                                                left: `${startCapLeft}px`,
+                                                                width: `${totalWidth}px`,
+                                                                ...(isStacked ? { top, height: barHeight } : { top: 4, bottom: 4, height: barHeight }),
+                                                            }}
+                                                        >
+                                                            <span
+                                                                className="font-medium whitespace-nowrap ps-1 pe-2"
+                                                                style={{ fontSize: getNameFontSize(res.customerName, totalWidth) }}
+                                                            >
+                                                                {res.customerName}
+                                                            </span>
+                                                        </div>
 
 
                                                         <div
