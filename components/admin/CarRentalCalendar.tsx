@@ -20,6 +20,7 @@ interface Car {
 
 interface Reservation {
     id: string;
+    bookingNumber?: string;
     carId: string;
     startDate: Date;
     endDate: Date;
@@ -157,7 +158,8 @@ const CarRentalCalendar: React.FC = () => {
             };
             const res = await apiClient.getBookings(params);
             const mapped: Reservation[] = (res.data || []).map((b: any) => ({
-                id: b.booking_number || b.id?.toString(),
+                id: b.id?.toString() ?? '',
+                bookingNumber: b.booking_number ?? '',
                 carId: b.car_id ? b.car_id.toString() : '',
                 startDate: new Date(b.rental_start_date),
                 endDate: new Date(b.rental_end_date),
@@ -481,6 +483,7 @@ const CarRentalCalendar: React.FC = () => {
             const info = res.data;
             const formatted = {
                 ...info,
+                id: info.id ?? reservationId,
                 rental_start_date: toLocalDateTimeInput(info.rental_start_date),
                 rental_end_date: toLocalDateTimeInput(info.rental_end_date),
                 coupon_amount: info.coupon_amount ?? 0,
