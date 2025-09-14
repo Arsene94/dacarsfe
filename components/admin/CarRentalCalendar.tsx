@@ -10,6 +10,9 @@ interface Car {
     id: string;
     model: string;
     license?: string;
+    image?: string;
+    transmission?: string;
+    fuel?: string;
     year?: number;
     type?: string;
     color?: string;
@@ -106,6 +109,15 @@ const CarRentalCalendar: React.FC = () => {
                 id: c.id?.toString() ?? '',
                 model: c.name ?? '',
                 license: c.license_plate ?? '',
+                image: c.image_preview || c.image || '',
+                transmission:
+                    typeof c.transmission === 'string'
+                        ? c.transmission
+                        : c.transmission?.name || c.transmission_name || '',
+                fuel:
+                    typeof c.fuel === 'string'
+                        ? c.fuel
+                        : c.fuel?.name || c.fuel_name || '',
                 year: c.year ? Number(c.year) : undefined,
                 type: c.type?.name ?? '',
                 color: c.color ?? '',
@@ -499,7 +511,10 @@ const CarRentalCalendar: React.FC = () => {
             rental_end_date: end ? formatDateInput(end) : '',
             car_id: selectedCarId ? Number(selectedCarId) : null,
             car_name: car?.model ?? '',
+            car_image: car?.image ?? '',
             car_license_plate: car?.license ?? '',
+            car_transmission: car?.transmission ?? '',
+            car_fuel: car?.fuel ?? '',
         });
         setEditPopupOpen(true);
     };
