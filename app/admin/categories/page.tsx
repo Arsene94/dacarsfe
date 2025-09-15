@@ -63,10 +63,9 @@ export default function CategoriesPage() {
     setDiscounts(Array(12).fill(0));
     apiClient
       .getCategoryPrices(category.id)
-      .then((res) => {
-        const data = res?.data?.data ?? res?.data ?? res;
-        setPricePeriods(data);
-        const lastEnd = data.length ? data[data.length - 1].days_end : 0;
+      .then((prices) => {
+        setPricePeriods(prices);
+        const lastEnd = prices.length ? prices[prices.length - 1].days_end : 0;
         const nextStart = lastEnd + 1;
         setPeriodStart(nextStart);
         setPeriodEnd(nextStart);
@@ -136,8 +135,11 @@ export default function CategoriesPage() {
       days_end: periodEnd,
       price: periodPrice,
     };
-    setPricePeriods([...pricePeriods, newPeriod]);
-    const nextStart = periodEnd + 1;
+    const updated = [...pricePeriods, newPeriod].sort(
+      (a, b) => a.days - b.days
+    );
+    setPricePeriods(updated);
+    const nextStart = updated[updated.length - 1].days_end + 1;
     setPeriodStart(nextStart);
     setPeriodEnd(nextStart);
     setPeriodPrice("");
