@@ -195,7 +195,7 @@ export default function CategoriesPage() {
 
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-white p-6 rounded-md w-full max-w-md">
+          <div className="bg-white p-6 rounded-md w-full max-w-7xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold mb-4">
               {editing ? "Editează categoria" : "Adaugă categorie"}
             </h2>
