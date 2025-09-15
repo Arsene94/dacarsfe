@@ -304,6 +304,54 @@ class ApiClient {
         return this.request<any>(`/admin/metrics/bookings-total${query ? `?${query}` : ''}`);
     }
 
+    async getCategories() {
+        return this.request<any>(`/car-categories`);
+    }
+
+    async createCategory(payload: { name: string; description?: string }) {
+        return this.request<any>(`/car-categories`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async updateCategory(id: number, payload: { name: string; description?: string }) {
+        return this.request<any>(`/car-categories/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async deleteCategory(id: number) {
+        return this.request<any>(`/car-categories/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getCategoryPrices(categoryId: number) {
+        return this.request<any>(`/prices?category_id=${categoryId}`);
+    }
+
+    async createCategoryPrice(payload: { category_id: number; days: number; days_end: number; price: number }) {
+        return this.request<any>(`/prices`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async updateCategoryPrice(id: number, payload: { category_id: number; days: number; days_end: number; price: number }) {
+        return this.request<any>(`/prices/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async deleteCategoryPrice(id: number) {
+        return this.request<any>(`/prices/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
     async getDynamicPrices() {
         return this.request<any>(`/dynamic-prices`);
     }

@@ -9,6 +9,7 @@ import {
   CalendarDays,
   Car,
   Percent,
+  FolderTree,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -22,6 +23,7 @@ const menuItems = [
   { name: "Rezervări", href: "/admin/bookings", icon: Calendar },
   { name: "Calendar", href: "/admin/calendar", icon: CalendarDays },
   { name: "Mașini", href: "/admin/cars", icon: Car },
+  { name: "Categorii", href: "/admin/categories", icon: FolderTree },
   { name: "Dynamic Price", href: "/admin/dynamic-prices", icon: Percent },
   {
     name: "Mockup",

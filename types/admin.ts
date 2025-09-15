@@ -55,6 +55,22 @@ export interface AdminCar {
   nextService?: string;
 }
 
+export interface AdminCategory {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface CategoryPrice {
+  id?: number;
+  category_id: number;
+  days: number;
+  days_end: number;
+  price: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface DynamicPricePercentage {
   id?: number;
   dynamic_price_id?: number;
