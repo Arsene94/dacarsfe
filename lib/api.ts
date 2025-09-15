@@ -329,7 +329,9 @@ class ApiClient {
     }
 
     async getCategoryPrices(categoryId: number) {
-        const res = await this.request<any>(`/prices?category_id=${categoryId}`);
+        const res = await this.request<any>(
+            `/prices?category_id=${categoryId}&per_page=100`
+        );
         const data = Array.isArray(res?.data) ? res.data : res;
         return (data as any[]).sort((a, b) => a.days - b.days);
     }
