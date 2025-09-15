@@ -127,10 +127,7 @@ export default function CategoriesPage() {
         const sorted = sortPeriods(
           prices.map((price) => ({
             ...price,
-            price:
-              typeof price.price === "number"
-                ? price.price.toString()
-                : price.price ?? "",
+            price: price.price ?? "",
             tempId: price.tempId ?? (price.id ? `existing-${price.id}` : generateTempId()),
           }))
         );
@@ -433,14 +430,14 @@ export default function CategoriesPage() {
                           const endOptions = uniqueSorted(endCandidates);
 
                           return (
-                            <tr key={p.tempId}>
+                            <tr key={p.tempId} className="odd:bg-white even:bg-gray-100 hover:bg-gray-200">
                               <td className="border p-1">
                                 <select
                                   value={p.days}
                                   onChange={(e) =>
                                     handlePeriodStartChange(p.tempId, Number(e.target.value))
                                   }
-                                  className="border rounded px-2 py-1 text-xs"
+                                  className="border rounded px-2 py-1 text-xs w-full"
                                 >
                                   {startOptions.map((n) => (
                                     <option key={n} value={n}>
@@ -455,7 +452,7 @@ export default function CategoriesPage() {
                                   onChange={(e) =>
                                     handlePeriodEndChange(p.tempId, Number(e.target.value))
                                   }
-                                  className="border rounded px-2 py-1 text-xs"
+                                  className="border rounded px-2 py-1 text-xs w-full"
                                 >
                                   {endOptions.map((n) => (
                                     <option key={n} value={n}>
@@ -472,7 +469,7 @@ export default function CategoriesPage() {
                                   onChange={(e) =>
                                     handlePeriodPriceChange(p.tempId, e.target.value)
                                   }
-                                  className="border rounded px-2 py-1 w-24 text-xs"
+                                  className="border rounded px-2 py-1 w-24 text-xs w-full"
                                 />
                               </td>
                               <td className="border p-1 text-center">
@@ -496,9 +493,9 @@ export default function CategoriesPage() {
                   <table className="min-w-full text-center border">
                     <thead>
                       <tr>
-                        <th className="border p-2"></th>
+                        <th className="border border-gray-300 p-2 bg-gray-200"></th>
                         {MONTH_LABELS.map((label) => (
-                          <th key={label} className="border p-2 text-xs">
+                          <th key={label} className="border border-gray-300 p-2 text-xs bg-gray-200">
                             {label}
                           </th>
                         ))}
@@ -538,7 +535,7 @@ export default function CategoriesPage() {
                     </thead>
                     <tbody>
                       {pricePeriods.map((p) => (
-                        <tr key={p.tempId}>
+                        <tr key={p.tempId} className="odd:bg-white even:bg-gray-100 hover:bg-gray-200">
                           <td className="border p-2 text-xs">
                             {p.days}-{p.days_end} Zile
                           </td>
