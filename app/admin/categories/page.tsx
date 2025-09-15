@@ -42,6 +42,15 @@ export default function CategoriesPage() {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    const lastEnd = pricePeriods.length
+      ? pricePeriods[pricePeriods.length - 1].days_end
+      : 0;
+    const nextStart = lastEnd + 1;
+    setPeriodStart(nextStart);
+    setPeriodEnd(nextStart);
+  }, [pricePeriods]);
+
   const openAddModal = () => {
     setEditing(null);
     setForm({ name: "", description: "" });
@@ -64,11 +73,8 @@ export default function CategoriesPage() {
     apiClient
       .getCategoryPrices(category.id)
       .then((prices) => {
-        setPricePeriods(prices);
-        const lastEnd = prices.length ? prices[prices.length - 1].days_end : 0;
-        const nextStart = lastEnd + 1;
-        setPeriodStart(nextStart);
-        setPeriodEnd(nextStart);
+        const sorted = [...prices].sort((a, b) => a.days - b.days);
+        setPricePeriods(sorted);
       })
       .catch((err) => console.error("Failed to load prices", err));
     setIsModalOpen(true);
@@ -135,13 +141,7 @@ export default function CategoriesPage() {
       days_end: periodEnd,
       price: periodPrice,
     };
-    const updated = [...pricePeriods, newPeriod].sort(
-      (a, b) => a.days - b.days
-    );
-    setPricePeriods(updated);
-    const nextStart = updated[updated.length - 1].days_end + 1;
-    setPeriodStart(nextStart);
-    setPeriodEnd(nextStart);
+    setPricePeriods((prev) => [...prev, newPeriod].sort((a, b) => a.days - b.days));
     setPeriodPrice("");
   };
 
@@ -290,6 +290,106 @@ export default function CategoriesPage() {
                     Adaugă preț
                   </button>
                 </div>
+                {pricePeriods.length > 0 && (
+                  <div className="overflow-x-auto mb-4">
+                    <table className="min-w-full text-left border">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border p-2 text-xs">De la</th>
+                          <th className="border p-2 text-xs">Până la</th>
+                          <th className="border p-2 text-xs">Preț (EUR)</th>
+                          <th className="border p-2 text-xs">Acțiuni</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pricePeriods.map((p, idx) => (
+                          <tr key={idx}>
+                            <td className="border p-1">
+                              <select
+                                value={p.days}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  setPricePeriods((prev) => {
+                                    const copy = [...prev];
+                                    copy[idx] = {
+                                      ...copy[idx],
+                                      days: val,
+                                      days_end:
+                                        copy[idx].days_end < val
+                                          ? val
+                                          : copy[idx].days_end,
+                                    };
+                                    return copy.sort((a, b) => a.days - b.days);
+                                  });
+                                }}
+                                className="border rounded px-2 py-1 text-xs"
+                              >
+                                {Array.from({ length: 90 }, (_, i) => i + 1).map((n) => (
+                                  <option key={n} value={n}>
+                                    {n}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="border p-1">
+                              <select
+                                value={p.days_end}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  setPricePeriods((prev) => {
+                                    const copy = [...prev];
+                                    copy[idx] = { ...copy[idx], days_end: val };
+                                    return copy.sort((a, b) => a.days - b.days);
+                                  });
+                                }}
+                                className="border rounded px-2 py-1 text-xs"
+                              >
+                                {Array.from({ length: 90 - p.days + 1 }, (_, i) =>
+                                  i + p.days
+                                ).map((n) => (
+                                  <option key={n} value={n}>
+                                    {n}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="border p-1">
+                              <input
+                                type="number"
+                                min="0"
+                                value={p.price}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setPricePeriods((prev) => {
+                                    const copy = [...prev];
+                                    copy[idx] = { ...copy[idx], price: val };
+                                    return copy;
+                                  });
+                                }}
+                                className="border rounded px-2 py-1 w-24 text-xs"
+                              />
+                            </td>
+                            <td className="border p-1 text-center">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPricePeriods((prev) => {
+                                    const copy = prev.filter((_, i) => i !== idx);
+                                    return copy.sort((a, b) => a.days - b.days);
+                                  });
+                                }}
+                                className="text-red-600 hover:text-red-800"
+                                aria-label="Șterge perioadă"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-center border">
                     <thead>
