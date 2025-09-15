@@ -54,3 +54,22 @@ export interface AdminCar {
   lastService?: string;
   nextService?: string;
 }
+
+export interface DynamicPricePercentage {
+  id?: number;
+  dynamic_price_id?: number;
+  percentage_start: number;
+  percentage_end: number;
+  percentage_amount: number;
+}
+
+export interface DynamicPrice {
+  id: number;
+  start_from: string;
+  end_to: string;
+  enabled: boolean;
+  author_id?: number;
+  created_at?: string;
+  updated_at?: string;
+  percentages: DynamicPricePercentage[];
+}
