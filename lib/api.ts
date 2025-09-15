@@ -304,6 +304,10 @@ class ApiClient {
         return this.request<any>(`/admin/metrics/bookings-total${query ? `?${query}` : ''}`);
     }
 
+    async getDynamicPrices() {
+        return this.request<any>(`/dynamic-prices`);
+    }
+
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
