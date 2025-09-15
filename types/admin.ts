@@ -69,6 +69,7 @@ export interface CategoryPrice {
   price: string;
   created_at?: string;
   updated_at?: string;
+  tempId?: string;
 }
 
 export interface DynamicPricePercentage {

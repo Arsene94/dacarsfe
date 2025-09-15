@@ -5,12 +5,54 @@ import { Edit, Trash2, Plus } from "lucide-react";
 import apiClient from "@/lib/api";
 import { AdminCategory, CategoryPrice } from "@/types/admin";
 
+type PricePeriodForm = CategoryPrice & { tempId: string };
+
+const generateTempId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `temp-${Math.random().toString(36).slice(2)}`;
+};
+
+const sortPeriods = (periods: PricePeriodForm[]) =>
+  [...periods].sort((a, b) => {
+    if (a.days === b.days) {
+      return a.days_end - b.days_end;
+    }
+    return a.days - b.days;
+  });
+
+const calculateNextStart = (periods: PricePeriodForm[]) => {
+  if (!periods.length) return 1;
+  const maxEnd = periods.reduce(
+    (acc, period) => Math.max(acc, clampDay(period.days_end)),
+    0
+  );
+  const nextStart = maxEnd + 1;
+  if (nextStart > 90) {
+    return 90;
+  }
+  return nextStart;
+};
+
+const buildRange = (min: number, max: number) => {
+  if (min > max) {
+    return [min];
+  }
+  return Array.from({ length: max - min + 1 }, (_, idx) => min + idx);
+};
+
+const clampDay = (value: number) => Math.max(1, Math.min(value, 90));
+
+const uniqueSorted = (values: number[]) =>
+  Array.from(new Set(values)).sort((a, b) => a - b);
+
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<AdminCategory | null>(null);
   const [form, setForm] = useState({ name: "", description: "" });
-  const [pricePeriods, setPricePeriods] = useState<CategoryPrice[]>([]);
+  const [pricePeriods, setPricePeriods] = useState<PricePeriodForm[]>([]);
   const [periodStart, setPeriodStart] = useState(1);
   const [periodEnd, setPeriodEnd] = useState(1);
   const [periodPrice, setPeriodPrice] = useState("");
@@ -43,12 +85,10 @@ export default function CategoriesPage() {
   }, []);
 
   useEffect(() => {
-    const lastEnd = pricePeriods.length
-      ? pricePeriods[pricePeriods.length - 1].days_end
-      : 0;
-    const nextStart = lastEnd + 1;
-    setPeriodStart(nextStart);
-    setPeriodEnd(nextStart);
+    const nextStart = calculateNextStart(pricePeriods);
+    const boundedStart = Math.max(1, Math.min(nextStart, 90));
+    setPeriodStart(boundedStart);
+    setPeriodEnd(boundedStart);
   }, [pricePeriods]);
 
   const openAddModal = () => {
@@ -73,7 +113,16 @@ export default function CategoriesPage() {
     apiClient
       .getCategoryPrices(category.id)
       .then((prices) => {
-        const sorted = [...prices].sort((a, b) => a.days - b.days);
+        const sorted = sortPeriods(
+          prices.map((price) => ({
+            ...price,
+            price:
+              typeof price.price === "number"
+                ? price.price.toString()
+                : price.price ?? "",
+            tempId: price.tempId ?? (price.id ? `existing-${price.id}` : generateTempId()),
+          }))
+        );
         setPricePeriods(sorted);
       })
       .catch((err) => console.error("Failed to load prices", err));
@@ -115,7 +164,7 @@ export default function CategoriesPage() {
   const savePrices = async (categoryId: number) => {
     try {
       await Promise.all(
-        pricePeriods.map((p) => {
+        pricePeriods.map(({ tempId: _tempId, ...p }) => {
           const payload = {
             category_id: categoryId,
             days: p.days,
@@ -135,14 +184,61 @@ export default function CategoriesPage() {
 
   const addPeriod = () => {
     if (periodStart > periodEnd || !periodPrice) return;
-    const newPeriod: CategoryPrice = {
+    const startValue = Math.max(1, Math.min(periodStart, 90));
+    const endValue = Math.max(startValue, Math.min(periodEnd, 90));
+    const newPeriod: PricePeriodForm = {
+      tempId: generateTempId(),
       category_id: editing?.id || 0,
-      days: periodStart,
-      days_end: periodEnd,
+      days: startValue,
+      days_end: endValue,
       price: periodPrice,
     };
-    setPricePeriods((prev) => [...prev, newPeriod].sort((a, b) => a.days - b.days));
+    setPricePeriods((prev) => sortPeriods([...prev, newPeriod]));
     setPeriodPrice("");
+  };
+
+  const handlePeriodStartChange = (tempId: string, value: number) => {
+    const clamped = Math.max(1, Math.min(value, 90));
+    setPricePeriods((prev) =>
+      sortPeriods(
+        prev.map((period) =>
+          period.tempId === tempId
+            ? {
+                ...period,
+                days: clamped,
+                days_end: period.days_end < clamped ? clamped : period.days_end,
+              }
+            : period
+        )
+      )
+    );
+  };
+
+  const handlePeriodEndChange = (tempId: string, value: number) => {
+    setPricePeriods((prev) =>
+      sortPeriods(
+        prev.map((period) =>
+          period.tempId === tempId
+            ? {
+                ...period,
+                days_end: Math.max(period.days, Math.min(value, 90)),
+              }
+            : period
+        )
+      )
+    );
+  };
+
+  const handlePeriodPriceChange = (tempId: string, value: string) => {
+    setPricePeriods((prev) =>
+      prev.map((period) =>
+        period.tempId === tempId ? { ...period, price: value } : period
+      )
+    );
+  };
+
+  const handleRemovePeriod = (tempId: string) => {
+    setPricePeriods((prev) => prev.filter((period) => period.tempId !== tempId));
   };
 
   return (
@@ -302,90 +398,80 @@ export default function CategoriesPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {pricePeriods.map((p, idx) => (
-                          <tr key={idx}>
-                            <td className="border p-1">
-                              <select
-                                value={p.days}
-                                onChange={(e) => {
-                                  const val = Number(e.target.value);
-                                  setPricePeriods((prev) => {
-                                    const copy = [...prev];
-                                    copy[idx] = {
-                                      ...copy[idx],
-                                      days: val,
-                                      days_end:
-                                        copy[idx].days_end < val
-                                          ? val
-                                          : copy[idx].days_end,
-                                    };
-                                    return copy.sort((a, b) => a.days - b.days);
-                                  });
-                                }}
-                                className="border rounded px-2 py-1 text-xs"
-                              >
-                                {Array.from({ length: 90 }, (_, i) => i + 1).map((n) => (
-                                  <option key={n} value={n}>
-                                    {n}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="border p-1">
-                              <select
-                                value={p.days_end}
-                                onChange={(e) => {
-                                  const val = Number(e.target.value);
-                                  setPricePeriods((prev) => {
-                                    const copy = [...prev];
-                                    copy[idx] = { ...copy[idx], days_end: val };
-                                    return copy.sort((a, b) => a.days - b.days);
-                                  });
-                                }}
-                                className="border rounded px-2 py-1 text-xs"
-                              >
-                                {Array.from({ length: 90 - p.days + 1 }, (_, i) =>
-                                  i + p.days
-                                ).map((n) => (
-                                  <option key={n} value={n}>
-                                    {n}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="border p-1">
-                              <input
-                                type="number"
-                                min="0"
-                                value={p.price}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setPricePeriods((prev) => {
-                                    const copy = [...prev];
-                                    copy[idx] = { ...copy[idx], price: val };
-                                    return copy;
-                                  });
-                                }}
-                                className="border rounded px-2 py-1 w-24 text-xs"
-                              />
-                            </td>
-                            <td className="border p-1 text-center">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPricePeriods((prev) => {
-                                    const copy = prev.filter((_, i) => i !== idx);
-                                    return copy.sort((a, b) => a.days - b.days);
-                                  });
-                                }}
-                                className="text-red-600 hover:text-red-800"
-                                aria-label="Șterge perioadă"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {pricePeriods.map((p, idx) => {
+                          const previousEnd = idx > 0 ? pricePeriods[idx - 1].days_end : 0;
+                          const minStartOption = clampDay(previousEnd + 1);
+                          const startCandidates = buildRange(minStartOption, 90);
+                          const currentStart = clampDay(p.days);
+                          if (!startCandidates.includes(currentStart)) {
+                            startCandidates.push(currentStart);
+                          }
+                          const startOptions = uniqueSorted(startCandidates);
+
+                          const minEndOption = clampDay(Math.max(p.days, 1));
+                          const endCandidates = buildRange(minEndOption, 90);
+                          const currentEnd = clampDay(p.days_end);
+                          if (!endCandidates.includes(currentEnd)) {
+                            endCandidates.push(currentEnd);
+                          }
+                          const endOptions = uniqueSorted(endCandidates);
+
+                          return (
+                            <tr key={p.tempId}>
+                              <td className="border p-1">
+                                <select
+                                  value={p.days}
+                                  onChange={(e) =>
+                                    handlePeriodStartChange(p.tempId, Number(e.target.value))
+                                  }
+                                  className="border rounded px-2 py-1 text-xs"
+                                >
+                                  {startOptions.map((n) => (
+                                    <option key={n} value={n}>
+                                      {n}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td className="border p-1">
+                                <select
+                                  value={p.days_end}
+                                  onChange={(e) =>
+                                    handlePeriodEndChange(p.tempId, Number(e.target.value))
+                                  }
+                                  className="border rounded px-2 py-1 text-xs"
+                                >
+                                  {endOptions.map((n) => (
+                                    <option key={n} value={n}>
+                                      {n}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td className="border p-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={p.price}
+                                  onChange={(e) =>
+                                    handlePeriodPriceChange(p.tempId, e.target.value)
+                                  }
+                                  className="border rounded px-2 py-1 w-24 text-xs"
+                                />
+                              </td>
+                              <td className="border p-1 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePeriod(p.tempId)}
+                                  className="text-red-600 hover:text-red-800"
+                                  aria-label="Șterge perioadă"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -430,8 +516,8 @@ export default function CategoriesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {pricePeriods.map((p, idx) => (
-                        <tr key={idx}>
+                      {pricePeriods.map((p) => (
+                        <tr key={p.tempId}>
                           <td className="border p-2 text-xs">
                             {p.days}-{p.days_end} Zile
                           </td>
