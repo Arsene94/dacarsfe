@@ -2,6 +2,7 @@ import { mapCarSearchFilters } from "@/lib/mapFilters";
 import { toQuery } from "@/lib/qs";
 import type { AuthResponse, User } from "@/types/auth";
 import type { WidgetActivityResponse } from "@/types/activity";
+import type { CategoryPrice, CategoryPriceCalendar } from "@/types/admin";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
@@ -302,6 +303,120 @@ class ApiClient {
         if (params.statuses) searchParams.append('statuses', params.statuses);
         const query = searchParams.toString();
         return this.request<any>(`/admin/metrics/bookings-total${query ? `?${query}` : ''}`);
+    }
+
+    async getCategories() {
+        return this.request<any>(`/car-categories`);
+    }
+
+    async createCategory(payload: { name: string; description?: string }) {
+        return this.request<any>(`/car-categories`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async updateCategory(id: number, payload: { name: string; description?: string }) {
+        return this.request<any>(`/car-categories/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async deleteCategory(id: number) {
+        return this.request<any>(`/car-categories/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getCategoryPrices(categoryId: number): Promise<{
+        prices: CategoryPrice[];
+        priceCalendar: CategoryPriceCalendar | null;
+    }> {
+        const res = await this.request<any>(
+            `/prices?category_id=${categoryId}&per_page=100`
+        );
+
+        const rawData = Array.isArray(res?.data) ? res.data : res;
+        const items: any[] = Array.isArray(rawData) ? rawData : [];
+
+        const calendarSource = items.find(
+            (item) => item && item.price_calendar
+        )?.price_calendar;
+
+        const parsePercentage = (value: unknown) => {
+            const numeric = Number(value);
+            return Number.isFinite(numeric) ? numeric : 0;
+        };
+
+        const priceCalendar: CategoryPriceCalendar | null = calendarSource
+            ? {
+                  id: calendarSource.id,
+                  category_id: calendarSource.category_id,
+                  jan: parsePercentage(calendarSource.jan),
+                  feb: parsePercentage(calendarSource.feb),
+                  mar: parsePercentage(calendarSource.mar),
+                  apr: parsePercentage(calendarSource.apr),
+                  may: parsePercentage(calendarSource.may),
+                  jun: parsePercentage(calendarSource.jun),
+                  jul: parsePercentage(calendarSource.jul),
+                  aug: parsePercentage(calendarSource.aug),
+                  sep: parsePercentage(calendarSource.sep),
+                  oct: parsePercentage(calendarSource.oct),
+                  nov: parsePercentage(calendarSource.nov),
+                  dec: parsePercentage(calendarSource.dec),
+                  created_at: calendarSource.created_at,
+                  updated_at: calendarSource.updated_at,
+              }
+            : null;
+
+        const prices = items
+            .map((item) => {
+                const { price_calendar: _calendar, category: _category, ...rest } =
+                    item ?? {};
+                const days = Number(rest.days);
+                const daysEnd = Number(rest.days_end);
+
+                if (!Number.isFinite(days) || !Number.isFinite(daysEnd)) {
+                    return null;
+                }
+
+                const priceValue =
+                    typeof rest.price === "number"
+                        ? rest.price.toString()
+                        : rest.price ?? "";
+
+                return {
+                    ...rest,
+                    days,
+                    days_end: daysEnd,
+                    price: priceValue,
+                } as CategoryPrice;
+            })
+            .filter((item): item is CategoryPrice => item !== null)
+            .sort((a, b) => a.days - b.days);
+
+        return { prices, priceCalendar };
+    }
+
+    async createCategoryPrice(payload: { category_id: number; days: number; days_end: number; price: number }) {
+        return this.request<any>(`/prices`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async updateCategoryPrice(id: number, payload: { category_id: number; days: number; days_end: number; price: number }) {
+        return this.request<any>(`/prices/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async deleteCategoryPrice(id: number) {
+        return this.request<any>(`/prices/${id}`, {
+            method: 'DELETE',
+        });
     }
 
     async getDynamicPrices() {
