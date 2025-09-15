@@ -3,9 +3,13 @@
 import { useState, useEffect } from "react";
 import { Edit, Trash2, Plus } from "lucide-react";
 import apiClient from "@/lib/api";
-import { AdminCategory, CategoryPrice } from "@/types/admin";
+import {
+  AdminCategory,
+  CategoryPrice,
+  CategoryPriceCalendarMonthKey,
+} from "@/types/admin";
 
-type PricePeriodForm = CategoryPrice & { tempId: string };
+type PricePeriodForm = Omit<CategoryPrice, "price_calendar"> & { tempId: string };
 
 const generateTempId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -47,6 +51,25 @@ const clampDay = (value: number) => Math.max(1, Math.min(value, 90));
 const uniqueSorted = (values: number[]) =>
   Array.from(new Set(values)).sort((a, b) => a - b);
 
+const MONTH_KEYS: CategoryPriceCalendarMonthKey[] = [
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "may",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "oct",
+  "nov",
+  "dec",
+];
+
+const MONTH_LABELS = MONTH_KEYS.map((key) => key.toUpperCase());
+
+const DISCOUNT_OPTIONS = Array.from({ length: 41 }, (_, idx) => -100 + idx * 5);
+
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,21 +79,9 @@ export default function CategoriesPage() {
   const [periodStart, setPeriodStart] = useState(1);
   const [periodEnd, setPeriodEnd] = useState(1);
   const [periodPrice, setPeriodPrice] = useState("");
-  const [discounts, setDiscounts] = useState<number[]>(Array(12).fill(0));
-  const months = [
-    "JAN",
-    "FEB",
-    "MAR",
-    "APR",
-    "MAY",
-    "JUN",
-    "JUL",
-    "AUG",
-    "SEP",
-    "OCT",
-    "NOV",
-    "DEC",
-  ];
+  const [discounts, setDiscounts] = useState<number[]>(
+    Array(MONTH_KEYS.length).fill(0)
+  );
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -98,7 +109,7 @@ export default function CategoriesPage() {
     setPeriodStart(1);
     setPeriodEnd(1);
     setPeriodPrice("");
-    setDiscounts(Array(12).fill(0));
+    setDiscounts(Array(MONTH_KEYS.length).fill(0));
     setIsModalOpen(true);
   };
 
@@ -109,10 +120,10 @@ export default function CategoriesPage() {
     setPeriodStart(1);
     setPeriodEnd(1);
     setPeriodPrice("");
-    setDiscounts(Array(12).fill(0));
+    setDiscounts(Array(MONTH_KEYS.length).fill(0));
     apiClient
       .getCategoryPrices(category.id)
-      .then((prices) => {
+      .then(({ prices, priceCalendar }) => {
         const sorted = sortPeriods(
           prices.map((price) => ({
             ...price,
@@ -124,6 +135,11 @@ export default function CategoriesPage() {
           }))
         );
         setPricePeriods(sorted);
+        if (priceCalendar) {
+          setDiscounts(MONTH_KEYS.map((key) => priceCalendar[key] ?? 0));
+        } else {
+          setDiscounts(Array(MONTH_KEYS.length).fill(0));
+        }
       })
       .catch((err) => console.error("Failed to load prices", err));
     setIsModalOpen(true);
@@ -481,18 +497,24 @@ export default function CategoriesPage() {
                     <thead>
                       <tr>
                         <th className="border p-2"></th>
-                        {months.map((m) => (
-                          <th key={m} className="border p-2 text-xs">
-                            {m}
+                        {MONTH_LABELS.map((label) => (
+                          <th key={label} className="border p-2 text-xs">
+                            {label}
                           </th>
                         ))}
                       </tr>
                       <tr>
                         <th className="border p-1 text-xs">Reducere</th>
-                        {months.map((m, i) => (
-                          <th key={m} className="border p-1">
-                            <select
-                              value={discounts[i]}
+                        {MONTH_KEYS.map((key, i) => {
+                          const currentValue = discounts[i] ?? 0;
+                          const options = uniqueSorted([
+                            ...DISCOUNT_OPTIONS,
+                            currentValue,
+                          ]);
+                          return (
+                            <th key={key} className="border p-1">
+                              <select
+                              value={currentValue}
                               onChange={(e) => {
                                 const val = Number(e.target.value);
                                 setDiscounts((d) => {
@@ -503,16 +525,15 @@ export default function CategoriesPage() {
                               }}
                               className="border rounded px-1 py-0.5 text-xs"
                             >
-                              {Array.from({ length: 21 }, (_, j) => j * 5).map(
-                                (n) => (
-                                  <option key={n} value={n}>
-                                    {n}%
-                                  </option>
-                                )
-                              )}
+                              {options.map((n) => (
+                                <option key={n} value={n}>
+                                  {n}%
+                                </option>
+                              ))}
                             </select>
-                          </th>
-                        ))}
+                            </th>
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody>
@@ -521,11 +542,11 @@ export default function CategoriesPage() {
                           <td className="border p-2 text-xs">
                             {p.days}-{p.days_end} Zile
                           </td>
-                          {months.map((m, i) => (
-                            <td key={i} className="border p-2 text-xs">
+                          {MONTH_KEYS.map((key, i) => (
+                            <td key={key} className="border p-2 text-xs">
                               {(
                                 parseFloat(p.price) *
-                                (1 - discounts[i] / 100)
+                                (1 - (discounts[i] ?? 0) / 100)
                               ).toFixed(2)}
                             </td>
                           ))}

@@ -61,6 +61,39 @@ export interface AdminCategory {
   description?: string;
 }
 
+export type CategoryPriceCalendarMonthKey =
+  | "jan"
+  | "feb"
+  | "mar"
+  | "apr"
+  | "may"
+  | "jun"
+  | "jul"
+  | "aug"
+  | "sep"
+  | "oct"
+  | "nov"
+  | "dec";
+
+export interface CategoryPriceCalendar {
+  id?: number;
+  category_id: number;
+  jan: number;
+  feb: number;
+  mar: number;
+  apr: number;
+  may: number;
+  jun: number;
+  jul: number;
+  aug: number;
+  sep: number;
+  oct: number;
+  nov: number;
+  dec: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface CategoryPrice {
   id?: number;
   category_id: number;
@@ -70,6 +103,7 @@ export interface CategoryPrice {
   created_at?: string;
   updated_at?: string;
   tempId?: string;
+  price_calendar?: CategoryPriceCalendar;
 }
 
 export interface DynamicPricePercentage {
