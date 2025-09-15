@@ -171,13 +171,27 @@ const DynamicPricesPage = () => {
         data={prices}
         columns={columns}
         renderRowDetails={(row: DynamicPrice) => (
-          <ul className="space-y-1">
-            {row.percentages.map((p) => (
-              <li key={p.id || `${p.percentage_start}-${p.percentage_end}`}>
-                {p.percentage_start}% - {p.percentage_end}% : {p.percentage_amount}%
-              </li>
-            ))}
-          </ul>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="py-1 px-2 text-left">Începe de la (%)</th>
+                <th className="py-1 px-2 text-left">Se termină la (%)</th>
+                <th className="py-1 px-2 text-left">Procentaj (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {row.percentages.map((p) => (
+                <tr
+                  key={p.id || `${p.percentage_start}-${p.percentage_end}`}
+                  className="border-b last:border-0"
+                >
+                  <td className="py-1 px-2">{p.percentage_start}%</td>
+                  <td className="py-1 px-2">{p.percentage_end}%</td>
+                  <td className="py-1 px-2">{p.percentage_amount}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       />
       <Popup open={showModal} onClose={() => setShowModal(false)} className="max-w-2xl">
