@@ -308,6 +308,33 @@ class ApiClient {
         return this.request<any>(`/dynamic-prices`);
     }
 
+    async createDynamicPrice(payload: any) {
+        return this.request<any>(`/dynamic-prices`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async updateDynamicPrice(id: number, payload: any) {
+        return this.request<any>(`/dynamic-prices/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async toggleDynamicPrice(id: number, enabled: boolean) {
+        return this.request<any>(`/dynamic-prices/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ enabled }),
+        });
+    }
+
+    async deleteDynamicPrice(id: number) {
+        return this.request<any>(`/dynamic-prices/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
