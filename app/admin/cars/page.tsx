@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -13,242 +19,660 @@ import {
   Settings,
   Users,
   Fuel,
-  Eye,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Popup } from "@/components/ui/popup";
+import apiClient from "@/lib/api";
 import { AdminCar } from "@/types/admin";
+
+const STORAGE_BASE =
+  process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
+const PER_PAGE = 12;
+
+const toImageUrl = (path?: string | null): string => {
+  if (!path) return "/images/placeholder-car.svg";
+  if (/^https?:\/\//i.test(path)) return path;
+  const base = STORAGE_BASE.replace(/\/$/, "");
+  const cleaned = String(path).replace(/^\//, "");
+  return `${base}/${cleaned}`;
+};
+
+const getFirstImage = (images: unknown): string | null => {
+  if (!images) return null;
+  if (typeof images === "string") return images;
+  if (Array.isArray(images)) {
+    const first = images.find((item) => typeof item === "string" && item);
+    return typeof first === "string" ? first : null;
+  }
+  if (typeof images === "object") {
+    const values = Object.values(images as Record<string, unknown>);
+    const first = values.find((item) => typeof item === "string" && item);
+    return typeof first === "string" ? first : null;
+  }
+  return null;
+};
+
+const parsePrice = (raw: unknown): number => {
+  if (raw == null) return 0;
+  if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
+  if (typeof raw === "string") {
+    const cleaned = raw.replace(/[^0-9.,-]/g, "").replace(/\.(?=\d{3}(?:\D|$))/g, "");
+    const normalized = cleaned.replace(/,/g, ".");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  try {
+    return parsePrice(String(raw));
+  } catch {
+    return 0;
+  }
+};
+
+const toNumber = (value: unknown): number | undefined => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : undefined;
+};
+
+const toInteger = (value: unknown): number | undefined => {
+  if (value == null) return undefined;
+  if (typeof value === "string" && value.trim().length === 0) return undefined;
+  const num = Number(value);
+  return Number.isFinite(num) ? Math.round(num) : undefined;
+};
+
+const toDecimalFromString = (value: string): number | undefined => {
+  if (!value || value.trim().length === 0) return undefined;
+  if (!/[0-9]/.test(value)) return undefined;
+  return parsePrice(value);
+};
+
+const collectSpecs = (raw: unknown): string[] => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item) => (item != null ? String(item).trim() : ""))
+      .filter((item) => item.length > 0);
+  }
+  if (typeof raw === "object") {
+    return Object.values(raw as Record<string, unknown>)
+      .map((item) => (item != null ? String(item).trim() : ""))
+      .filter((item) => item.length > 0);
+  }
+  if (typeof raw === "string") {
+    return raw
+      .split(/[,;\n]+/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+  return [];
+};
+
+const normalizeStatus = (status: unknown): AdminCar["status"] => {
+  if (typeof status !== "string") return "available";
+  const value = status.toLowerCase();
+  if (value === "maintenance" || value === "in_service") return "maintenance";
+  if (value === "out_of_service" || value === "unavailable")
+    return "out_of_service";
+  return "available";
+};
+
+const extractCarsList = (response: any): any[] => {
+  if (!response) return [];
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response?.results)) return response.results;
+  return [];
+};
+
+const extractTotal = (response: any): number | undefined => {
+  const meta = response?.meta ?? response?.pagination ?? {};
+  const total =
+    meta?.total ??
+    meta?.count ??
+    response?.total ??
+    response?.count ??
+    response?.data?.length;
+  return typeof total === "number" ? total : undefined;
+};
+
+const extractLastPage = (response: any, fallback: number): number => {
+  const meta = response?.meta ?? response?.pagination ?? {};
+  const lastPage =
+    meta?.last_page ??
+    meta?.lastPage ??
+    response?.last_page ??
+    response?.lastPage ??
+    fallback;
+  return typeof lastPage === "number" && Number.isFinite(lastPage)
+    ? lastPage
+    : fallback;
+};
+
+const mapApiCarToAdminCar = (raw: any): AdminCar => {
+  const typeInfo = raw?.type ?? raw?.vehicle_type ?? raw?.car_type ?? null;
+  const typeName =
+    typeof typeInfo === "string"
+      ? typeInfo
+      : typeInfo?.name ?? raw?.type_name ?? raw?.vehicle_type_name ?? "";
+  const typeId =
+    typeof typeInfo === "object" && typeInfo
+      ? toInteger((typeInfo as any).id) ?? null
+      : toInteger(raw?.type_id ?? raw?.vehicle_type_id) ?? null;
+
+  const transmissionInfo = raw?.transmission ?? null;
+  const transmissionName =
+    typeof transmissionInfo === "string"
+      ? transmissionInfo
+      : transmissionInfo?.name ?? raw?.transmission_name ?? "";
+  const transmissionId =
+    typeof transmissionInfo === "object" && transmissionInfo
+      ? toInteger((transmissionInfo as any).id) ?? null
+      : toInteger(raw?.transmission_id) ?? null;
+
+  const fuelInfo = raw?.fuel ?? null;
+  const fuelName =
+    typeof fuelInfo === "string"
+      ? fuelInfo
+      : fuelInfo?.name ?? raw?.fuel_name ?? "";
+  const fuelId =
+    typeof fuelInfo === "object" && fuelInfo
+      ? toInteger((fuelInfo as any).id) ?? null
+      : toInteger(raw?.fuel_id) ?? null;
+
+  const passengers =
+    toInteger(raw?.number_of_seats ?? raw?.passengers ?? raw?.seats) ?? 0;
+  const doors = toInteger(raw?.doors) ?? 4;
+  const luggage = toInteger(raw?.luggage ?? raw?.boot_space) ?? 2;
+
+  const descriptionSource =
+    typeof raw?.content === "string" && raw.content.trim().length > 0
+      ? raw.content
+      : typeof raw?.description === "string"
+      ? raw.description
+      : "";
+
+  const mileage =
+    toInteger(raw?.mileage ?? raw?.kilometers ?? raw?.odometer ?? raw?.km) ??
+    undefined;
+
+  const lastService =
+    raw?.last_service_date ?? raw?.last_service ?? raw?.service?.last_date;
+  const nextService =
+    raw?.next_service_date ?? raw?.next_service ?? raw?.service?.next_date;
+
+  return {
+    id: Number(raw?.id) || raw?.id,
+    name: raw?.name ?? "",
+    type: typeName ? typeName : "Nespecificat",
+    typeId,
+    image: toImageUrl(
+      raw?.image_preview ??
+        raw?.image ??
+        raw?.thumbnail ??
+        getFirstImage(raw?.images),
+    ),
+    price:
+      parsePrice(raw?.rental_rate ?? raw?.price ?? raw?.daily_rate ?? raw?.rate),
+    features: {
+      passengers,
+      transmission: transmissionName || "—",
+      transmissionId,
+      fuel: fuelName || "—",
+      fuelId,
+      doors,
+      luggage,
+    },
+    status: normalizeStatus(raw?.status ?? raw?.availability ?? raw?.state),
+    rating: toNumber(raw?.avg_review),
+    description: descriptionSource,
+    specs: collectSpecs(raw?.specs ?? raw?.options ?? raw?.features),
+    licensePlate: raw?.license_plate ?? raw?.licensePlate ?? raw?.plate ?? "",
+    year: toInteger(raw?.year ?? raw?.manufactured_year ?? raw?.production_year),
+    mileage,
+    lastService: typeof lastService === "string" ? lastService : undefined,
+    nextService: typeof nextService === "string" ? nextService : undefined,
+  };
+};
+
+type CarFormState = {
+  id: number | null;
+  name: string;
+  license_plate: string;
+  status: AdminCar["status"];
+  type_id: number | null;
+  type_name: string;
+  rental_rate: string;
+  year: string;
+  mileage: string;
+  passengers: string;
+  transmission: string;
+  fuel: string;
+  doors: string;
+  luggage: string;
+  description: string;
+  specs: string;
+  last_service: string;
+  next_service: string;
+};
+
+const EMPTY_FORM: CarFormState = {
+  id: null,
+  name: "",
+  license_plate: "",
+  status: "available",
+  type_id: null,
+  type_name: "",
+  rental_rate: "",
+  year: "",
+  mileage: "",
+  passengers: "",
+  transmission: "",
+  fuel: "",
+  doors: "",
+  luggage: "",
+  description: "",
+  specs: "",
+  last_service: "",
+  next_service: "",
+};
+
+const mapAdminCarToFormState = (car: AdminCar): CarFormState => ({
+  id: car.id,
+  name: car.name ?? "",
+  license_plate: car.licensePlate ?? "",
+  status: car.status,
+  type_id: car.typeId ?? null,
+  type_name: car.type ?? "",
+  rental_rate: car.price ? String(car.price) : "",
+  year: car.year ? String(car.year) : "",
+  mileage: car.mileage ? String(car.mileage) : "",
+  passengers: car.features?.passengers
+    ? String(car.features.passengers)
+    : "",
+  transmission: car.features?.transmission ?? "",
+  fuel: car.features?.fuel ?? "",
+  doors: car.features?.doors ? String(car.features.doors) : "",
+  luggage: car.features?.luggage ? String(car.features.luggage) : "",
+  description: car.description ?? "",
+  specs: Array.isArray(car.specs) ? car.specs.join(", ") : "",
+  last_service: car.lastService ? car.lastService.slice(0, 10) : "",
+  next_service: car.nextService ? car.nextService.slice(0, 10) : "",
+});
+
+const buildCarPayload = (form: CarFormState) => {
+  const payload: Record<string, any> = {
+    name: form.name.trim(),
+    license_plate: form.license_plate.trim(),
+    status: form.status,
+  };
+
+  if (form.type_id) {
+    payload.type_id = form.type_id;
+  } else if (form.type_name.trim().length > 0) {
+    payload.type_name = form.type_name.trim();
+  }
+
+  const rentalRate = toDecimalFromString(form.rental_rate);
+  if (rentalRate !== undefined) {
+    payload.rental_rate = rentalRate;
+  }
+
+  const year = toInteger(form.year);
+  if (year !== undefined) {
+    payload.year = year;
+  }
+
+  const mileage = toInteger(form.mileage);
+  if (mileage !== undefined) {
+    payload.mileage = mileage;
+  }
+
+  const passengers = toInteger(form.passengers);
+  if (passengers !== undefined) {
+    payload.number_of_seats = passengers;
+  }
+
+  const doors = toInteger(form.doors);
+  if (doors !== undefined) {
+    payload.doors = doors;
+  }
+
+  const luggage = toInteger(form.luggage);
+  if (luggage !== undefined) {
+    payload.luggage = luggage;
+  }
+
+  if (form.transmission.trim().length > 0) {
+    payload.transmission_name = form.transmission.trim();
+  }
+
+  if (form.fuel.trim().length > 0) {
+    payload.fuel_name = form.fuel.trim();
+  }
+
+  if (form.description.trim().length > 0) {
+    payload.description = form.description.trim();
+  }
+
+  if (form.specs.trim().length > 0) {
+    payload.specs = form.specs
+      .split(/[,;\n]+/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+
+  if (form.last_service) {
+    payload.last_service_date = form.last_service;
+  }
+
+  if (form.next_service) {
+    payload.next_service_date = form.next_service;
+  }
+
+  return payload;
+};
 
 const CarsPage = () => {
   const [cars, setCars] = useState<AdminCar[]>([]);
-  const [filteredCars, setFilteredCars] = useState<AdminCar[]>([]);
+  const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [selectedCar, setSelectedCar] = useState<AdminCar | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [sortBy, setSortBy] = useState("recent");
+  const [totalCars, setTotalCars] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState({
+    total: 0,
+    available: 0,
+    maintenance: 0,
+    outOfService: 0,
+  });
 
-  // Mock data pentru demo
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+  const [carForm, setCarForm] = useState<CarFormState>(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const loadingRef = useRef(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
-    const mockCars: AdminCar[] = [
-      {
-        id: 1,
-        name: "Dacia Logan",
-        type: "Economic",
-        image:
-          "https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg?auto=compress&cs=tinysrgb&w=600",
-        price: 45,
-        features: {
-          passengers: 5,
-          transmission: "Manual",
-          fuel: "Benzină",
-          doors: 4,
-          luggage: 2,
-        },
-        status: "available",
-        rating: 4.8,
-        description:
-          "Mașină economică și fiabilă, perfectă pentru călătoriile în oraș și pe distanțe medii.",
-        specs: [
-          "Aer condiționat",
-          "Radio/USB",
-          "Geamuri electrice",
-          "Servo direcție",
-        ],
-        licensePlate: "B 123 ABC",
-        year: 2022,
-        mileage: 45000,
-        lastService: "2024-12-15",
-        nextService: "2025-06-15",
-      },
-      {
-        id: 2,
-        name: "Volkswagen Golf",
-        type: "Comfort",
-        image:
-          "https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=600",
-        price: 65,
-        features: {
-          passengers: 5,
-          transmission: "Automat",
-          fuel: "Benzină",
-          doors: 5,
-          luggage: 3,
-        },
-        status: "out_of_service",
-        rating: 4.9,
-        description:
-          "Mașină de clasă medie cu tehnologie avansată și confort superior.",
-        specs: [
-          "Climatronic",
-          "Navigație GPS",
-          "Senzori parcare",
-          "Cruise control",
-        ],
-        licensePlate: "B 456 DEF",
-        year: 2023,
-        mileage: 28000,
-        lastService: "2024-11-20",
-        nextService: "2025-05-20",
-      },
-      {
-        id: 3,
-        name: "BMW Seria 3",
-        type: "Premium",
-        image:
-          "https://images.pexels.com/photos/358070/pexels-photo-358070.jpeg?auto=compress&cs=tinysrgb&w=600",
-        price: 95,
-        features: {
-          passengers: 5,
-          transmission: "Automat",
-          fuel: "Diesel",
-          doors: 4,
-          luggage: 3,
-        },
-        status: "available",
-        rating: 4.9,
-        description:
-          "Sedan premium cu performanțe excepționale și tehnologie de vârf.",
-        specs: [
-          "Piele",
-          "Navigație premium",
-          "Scaune sport",
-          "Sistem audio premium",
-        ],
-        licensePlate: "B 789 GHI",
-        year: 2023,
-        mileage: 15000,
-        lastService: "2024-12-01",
-        nextService: "2025-06-01",
-      },
-      {
-        id: 4,
-        name: "Ford Transit",
-        type: "Van",
-        image:
-          "https://images.pexels.com/photos/1007410/pexels-photo-1007410.jpeg?auto=compress&cs=tinysrgb&w=600",
-        price: 85,
-        features: {
-          passengers: 9,
-          transmission: "Manual",
-          fuel: "Diesel",
-          doors: 4,
-          luggage: 5,
-        },
-        status: "maintenance",
-        rating: 4.7,
-        description:
-          "Van spațios pentru grupuri mari, ideal pentru excursii și evenimente.",
-        specs: [
-          "9 locuri",
-          "Aer condiționat",
-          "Radio",
-          "Spațiu generos bagaje",
-        ],
-        licensePlate: "B 321 JKL",
-        year: 2021,
-        mileage: 78000,
-        lastService: "2025-01-05",
-        nextService: "2025-07-05",
-      },
-      {
-        id: 5,
-        name: "Skoda Octavia",
-        type: "Comfort",
-        image:
-          "https://images.pexels.com/photos/1719648/pexels-photo-1719648.jpeg?auto=compress&cs=tinysrgb&w=600",
-        price: 68,
-        features: {
-          passengers: 5,
-          transmission: "Automat",
-          fuel: "Diesel",
-          doors: 4,
-          luggage: 4,
-        },
-        status: "available",
-        rating: 4.8,
-        description:
-          "Sedan spațios cu portbagaj generos, perfect pentru călătorii lungi.",
-        specs: [
-          "Climatronic",
-          "Navigație",
-          "Scaune încălzite",
-          "Senzori parcare",
-        ],
-        licensePlate: "B 654 MNO",
-        year: 2022,
-        mileage: 52000,
-        lastService: "2024-10-30",
-        nextService: "2025-04-30",
-      },
-      {
-        id: 6,
-        name: "Audi A4",
-        type: "Premium",
-        image:
-          "https://images.pexels.com/photos/1719648/pexels-photo-1719648.jpeg?auto=compress&cs=tinysrgb&w=600",
-        price: 98,
-        features: {
-          passengers: 5,
-          transmission: "Automat",
-          fuel: "Diesel",
-          doors: 4,
-          luggage: 3,
-        },
-        status: "available",
-        rating: 4.9,
-        description:
-          "Luxul german la cel mai înalt nivel, cu tehnologie inovatoare.",
-        specs: [
-          "Quattro",
-          "Virtual Cockpit",
-          "Scaune ventilate",
-          "Bang & Olufsen",
-        ],
-        licensePlate: "B 987 PQR",
-        year: 2023,
-        mileage: 12000,
-        lastService: "2024-12-10",
-        nextService: "2025-06-10",
-      },
-    ];
+    const handler = setTimeout(() => {
+      setSearchTerm(searchInput.trim());
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
 
-    setCars(mockCars);
-    setFilteredCars(mockCars);
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const [totalRes, availableRes, maintenanceRes, outServiceRes] =
+        await Promise.all([
+          apiClient.fetchAdminCarsTotal(),
+          apiClient.fetchAdminCarsTotal({ status: "available" }),
+          apiClient.fetchAdminCarsTotal({ status: "maintenance" }),
+          apiClient.fetchAdminCarsTotal({ status: "out_of_service" }),
+        ]);
+      const toCount = (data: any) =>
+        Number(
+          data?.count ??
+            data?.total ??
+            data?.data ??
+            data?.value ??
+            data?.cars ??
+            0,
+        ) || 0;
+      setMetrics({
+        total: toCount(totalRes),
+        available: toCount(availableRes),
+        maintenance: toCount(maintenanceRes),
+        outOfService: toCount(outServiceRes),
+      });
+    } catch (err) {
+      console.error("Error loading car metrics:", err);
+    }
   }, []);
 
-  // Filter cars
   useEffect(() => {
-    let filtered = cars;
+    fetchMetrics();
+  }, [fetchMetrics]);
 
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (car) =>
-          car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          car.licensePlate
-            ?.toLowerCase()
-            ?.includes(searchTerm.toLowerCase()) ||
-          car.type.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-    }
+  const fetchCars = useCallback(
+    async (pageToLoad: number, append: boolean) => {
+      if (loadingRef.current) return;
+      loadingRef.current = true;
+      setError(null);
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((car) => car.status === statusFilter);
-    }
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoadingInitial(true);
+      }
 
-    if (typeFilter !== "all") {
-      filtered = filtered.filter(
-        (car) => car.type.toLowerCase() === typeFilter.toLowerCase(),
-      );
-    }
+      try {
+        const params: Record<string, any> = {
+          page: pageToLoad,
+          perPage: PER_PAGE,
+        };
 
-    setFilteredCars(filtered);
-  }, [cars, searchTerm, statusFilter, typeFilter]);
+        if (searchTerm.length > 0) {
+          params.search = searchTerm;
+        }
 
-  const handleViewCar = (car: AdminCar) => {
-    setSelectedCar(car);
-    setShowModal(true);
+        if (statusFilter !== "all") {
+          params.status = statusFilter;
+        }
+
+        if (typeFilter !== "all") {
+          if (typeFilter.startsWith("id:")) {
+            const idValue = Number(typeFilter.slice(3));
+            if (!Number.isNaN(idValue)) {
+              params.type_id = idValue;
+            }
+          } else if (typeFilter.startsWith("name:")) {
+            params.type = typeFilter.slice(5);
+          } else {
+            params.type = typeFilter;
+          }
+        }
+
+        if (sortBy && sortBy !== "none") {
+          params.sort_by = sortBy;
+        }
+
+        const response = await apiClient.getCars(params);
+        const list = extractCarsList(response).map(mapApiCarToAdminCar);
+
+        setCars((prev) => (append ? [...prev, ...list] : list));
+
+        const total = extractTotal(response);
+        setTotalCars((prev) => {
+          if (typeof total === "number" && total >= 0) {
+            return total;
+          }
+          return append ? prev + list.length : list.length;
+        });
+
+        const lastPage = extractLastPage(response, pageToLoad);
+        let more = pageToLoad < lastPage;
+        if (!Number.isFinite(lastPage) || lastPage <= pageToLoad) {
+          more = list.length === PER_PAGE;
+        }
+        if (list.length === 0) {
+          more = false;
+        }
+        setHasMore(more);
+        setCurrentPage(pageToLoad);
+      } catch (err) {
+        console.error("Error loading cars:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "A apărut o eroare la încărcarea mașinilor.",
+        );
+        if (!append) {
+          setCars([]);
+          setTotalCars(0);
+        }
+        setHasMore(false);
+      } finally {
+        loadingRef.current = false;
+        if (append) {
+          setLoadingMore(false);
+        } else {
+          setLoadingInitial(false);
+        }
+      }
+    },
+    [searchTerm, statusFilter, typeFilter, sortBy],
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setHasMore(true);
+    fetchCars(1, false);
+  }, [fetchCars]);
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && hasMore && !loadingRef.current) {
+          fetchCars(currentPage + 1, true);
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [fetchCars, hasMore, currentPage]);
+
+  const handleOpenCreate = () => {
+    setCarForm(EMPTY_FORM);
+    setModalMode("create");
+    setFormError(null);
+    setIsModalOpen(true);
   };
+
+  const handleOpenEdit = (car: AdminCar) => {
+    setCarForm(mapAdminCarToFormState(car));
+    setModalMode("edit");
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    if (saving) return;
+    setIsModalOpen(false);
+  };
+
+  const handleFormChange = (
+    field: keyof CarFormState,
+  ): ((
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => void) => {
+    return (event) => {
+      const value = event.target.value;
+      setCarForm((prev) => {
+        if (field === "type_name") {
+          return { ...prev, type_name: value, type_id: null };
+        }
+        return { ...prev, [field]: value };
+      });
+    };
+  };
+
+  const handleStatusChange = (value: string) => {
+    setCarForm((prev) => ({
+      ...prev,
+      status: (value as AdminCar["status"]) ?? prev.status,
+    }));
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setFormError(null);
+
+    try {
+      const payload = buildCarPayload(carForm);
+      const response =
+        modalMode === "edit" && carForm.id
+          ? await apiClient.updateCar(carForm.id, payload)
+          : await apiClient.createCar(payload);
+
+      const dataCandidate =
+        response?.data ?? response?.car ?? response?.item ?? response;
+      const normalizedSource = Array.isArray(dataCandidate)
+        ? dataCandidate[0]
+        : dataCandidate;
+
+      if (!normalizedSource || typeof normalizedSource !== "object") {
+        throw new Error("Răspunsul serverului nu a putut fi interpretat.");
+      }
+
+      const normalizedCar = mapApiCarToAdminCar(normalizedSource);
+      setCars((prev) => {
+        if (modalMode === "edit") {
+          return prev.map((car) =>
+            car.id === normalizedCar.id ? normalizedCar : car,
+          );
+        }
+        return [normalizedCar, ...prev];
+      });
+
+      setIsModalOpen(false);
+      await fetchMetrics();
+      setHasMore(true);
+      setCurrentPage(1);
+      await fetchCars(1, false);
+    } catch (err) {
+      console.error("Error saving car:", err);
+      setFormError(
+        err instanceof Error
+          ? err.message
+          : "A apărut o eroare la salvarea mașinii.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const typeOptions = useMemo(() => {
+    const entries = new Map<string, { value: string; label: string }>();
+    cars.forEach((car) => {
+      if (!car.type || car.type === "Nespecificat") return;
+      if (car.typeId != null) {
+        const key = `id:${car.typeId}`;
+        if (!entries.has(key)) {
+          entries.set(key, { value: key, label: car.type });
+        }
+      } else {
+        const key = `name:${car.type}`;
+        if (!entries.has(key)) {
+          entries.set(key, { value: key, label: car.type });
+        }
+      }
+    });
+    return Array.from(entries.values()).sort((a, b) =>
+      a.label.localeCompare(b.label, "ro", { sensitivity: "base" }),
+    );
+  }, [cars]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -280,15 +704,15 @@ const CarsPage = () => {
     if (!nextServiceDate) return false;
     const nextService = new Date(nextServiceDate);
     const today = new Date();
-    const daysUntilService = Math.ceil(
-      (nextService.getTime() - today.getTime()) / (1000 * 3600 * 24),
-    );
-    return daysUntilService <= 30;
+    const diff =
+      (nextService.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+    return diff <= 30;
   };
+
+  const resultsCount = totalCars || cars.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -305,19 +729,19 @@ const CarsPage = () => {
               </h1>
             </div>
 
-            <button
-              className="flex items-center space-x-2 px-4 py-2 bg-jade text-white rounded-lg hover:bg-jade/90 transition-colors"
+            <Button
+              onClick={handleOpenCreate}
+              className="flex items-center space-x-2 px-4 py-2"
               aria-label="Adaugă Mașină"
             >
               <Plus className="h-4 w-4" />
               <span className="font-dm-sans font-semibold">Adaugă Mașină</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between">
@@ -326,7 +750,7 @@ const CarsPage = () => {
                   Total Mașini
                 </p>
                 <p className="text-2xl font-poppins font-bold text-berkeley">
-                  {cars.length}
+                  {metrics.total}
                 </p>
               </div>
               <Car className="h-8 w-8 text-jade" />
@@ -340,7 +764,7 @@ const CarsPage = () => {
                   Disponibile
                 </p>
                 <p className="text-2xl font-poppins font-bold text-green-600">
-                  {cars.filter((car) => car.status === "available").length}
+                  {metrics.available}
                 </p>
               </div>
               <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
@@ -354,7 +778,7 @@ const CarsPage = () => {
               <div>
                 <p className="text-sm font-dm-sans text-gray-600">În Service</p>
                 <p className="text-2xl font-poppins font-bold text-yellow-600">
-                  {cars.filter((car) => car.status === "maintenance").length}
+                  {metrics.maintenance}
                 </p>
               </div>
               <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
@@ -366,9 +790,11 @@ const CarsPage = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-dm-sans text-gray-600">Indisponibile</p>
+                <p className="text-sm font-dm-sans text-gray-600">
+                  Indisponibile
+                </p>
                 <p className="text-2xl font-poppins font-bold text-red-600">
-                  {cars.filter((car) => car.status === "out_of_service").length}
+                  {metrics.outOfService}
                 </p>
               </div>
               <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
@@ -378,159 +804,193 @@ const CarsPage = () => {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
+              <Input
                 type="text"
                 placeholder="Caută mașini..."
                 aria-label="Caută mașini"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-10"
               />
             </div>
 
-            <Select
-              className="px-4 py-3"
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-              placeholder="Toate statusurile"
-              aria-label="Filtrează după status"
-            >
-              <option value="all">Toate statusurile</option>
-              <option value="available">Disponibile</option>
-              <option value="maintenance">În Service</option>
-              <option value="out_of_service">Indisponibile</option>
-            </Select>
+            <div>
+              <Label htmlFor="car-status-filter" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Status
+              </Label>
+              <Select
+                id="car-status-filter"
+                className="mt-2"
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                aria-label="Filtrează după status"
+              >
+                <option value="all">Toate statusurile</option>
+                <option value="available">Disponibile</option>
+                <option value="maintenance">În Service</option>
+                <option value="out_of_service">Indisponibile</option>
+              </Select>
+            </div>
 
-            <Select
-              className="px-4 py-3"
-              value={typeFilter}
-              onValueChange={setTypeFilter}
-              placeholder="Toate tipurile"
-              aria-label="Filtrează după tip"
-            >
-              <option value="all">Toate tipurile</option>
-              <option value="economic">Economic</option>
-              <option value="comfort">Comfort</option>
-              <option value="premium">Premium</option>
-              <option value="van">Van</option>
-            </Select>
+            <div>
+              <Label htmlFor="car-type-filter" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Tip vehicul
+              </Label>
+              <Select
+                id="car-type-filter"
+                className="mt-2"
+                value={typeFilter}
+                onValueChange={setTypeFilter}
+                aria-label="Filtrează după tip"
+              >
+                <option value="all">Toate tipurile</option>
+                {typeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-            <div className="flex items-center justify-between">
-              <span className="font-dm-sans text-gray-600">
-                {filteredCars.length} mașini găsite
-              </span>
+            <div>
+              <Label htmlFor="car-sort" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Sortare
+              </Label>
+              <Select
+                id="car-sort"
+                className="mt-2"
+                value={sortBy}
+                onValueChange={setSortBy}
+                aria-label="Sortează mașinile"
+              >
+                <option value="recent">Cele mai noi</option>
+                <option value="oldest">Cele mai vechi</option>
+                <option value="name_asc">Nume A-Z</option>
+                <option value="name_desc">Nume Z-A</option>
+              </Select>
+              <p className="mt-2 text-sm text-gray-600 font-dm-sans text-right md:text-left">
+                {resultsCount} mașini găsite
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Cars Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCars.map((car) => (
-            <div
-              key={car.id}
-              className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300"
-            >
-              <div className="relative w-full h-48">
-                <Image
-                  src={car.image || "/images/placeholder-car.svg"}
-                  alt={car.name}
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
-                  {car.type}
-                </div>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-6 font-dm-sans">
+            {error}
+          </div>
+        )}
+
+        {loadingInitial ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-6 w-6 text-jade animate-spin" />
+          </div>
+        ) : cars.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {cars.map((car) => (
                 <div
-                  className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-dm-sans font-semibold ${getStatusColor(car.status)}`}
+                  key={car.id}
+                  className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300"
                 >
-                  {getStatusText(car.status)}
-                </div>
-                {isServiceDue(car.nextService) && (
-                  <div className="absolute bottom-4 left-4 bg-red-500 text-white px-2 py-1 rounded-lg flex items-center space-x-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    <span className="text-xs font-dm-sans">Service</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-poppins font-semibold text-berkeley">
-                    {car.name}
-                  </h3>
-                  <div className="flex items-center space-x-1"></div>
-                </div>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-jade" />
-                      <span>{car?.features?.passengers} persoane</span>
+                  <div className="relative w-full h-48">
+                    <Image
+                      src={car.image || "/images/placeholder-car.svg"}
+                      alt={car.name || "Mașină"}
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
+                      {car.type}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Settings className="h-4 w-4 text-jade" />
-                      <span>{car?.features?.transmission}</span>
+                    <div
+                      className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-dm-sans font-semibold ${getStatusColor(car.status)}`}
+                    >
+                      {getStatusText(car.status)}
+                    </div>
+                    {isServiceDue(car.nextService) && (
+                      <div className="absolute bottom-4 left-4 bg-red-500 text-white px-2 py-1 rounded-lg flex items-center space-x-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span className="text-xs font-dm-sans">Service</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-poppins font-semibold text-berkeley">
+                        {car.licensePlate || "—"}
+                      </h3>
+                      {car.year && (
+                        <span className="text-sm font-dm-sans text-gray-500">
+                          Anul {car.year}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
+                        <div className="flex items-center space-x-2">
+                          <Users className="h-4 w-4 text-jade" />
+                          <span>{car.features?.passengers ?? 0} persoane</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Settings className="h-4 w-4 text-jade" />
+                          <span>{car.features?.transmission}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
+                        <div className="flex items-center space-x-2">
+                          <Fuel className="h-4 w-4 text-jade" />
+                          <span>{car.features?.fuel}</span>
+                        </div>
+                        <span className="font-semibold text-berkeley">{car.name}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(car)}
+                        className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 border border-jade text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade hover:text-white transition-colors"
+                        aria-label="Editează mașina"
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span>Editează</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="ml-3 p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        aria-label="Șterge"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
-                    <div className="flex items-center space-x-2">
-                      <Fuel className="h-4 w-4 text-jade" />
-                      <span>{car?.features?.fuel}</span>
-                    </div>
-                    <span className="font-semibold">{car.licensePlate}</span>
-                  </div>
                 </div>
-
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <span className="text-2xl font-poppins font-bold text-berkeley">
-                      {car.price}€
-                    </span>
-                    <span className="text-gray-600 font-dm-sans">/zi</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600 font-dm-sans">
-                      Anul {car.year}
-                    </p>
-                    <p className="text-sm text-gray-600 font-dm-sans">
-                      {car?.mileage?.toLocaleString()} km
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handleViewCar(car)}
-                    className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 border border-jade text-jade font-dm-sans font-semibold rounded-lg hover:bg-jade hover:text-white transition-colors"
-                    aria-label="Vezi mașina"
-                  >
-                    <Eye className="h-4 w-4" />
-                    <span>Vezi</span>
-                  </button>
-                  <button
-                    className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    aria-label="Editează"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    aria-label="Șterge"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {filteredCars.length === 0 && (
+            <div ref={loadMoreRef} className="h-10"></div>
+
+            {loadingMore && (
+              <div className="flex justify-center items-center gap-2 py-6 text-gray-500 font-dm-sans">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Se încarcă mașini...</span>
+              </div>
+            )}
+
+            {!hasMore && !loadingMore && cars.length > 0 && (
+              <p className="text-center text-sm text-gray-500 font-dm-sans mt-6">
+                Ai ajuns la sfârșitul listei.
+              </p>
+            )}
+          </>
+        ) : (
           <div className="text-center py-12">
             <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-poppins font-semibold text-gray-600 mb-2">
@@ -541,221 +1001,292 @@ const CarsPage = () => {
             </p>
           </div>
         )}
+      </div>
 
-        {/* Car Details Modal */}
-        {showModal && selectedCar && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-poppins font-bold text-berkeley">
-                  {selectedCar.name}
-                </h3>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  aria-label="Închide detalii mașină"
-                >
-                  <svg
-                    className="w-6 h-6 text-gray-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
+      <Popup
+        open={isModalOpen}
+        onClose={handleCloseModal}
+        className="max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-poppins font-bold text-berkeley">
+            {modalMode === "create" ? "Adaugă mașină" : "Editează mașina"}
+          </h3>
+          <button
+            type="button"
+            onClick={handleCloseModal}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Închide formularul"
+            disabled={saving}
+          >
+            <svg
+              className="w-6 h-6 text-gray-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Car Image and Basic Info */}
-                <div>
-                    {selectedCar.image && (<div className="relative w-full h-64 mb-6">
-                    <Image
-                      src={selectedCar?.image}
-                      alt={selectedCar.name}
-                      fill
-                      className="object-cover rounded-xl"
-                    />
-                  </div>)}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {formError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 font-dm-sans">
+              {formError}
+            </div>
+          )}
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-dm-sans text-gray-600">
-                        Status:
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-dm-sans ${getStatusColor(selectedCar.status)}`}
-                      >
-                        {getStatusText(selectedCar.status)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-dm-sans text-gray-600">
-                        Număr înmatriculare:
-                      </span>
-                      <span className="font-dm-sans font-semibold text-berkeley">
-                        {selectedCar.licensePlate}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-dm-sans text-gray-600">
-                        An fabricație:
-                      </span>
-                      <span className="font-dm-sans font-semibold text-berkeley">
-                        {selectedCar.year}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-dm-sans text-gray-600">
-                        Kilometraj:
-                      </span>
-                      <span className="font-dm-sans font-semibold text-berkeley">
-                        {selectedCar?.mileage?.toLocaleString()} km
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-dm-sans text-gray-600">
-                        Preț/zi:
-                      </span>
-                      <span className="font-dm-sans font-bold text-jade text-lg">
-                        {selectedCar.price}€
-                      </span>
-                    </div>
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="car-name" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Nume mașină
+              </Label>
+              <Input
+                id="car-name"
+                value={carForm.name}
+                onChange={handleFormChange("name")}
+                required
+                placeholder="Ex: Dacia Logan"
+              />
+            </div>
 
-                {/* Detailed Info */}
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="font-poppins font-semibold text-berkeley text-lg mb-3">
-                      Specificații
-                    </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-4 w-4 text-jade" />
-                        <span className="font-dm-sans text-gray-600">
-                          {selectedCar?.features?.passengers} persoane
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Settings className="h-4 w-4 text-jade" />
-                        <span className="font-dm-sans text-gray-600">
-                          {selectedCar?.features?.transmission}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Fuel className="h-4 w-4 text-jade" />
-                        <span className="font-dm-sans text-gray-600">
-                          {selectedCar?.features?.fuel}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Car className="h-4 w-4 text-jade" />
-                        <span className="font-dm-sans text-gray-600">
-                          {selectedCar?.features?.doors} uși
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+            <div>
+              <Label htmlFor="car-license" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Număr înmatriculare
+              </Label>
+              <Input
+                id="car-license"
+                value={carForm.license_plate}
+                onChange={handleFormChange("license_plate")}
+                required
+                placeholder="B 123 ABC"
+              />
+            </div>
 
-                  <div>
-                    <h4 className="font-poppins font-semibold text-berkeley text-lg mb-3">
-                      Dotări
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedCar?.specs?.map((spec, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full"
-                        >
-                          {spec}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+            <div>
+              <Label htmlFor="car-status" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Status
+              </Label>
+              <Select
+                id="car-status"
+                className="mt-2"
+                value={carForm.status}
+                onValueChange={handleStatusChange}
+              >
+                <option value="available">Disponibilă</option>
+                <option value="maintenance">În service</option>
+                <option value="out_of_service">Indisponibilă</option>
+              </Select>
+            </div>
 
-                  <div>
-                    <h4 className="font-poppins font-semibold text-berkeley text-lg mb-3">
-                      Service
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-dm-sans text-gray-600">
-                          Ultimul service:
-                        </span>
-                        <span className="font-dm-sans text-gray-900">
-                          {selectedCar.lastService
-                            ? new Date(selectedCar.lastService).toLocaleDateString(
-                                "ro-RO",
-                              )
-                            : "-"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-dm-sans text-gray-600">
-                          Următorul service:
-                        </span>
-                        <span
-                          className={`font-dm-sans ${isServiceDue(selectedCar.nextService) ? "text-red-600 font-semibold" : "text-gray-900"}`}
-                        >
-                          {selectedCar.nextService
-                            ? new Date(selectedCar.nextService).toLocaleDateString(
-                                "ro-RO",
-                              )
-                            : "-"}
-                          {isServiceDue(selectedCar.nextService) && (
-                            <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
-                              Urgent
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+            <div>
+              <Label htmlFor="car-type" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Tip vehicul
+              </Label>
+              <Input
+                id="car-type"
+                value={carForm.type_name}
+                onChange={handleFormChange("type_name")}
+                placeholder="Ex: Economic"
+              />
+            </div>
 
-                  <div>
-                    <h4 className="font-poppins font-semibold text-berkeley text-lg mb-3">
-                      Descriere
-                    </h4>
-                    <p className="font-dm-sans text-gray-600 leading-relaxed">
-                      {selectedCar.description}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div>
+              <Label htmlFor="car-year" className="text-sm font-dm-sans font-semibold text-gray-700">
+                An fabricație
+              </Label>
+              <Input
+                id="car-year"
+                type="number"
+                min="1900"
+                max="2100"
+                value={carForm.year}
+                onChange={handleFormChange("year")}
+                placeholder="2024"
+              />
+            </div>
 
-              {/* Actions */}
-              <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <button
-                  className="flex-1 bg-jade text-white py-3 rounded-lg font-semibold font-dm-sans hover:bg-jade/90 transition-colors"
-                  aria-label="Editează Mașina"
-                >
-                  Editează Mașina
-                </button>
-                <button
-                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-gray-50 transition-colors"
-                  aria-label="Vezi Rezervări"
-                >
-                  Vezi Rezervări
-                </button>
-                {selectedCar.status === "available" && (
-                  <button
-                    className="flex-1 border-2 border-yellow-300 text-yellow-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-yellow-50 transition-colors"
-                    aria-label="Trimite la Service"
-                  >
-                    Trimite la Service
-                  </button>
-                )}
-              </div>
+            <div>
+              <Label htmlFor="car-mileage" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Kilometraj
+              </Label>
+              <Input
+                id="car-mileage"
+                type="number"
+                min="0"
+                value={carForm.mileage}
+                onChange={handleFormChange("mileage")}
+                placeholder="45000"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="car-passengers" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Număr persoane
+              </Label>
+              <Input
+                id="car-passengers"
+                type="number"
+                min="1"
+                value={carForm.passengers}
+                onChange={handleFormChange("passengers")}
+                placeholder="5"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="car-transmission" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Transmisie
+              </Label>
+              <Input
+                id="car-transmission"
+                value={carForm.transmission}
+                onChange={handleFormChange("transmission")}
+                placeholder="Manuală / Automată"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="car-fuel" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Combustibil
+              </Label>
+              <Input
+                id="car-fuel"
+                value={carForm.fuel}
+                onChange={handleFormChange("fuel")}
+                placeholder="Benzină / Diesel"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="car-doors" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Număr uși
+              </Label>
+              <Input
+                id="car-doors"
+                type="number"
+                min="2"
+                value={carForm.doors}
+                onChange={handleFormChange("doors")}
+                placeholder="4"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="car-luggage" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Spațiu bagaje
+              </Label>
+              <Input
+                id="car-luggage"
+                type="number"
+                min="0"
+                value={carForm.luggage}
+                onChange={handleFormChange("luggage")}
+                placeholder="2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="car-price" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Preț/zi (€)
+              </Label>
+              <Input
+                id="car-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={carForm.rental_rate}
+                onChange={handleFormChange("rental_rate")}
+                placeholder="45"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="car-specs" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Dotări (separate prin virgulă)
+              </Label>
+              <Input
+                id="car-specs"
+                value={carForm.specs}
+                onChange={handleFormChange("specs")}
+                placeholder="Aer condiționat, Navigație"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="car-last-service" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Ultimul service
+              </Label>
+              <Input
+                id="car-last-service"
+                type="date"
+                value={carForm.last_service}
+                onChange={handleFormChange("last_service")}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="car-next-service" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Următor service
+              </Label>
+              <Input
+                id="car-next-service"
+                type="date"
+                value={carForm.next_service}
+                onChange={handleFormChange("next_service")}
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <Label htmlFor="car-description" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Descriere
+              </Label>
+              <textarea
+                id="car-description"
+                value={carForm.description}
+                onChange={handleFormChange("description")}
+                className="w-full min-h-[120px] rounded-lg border border-gray-300 px-4 py-3 font-dm-sans text-gray-700 focus:ring-2 focus:ring-jade focus:border-transparent transition"
+                placeholder="Detalii despre mașină"
+              />
             </div>
           </div>
-        )}
-      </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={handleCloseModal}
+              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-dm-sans hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label="Anulează"
+              disabled={saving}
+            >
+              Anulează
+            </button>
+            <Button
+              type="submit"
+              disabled={saving}
+              className="px-6 py-2 flex items-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              aria-label={
+                modalMode === "create"
+                  ? "Adaugă mașina"
+                  : "Salvează modificările"
+              }
+            >
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              <span>
+                {modalMode === "create"
+                  ? "Adaugă mașina"
+                  : "Salvează modificările"}
+              </span>
+            </Button>
+          </div>
+        </form>
+      </Popup>
     </div>
   );
 };

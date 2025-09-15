@@ -118,6 +118,22 @@ class ApiClient {
         return this.request<any>(`/cars?${query}`);
     }
 
+    async createCar(payload: Record<string, any>) {
+        const cleanPayload = JSON.parse(JSON.stringify(payload));
+        return this.request<any>(`/cars`, {
+            method: 'POST',
+            body: JSON.stringify(cleanPayload),
+        });
+    }
+
+    async updateCar(id: number, payload: Record<string, any>) {
+        const cleanPayload = JSON.parse(JSON.stringify(payload));
+        return this.request<any>(`/cars/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(cleanPayload),
+        });
+    }
+
     async getCarCategories() {
         return this.request<any>(`/car-categories?limit=100`);
     }

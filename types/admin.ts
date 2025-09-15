@@ -35,6 +35,7 @@ export interface AdminCar {
   id: number;
   name: string;
   type: string;
+  typeId?: number | null;
   image?: string;
   price: number;
   features?: {
@@ -43,6 +44,8 @@ export interface AdminCar {
     fuel: string;
     doors: number;
     luggage: number;
+    transmissionId?: number | null;
+    fuelId?: number | null;
   };
   status: 'available' | 'maintenance' | 'out_of_service';
   rating?: number;
