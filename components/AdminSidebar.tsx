@@ -16,6 +16,7 @@ import {
   Folder,
   Menu,
   X,
+  ConciergeBell,
 } from "lucide-react";
 
 const menuItems = [
@@ -25,6 +26,7 @@ const menuItems = [
   { name: "Mașini", href: "/admin/cars", icon: Car },
   { name: "Categorii", href: "/admin/categories", icon: FolderTree },
   { name: "Dynamic Price", href: "/admin/dynamic-prices", icon: Percent },
+  { name: "Servicii", href: "/admin/services", icon: ConciergeBell },
   {
     name: "Mockup",
     icon: Folder,

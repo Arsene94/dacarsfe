@@ -296,6 +296,20 @@ class ApiClient {
         return this.request<any>(`/services`);
     }
 
+    async createService(payload: { name: string; price: number }) {
+        return this.request<any>(`/services`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async updateService(id: number, payload: { name: string; price: number }) {
+        return this.request<any>(`/services/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    }
+
     async validateDiscountCode(params: { code: string, car_id: number, start_date: any, end_date: any, price: any, price_casco: any, total_price: any, total_price_casco: any }) {
         return this.request<any>(`/coupons/validate`, {
             method: 'POST',
