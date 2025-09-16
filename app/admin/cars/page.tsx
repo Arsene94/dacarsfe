@@ -27,6 +27,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
+import { CKEditor } from "@ckeditor/ckeditor5-react";
+import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
 import apiClient from "@/lib/api";
 import { AdminCar } from "@/types/admin";
 
@@ -124,6 +126,28 @@ const collectSpecs = (raw: unknown): string[] => collectStringValues(raw);
 
 const normalizeImages = (raw: unknown): string[] =>
   collectStringValues(raw).filter((item) => /[./]/.test(item));
+
+const hasMeaningfulHtmlContent = (value: string): boolean => {
+  const cleanedText = value
+    .replace(/<(script|style)[^>]*>.*?<\/\1>/gis, "")
+    .replace(/<br\s*\/?>(\s|&nbsp;|\u00a0)*/gi, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (cleanedText.length > 0) {
+    return true;
+  }
+
+  return /<(img|video|audio|iframe|table|ul|ol|li|blockquote|pre|figure)\b/i.test(value);
+};
+
+const normalizeRichTextValue = (value: string): string => {
+  if (!value) return "";
+  const trimmed = value.trim();
+  return hasMeaningfulHtmlContent(trimmed) ? trimmed : "";
+};
 
 const toDecimal = (value: unknown): number | undefined => {
   if (value == null) return undefined;
@@ -425,8 +449,8 @@ const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
   return {
     id: car.id,
     name: car.name ?? "",
-    description: car.description ?? "",
-    content: car.content ?? "",
+    description: normalizeRichTextValue(car.description ?? ""),
+    content: normalizeRichTextValue(car.content ?? ""),
     images: imageList.length > 0 ? imageList.join("\n") : "",
     license_plate: car.licensePlate ?? "",
     make_id: car.makeId ?? null,
@@ -468,12 +492,14 @@ const buildCarPayload = (form: CarFormState) => {
     status: form.status,
   };
 
-  if (form.description.trim().length > 0) {
-    payload.description = form.description.trim();
+  const description = normalizeRichTextValue(form.description);
+  if (description.length > 0) {
+    payload.description = description;
   }
 
-  if (form.content.trim().length > 0) {
-    payload.content = form.content.trim();
+  const content = normalizeRichTextValue(form.content);
+  if (content.length > 0) {
+    payload.content = content;
   }
 
   const imageValues = collectStringValues(form.images);
@@ -585,6 +611,47 @@ const CarsPage = () => {
   const [vehicleTypeOptions, setVehicleTypeOptions] = useState<LookupOption[]>([]);
   const [transmissionOptions, setTransmissionOptions] = useState<LookupOption[]>([]);
   const [fuelOptions, setFuelOptions] = useState<LookupOption[]>([]);
+
+  const descriptionEditorConfig = useMemo(
+    () => ({
+      toolbar: [
+        "heading",
+        "|",
+        "bold",
+        "italic",
+        "link",
+        "bulletedList",
+        "numberedList",
+        "|",
+        "blockQuote",
+        "undo",
+        "redo",
+      ],
+      placeholder: "Descriere scurtă a mașinii",
+    }),
+    [],
+  );
+
+  const contentEditorConfig = useMemo(
+    () => ({
+      toolbar: [
+        "heading",
+        "|",
+        "bold",
+        "italic",
+        "link",
+        "bulletedList",
+        "numberedList",
+        "|",
+        "blockQuote",
+        "insertTable",
+        "undo",
+        "redo",
+      ],
+      placeholder: "Informații detaliate pentru pagina mașinii",
+    }),
+    [],
+  );
 
   const loadingRef = useRef(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -806,6 +873,24 @@ const CarsPage = () => {
       }));
     };
   };
+
+  const handleRichTextChange = useCallback(
+    (field: "description" | "content") =>
+      (_event: unknown, editorInstance: { getData: () => string }) => {
+        const value = normalizeRichTextValue(editorInstance.getData());
+        setCarForm((prev) => {
+          if (prev[field] === value) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            [field]: value,
+          };
+        });
+      },
+    [],
+  );
 
   const handleStatusChange = (value: string) => {
     setCarForm((prev) => ({
@@ -1640,29 +1725,40 @@ https://exemplu.ro/imagine2.jpg`}
             </div>
 
             <div className="md:col-span-2">
-              <Label htmlFor="car-description" className="text-sm font-dm-sans font-semibold text-gray-700">
+              <Label
+                htmlFor="car-description-editor"
+                className="text-sm font-dm-sans font-semibold text-gray-700"
+              >
                 Descriere
               </Label>
-              <textarea
-                id="car-description"
-                value={carForm.description}
-                onChange={handleFormChange("description")}
-                className="w-full min-h-[120px] rounded-lg border border-gray-300 px-4 py-3 font-dm-sans text-gray-700 focus:ring-2 focus:ring-jade focus:border-transparent transition"
-                placeholder="Descriere scurtă a mașinii"
-              />
+              <div
+                id="car-description-editor"
+                className="mt-2 rich-text-editor rich-text-editor--description"
+              >
+                <CKEditor
+                  editor={ClassicEditor}
+                  data={carForm.description}
+                  config={descriptionEditorConfig}
+                  onChange={handleRichTextChange("description")}
+                />
+              </div>
             </div>
 
             <div className="md:col-span-2">
-              <Label htmlFor="car-content" className="text-sm font-dm-sans font-semibold text-gray-700">
+              <Label
+                htmlFor="car-content-editor"
+                className="text-sm font-dm-sans font-semibold text-gray-700"
+              >
                 Conținut detaliat
               </Label>
-              <textarea
-                id="car-content"
-                value={carForm.content}
-                onChange={handleFormChange("content")}
-                className="w-full min-h-[150px] rounded-lg border border-gray-300 px-4 py-3 font-dm-sans text-gray-700 focus:ring-2 focus:ring-jade focus:border-transparent transition"
-                placeholder="Informații detaliate pentru pagina mașinii"
-              />
+              <div id="car-content-editor" className="mt-2 rich-text-editor rich-text-editor--content">
+                <CKEditor
+                  editor={ClassicEditor}
+                  data={carForm.content}
+                  config={contentEditorConfig}
+                  onChange={handleRichTextChange("content")}
+                />
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
