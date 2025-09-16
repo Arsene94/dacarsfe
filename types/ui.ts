@@ -5,7 +5,8 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 export interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {}
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'outline' | 'danger' | 'blue' | 'yellow';
+  variant?: 'default' | 'secondary' | 'outline' | 'danger' | 'blue' | 'yellow';
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
