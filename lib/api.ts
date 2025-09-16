@@ -39,15 +39,42 @@ class ApiClient {
     ): Promise<T> {
         const url = `${this.baseURL}${endpoint}`;
 
+        const isFormData =
+            typeof FormData !== 'undefined' && options.body instanceof FormData;
+
+        const headers: Record<string, string> = {
+            ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+            ...(this.token && { Authorization: `Bearer ${this.token}` }),
+            'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        };
+
+        const applyHeaders = (source?: HeadersInit) => {
+            if (!source) return;
+            if (source instanceof Headers) {
+                source.forEach((value, key) => {
+                    headers[key] = value;
+                });
+                return;
+            }
+            if (Array.isArray(source)) {
+                source.forEach(([key, value]) => {
+                    headers[key] = value;
+                });
+                return;
+            }
+            Object.entries(source).forEach(([key, value]) => {
+                if (typeof value !== 'undefined') {
+                    headers[key] = String(value);
+                }
+            });
+        };
+
+        applyHeaders(options.headers);
+
         const config: RequestInit = {
             ...options,
             credentials: options.credentials ?? 'omit',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(this.token && { Authorization: `Bearer ${this.token}` }),
-                'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
-                ...(options.headers || {}),
-            },
+            headers,
         };
 
         try {
@@ -118,8 +145,137 @@ class ApiClient {
         return this.request<any>(`/cars?${query}`);
     }
 
-    async getCarCategories() {
-        return this.request<any>(`/car-categories?limit=100`);
+    async createCar(payload: Record<string, any> | FormData) {
+        if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+            return this.request<any>(`/cars`, {
+                method: 'POST',
+                body: payload,
+            });
+        }
+
+        const cleanPayload = JSON.parse(JSON.stringify(payload));
+        return this.request<any>(`/cars`, {
+            method: 'POST',
+            body: JSON.stringify(cleanPayload),
+        });
+    }
+
+    async updateCar(id: number, payload: Record<string, any> | FormData) {
+        if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+            return this.request<any>(`/cars/${id}`, {
+                method: 'PUT',
+                body: payload,
+            });
+        }
+
+        const cleanPayload = JSON.parse(JSON.stringify(payload));
+        return this.request<any>(`/cars/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(cleanPayload),
+        });
+    }
+
+    async getCarMakes(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/car-makes${query ? `?${query}` : ''}`);
+    }
+
+    async getCarMake(id: number | string) {
+        return this.request<any>(`/car-makes/${id}`);
+    }
+
+    async getCarTypes(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/car-types${query ? `?${query}` : ''}`);
+    }
+
+    async getCarType(id: number | string) {
+        return this.request<any>(`/car-types/${id}`);
+    }
+
+    async getCarTransmissions(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/car-transmissions${query ? `?${query}` : ''}`);
+    }
+
+    async getCarTransmission(id: number | string) {
+        return this.request<any>(`/car-transmissions/${id}`);
+    }
+
+    async getCarFuels(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/car-fuels${query ? `?${query}` : ''}`);
+    }
+
+    async getCarFuel(id: number | string) {
+        return this.request<any>(`/car-fuels/${id}`);
+    }
+
+    async getCarCategories(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit || params.limit === 0) {
+            searchParams.append('limit', (params.limit ?? 0).toString());
+        } else {
+            searchParams.append('limit', '100');
+        }
+        const query = searchParams.toString();
+        return this.request<any>(`/car-categories${query ? `?${query}` : ''}`);
+    }
+
+    async getCarCategory(id: number | string) {
+        return this.request<any>(`/car-categories/${id}`);
+    }
+
+    async getCarColors(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/car-colors${query ? `?${query}` : ''}`);
+    }
+
+    async getCarColor(id: number | string) {
+        return this.request<any>(`/car-colors/${id}`);
+    }
+
+    async getUsers(
+        params: {
+            search?: string;
+            page?: number;
+            perPage?: number;
+            roles?: string | string[];
+        } = {},
+    ) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.page) searchParams.append('page', params.page.toString());
+        if (params.perPage) searchParams.append('per_page', params.perPage.toString());
+        if (params.roles) {
+            const values = Array.isArray(params.roles)
+                ? params.roles
+                : [params.roles];
+            const key = Array.isArray(params.roles) ? 'roles[]' : 'roles';
+            values
+                .filter((role): role is string => typeof role === 'string' && role.length > 0)
+                .forEach((role) => {
+                    searchParams.append(key, role);
+                });
+        }
+        const query = searchParams.toString();
+        return this.request<any>(`/users${query ? `?${query}` : ''}`);
     }
 
     async getCarForBooking(uiPayload: any) {

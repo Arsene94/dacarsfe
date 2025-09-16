@@ -28,6 +28,8 @@ const nextConfig = {
         },
         resolveAlias: {
             canvas: './lib/empty.js',
+            '@ckeditor/ckeditor5-react': './lib/vendors/ckeditor/react.tsx',
+            '@ckeditor/ckeditor5-build-classic': './lib/vendors/ckeditor/classic-editor.ts',
         },
     },
 
@@ -133,6 +135,11 @@ const nextConfig = {
         config.resolve.alias = {
             ...(config.resolve.alias || {}),
             canvas: path.resolve(__dirname, 'lib/empty.js'),
+            '@ckeditor/ckeditor5-react': path.resolve(__dirname, 'lib/vendors/ckeditor/react.tsx'),
+            '@ckeditor/ckeditor5-build-classic': path.resolve(
+                __dirname,
+                'lib/vendors/ckeditor/classic-editor.ts'
+            ),
         };
         return config;
     },

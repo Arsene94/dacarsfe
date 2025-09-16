@@ -35,7 +35,11 @@ export interface AdminCar {
   id: number;
   name: string;
   type: string;
+  typeId?: number | null;
+  vehicleTypeId?: number | null;
+  vehicleTypeName?: string;
   image?: string;
+  images?: string[];
   price: number;
   features?: {
     passengers: number;
@@ -43,16 +47,34 @@ export interface AdminCar {
     fuel: string;
     doors: number;
     luggage: number;
+    transmissionId?: number | null;
+    fuelId?: number | null;
   };
+  makeId?: number | null;
+  makeName?: string;
+  transmissionId?: number | null;
+  transmissionName?: string;
+  fuelTypeId?: number | null;
+  fuelTypeName?: string;
   status: 'available' | 'maintenance' | 'out_of_service';
   rating?: number;
   description?: string;
+  content?: string;
   specs?: string[];
   licensePlate?: string;
   year?: number;
   mileage?: number;
   lastService?: string;
   nextService?: string;
+  numberOfSeats?: number | null;
+  numberOfDoors?: number | null;
+  vin?: string;
+  deposit?: number | null;
+  weight?: number | null;
+  weightFront?: number | null;
+  isPartner?: boolean;
+  partnerId?: number | null;
+  partnerPercentage?: number | null;
 }
 
 export interface AdminCategory {

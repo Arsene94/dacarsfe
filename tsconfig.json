@@ -21,7 +21,9 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@/locales/*": ["./messages/*"]
+      "@/locales/*": ["./messages/*"],
+      "@ckeditor/ckeditor5-react": ["./lib/vendors/ckeditor/react"],
+      "@ckeditor/ckeditor5-build-classic": ["./lib/vendors/ckeditor/classic-editor"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
