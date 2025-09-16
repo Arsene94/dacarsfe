@@ -39,15 +39,42 @@ class ApiClient {
     ): Promise<T> {
         const url = `${this.baseURL}${endpoint}`;
 
+        const isFormData =
+            typeof FormData !== 'undefined' && options.body instanceof FormData;
+
+        const headers: Record<string, string> = {
+            ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+            ...(this.token && { Authorization: `Bearer ${this.token}` }),
+            'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        };
+
+        const applyHeaders = (source?: HeadersInit) => {
+            if (!source) return;
+            if (source instanceof Headers) {
+                source.forEach((value, key) => {
+                    headers[key] = value;
+                });
+                return;
+            }
+            if (Array.isArray(source)) {
+                source.forEach(([key, value]) => {
+                    headers[key] = value;
+                });
+                return;
+            }
+            Object.entries(source).forEach(([key, value]) => {
+                if (typeof value !== 'undefined') {
+                    headers[key] = String(value);
+                }
+            });
+        };
+
+        applyHeaders(options.headers);
+
         const config: RequestInit = {
             ...options,
             credentials: options.credentials ?? 'omit',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(this.token && { Authorization: `Bearer ${this.token}` }),
-                'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
-                ...(options.headers || {}),
-            },
+            headers,
         };
 
         try {
@@ -118,7 +145,14 @@ class ApiClient {
         return this.request<any>(`/cars?${query}`);
     }
 
-    async createCar(payload: Record<string, any>) {
+    async createCar(payload: Record<string, any> | FormData) {
+        if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+            return this.request<any>(`/cars`, {
+                method: 'POST',
+                body: payload,
+            });
+        }
+
         const cleanPayload = JSON.parse(JSON.stringify(payload));
         return this.request<any>(`/cars`, {
             method: 'POST',
@@ -126,7 +160,14 @@ class ApiClient {
         });
     }
 
-    async updateCar(id: number, payload: Record<string, any>) {
+    async updateCar(id: number, payload: Record<string, any> | FormData) {
+        if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+            return this.request<any>(`/cars/${id}`, {
+                method: 'PUT',
+                body: payload,
+            });
+        }
+
         const cleanPayload = JSON.parse(JSON.stringify(payload));
         return this.request<any>(`/cars/${id}`, {
             method: 'PUT',

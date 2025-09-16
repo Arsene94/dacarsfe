@@ -27,6 +27,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
+import CarImagesUploader, {
+  type CarImageAsset,
+} from "@/components/admin/car-images-uploader";
 import { CKEditor } from "@ckeditor/ckeditor5-react";
 import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
 import apiClient from "@/lib/api";
@@ -126,6 +129,80 @@ const collectSpecs = (raw: unknown): string[] => collectStringValues(raw);
 
 const normalizeImages = (raw: unknown): string[] =>
   collectStringValues(raw).filter((item) => /[./]/.test(item));
+
+const generateImageId = (() => {
+  let counter = 0;
+  return (prefix: string) => {
+    counter += 1;
+    const uuid =
+      typeof globalThis !== "undefined" &&
+      globalThis.crypto &&
+      typeof globalThis.crypto.randomUUID === "function"
+        ? globalThis.crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    return `${prefix}-${uuid}-${counter}`;
+  };
+})();
+
+const extractImageName = (value: string, fallbackIndex: number): string => {
+  if (!value) {
+    return `imagine-${fallbackIndex + 1}`;
+  }
+
+  try {
+    const candidateUrl = new URL(value, "https://local.placeholder");
+    const segments = candidateUrl.pathname.split(/[/\\\\]/).filter(Boolean);
+    if (segments.length > 0) {
+      return decodeURIComponent(segments[segments.length - 1]);
+    }
+  } catch {
+    const segments = value.split(/[/\\\\]/).filter(Boolean);
+    if (segments.length > 0) {
+      return decodeURIComponent(segments[segments.length - 1]);
+    }
+  }
+
+  return value;
+};
+
+const createExistingImageAsset = (
+  value: string,
+  index: number,
+): CarImageAsset => ({
+  id: generateImageId("existing"),
+  name: extractImageName(value, index),
+  previewUrl: toImageUrl(value),
+  existingPath: value,
+});
+
+const createUploadedImageAsset = (file: File): CarImageAsset => {
+  let preview = "";
+  if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+    preview = URL.createObjectURL(file);
+  }
+
+  return {
+    id: generateImageId("upload"),
+    name: file.name || "imagine",
+    previewUrl: preview,
+    file,
+  };
+};
+
+const releaseImagePreview = (image: CarImageAsset) => {
+  if (!image.file) return;
+  if (!image.previewUrl) return;
+  if (typeof URL === "undefined" || typeof URL.revokeObjectURL !== "function") {
+    return;
+  }
+  if (image.previewUrl.startsWith("blob:")) {
+    try {
+      URL.revokeObjectURL(image.previewUrl);
+    } catch (error) {
+      console.warn("Nu s-a putut elibera previzualizarea imaginii:", error);
+    }
+  }
+};
 
 const hasMeaningfulHtmlContent = (value: string): boolean => {
   const cleanedText = value
@@ -393,7 +470,7 @@ type CarFormState = {
   name: string;
   description: string;
   content: string;
-  images: string;
+  images: CarImageAsset[];
   license_plate: string;
   make_id: number | null;
   status: AdminCar["status"];
@@ -414,12 +491,12 @@ type CarFormState = {
   rental_rate: string;
 };
 
-const EMPTY_FORM: CarFormState = {
+const createEmptyFormState = (): CarFormState => ({
   id: null,
   name: "",
   description: "",
   content: "",
-  images: "",
+  images: [],
   license_plate: "",
   make_id: null,
   status: "available",
@@ -438,12 +515,15 @@ const EMPTY_FORM: CarFormState = {
   partner_id: "",
   partner_percentage: "",
   rental_rate: "",
-};
+});
 
 const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
   const imageList =
     Array.isArray(car.images) && car.images.length > 0
-      ? car.images
+      ? car.images.filter(
+          (value): value is string =>
+            typeof value === "string" && value.trim().length > 0,
+        )
       : [];
 
   return {
@@ -451,7 +531,9 @@ const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
     name: car.name ?? "",
     description: normalizeRichTextValue(car.description ?? ""),
     content: normalizeRichTextValue(car.content ?? ""),
-    images: imageList.length > 0 ? imageList.join("\n") : "",
+    images: imageList.map((value, index) =>
+      createExistingImageAsset(value, index),
+    ),
     license_plate: car.licensePlate ?? "",
     make_id: car.makeId ?? null,
     status: car.status,
@@ -500,11 +582,6 @@ const buildCarPayload = (form: CarFormState) => {
   const content = normalizeRichTextValue(form.content);
   if (content.length > 0) {
     payload.content = content;
-  }
-
-  const imageValues = collectStringValues(form.images);
-  if (imageValues.length > 0) {
-    payload.images = imageValues;
   }
 
   if (form.make_id != null) {
@@ -579,7 +656,65 @@ const buildCarPayload = (form: CarFormState) => {
     payload.rental_rate = rentalRate;
   }
 
-  return payload;
+  const orderedImages: Array<{
+    type: "file" | "existing";
+    value: File | string;
+  }> = [];
+  let hasUploads = false;
+
+  form.images.forEach((image) => {
+    if (image.file) {
+      hasUploads = true;
+      orderedImages.push({ type: "file", value: image.file });
+      return;
+    }
+
+    if (image.existingPath && image.existingPath.trim().length > 0) {
+      orderedImages.push({
+        type: "existing",
+        value: image.existingPath.trim(),
+      });
+    }
+  });
+
+  if (!hasUploads) {
+    if (orderedImages.length > 0) {
+      payload.images = orderedImages.map((entry) => entry.value as string);
+    }
+    return payload;
+  }
+
+  const formData = new FormData();
+  const appendValue = (key: string, value: unknown) => {
+    if (value == null) return;
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => appendValue(`${key}[]`, item));
+      return;
+    }
+
+    if (typeof value === "boolean") {
+      formData.append(key, value ? "1" : "0");
+      return;
+    }
+
+    formData.append(key, String(value));
+  };
+
+  Object.entries(payload).forEach(([key, value]) => {
+    appendValue(key, value);
+  });
+
+  orderedImages.forEach((entry) => {
+    if (entry.type === "file") {
+      const file = entry.value as File;
+      formData.append("images[]", file, file.name);
+    } else {
+      formData.append("images[]", entry.value as string);
+    }
+  });
+
+  return formData;
 };
 
 const CarsPage = () => {
@@ -604,7 +739,9 @@ const CarsPage = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [carForm, setCarForm] = useState<CarFormState>(EMPTY_FORM);
+  const [carForm, setCarForm] = useState<CarFormState>(() =>
+    createEmptyFormState(),
+  );
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [makeOptions, setMakeOptions] = useState<LookupOption[]>([]);
@@ -655,6 +792,60 @@ const CarsPage = () => {
 
   const loadingRef = useRef(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const cleanupImages = useCallback((images: CarImageAsset[]) => {
+    images.forEach((image) => {
+      releaseImagePreview(image);
+    });
+  }, []);
+
+  const handleImagesAdd = useCallback(
+    (files: File[]) => {
+      if (!files || files.length === 0) return;
+
+      const imageFiles = files.filter((file) => {
+        if (file.type) {
+          return file.type.startsWith("image/");
+        }
+        return /\.(jpe?g|png|gif|webp|avif|heic|heif)$/i.test(file.name);
+      });
+      if (imageFiles.length === 0) return;
+
+      setCarForm((prev) => ({
+        ...prev,
+        images: [...prev.images, ...imageFiles.map(createUploadedImageAsset)],
+      }));
+    },
+    [setCarForm],
+  );
+
+  const handleImageRemove = useCallback(
+    (id: string) => {
+      setCarForm((prev) => {
+        const target = prev.images.find((image) => image.id === id);
+        if (!target) {
+          return prev;
+        }
+
+        releaseImagePreview(target);
+        return {
+          ...prev,
+          images: prev.images.filter((image) => image.id !== id),
+        };
+      });
+    },
+    [setCarForm],
+  );
+
+  const handleImagesReorder = useCallback(
+    (nextImages: CarImageAsset[]) => {
+      setCarForm((prev) => ({
+        ...prev,
+        images: nextImages,
+      }));
+    },
+    [setCarForm],
+  );
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -842,13 +1033,15 @@ const CarsPage = () => {
   }, [fetchCars, hasMore, currentPage]);
 
   const handleOpenCreate = () => {
-    setCarForm(EMPTY_FORM);
+    cleanupImages(carForm.images);
+    setCarForm(createEmptyFormState());
     setModalMode("create");
     setFormError(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (car: AdminCar) => {
+    cleanupImages(carForm.images);
     setCarForm(mapAdminCarToFormState(car));
     setModalMode("edit");
     setFormError(null);
@@ -1000,6 +1193,8 @@ const CarsPage = () => {
       });
 
       setIsModalOpen(false);
+      cleanupImages(carForm.images);
+      setCarForm(createEmptyFormState());
       await fetchMetrics();
       setHasMore(true);
       setCurrentPage(1);
@@ -1711,16 +1906,19 @@ const CarsPage = () => {
             </div>
 
             <div className="md:col-span-2">
-              <Label htmlFor="car-images" className="text-sm font-dm-sans font-semibold text-gray-700">
-                Imagini (o adresă per linie)
+              <Label
+                htmlFor="car-images-uploader"
+                className="text-sm font-dm-sans font-semibold text-gray-700"
+              >
+                Imagini
               </Label>
-              <textarea
-                id="car-images"
-                value={carForm.images}
-                onChange={handleFormChange("images")}
-                className="w-full min-h-[100px] rounded-lg border border-gray-300 px-4 py-3 font-dm-sans text-gray-700 focus:ring-2 focus:ring-jade focus:border-transparent transition"
-                placeholder={`https://exemplu.ro/imagine1.jpg
-https://exemplu.ro/imagine2.jpg`}
+              <CarImagesUploader
+                id="car-images-uploader"
+                images={carForm.images}
+                onAddFiles={handleImagesAdd}
+                onRemove={handleImageRemove}
+                onReorder={handleImagesReorder}
+                disabled={saving}
               />
             </div>
 
