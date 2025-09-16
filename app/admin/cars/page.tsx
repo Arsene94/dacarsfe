@@ -23,6 +23,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import { SearchSelect } from "@/components/ui/search-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -275,6 +276,69 @@ const extractLookupOptions = (response: any): LookupOption[] => {
   return options.sort((a, b) =>
     a.name.localeCompare(b.name, "ro", { sensitivity: "base" }),
   );
+};
+
+type PartnerOption = {
+  id: number;
+  name: string;
+  email?: string | null;
+  username?: string | null;
+};
+
+const mapRawUserToPartnerOption = (raw: any): PartnerOption | null => {
+  if (!raw || typeof raw !== "object") return null;
+
+  const id = toInteger((raw as any).id);
+  if (id == null) return null;
+
+  const firstName =
+    typeof (raw as any).first_name === "string"
+      ? (raw as any).first_name.trim()
+      : "";
+  const lastName =
+    typeof (raw as any).last_name === "string"
+      ? (raw as any).last_name.trim()
+      : "";
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+
+  const nameCandidate = [
+    typeof (raw as any).name === "string" ? (raw as any).name : undefined,
+    fullName.length > 0 ? fullName : undefined,
+    typeof (raw as any).username === "string"
+      ? (raw as any).username
+      : undefined,
+    typeof (raw as any).email === "string" ? (raw as any).email : undefined,
+  ].find((value) => typeof value === "string" && value.trim().length > 0);
+
+  const email =
+    typeof (raw as any).email === "string"
+      ? (raw as any).email.trim()
+      : null;
+  const username =
+    typeof (raw as any).username === "string"
+      ? (raw as any).username.trim()
+      : null;
+
+  return {
+    id,
+    name: nameCandidate ? nameCandidate.trim() : `Utilizator #${id}`,
+    email,
+    username,
+  };
+};
+
+const extractPartnerOptions = (response: any): PartnerOption[] => {
+  const list = extractCarsList(response);
+  const options: PartnerOption[] = [];
+
+  list.forEach((item) => {
+    const option = mapRawUserToPartnerOption(item);
+    if (option) {
+      options.push(option);
+    }
+  });
+
+  return options;
 };
 
 const normalizeStatus = (status: unknown): AdminCar["status"] => {
@@ -748,6 +812,12 @@ const CarsPage = () => {
   const [vehicleTypeOptions, setVehicleTypeOptions] = useState<LookupOption[]>([]);
   const [transmissionOptions, setTransmissionOptions] = useState<LookupOption[]>([]);
   const [fuelOptions, setFuelOptions] = useState<LookupOption[]>([]);
+  const [partnerSearch, setPartnerSearch] = useState("");
+  const [partnerResults, setPartnerResults] = useState<PartnerOption[]>([]);
+  const [partnerSearchActive, setPartnerSearchActive] = useState(false);
+  const [selectedPartner, setSelectedPartner] = useState<PartnerOption | null>(
+    null,
+  );
 
   const descriptionEditorConfig = useMemo(
     () => ({
@@ -792,6 +862,41 @@ const CarsPage = () => {
 
   const loadingRef = useRef(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const partnerRequestRef = useRef(0);
+
+  const resetPartnerLookup = useCallback(() => {
+    setPartnerSearch("");
+    setPartnerResults([]);
+    setPartnerSearchActive(false);
+    setSelectedPartner(null);
+    partnerRequestRef.current += 1;
+  }, []);
+
+  const fetchPartnerOptions = useCallback(
+    async (query: string) => {
+      const trimmed = query.trim();
+      const requestId = ++partnerRequestRef.current;
+
+      if (trimmed.length === 0) {
+        setPartnerResults([]);
+        return;
+      }
+
+      try {
+        const response = await apiClient.getUsers({
+          search: trimmed,
+          perPage: 10,
+        });
+        if (partnerRequestRef.current !== requestId) return;
+        setPartnerResults(extractPartnerOptions(response));
+      } catch (err) {
+        if (partnerRequestRef.current !== requestId) return;
+        console.error("Error searching partner users:", err);
+        setPartnerResults([]);
+      }
+    },
+    [],
+  );
 
   const cleanupImages = useCallback((images: CarImageAsset[]) => {
     images.forEach((image) => {
@@ -853,6 +958,35 @@ const CarsPage = () => {
     }, 350);
     return () => clearTimeout(handler);
   }, [searchInput]);
+
+  useEffect(() => {
+    if (!partnerSearchActive) return;
+    const handler = setTimeout(() => {
+      fetchPartnerOptions(partnerSearch);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [partnerSearch, partnerSearchActive, fetchPartnerOptions]);
+
+  useEffect(() => {
+    if (!carForm.is_partner) return;
+    if (!carForm.partner_id) return;
+    const match = partnerResults.find(
+      (item) => String(item.id) === carForm.partner_id,
+    );
+    if (!match) return;
+    setSelectedPartner((prev) => {
+      if (
+        prev &&
+        prev.id === match.id &&
+        prev.name === match.name &&
+        prev.email === match.email &&
+        prev.username === match.username
+      ) {
+        return prev;
+      }
+      return match;
+    });
+  }, [carForm.is_partner, carForm.partner_id, partnerResults]);
 
   useEffect(() => {
     let active = true;
@@ -1034,6 +1168,7 @@ const CarsPage = () => {
 
   const handleOpenCreate = () => {
     cleanupImages(carForm.images);
+    resetPartnerLookup();
     setCarForm(createEmptyFormState());
     setModalMode("create");
     setFormError(null);
@@ -1042,7 +1177,48 @@ const CarsPage = () => {
 
   const handleOpenEdit = (car: AdminCar) => {
     cleanupImages(carForm.images);
+    resetPartnerLookup();
     setCarForm(mapAdminCarToFormState(car));
+    if (car.partnerId != null) {
+      const fallback = `Utilizator #${car.partnerId}`;
+      const partnerName =
+        typeof (car as any).partnerName === "string"
+          ? (car as any).partnerName
+          : typeof (car as any).partner_name === "string"
+          ? (car as any).partner_name
+          : fallback;
+      const partnerEmail =
+        typeof (car as any).partnerEmail === "string"
+          ? (car as any).partnerEmail
+          : typeof (car as any).partner_email === "string"
+          ? (car as any).partner_email
+          : null;
+      const partnerUsername =
+        typeof (car as any).partnerUsername === "string"
+          ? (car as any).partnerUsername
+          : typeof (car as any).partner_username === "string"
+          ? (car as any).partner_username
+          : null;
+
+      setSelectedPartner({
+        id: car.partnerId,
+        name:
+          typeof partnerName === "string" && partnerName.trim().length > 0
+            ? partnerName.trim()
+            : fallback,
+        email:
+          typeof partnerEmail === "string" && partnerEmail.trim().length > 0
+            ? partnerEmail.trim()
+            : null,
+        username:
+          typeof partnerUsername === "string" &&
+          partnerUsername.trim().length > 0
+            ? partnerUsername.trim()
+            : null,
+      });
+
+      void fetchPartnerOptions(String(car.partnerId));
+    }
     setModalMode("edit");
     setFormError(null);
     setIsModalOpen(true);
@@ -1051,6 +1227,7 @@ const CarsPage = () => {
   const handleCloseModal = () => {
     if (saving) return;
     setIsModalOpen(false);
+    resetPartnerLookup();
   };
 
   const handleFormChange = (
@@ -1152,11 +1329,29 @@ const CarsPage = () => {
     });
   };
 
-  const handlePartnerChange = (value: string) => {
-    setCarForm((prev) => {
-      const nextIsPartner =
-        value === "true" ? true : value === "false" ? false : prev.is_partner;
+  const handlePartnerSearchOpen = useCallback(() => {
+    setPartnerSearchActive(true);
+    if (
+      carForm.is_partner &&
+      carForm.partner_id &&
+      partnerResults.length === 0
+    ) {
+      fetchPartnerOptions(carForm.partner_id);
+    }
+  }, [carForm.is_partner, carForm.partner_id, partnerResults.length, fetchPartnerOptions]);
 
+  const handlePartnerSelect = useCallback((user: PartnerOption) => {
+    setSelectedPartner(user);
+    setCarForm((prev) => ({
+      ...prev,
+      partner_id: user?.id != null ? String(user.id) : "",
+    }));
+    setPartnerSearch("");
+  }, []);
+
+  const handlePartnerChange = (value: string) => {
+    const nextIsPartner = value === "true";
+    setCarForm((prev) => {
       if (!nextIsPartner) {
         return {
           ...prev,
@@ -1168,9 +1363,12 @@ const CarsPage = () => {
 
       return {
         ...prev,
-        is_partner: nextIsPartner,
+        is_partner: true,
       };
     });
+    if (!nextIsPartner) {
+      resetPartnerLookup();
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -1896,16 +2094,67 @@ const CarsPage = () => {
                     htmlFor="car-partner-id"
                     className="text-sm font-dm-sans font-semibold text-gray-700"
                   >
-                    ID partener
+                    Partener
                   </Label>
-                  <Input
-                    id="car-partner-id"
-                    type="number"
-                    min="0"
-                    value={carForm.partner_id}
-                    onChange={handleFormChange("partner_id")}
-                    placeholder="123"
-                  />
+                  <div className="mt-2">
+                    <SearchSelect
+                      id="car-partner-id"
+                      value={carForm.is_partner ? selectedPartner : null}
+                      search={partnerSearch}
+                      items={partnerResults}
+                      onSearch={(value) => {
+                        setPartnerSearch(value);
+                        if (value.trim().length === 0) {
+                          setPartnerResults([]);
+                        }
+                      }}
+                      onSelect={handlePartnerSelect}
+                      onOpen={handlePartnerSearchOpen}
+                      placeholder="Selectează partenerul"
+                      renderItem={(user) => {
+                        const secondaryInfo = [user.username, user.email]
+                          .filter(
+                            (value): value is string =>
+                              typeof value === "string" &&
+                              value.trim().length > 0,
+                          )
+                          .join(" • ");
+
+                        return (
+                          <div className="min-w-0">
+                            <div className="font-dm-sans font-semibold truncate">
+                              {user.name}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {secondaryInfo || "Fără detalii suplimentare"}
+                            </div>
+                          </div>
+                        );
+                      }}
+                      renderValue={(user) => {
+                        const secondaryInfo = [user.username, user.email]
+                          .filter(
+                            (value): value is string =>
+                              typeof value === "string" &&
+                              value.trim().length > 0,
+                          )
+                          .join(" • ");
+
+                        return (
+                          <div className="flex flex-col">
+                            <span className="font-dm-sans font-semibold text-sm">
+                              {user.name}
+                            </span>
+                            {secondaryInfo && (
+                              <span className="text-xs text-gray-500">
+                                {secondaryInfo}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div>

@@ -251,6 +251,15 @@ class ApiClient {
         return this.request<any>(`/car-colors/${id}`);
     }
 
+    async getUsers(params: { search?: string; page?: number; perPage?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.page) searchParams.append('page', params.page.toString());
+        if (params.perPage) searchParams.append('per_page', params.perPage.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/users${query ? `?${query}` : ''}`);
+    }
+
     async getCarForBooking(uiPayload: any) {
         const mapped = mapCarSearchFilters(uiPayload);
         const query  = toQuery(mapped);
