@@ -134,8 +134,80 @@ class ApiClient {
         });
     }
 
-    async getCarCategories() {
-        return this.request<any>(`/car-categories?limit=100`);
+    async getCarMakes(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/car-makes${query ? `?${query}` : ''}`);
+    }
+
+    async getCarMake(id: number | string) {
+        return this.request<any>(`/car-makes/${id}`);
+    }
+
+    async getCarTypes(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/car-types${query ? `?${query}` : ''}`);
+    }
+
+    async getCarType(id: number | string) {
+        return this.request<any>(`/car-types/${id}`);
+    }
+
+    async getCarTransmissions(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/car-transmissions${query ? `?${query}` : ''}`);
+    }
+
+    async getCarTransmission(id: number | string) {
+        return this.request<any>(`/car-transmissions/${id}`);
+    }
+
+    async getCarFuels(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/car-fuels${query ? `?${query}` : ''}`);
+    }
+
+    async getCarFuel(id: number | string) {
+        return this.request<any>(`/car-fuels/${id}`);
+    }
+
+    async getCarCategories(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit || params.limit === 0) {
+            searchParams.append('limit', (params.limit ?? 0).toString());
+        } else {
+            searchParams.append('limit', '100');
+        }
+        const query = searchParams.toString();
+        return this.request<any>(`/car-categories${query ? `?${query}` : ''}`);
+    }
+
+    async getCarCategory(id: number | string) {
+        return this.request<any>(`/car-categories/${id}`);
+    }
+
+    async getCarColors(params: { search?: string; limit?: number } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append('search', params.search);
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<any>(`/car-colors${query ? `?${query}` : ''}`);
+    }
+
+    async getCarColor(id: number | string) {
+        return this.request<any>(`/car-colors/${id}`);
     }
 
     async getCarForBooking(uiPayload: any) {

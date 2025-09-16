@@ -91,25 +91,89 @@ const toDecimalFromString = (value: string): number | undefined => {
   return parsePrice(value);
 };
 
-const collectSpecs = (raw: unknown): string[] => {
-  if (!raw) return [];
-  if (Array.isArray(raw)) {
-    return raw
-      .map((item) => (item != null ? String(item).trim() : ""))
-      .filter((item) => item.length > 0);
-  }
-  if (typeof raw === "object") {
-    return Object.values(raw as Record<string, unknown>)
-      .map((item) => (item != null ? String(item).trim() : ""))
-      .filter((item) => item.length > 0);
-  }
+const collectStringValues = (raw: unknown): string[] => {
+  if (raw == null) return [];
+
   if (typeof raw === "string") {
     return raw
       .split(/[,;\n]+/)
       .map((item) => item.trim())
       .filter((item) => item.length > 0);
   }
+
+  if (typeof raw === "number" || typeof raw === "boolean") {
+    const value = String(raw).trim();
+    return value.length > 0 ? [value] : [];
+  }
+
+  if (Array.isArray(raw)) {
+    return raw
+      .flatMap((item) => collectStringValues(item))
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+
+  if (typeof raw === "object") {
+    return collectStringValues(Object.values(raw as Record<string, unknown>));
+  }
+
   return [];
+};
+
+const collectSpecs = (raw: unknown): string[] => collectStringValues(raw);
+
+const normalizeImages = (raw: unknown): string[] =>
+  collectStringValues(raw).filter((item) => /[./]/.test(item));
+
+const toDecimal = (value: unknown): number | undefined => {
+  if (value == null) return undefined;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+  if (typeof value === "string") {
+    return toDecimalFromString(value);
+  }
+  return undefined;
+};
+
+const toBoolean = (value: unknown): boolean | undefined => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["1", "true", "da", "yes", "y"].includes(normalized)) return true;
+    if (["0", "false", "nu", "no", "n"].includes(normalized)) return false;
+  }
+  return undefined;
+};
+
+type LookupOption = { id: number; name: string };
+
+const extractLookupOptions = (response: any): LookupOption[] => {
+  const list = extractCarsList(response);
+  const options: LookupOption[] = [];
+
+  list.forEach((item) => {
+    if (!item || typeof item !== "object") return;
+
+    const id = toInteger((item as any).id);
+    const name =
+      typeof (item as any).name === "string"
+        ? (item as any).name
+        : typeof (item as any).title === "string"
+        ? (item as any).title
+        : typeof (item as any).label === "string"
+        ? (item as any).label
+        : "";
+
+    if (id != null && name.trim().length > 0) {
+      options.push({ id, name: name.trim() });
+    }
+  });
+
+  return options.sort((a, b) =>
+    a.name.localeCompare(b.name, "ro", { sensitivity: "base" }),
+  );
 };
 
 const normalizeStatus = (status: unknown): AdminCar["status"] => {
@@ -155,6 +219,16 @@ const extractLastPage = (response: any, fallback: number): number => {
 };
 
 const mapApiCarToAdminCar = (raw: any): AdminCar => {
+  const makeInfo = raw?.make ?? raw?.car_make ?? raw?.brand ?? null;
+  const makeName =
+    typeof makeInfo === "string"
+      ? makeInfo
+      : makeInfo?.name ?? raw?.make_name ?? raw?.brand_name ?? "";
+  const makeId =
+    (typeof makeInfo === "object" && makeInfo
+      ? toInteger((makeInfo as any).id)
+      : undefined) ?? toInteger(raw?.make_id);
+
   const typeInfo = raw?.type ?? raw?.vehicle_type ?? raw?.car_type ?? null;
   const typeName =
     typeof typeInfo === "string"
@@ -165,7 +239,7 @@ const mapApiCarToAdminCar = (raw: any): AdminCar => {
       ? toInteger((typeInfo as any).id) ?? null
       : toInteger(raw?.type_id ?? raw?.vehicle_type_id) ?? null;
 
-  const transmissionInfo = raw?.transmission ?? null;
+  const transmissionInfo = raw?.transmission ?? raw?.car_transmission ?? null;
   const transmissionName =
     typeof transmissionInfo === "string"
       ? transmissionInfo
@@ -175,7 +249,7 @@ const mapApiCarToAdminCar = (raw: any): AdminCar => {
       ? toInteger((transmissionInfo as any).id) ?? null
       : toInteger(raw?.transmission_id) ?? null;
 
-  const fuelInfo = raw?.fuel ?? null;
+  const fuelInfo = raw?.fuel ?? raw?.car_fuel ?? null;
   const fuelName =
     typeof fuelInfo === "string"
       ? fuelInfo
@@ -185,17 +259,26 @@ const mapApiCarToAdminCar = (raw: any): AdminCar => {
       ? toInteger((fuelInfo as any).id) ?? null
       : toInteger(raw?.fuel_id) ?? null;
 
-  const passengers =
-    toInteger(raw?.number_of_seats ?? raw?.passengers ?? raw?.seats) ?? 0;
-  const doors = toInteger(raw?.doors) ?? 4;
+  const seatsValue =
+    toInteger(
+      raw?.number_of_seats ??
+        raw?.passengers ??
+        raw?.seats ??
+        raw?.capacity ??
+        raw?.capacity_passengers,
+    ) ?? undefined;
+  const passengers = seatsValue ?? 0;
+  const doorsValue = toInteger(raw?.number_of_doors ?? raw?.doors) ?? undefined;
+  const doors = doorsValue ?? 4;
   const luggage = toInteger(raw?.luggage ?? raw?.boot_space) ?? 2;
 
+  const rawContent =
+    typeof raw?.content === "string" ? raw.content : "";
+  const rawDescription =
+    typeof raw?.description === "string" ? raw.description : "";
+
   const descriptionSource =
-    typeof raw?.content === "string" && raw.content.trim().length > 0
-      ? raw.content
-      : typeof raw?.description === "string"
-      ? raw.description
-      : "";
+    rawContent.trim().length > 0 ? rawContent : rawDescription;
 
   const mileage =
     toInteger(raw?.mileage ?? raw?.kilometers ?? raw?.odometer ?? raw?.km) ??
@@ -206,17 +289,44 @@ const mapApiCarToAdminCar = (raw: any): AdminCar => {
   const nextService =
     raw?.next_service_date ?? raw?.next_service ?? raw?.service?.next_date;
 
+  const rawImages =
+    raw?.images ?? raw?.gallery ?? raw?.car_images ?? raw?.media ?? undefined;
+  const imageList = normalizeImages(rawImages);
+  const firstImageCandidate =
+    raw?.image_preview ??
+    raw?.image ??
+    raw?.thumbnail ??
+    raw?.cover_image ??
+    raw?.cover ??
+    (imageList.length > 0 ? imageList[0] : getFirstImage(rawImages));
+
+  const depositValue = toDecimal(raw?.deposit ?? raw?.security_deposit);
+  const weightValue = toDecimal(raw?.weight);
+  const weightFrontValue = toDecimal(raw?.weight_front ?? raw?.front_weight);
+  const partnerIdValue = toInteger(raw?.partner_id);
+  const partnerPercentageValue = toDecimal(
+    raw?.partner_percentage ?? raw?.partner_share ?? raw?.partner_rate,
+  );
+  const isPartnerValue =
+    toBoolean(raw?.is_partner ?? raw?.partner ?? raw?.has_partner) ?? false;
+  const vinValue =
+    typeof raw?.vin === "string"
+      ? raw.vin
+      : typeof raw?.vehicle_identification_number === "string"
+      ? raw.vehicle_identification_number
+      : "";
+
   return {
     id: Number(raw?.id) || raw?.id,
     name: raw?.name ?? "",
     type: typeName ? typeName : "Nespecificat",
     typeId,
-    image: toImageUrl(
-      raw?.image_preview ??
-        raw?.image ??
-        raw?.thumbnail ??
-        getFirstImage(raw?.images),
-    ),
+    vehicleTypeId: typeId ?? null,
+    vehicleTypeName: typeName,
+    image: toImageUrl(firstImageCandidate),
+    images: imageList,
+    makeId: makeId ?? null,
+    makeName,
     price:
       parsePrice(raw?.rental_rate ?? raw?.price ?? raw?.daily_rate ?? raw?.rate),
     features: {
@@ -228,82 +338,128 @@ const mapApiCarToAdminCar = (raw: any): AdminCar => {
       doors,
       luggage,
     },
+    transmissionId,
+    transmissionName,
+    fuelTypeId: fuelId,
+    fuelTypeName: fuelName,
     status: normalizeStatus(raw?.status ?? raw?.availability ?? raw?.state),
     rating: toNumber(raw?.avg_review),
     description: descriptionSource,
+    content: rawContent,
     specs: collectSpecs(raw?.specs ?? raw?.options ?? raw?.features),
     licensePlate: raw?.license_plate ?? raw?.licensePlate ?? raw?.plate ?? "",
     year: toInteger(raw?.year ?? raw?.manufactured_year ?? raw?.production_year),
     mileage,
     lastService: typeof lastService === "string" ? lastService : undefined,
     nextService: typeof nextService === "string" ? nextService : undefined,
+    numberOfSeats: seatsValue ?? null,
+    numberOfDoors: doorsValue ?? null,
+    vin: vinValue,
+    deposit: depositValue,
+    weight: weightValue,
+    weightFront: weightFrontValue,
+    isPartner: isPartnerValue,
+    partnerId: partnerIdValue ?? null,
+    partnerPercentage: partnerPercentageValue,
   };
 };
 
 type CarFormState = {
   id: number | null;
   name: string;
+  description: string;
+  content: string;
+  images: string;
   license_plate: string;
+  make_id: number | null;
   status: AdminCar["status"];
-  type_id: number | null;
-  type_name: string;
-  rental_rate: string;
   year: string;
   mileage: string;
-  passengers: string;
-  transmission: string;
-  fuel: string;
-  doors: string;
-  luggage: string;
-  description: string;
-  specs: string;
-  last_service: string;
-  next_service: string;
+  vehicle_type_id: number | null;
+  transmission_id: number | null;
+  fuel_type_id: number | null;
+  number_of_seats: string;
+  number_of_doors: string;
+  vin: string;
+  deposit: string;
+  weight: string;
+  weight_front: string;
+  is_partner: boolean;
+  partner_id: string;
+  partner_percentage: string;
+  rental_rate: string;
 };
 
 const EMPTY_FORM: CarFormState = {
   id: null,
   name: "",
+  description: "",
+  content: "",
+  images: "",
   license_plate: "",
+  make_id: null,
   status: "available",
-  type_id: null,
-  type_name: "",
-  rental_rate: "",
   year: "",
   mileage: "",
-  passengers: "",
-  transmission: "",
-  fuel: "",
-  doors: "",
-  luggage: "",
-  description: "",
-  specs: "",
-  last_service: "",
-  next_service: "",
+  vehicle_type_id: null,
+  transmission_id: null,
+  fuel_type_id: null,
+  number_of_seats: "",
+  number_of_doors: "",
+  vin: "",
+  deposit: "",
+  weight: "",
+  weight_front: "",
+  is_partner: false,
+  partner_id: "",
+  partner_percentage: "",
+  rental_rate: "",
 };
 
-const mapAdminCarToFormState = (car: AdminCar): CarFormState => ({
-  id: car.id,
-  name: car.name ?? "",
-  license_plate: car.licensePlate ?? "",
-  status: car.status,
-  type_id: car.typeId ?? null,
-  type_name: car.type ?? "",
-  rental_rate: car.price ? String(car.price) : "",
-  year: car.year ? String(car.year) : "",
-  mileage: car.mileage ? String(car.mileage) : "",
-  passengers: car.features?.passengers
-    ? String(car.features.passengers)
-    : "",
-  transmission: car.features?.transmission ?? "",
-  fuel: car.features?.fuel ?? "",
-  doors: car.features?.doors ? String(car.features.doors) : "",
-  luggage: car.features?.luggage ? String(car.features.luggage) : "",
-  description: car.description ?? "",
-  specs: Array.isArray(car.specs) ? car.specs.join(", ") : "",
-  last_service: car.lastService ? car.lastService.slice(0, 10) : "",
-  next_service: car.nextService ? car.nextService.slice(0, 10) : "",
-});
+const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
+  const imageList =
+    Array.isArray(car.images) && car.images.length > 0
+      ? car.images
+      : [];
+
+  return {
+    id: car.id,
+    name: car.name ?? "",
+    description: car.description ?? "",
+    content: car.content ?? "",
+    images: imageList.length > 0 ? imageList.join("\n") : "",
+    license_plate: car.licensePlate ?? "",
+    make_id: car.makeId ?? null,
+    status: car.status,
+    year: car.year != null ? String(car.year) : "",
+    mileage: car.mileage != null ? String(car.mileage) : "",
+    vehicle_type_id: car.vehicleTypeId ?? car.typeId ?? null,
+    transmission_id:
+      car.transmissionId ?? car.features?.transmissionId ?? null,
+    fuel_type_id: car.fuelTypeId ?? car.features?.fuelId ?? null,
+    number_of_seats:
+      car.numberOfSeats != null
+        ? String(car.numberOfSeats)
+        : car.features?.passengers && car.features.passengers > 0
+        ? String(car.features.passengers)
+        : "",
+    number_of_doors:
+      car.numberOfDoors != null
+        ? String(car.numberOfDoors)
+        : car.features?.doors && car.features.doors > 0
+        ? String(car.features.doors)
+        : "",
+    vin: car.vin ?? "",
+    deposit: car.deposit != null ? String(car.deposit) : "",
+    weight: car.weight != null ? String(car.weight) : "",
+    weight_front: car.weightFront != null ? String(car.weightFront) : "",
+    is_partner: car.isPartner ?? false,
+    partner_id: car.partnerId != null ? String(car.partnerId) : "",
+    partner_percentage:
+      car.partnerPercentage != null ? String(car.partnerPercentage) : "",
+    rental_rate: car.price ? String(car.price) : "",
+  };
+};
 
 const buildCarPayload = (form: CarFormState) => {
   const payload: Record<string, any> = {
@@ -312,15 +468,21 @@ const buildCarPayload = (form: CarFormState) => {
     status: form.status,
   };
 
-  if (form.type_id) {
-    payload.type_id = form.type_id;
-  } else if (form.type_name.trim().length > 0) {
-    payload.type_name = form.type_name.trim();
+  if (form.description.trim().length > 0) {
+    payload.description = form.description.trim();
   }
 
-  const rentalRate = toDecimalFromString(form.rental_rate);
-  if (rentalRate !== undefined) {
-    payload.rental_rate = rentalRate;
+  if (form.content.trim().length > 0) {
+    payload.content = form.content.trim();
+  }
+
+  const imageValues = collectStringValues(form.images);
+  if (imageValues.length > 0) {
+    payload.images = imageValues;
+  }
+
+  if (form.make_id != null) {
+    payload.make_id = form.make_id;
   }
 
   const year = toInteger(form.year);
@@ -333,46 +495,62 @@ const buildCarPayload = (form: CarFormState) => {
     payload.mileage = mileage;
   }
 
-  const passengers = toInteger(form.passengers);
-  if (passengers !== undefined) {
-    payload.number_of_seats = passengers;
+  if (form.vehicle_type_id != null) {
+    payload.vehicle_type_id = form.vehicle_type_id;
   }
 
-  const doors = toInteger(form.doors);
+  if (form.transmission_id != null) {
+    payload.transmission_id = form.transmission_id;
+  }
+
+  if (form.fuel_type_id != null) {
+    payload.fuel_type_id = form.fuel_type_id;
+  }
+
+  const seats = toInteger(form.number_of_seats);
+  if (seats !== undefined) {
+    payload.number_of_seats = seats;
+  }
+
+  const doors = toInteger(form.number_of_doors);
   if (doors !== undefined) {
-    payload.doors = doors;
+    payload.number_of_doors = doors;
   }
 
-  const luggage = toInteger(form.luggage);
-  if (luggage !== undefined) {
-    payload.luggage = luggage;
+  if (form.vin.trim().length > 0) {
+    payload.vin = form.vin.trim();
   }
 
-  if (form.transmission.trim().length > 0) {
-    payload.transmission_name = form.transmission.trim();
+  const deposit = toDecimalFromString(form.deposit);
+  if (deposit !== undefined) {
+    payload.deposit = deposit;
   }
 
-  if (form.fuel.trim().length > 0) {
-    payload.fuel_name = form.fuel.trim();
+  const weight = toDecimalFromString(form.weight);
+  if (weight !== undefined) {
+    payload.weight = weight;
   }
 
-  if (form.description.trim().length > 0) {
-    payload.description = form.description.trim();
+  const weightFront = toDecimalFromString(form.weight_front);
+  if (weightFront !== undefined) {
+    payload.weight_front = weightFront;
   }
 
-  if (form.specs.trim().length > 0) {
-    payload.specs = form.specs
-      .split(/[,;\n]+/)
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0);
+  payload.is_partner = form.is_partner;
+
+  const partnerId = toInteger(form.partner_id);
+  if (partnerId !== undefined) {
+    payload.partner_id = partnerId;
   }
 
-  if (form.last_service) {
-    payload.last_service_date = form.last_service;
+  const partnerPercentage = toDecimalFromString(form.partner_percentage);
+  if (partnerPercentage !== undefined) {
+    payload.partner_percentage = partnerPercentage;
   }
 
-  if (form.next_service) {
-    payload.next_service_date = form.next_service;
+  const rentalRate = toDecimalFromString(form.rental_rate);
+  if (rentalRate !== undefined) {
+    payload.rental_rate = rentalRate;
   }
 
   return payload;
@@ -403,6 +581,10 @@ const CarsPage = () => {
   const [carForm, setCarForm] = useState<CarFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [makeOptions, setMakeOptions] = useState<LookupOption[]>([]);
+  const [vehicleTypeOptions, setVehicleTypeOptions] = useState<LookupOption[]>([]);
+  const [transmissionOptions, setTransmissionOptions] = useState<LookupOption[]>([]);
+  const [fuelOptions, setFuelOptions] = useState<LookupOption[]>([]);
 
   const loadingRef = useRef(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -413,6 +595,37 @@ const CarsPage = () => {
     }, 350);
     return () => clearTimeout(handler);
   }, [searchInput]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadLookups = async () => {
+      try {
+        const [makesRes, typesRes, transmissionsRes, fuelsRes] =
+          await Promise.all([
+            apiClient.getCarMakes({ limit: 200 }),
+            apiClient.getCarTypes({ limit: 200 }),
+            apiClient.getCarTransmissions({ limit: 200 }),
+            apiClient.getCarFuels({ limit: 200 }),
+          ]);
+
+        if (!active) return;
+
+        setMakeOptions(extractLookupOptions(makesRes));
+        setVehicleTypeOptions(extractLookupOptions(typesRes));
+        setTransmissionOptions(extractLookupOptions(transmissionsRes));
+        setFuelOptions(extractLookupOptions(fuelsRes));
+      } catch (err) {
+        console.error("Error loading car lookup data:", err);
+      }
+    };
+
+    loadLookups();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const fetchMetrics = useCallback(async () => {
     try {
@@ -587,12 +800,10 @@ const CarsPage = () => {
   ) => void) => {
     return (event) => {
       const value = event.target.value;
-      setCarForm((prev) => {
-        if (field === "type_name") {
-          return { ...prev, type_name: value, type_id: null };
-        }
-        return { ...prev, [field]: value };
-      });
+      setCarForm((prev) => ({
+        ...prev,
+        [field]: value as CarFormState[typeof field],
+      }));
     };
   };
 
@@ -600,6 +811,73 @@ const CarsPage = () => {
     setCarForm((prev) => ({
       ...prev,
       status: (value as AdminCar["status"]) ?? prev.status,
+    }));
+  };
+
+  const handleMakeChange = (value: string) => {
+    setCarForm((prev) => {
+      if (!value) {
+        return { ...prev, make_id: null };
+      }
+
+      const numeric = Number(value);
+      if (Number.isFinite(numeric)) {
+        return { ...prev, make_id: numeric };
+      }
+
+      return prev;
+    });
+  };
+
+  const handleVehicleTypeChange = (value: string) => {
+    setCarForm((prev) => {
+      if (!value) {
+        return { ...prev, vehicle_type_id: null };
+      }
+
+      const numeric = Number(value);
+      if (Number.isFinite(numeric)) {
+        return { ...prev, vehicle_type_id: numeric };
+      }
+
+      return prev;
+    });
+  };
+
+  const handleTransmissionChange = (value: string) => {
+    setCarForm((prev) => {
+      if (!value) {
+        return { ...prev, transmission_id: null };
+      }
+
+      const numeric = Number(value);
+      if (Number.isFinite(numeric)) {
+        return { ...prev, transmission_id: numeric };
+      }
+
+      return prev;
+    });
+  };
+
+  const handleFuelChange = (value: string) => {
+    setCarForm((prev) => {
+      if (!value) {
+        return { ...prev, fuel_type_id: null };
+      }
+
+      const numeric = Number(value);
+      if (Number.isFinite(numeric)) {
+        return { ...prev, fuel_type_id: numeric };
+      }
+
+      return prev;
+    });
+  };
+
+  const handlePartnerChange = (value: string) => {
+    setCarForm((prev) => ({
+      ...prev,
+      is_partner: value === "true" ? true : value === "false" ? false : prev.is_partner,
     }));
   };
 
@@ -1086,15 +1364,45 @@ const CarsPage = () => {
             </div>
 
             <div>
+              <Label htmlFor="car-make" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Marcă
+              </Label>
+              <Select
+                id="car-make"
+                className="mt-2"
+                value={carForm.make_id != null ? String(carForm.make_id) : ""}
+                onValueChange={handleMakeChange}
+              >
+                <option value="">Selectează marcă</option>
+                {makeOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
               <Label htmlFor="car-type" className="text-sm font-dm-sans font-semibold text-gray-700">
                 Tip vehicul
               </Label>
-              <Input
+              <Select
                 id="car-type"
-                value={carForm.type_name}
-                onChange={handleFormChange("type_name")}
-                placeholder="Ex: Economic"
-              />
+                className="mt-2"
+                value={
+                  carForm.vehicle_type_id != null
+                    ? String(carForm.vehicle_type_id)
+                    : ""
+                }
+                onValueChange={handleVehicleTypeChange}
+              >
+                <option value="">Selectează tip</option>
+                {vehicleTypeOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </Select>
             </div>
 
             <div>
@@ -1122,21 +1430,7 @@ const CarsPage = () => {
                 min="0"
                 value={carForm.mileage}
                 onChange={handleFormChange("mileage")}
-                placeholder="45000"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="car-passengers" className="text-sm font-dm-sans font-semibold text-gray-700">
-                Număr persoane
-              </Label>
-              <Input
-                id="car-passengers"
-                type="number"
-                min="1"
-                value={carForm.passengers}
-                onChange={handleFormChange("passengers")}
-                placeholder="5"
+                placeholder="125000"
               />
             </div>
 
@@ -1144,23 +1438,59 @@ const CarsPage = () => {
               <Label htmlFor="car-transmission" className="text-sm font-dm-sans font-semibold text-gray-700">
                 Transmisie
               </Label>
-              <Input
+              <Select
                 id="car-transmission"
-                value={carForm.transmission}
-                onChange={handleFormChange("transmission")}
-                placeholder="Manuală / Automată"
-              />
+                className="mt-2"
+                value={
+                  carForm.transmission_id != null
+                    ? String(carForm.transmission_id)
+                    : ""
+                }
+                onValueChange={handleTransmissionChange}
+              >
+                <option value="">Selectează transmisia</option>
+                {transmissionOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </Select>
             </div>
 
             <div>
               <Label htmlFor="car-fuel" className="text-sm font-dm-sans font-semibold text-gray-700">
-                Combustibil
+                Tip combustibil
+              </Label>
+              <Select
+                id="car-fuel"
+                className="mt-2"
+                value={
+                  carForm.fuel_type_id != null
+                    ? String(carForm.fuel_type_id)
+                    : ""
+                }
+                onValueChange={handleFuelChange}
+              >
+                <option value="">Selectează combustibil</option>
+                {fuelOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="car-seats" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Număr locuri
               </Label>
               <Input
-                id="car-fuel"
-                value={carForm.fuel}
-                onChange={handleFormChange("fuel")}
-                placeholder="Benzină / Diesel"
+                id="car-seats"
+                type="number"
+                min="1"
+                value={carForm.number_of_seats}
+                onChange={handleFormChange("number_of_seats")}
+                placeholder="5"
               />
             </div>
 
@@ -1172,23 +1502,21 @@ const CarsPage = () => {
                 id="car-doors"
                 type="number"
                 min="2"
-                value={carForm.doors}
-                onChange={handleFormChange("doors")}
+                value={carForm.number_of_doors}
+                onChange={handleFormChange("number_of_doors")}
                 placeholder="4"
               />
             </div>
 
             <div>
-              <Label htmlFor="car-luggage" className="text-sm font-dm-sans font-semibold text-gray-700">
-                Spațiu bagaje
+              <Label htmlFor="car-vin" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Serie șasiu (VIN)
               </Label>
               <Input
-                id="car-luggage"
-                type="number"
-                min="0"
-                value={carForm.luggage}
-                onChange={handleFormChange("luggage")}
-                placeholder="2"
+                id="car-vin"
+                value={carForm.vin}
+                onChange={handleFormChange("vin")}
+                placeholder="VIN"
               />
             </div>
 
@@ -1208,38 +1536,106 @@ const CarsPage = () => {
             </div>
 
             <div>
-              <Label htmlFor="car-specs" className="text-sm font-dm-sans font-semibold text-gray-700">
-                Dotări (separate prin virgulă)
+              <Label htmlFor="car-deposit" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Garanție (€)
               </Label>
               <Input
-                id="car-specs"
-                value={carForm.specs}
-                onChange={handleFormChange("specs")}
-                placeholder="Aer condiționat, Navigație"
+                id="car-deposit"
+                type="number"
+                min="0"
+                step="0.01"
+                value={carForm.deposit}
+                onChange={handleFormChange("deposit")}
+                placeholder="250"
               />
             </div>
 
             <div>
-              <Label htmlFor="car-last-service" className="text-sm font-dm-sans font-semibold text-gray-700">
-                Ultimul service
+              <Label htmlFor="car-weight" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Greutate (kg)
               </Label>
               <Input
-                id="car-last-service"
-                type="date"
-                value={carForm.last_service}
-                onChange={handleFormChange("last_service")}
+                id="car-weight"
+                type="number"
+                min="0"
+                step="0.01"
+                value={carForm.weight}
+                onChange={handleFormChange("weight")}
+                placeholder="1200"
               />
             </div>
 
             <div>
-              <Label htmlFor="car-next-service" className="text-sm font-dm-sans font-semibold text-gray-700">
-                Următor service
+              <Label htmlFor="car-weight-front" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Greutate față (kg)
               </Label>
               <Input
-                id="car-next-service"
-                type="date"
-                value={carForm.next_service}
-                onChange={handleFormChange("next_service")}
+                id="car-weight-front"
+                type="number"
+                min="0"
+                step="0.01"
+                value={carForm.weight_front}
+                onChange={handleFormChange("weight_front")}
+                placeholder="600"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="car-partner" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Mașină partener
+              </Label>
+              <Select
+                id="car-partner"
+                className="mt-2"
+                value={carForm.is_partner ? "true" : "false"}
+                onValueChange={handlePartnerChange}
+              >
+                <option value="false">Nu</option>
+                <option value="true">Da</option>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="car-partner-id" className="text-sm font-dm-sans font-semibold text-gray-700">
+                ID partener
+              </Label>
+              <Input
+                id="car-partner-id"
+                type="number"
+                min="0"
+                value={carForm.partner_id}
+                onChange={handleFormChange("partner_id")}
+                placeholder="123"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="car-partner-percentage" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Procent partener (%)
+              </Label>
+              <Input
+                id="car-partner-percentage"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={carForm.partner_percentage}
+                onChange={handleFormChange("partner_percentage")}
+                placeholder="15"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <Label htmlFor="car-images" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Imagini (o adresă per linie)
+              </Label>
+              <textarea
+                id="car-images"
+                value={carForm.images}
+                onChange={handleFormChange("images")}
+                className="w-full min-h-[100px] rounded-lg border border-gray-300 px-4 py-3 font-dm-sans text-gray-700 focus:ring-2 focus:ring-jade focus:border-transparent transition"
+                placeholder={`https://exemplu.ro/imagine1.jpg
+https://exemplu.ro/imagine2.jpg`}
               />
             </div>
 
@@ -1252,11 +1648,23 @@ const CarsPage = () => {
                 value={carForm.description}
                 onChange={handleFormChange("description")}
                 className="w-full min-h-[120px] rounded-lg border border-gray-300 px-4 py-3 font-dm-sans text-gray-700 focus:ring-2 focus:ring-jade focus:border-transparent transition"
-                placeholder="Detalii despre mașină"
+                placeholder="Descriere scurtă a mașinii"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <Label htmlFor="car-content" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Conținut detaliat
+              </Label>
+              <textarea
+                id="car-content"
+                value={carForm.content}
+                onChange={handleFormChange("content")}
+                className="w-full min-h-[150px] rounded-lg border border-gray-300 px-4 py-3 font-dm-sans text-gray-700 focus:ring-2 focus:ring-jade focus:border-transparent transition"
+                placeholder="Informații detaliate pentru pagina mașinii"
               />
             </div>
           </div>
-
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
