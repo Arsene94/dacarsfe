@@ -146,3 +146,9 @@ export interface DynamicPrice {
   updated_at?: string;
   percentages: DynamicPricePercentage[];
 }
+
+export interface AdminService {
+  id: number;
+  name: string;
+  price: number;
+}
