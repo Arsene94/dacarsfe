@@ -251,11 +251,29 @@ class ApiClient {
         return this.request<any>(`/car-colors/${id}`);
     }
 
-    async getUsers(params: { search?: string; page?: number; perPage?: number } = {}) {
+    async getUsers(
+        params: {
+            search?: string;
+            page?: number;
+            perPage?: number;
+            roles?: string | string[];
+        } = {},
+    ) {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
         if (params.page) searchParams.append('page', params.page.toString());
         if (params.perPage) searchParams.append('per_page', params.perPage.toString());
+        if (params.roles) {
+            const values = Array.isArray(params.roles)
+                ? params.roles
+                : [params.roles];
+            const key = Array.isArray(params.roles) ? 'roles[]' : 'roles';
+            values
+                .filter((role): role is string => typeof role === 'string' && role.length > 0)
+                .forEach((role) => {
+                    searchParams.append(key, role);
+                });
+        }
         const query = searchParams.toString();
         return this.request<any>(`/users${query ? `?${query}` : ''}`);
     }

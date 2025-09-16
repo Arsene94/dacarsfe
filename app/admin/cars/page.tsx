@@ -886,6 +886,7 @@ const CarsPage = () => {
         const response = await apiClient.getUsers({
           search: trimmed,
           perPage: 10,
+          roles: ["partner"],
         });
         if (partnerRequestRef.current !== requestId) return;
         setPartnerResults(extractPartnerOptions(response));
