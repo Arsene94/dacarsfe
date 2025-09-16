@@ -30,7 +30,7 @@ const parsePrice = (raw: unknown): number => {
 
 const currencyFormatter = new Intl.NumberFormat("ro-RO", {
   style: "currency",
-  currency: "RON",
+  currency: "EUR",
 });
 
 const AdditionalServicesPage = () => {
@@ -207,7 +207,7 @@ const AdditionalServicesPage = () => {
           </div>
           <div>
             <label htmlFor="service-price" className="mb-1 block font-medium">
-              Preț (RON)
+              Preț (EUR)
             </label>
             <Input
               id="service-price"
