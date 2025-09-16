@@ -2,7 +2,15 @@ import { mapCarSearchFilters } from "@/lib/mapFilters";
 import { toQuery } from "@/lib/qs";
 import type { AuthResponse, User } from "@/types/auth";
 import type { WidgetActivityResponse } from "@/types/activity";
-import type { CategoryPrice, CategoryPriceCalendar } from "@/types/admin";
+import type {
+    CategoryPrice,
+    CategoryPriceCalendar,
+} from "@/types/admin";
+
+type CategoryPriceCalendarPayload = Omit<
+    CategoryPriceCalendar,
+    "id" | "created_at" | "updated_at"
+>;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
@@ -572,6 +580,23 @@ class ApiClient {
     async deleteCategoryPrice(id: number) {
         return this.request<any>(`/prices/${id}`, {
             method: 'DELETE',
+        });
+    }
+
+    async createCategoryPriceCalendar(payload: CategoryPriceCalendarPayload) {
+        return this.request<any>(`/price-calendars`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async updateCategoryPriceCalendar(
+        id: number,
+        payload: CategoryPriceCalendarPayload,
+    ) {
+        return this.request<any>(`/price-calendars/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
         });
     }
 
