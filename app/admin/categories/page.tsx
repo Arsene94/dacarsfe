@@ -6,6 +6,7 @@ import apiClient from "@/lib/api";
 import {
   AdminCategory,
   CategoryPrice,
+  CategoryPriceCalendar,
   CategoryPriceCalendarMonthKey,
 } from "@/types/admin";
 
@@ -82,6 +83,9 @@ export default function CategoriesPage() {
   const [discounts, setDiscounts] = useState<number[]>(
     Array(MONTH_KEYS.length).fill(0)
   );
+  const [priceCalendarId, setPriceCalendarId] = useState<number | null>(null);
+  const [removedPriceIds, setRemovedPriceIds] = useState<number[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -110,7 +114,16 @@ export default function CategoriesPage() {
     setPeriodEnd(1);
     setPeriodPrice("");
     setDiscounts(Array(MONTH_KEYS.length).fill(0));
+    setPriceCalendarId(null);
+    setRemovedPriceIds([]);
     setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditing(null);
+    setPriceCalendarId(null);
+    setRemovedPriceIds([]);
   };
 
   const openEditModal = (category: AdminCategory) => {
@@ -121,6 +134,8 @@ export default function CategoriesPage() {
     setPeriodEnd(1);
     setPeriodPrice("");
     setDiscounts(Array(MONTH_KEYS.length).fill(0));
+    setPriceCalendarId(null);
+    setRemovedPriceIds([]);
     apiClient
       .getCategoryPrices(category.id)
       .then(({ prices, priceCalendar }) => {
@@ -132,8 +147,11 @@ export default function CategoriesPage() {
           }))
         );
         setPricePeriods(sorted);
+        setPriceCalendarId(priceCalendar?.id ?? null);
         if (priceCalendar) {
-          setDiscounts(MONTH_KEYS.map((key) => priceCalendar[key] ?? 0));
+          setDiscounts(
+            MONTH_KEYS.map((key) => Number(priceCalendar[key] ?? 0))
+          );
         } else {
           setDiscounts(Array(MONTH_KEYS.length).fill(0));
         }
@@ -153,6 +171,7 @@ export default function CategoriesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       if (editing) {
         const res = await apiClient.updateCategory(editing.id, form);
@@ -163,36 +182,118 @@ export default function CategoriesPage() {
         await savePrices(editing.id);
       } else {
         const res = await apiClient.createCategory(form);
-        const created = res?.data ?? res;
+        const rawCreated = res?.data ?? res;
+        const newId =
+          typeof rawCreated?.id === "number"
+            ? rawCreated.id
+            : Number(rawCreated?.id);
+
+        if (!Number.isFinite(newId)) {
+          throw new Error("Categoria creată nu a returnat un ID valid");
+        }
+
+        const created: AdminCategory = {
+          ...(rawCreated as AdminCategory),
+          id: Number(newId),
+        };
+
         setCategories((prev) => [...prev, created]);
-        await savePrices(created.id);
+        await savePrices(Number(newId));
       }
-      setIsModalOpen(false);
-      setEditing(null);
+      closeModal();
     } catch (error) {
       console.error("Failed to save category", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const savePriceCalendar = async (categoryId: number) => {
+    const hasDiscounts = discounts.some((value) => Number(value) !== 0);
+    if (!priceCalendarId && pricePeriods.length === 0 && !hasDiscounts) {
+      return;
+    }
+
+    const calendarPayload: Omit<
+      CategoryPriceCalendar,
+      "id" | "created_at" | "updated_at"
+    > = {
+      category_id: categoryId,
+      jan: 0,
+      feb: 0,
+      mar: 0,
+      apr: 0,
+      may: 0,
+      jun: 0,
+      jul: 0,
+      aug: 0,
+      sep: 0,
+      oct: 0,
+      nov: 0,
+      dec: 0,
+    };
+
+    MONTH_KEYS.forEach((key, index) => {
+      const value = Number(discounts[index] ?? 0);
+      calendarPayload[key] = Number.isFinite(value) ? value : 0;
+    });
+
+    if (priceCalendarId) {
+      const res = await apiClient.updateCategoryPriceCalendar(
+        priceCalendarId,
+        calendarPayload
+      );
+      const updated = res?.data ?? res;
+      if (updated && typeof updated.id === "number") {
+        setPriceCalendarId(updated.id);
+      }
+      return;
+    }
+
+    const res = await apiClient.createCategoryPriceCalendar(calendarPayload);
+    const created = res?.data ?? res;
+    if (created && typeof created.id === "number") {
+      setPriceCalendarId(created.id);
     }
   };
 
   const savePrices = async (categoryId: number) => {
-    try {
-      await Promise.all(
-        pricePeriods.map(({ tempId: _tempId, ...p }) => {
-          const payload = {
-            category_id: categoryId,
-            days: p.days,
-            days_end: p.days_end,
-            price: Number(p.price),
-          };
-          if (p.id) {
-            return apiClient.updateCategoryPrice(p.id, payload);
-          }
-          return apiClient.createCategoryPrice(payload);
-        })
-      );
-    } catch (err) {
-      console.error("Failed to save prices", err);
+    const operations: Promise<unknown>[] = [];
+
+    const idsToDelete = Array.from(new Set(removedPriceIds)).filter((id) =>
+      Number.isFinite(id)
+    ) as number[];
+
+    idsToDelete.forEach((id) => {
+      operations.push(apiClient.deleteCategoryPrice(id));
+    });
+
+    pricePeriods.forEach(({ tempId: _tempId, ...period }) => {
+      const parsedPrice = Number(period.price);
+      if (!Number.isFinite(parsedPrice)) {
+        return;
+      }
+
+      const payload = {
+        category_id: categoryId,
+        days: clampDay(period.days),
+        days_end: clampDay(period.days_end),
+        price: parsedPrice,
+      };
+
+      if (period.id) {
+        operations.push(apiClient.updateCategoryPrice(period.id, payload));
+      } else {
+        operations.push(apiClient.createCategoryPrice(payload));
+      }
+    });
+
+    if (operations.length > 0) {
+      await Promise.all(operations);
     }
+
+    await savePriceCalendar(categoryId);
+    setRemovedPriceIds([]);
   };
 
   const addPeriod = () => {
@@ -251,7 +352,16 @@ export default function CategoriesPage() {
   };
 
   const handleRemovePeriod = (tempId: string) => {
-    setPricePeriods((prev) => prev.filter((period) => period.tempId !== tempId));
+    setPricePeriods((prev) => {
+      const target = prev.find((period) => period.tempId === tempId);
+      if (target && typeof target.id === "number") {
+        const targetId = target.id;
+        setRemovedPriceIds((ids) =>
+          ids.includes(targetId) ? ids : [...ids, targetId]
+        );
+      }
+      return prev.filter((period) => period.tempId !== tempId);
+    });
   };
 
   return (
@@ -556,16 +666,17 @@ export default function CategoriesPage() {
               <div className="flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeModal}
                   className="px-4 py-2 rounded-md border"
                 >
                   Anulează
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-md bg-jade text-white hover:bg-jade/90"
+                  className="px-4 py-2 rounded-md bg-jade text-white hover:bg-jade/90 disabled:opacity-70 disabled:cursor-not-allowed"
+                  disabled={isSaving}
                 >
-                  {editing ? "Salvează" : "Adaugă"}
+                  {isSaving ? "Se salvează..." : editing ? "Salvează" : "Adaugă"}
                 </button>
               </div>
             </form>
