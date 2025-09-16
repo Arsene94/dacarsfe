@@ -1153,10 +1153,24 @@ const CarsPage = () => {
   };
 
   const handlePartnerChange = (value: string) => {
-    setCarForm((prev) => ({
-      ...prev,
-      is_partner: value === "true" ? true : value === "false" ? false : prev.is_partner,
-    }));
+    setCarForm((prev) => {
+      const nextIsPartner =
+        value === "true" ? true : value === "false" ? false : prev.is_partner;
+
+      if (!nextIsPartner) {
+        return {
+          ...prev,
+          is_partner: false,
+          partner_id: "",
+          partner_percentage: "",
+        };
+      }
+
+      return {
+        ...prev,
+        is_partner: nextIsPartner,
+      };
+    });
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -1875,35 +1889,45 @@ const CarsPage = () => {
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="car-partner-id" className="text-sm font-dm-sans font-semibold text-gray-700">
-                ID partener
-              </Label>
-              <Input
-                id="car-partner-id"
-                type="number"
-                min="0"
-                value={carForm.partner_id}
-                onChange={handleFormChange("partner_id")}
-                placeholder="123"
-              />
-            </div>
+            {carForm.is_partner && (
+              <>
+                <div>
+                  <Label
+                    htmlFor="car-partner-id"
+                    className="text-sm font-dm-sans font-semibold text-gray-700"
+                  >
+                    ID partener
+                  </Label>
+                  <Input
+                    id="car-partner-id"
+                    type="number"
+                    min="0"
+                    value={carForm.partner_id}
+                    onChange={handleFormChange("partner_id")}
+                    placeholder="123"
+                  />
+                </div>
 
-            <div>
-              <Label htmlFor="car-partner-percentage" className="text-sm font-dm-sans font-semibold text-gray-700">
-                Procent partener (%)
-              </Label>
-              <Input
-                id="car-partner-percentage"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                value={carForm.partner_percentage}
-                onChange={handleFormChange("partner_percentage")}
-                placeholder="15"
-              />
-            </div>
+                <div>
+                  <Label
+                    htmlFor="car-partner-percentage"
+                    className="text-sm font-dm-sans font-semibold text-gray-700"
+                  >
+                    Procent partener (%)
+                  </Label>
+                  <Input
+                    id="car-partner-percentage"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={carForm.partner_percentage}
+                    onChange={handleFormChange("partner_percentage")}
+                    placeholder="15"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="md:col-span-2">
               <Label
