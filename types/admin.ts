@@ -1,3 +1,5 @@
+import type { ReservationWheelPrizeSummary } from "@/types/reservation";
+
 export interface AdminReservation {
   id: string;
   customerName: string;
@@ -19,6 +21,9 @@ export interface AdminReservation {
   pricePerDay?: number;
   servicesPrice?: number;
   discount?: number;
+  totalBeforeWheelPrize?: number | null;
+  wheelPrizeDiscount?: number | null;
+  wheelPrize?: ReservationWheelPrizeSummary | null;
   email?: string;
   days?: number;
   pickupTime?: string;
