@@ -16,6 +16,17 @@ import {
 } from "lucide-react";
 
 import apiClient from "@/lib/api";
+import {
+    buildWheelPrizeDefaultDescription,
+    describeWheelPrizeAmount,
+} from "@/lib/wheelFormatting";
+import {
+    clearStoredWheelPrize,
+    getStoredWheelPrize,
+    isStoredWheelPrizeActive,
+    storeWheelPrize,
+    type StoredWheelPrizeEntry,
+} from "@/lib/wheelStorage";
 import type {
     WheelOfFortunePeriod,
     WheelPrize,
@@ -79,11 +90,6 @@ const isPeriodActive = (period?: WheelOfFortunePeriod | null) => {
     return false;
 };
 
-const amountFormatter = new Intl.NumberFormat("ro-RO", {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 0,
-});
-
 const toOptionalNumber = (value: unknown): number | null => {
     if (typeof value === "undefined" || value === null) return null;
     if (typeof value === "number") {
@@ -98,61 +104,22 @@ const toOptionalNumber = (value: unknown): number | null => {
     return null;
 };
 
-const formatPrizeAmount = (
-    prize: Pick<WheelPrize, "amount" | "type"> | null | undefined,
-): string => {
-    if (!prize) return "—";
-    const { amount } = prize;
-    if (typeof amount !== "number" || !Number.isFinite(amount)) {
-        return "—";
-    }
-    const normalizedType = typeof prize.type === "string" ? prize.type : "other";
-    if (normalizedType === "percentage_discount") {
-        return `${amountFormatter.format(amount)}%`;
-    }
-    if (normalizedType === "fixed_discount") {
-        return `${amountFormatter.format(amount)} RON`;
-    }
-    if (normalizedType === "extra_rental_day") {
-        const formatted = Number.isInteger(amount)
-            ? amount.toString()
-            : amountFormatter.format(amount);
-        return `${formatted} ${formatted === "1" ? "zi" : "zile"}`;
-    }
-    return amountFormatter.format(amount);
-};
+const dateFormatter = new Intl.DateTimeFormat("ro-RO", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+});
 
-const describePrizeAmount = (prize: WheelPrize | null | undefined): string | null => {
-    if (!prize) return null;
-    const formatted = formatPrizeAmount(prize);
-    if (formatted === "—") return null;
-    const type = typeof prize.type === "string" ? prize.type : "other";
-    if (type === "percentage_discount") {
-        return `Reducere de ${formatted}`;
+const formatDateLabel = (value: string | null | undefined): string | null => {
+    if (!value) return null;
+    const parsed = Date.parse(value);
+    if (Number.isNaN(parsed)) return null;
+    try {
+        return dateFormatter.format(new Date(parsed));
+    } catch (error) {
+        console.warn("Failed to format date", error);
+        return new Date(parsed).toLocaleDateString("ro-RO");
     }
-    if (type === "fixed_discount") {
-        return `Discount de ${formatted}`;
-    }
-    if (type === "extra_rental_day") {
-        return `Bonus de ${formatted}`;
-    }
-    return formatted;
-};
-
-const buildDefaultDescription = (prize: WheelPrize): string | null => {
-    const amountDescription = describePrizeAmount(prize);
-    if (!amountDescription) return null;
-    const type = typeof prize.type === "string" ? prize.type : "other";
-    if (type === "percentage_discount") {
-        return `${amountDescription} la următoarea rezervare.`;
-    }
-    if (type === "fixed_discount") {
-        return `${amountDescription} aplicat la rezervarea ta.`;
-    }
-    if (type === "extra_rental_day") {
-        return `${amountDescription} pentru mașina rezervată.`;
-    }
-    return amountDescription;
 };
 
 const mapPrize = (item: any): WheelPrize | null => {
@@ -182,7 +149,7 @@ const mapPrize = (item: any): WheelPrize | null => {
         ? probabilitySource
         : Number(String(probabilitySource).replace(/,/g, "."));
 
-    return {
+    const basePrize: WheelPrize = {
         id,
         period_id: Number.isFinite(periodId) ? periodId : 0,
         title,
@@ -193,6 +160,13 @@ const mapPrize = (item: any): WheelPrize | null => {
         type: typeof typeSource === "string" ? typeSource : "other",
         created_at: typeof item.created_at === "string" ? item.created_at : null,
         updated_at: typeof item.updated_at === "string" ? item.updated_at : null,
+    };
+
+    const resolvedDescription = basePrize.description ?? buildWheelPrizeDefaultDescription(basePrize);
+
+    return {
+        ...basePrize,
+        description: resolvedDescription ?? null,
     };
 };
 
@@ -242,6 +216,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     const [saveState, setSaveState] = useState<"idle" | "saving" | "success" | "error">("idle");
     const [saveError, setSaveError] = useState<string | null>(null);
     const [clientIp, setClientIp] = useState<string | null>(null);
+    const [storedPrizeRecord, setStoredPrizeRecord] = useState<StoredWheelPrizeEntry | null>(null);
 
     const mountedRef = useRef(true);
     const spinTimeoutRef = useRef<number | null>(null);
@@ -297,6 +272,24 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         return () => {
             cancelled = true;
         };
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const stored = getStoredWheelPrize();
+        if (!stored) return;
+        if (isStoredWheelPrizeActive(stored)) {
+            setStoredPrizeRecord(stored);
+            setSpinsLeft(0);
+            if (stored.winner.name) {
+                setCustomerName(stored.winner.name);
+            }
+            if (stored.winner.phone) {
+                setCustomerPhone(stored.winner.phone);
+            }
+        } else {
+            clearStoredWheelPrize();
+        }
     }, []);
 
     const fetchWheelData = useCallback(async () => {
@@ -389,17 +382,39 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         return prizes.length - 1;
     }, [prizes, totalWeight]);
 
+    const hasStoredPrize = useMemo(
+        () => isStoredWheelPrizeActive(storedPrizeRecord),
+        [storedPrizeRecord],
+    );
+
     const persistPrizeResult = useCallback(async (prize: WheelPrize, info: { name: string; phone: string }) => {
+        const normalizedParticipant = {
+            name: info.name.trim(),
+            phone: info.phone.trim(),
+        };
         setSaveState("saving");
         setSaveError(null);
         try {
-            await apiClient.createWheelOfFortunePrize({
+            const response: any = await apiClient.createWheelOfFortunePrize({
                 wheel_of_fortune_id: prize.id,
-                name: info.name,
-                phone: info.phone,
+                name: normalizedParticipant.name,
+                phone: normalizedParticipant.phone,
                 ...(clientIp ? { ip_address: clientIp } : {}),
             });
             if (!mountedRef.current) return;
+
+            const responsePrize = response?.wheel_of_fortune ? mapPrize(response.wheel_of_fortune) : null;
+            const stored = storeWheelPrize({
+                prize: responsePrize ?? prize,
+                winner: normalizedParticipant,
+                prizeId: toOptionalNumber(response?.id),
+                wheel_of_fortune_id:
+                    toOptionalNumber(response?.wheel_of_fortune_id)
+                    ?? (responsePrize ?? prize).id,
+                savedAt: typeof response?.created_at === "string" ? response.created_at : null,
+                expiresAt: typeof response?.expires_at === "string" ? response.expires_at : null,
+            });
+            setStoredPrizeRecord(stored);
             setSaveState("success");
         } catch (error) {
             console.error("Failed to store wheel prize", error);
@@ -418,6 +433,13 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         if (isLoading) return;
         if (prizes.length === 0) {
             setFormError("Roata nu este disponibilă în acest moment.");
+            return;
+        }
+
+        if (hasStoredPrize) {
+            setFormError(
+                "Ai deja un premiu activ câștigat la Roata Norocului. Îl poți folosi la checkout în următoarele 30 de zile.",
+            );
             return;
         }
 
@@ -441,9 +463,10 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         }
 
         const winningPrize = prizes[winningIndex];
+        const normalizedParticipant = { name: sanitizedName, phone: sanitizedPhone };
 
         setFormError(null);
-        setParticipant({ name: sanitizedName, phone: sanitizedPhone });
+        setParticipant(normalizedParticipant);
         setSaveState("idle");
         setSaveError(null);
         setIsSpinning(true);
@@ -469,11 +492,13 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
             setShowModal(true);
 
             if (winningPrize.type !== "try_again") {
-                setSpinsLeft(0);
-                void persistPrizeResult(winningPrize, {
-                    name: sanitizedName,
-                    phone: sanitizedPhone,
+                const stored = storeWheelPrize({
+                    prize: winningPrize,
+                    winner: normalizedParticipant,
                 });
+                setStoredPrizeRecord(stored);
+                setSpinsLeft(0);
+                void persistPrizeResult(winningPrize, normalizedParticipant);
             }
         }, 4000);
     };
@@ -485,6 +510,8 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     };
 
     const resetSpins = () => {
+        clearStoredWheelPrize();
+        setStoredPrizeRecord(null);
         setSpinsLeft(1);
         setRotation(0);
         setSelectedPrize(null);
@@ -506,8 +533,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         if (onClose) onClose();
     };
 
-    const canSpin = !isSpinning && spinsLeft > 0 && prizes.length > 0 && !isLoading;
-    const selectedPrizeAmountLabel = selectedPrize ? describePrizeAmount(selectedPrize) : null;
+    const canSpin = !isSpinning && spinsLeft > 0 && prizes.length > 0 && !isLoading && !hasStoredPrize;
+    const selectedPrizeAmountLabel = selectedPrize ? describeWheelPrizeAmount(selectedPrize) : null;
+    const storedPrizeAmountLabel = storedPrizeRecord
+        ? describeWheelPrizeAmount(storedPrizeRecord.prize)
+        : null;
+    const storedPrizeExpiryLabel = storedPrizeRecord?.expires_at
+        ? formatDateLabel(storedPrizeRecord.expires_at)
+        : null;
 
     const winnerModal = showModal && selectedPrize ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -546,6 +579,12 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                                 ? "Nu te descuraja! Ai primit o nouă șansă să câștigi un premiu și mai bun."
                                 : "Am înregistrat premiul tău și vei primi detalii prin SMS sau email în scurt timp."}
                         </p>
+
+                        {selectedPrize.type !== "try_again" && storedPrizeExpiryLabel && (
+                            <p className="font-['DM Sans'] text-xs text-[#191919]/60">
+                                Premiul este valabil până la {storedPrizeExpiryLabel} și îl vei găsi salvat și în pagina de checkout.
+                            </p>
+                        )}
 
                         {selectedPrize.type !== "try_again" && (
                             <div className="space-y-3">
@@ -763,6 +802,27 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         </div>
                     </div>
 
+                    {hasStoredPrize && storedPrizeRecord && (
+                        <div className="flex items-start gap-3 rounded-xl border border-[#1E7149]/40 bg-white/90 px-4 py-3 text-left shadow-sm">
+                            <Gift className="mt-1 h-5 w-5 text-[#1E7149]" />
+                            <div className="space-y-1">
+                                <p className="font-['Poppins'] text-sm font-semibold text-[#1A3661]">
+                                    Premiu activ din Roata Norocului
+                                </p>
+                                <p className="font-['DM Sans'] text-xs text-[#1A3661]/80">
+                                    Ai câștigat <span className="font-semibold text-[#1A3661]">{storedPrizeRecord.prize.title}</span>
+                                    {storedPrizeAmountLabel ? ` — ${storedPrizeAmountLabel}` : ""}. Premiul este valabil până la
+                                    {" "}
+                                    <span className="font-semibold text-[#1A3661]">
+                                        {storedPrizeExpiryLabel ?? "expirarea automată"}
+                                    </span>
+                                    {" "}
+                                    și îl poți folosi direct în pagina de checkout.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {formError && (
                         <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                             <AlertCircle className="h-4 w-4" />
@@ -792,6 +852,10 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         <>
                             <RotateCcw className="mr-3 h-6 w-6 animate-spin" /> Se învârte...
                         </>
+                    ) : hasStoredPrize ? (
+                        <>
+                            <Gift className="mr-3 h-6 w-6" /> Premiu activ
+                        </>
                     ) : spinsLeft <= 0 ? (
                         <>
                             <Gift className="mr-3 h-6 w-6" /> Încercări epuizate
@@ -803,7 +867,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                     )}
                 </button>
 
-                {spinsLeft <= 0 && (
+                {spinsLeft <= 0 && !hasStoredPrize && (
                     <button
                         type="button"
                         onClick={resetSpins}

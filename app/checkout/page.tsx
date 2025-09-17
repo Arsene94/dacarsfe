@@ -7,6 +7,13 @@ import {Label} from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import {useBooking} from "@/context/BookingContext";
 import { apiClient } from "@/lib/api";
+import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
+import {
+    getStoredWheelPrize,
+    isStoredWheelPrizeActive,
+    clearStoredWheelPrize,
+    type StoredWheelPrizeEntry,
+} from "@/lib/wheelStorage";
 import {ApiCar, Car} from "@/types/car";
 import {ReservationFormData, Service} from "@/types/reservation";
 import {Button} from "@/components/ui/button";
@@ -34,6 +41,24 @@ const parsePrice = (raw: unknown): number => {
         return parsePrice(String(raw));
     } catch {
         return 0;
+    }
+};
+
+const wheelPrizeDateFormatter = new Intl.DateTimeFormat("ro-RO", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+});
+
+const formatWheelPrizeDate = (value?: string | null): string | null => {
+    if (!value) return null;
+    const parsed = Date.parse(value);
+    if (Number.isNaN(parsed)) return null;
+    try {
+        return wheelPrizeDateFormatter.format(new Date(parsed));
+    } catch (error) {
+        console.warn("Failed to format wheel prize date", error);
+        return new Date(parsed).toLocaleDateString("ro-RO");
     }
 };
 
@@ -91,6 +116,7 @@ const ReservationPage = () => {
 
     const [services, setServices] = useState<Service[]>([]);
     const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+    const [wheelPrizeRecord, setWheelPrizeRecord] = useState<StoredWheelPrizeEntry | null>(null);
 
     useEffect(() => {
         const fetchServices = async () => {
@@ -112,6 +138,21 @@ const ReservationPage = () => {
             }
         };
         fetchServices();
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const stored = getStoredWheelPrize();
+        if (!stored) {
+            setWheelPrizeRecord(null);
+            return;
+        }
+        if (isStoredWheelPrizeActive(stored)) {
+            setWheelPrizeRecord(stored);
+        } else {
+            clearStoredWheelPrize();
+            setWheelPrizeRecord(null);
+        }
     }, []);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -295,6 +336,10 @@ const ReservationPage = () => {
         (sum, service) => sum + service.price,
         0,
     );
+
+    const hasWheelPrize = wheelPrizeRecord ? isStoredWheelPrizeActive(wheelPrizeRecord) : false;
+    const wheelPrizeAmountLabel = hasWheelPrize ? describeWheelPrizeAmount(wheelPrizeRecord?.prize) : null;
+    const wheelPrizeExpiryLabel = hasWheelPrize ? formatWheelPrizeDate(wheelPrizeRecord?.expires_at) : null;
 
     const calculateBaseTotal = () => {
         const selectedCar = booking.selectedCar;
@@ -857,6 +902,29 @@ const ReservationPage = () => {
                             <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6">
                                 Rezumatul rezervării
                             </h3>
+
+                            {hasWheelPrize && wheelPrizeRecord && (
+                                <div className="mb-6 rounded-xl border border-jade/30 bg-jade/10 p-4">
+                                    <div className="flex items-start gap-3">
+                                        <Gift className="mt-1 h-5 w-5 text-jade" />
+                                        <div className="space-y-1">
+                                            <p className="font-poppins text-sm font-semibold text-berkeley">
+                                                Premiu Roata Norocului
+                                            </p>
+                                            <p className="font-dm-sans text-sm text-gray-700">
+                                                {wheelPrizeRecord.prize.title}
+                                                {wheelPrizeAmountLabel ? ` — ${wheelPrizeAmountLabel}` : ""}
+                                            </p>
+                                            <p className="font-dm-sans text-xs text-gray-600">
+                                                {wheelPrizeExpiryLabel
+                                                    ? `Valabil până la ${wheelPrizeExpiryLabel}.`
+                                                    : "Valabil 30 de zile de la momentul câștigării."}
+                                                {" "}Beneficiul va fi aplicat de echipa DaCars când finalizezi rezervarea.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="space-y-4 mb-6">
                                 {selectedCar && (
