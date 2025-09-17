@@ -18,34 +18,34 @@ const ElfsightWidget = dynamic(() => import("@/components/ElfsightWidget"), {
 const HomePage = () => {
     const [showWheelPopup, setShowWheelPopup] = useState(false);
 
-    // useEffect(() => {
-    //     // Show wheel popup after 2 seconds when page loads
-    //     const timer = setTimeout(() => {
-    //         setShowWheelPopup(true);
-    //     }, 2000);
-    //
-    //     return () => clearTimeout(timer);
-    // }, []);
+    useEffect(() => {
+        // Show wheel popup after 2 seconds when page loads
+        const timer = setTimeout(() => {
+            setShowWheelPopup(true);
+        }, 2000);
 
-  return (
-    <div className="pt-16 lg:pt-20">
-      <HeroSection />
-      <FleetSection />
-      <BenefitsSection />
-      <OffersSection />
-      <ElfsightWidget />
-      {/*<TestimonialsSection />*/}
-      <ProcessSection />
-      <ContactSection />
+        return () => clearTimeout(timer);
+    }, []);
 
-        {/*{showWheelPopup && (*/}
-        {/*    <WheelOfFortune*/}
-        {/*        isPopup={true}*/}
-        {/*        onClose={() => setShowWheelPopup(false)}*/}
-        {/*    />*/}
-        {/*)}*/}
-    </div>
-  );
+    return (
+        <div className="pt-16 lg:pt-20">
+            <HeroSection />
+            <FleetSection />
+            <BenefitsSection />
+            <OffersSection />
+            <ElfsightWidget />
+            {/*<TestimonialsSection />*/}
+            <ProcessSection />
+            <ContactSection />
+
+            {showWheelPopup && (
+                <WheelOfFortune
+                    isPopup={true}
+                    onClose={() => setShowWheelPopup(false)}
+                />
+            )}
+        </div>
+    );
 };
 
 export default HomePage;
