@@ -349,6 +349,18 @@ class ApiClient {
         });
     }
 
+    async makeUserSuper(id: number | string) {
+        return this.request<any>(`/users/${id}/super`, {
+            method: 'POST',
+        });
+    }
+
+    async removeUserSuper(id: number | string) {
+        return this.request<any>(`/users/${id}/super`, {
+            method: 'DELETE',
+        });
+    }
+
     async deleteUser(id: number | string) {
         return this.request<any>(`/users/${id}`, {
             method: 'DELETE',

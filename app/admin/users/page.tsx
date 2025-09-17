@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/table";
 import { Popup } from "@/components/ui/popup";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import apiClient from "@/lib/api";
 import type { Column } from "@/types/ui";
 import type { User } from "@/types/auth";
@@ -45,6 +46,59 @@ const defaultFormState: UserFormState = {
   superUser: false,
   manageSupers: false,
 };
+
+const ToggleSwitch = ({
+  checked,
+  disabled,
+  onToggle,
+  ariaLabel,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+  ariaLabel?: string;
+}) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    aria-label={ariaLabel}
+    disabled={disabled}
+    onClick={(event) => {
+      event.stopPropagation();
+      if (disabled) {
+        return;
+      }
+      onToggle();
+    }}
+    className={cn(
+      "relative inline-flex h-6 w-11 items-center rounded-full border border-transparent transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-jade/70",
+      disabled
+        ? "cursor-not-allowed opacity-60"
+        : "cursor-pointer focus-visible:ring-offset-2",
+      checked
+        ? "bg-gradient-to-r from-jade to-jadeLight shadow-inner"
+        : "bg-gray-300",
+    )}
+  >
+    <span
+      className={cn(
+        "inline-flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm transition-all duration-300 ease-out",
+        checked ? "translate-x-5" : "translate-x-1",
+      )}
+    >
+      <span
+        className={cn(
+          "h-2 w-2 rounded-full transition-colors duration-300",
+          checked ? "bg-jade" : "bg-gray-400",
+        )}
+      />
+    </span>
+  </button>
+);
+
+const SUPER_TOGGLE_ERROR_MESSAGE =
+  "Nu am putut actualiza statutul de super utilizator. Încearcă din nou.";
 
 const parseString = (value: unknown): string | null => {
   if (value == null) return null;
@@ -209,6 +263,9 @@ const UsersAdminPage = () => {
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [superToggleLoading, setSuperToggleLoading] = useState<
+    Record<number, boolean>
+  >({});
   const searchRef = useRef<string>("");
 
   const subtleButtonClass =
@@ -400,6 +457,51 @@ const UsersAdminPage = () => {
     }
   };
 
+  const handleSuperToggle = useCallback(async (user: User) => {
+    const userId = user.id;
+    const nextStatus = !user.super_user;
+    setSuperToggleLoading((prev) => ({ ...prev, [userId]: true }));
+    try {
+      if (user.super_user) {
+        await apiClient.removeUserSuper(userId);
+      } else {
+        await apiClient.makeUserSuper(userId);
+      }
+
+      setUsers((prev) =>
+        prev.map((item) =>
+          item.id === userId ? { ...item, super_user: nextStatus } : item,
+        ),
+      );
+
+      let shouldUpdateForm = false;
+      setEditingUser((prev) => {
+        if (prev && prev.id === userId) {
+          shouldUpdateForm = true;
+          return { ...prev, super_user: nextStatus };
+        }
+        return prev;
+      });
+
+      if (shouldUpdateForm) {
+        setFormState((prev) => ({ ...prev, superUser: nextStatus }));
+      }
+
+      setError((current) =>
+        current === SUPER_TOGGLE_ERROR_MESSAGE ? null : current,
+      );
+    } catch (err) {
+      console.error("Failed to toggle super user status", err);
+      setError(SUPER_TOGGLE_ERROR_MESSAGE);
+    } finally {
+      setSuperToggleLoading((prev) => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+    }
+  }, []);
+
   const columns = useMemo<Column<User>[]>(
     () => [
       {
@@ -436,6 +538,35 @@ const UsersAdminPage = () => {
         accessor: (row) => row.roles.join(", ").toLowerCase(),
         cell: (row) =>
           row.roles.length > 0 ? row.roles.join(", ") : "—",
+        sortable: true,
+      },
+      {
+        id: "super_user",
+        header: "Super utilizator",
+        accessor: (row) => (row.super_user ? 1 : 0),
+        cell: (row) => {
+          const busy = Boolean(superToggleLoading[row.id]);
+          return (
+            <div className="flex items-center gap-2">
+              <ToggleSwitch
+                checked={row.super_user}
+                disabled={busy}
+                ariaLabel={`${
+                  row.super_user ? "Dezactivează" : "Activează"
+                } statutul de super utilizator pentru ${toDisplayName(row)}`}
+                onToggle={() => {
+                  void handleSuperToggle(row);
+                }}
+              />
+              {busy && (
+                <Loader2
+                  className="h-4 w-4 animate-spin text-gray-400"
+                  aria-hidden="true"
+                />
+              )}
+            </div>
+          );
+        },
         sortable: true,
       },
       {
@@ -477,7 +608,7 @@ const UsersAdminPage = () => {
         ),
       },
     ],
-    [openEditModal, openDeleteModal],
+    [openEditModal, openDeleteModal, handleSuperToggle, superToggleLoading],
   );
 
   return (
