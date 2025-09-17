@@ -277,7 +277,7 @@ const ReservationsPage = () => {
       },
       {
         id: "car",
-        header: "Număr înmatriculare",
+        header: "Mașină",
         accessor: (r) => r.carLicensePlate || r.carName,
         cell: (r) => (
           <div className="font-dm-sans text-gray-900 text-xs">
