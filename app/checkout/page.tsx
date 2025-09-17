@@ -1146,21 +1146,22 @@ const ReservationPage = () => {
                     Total:
                   </span>
                                     <span className="font-poppins font-bold text-jade">
-                                        {formatPrice(total)}€ {booking.withDeposit && (
-                                        <span className=" text-xs font-dm-sans text-gray-600">
-                            (+{selectedCar.deposit}€ garanție)
-                          </span>
-                                    )}
+                                        {formatPrice(total)}€
+                                        {booking.withDeposit && selectedCar && (
+                                            <span className="text-xs font-dm-sans text-gray-600">
+                                                (+{selectedCar.deposit}€ garanție)
+                                            </span>
+                                        )}
                   </span>
                                 </div>
-                                {booking.withDeposit && (
+                                {booking.withDeposit && selectedCar && (
                                     <div className="flex justify-between items-center text-xl">
                         <span className="font-poppins font-semibold text-berkeley">
                             Garanție:
                         </span>
                                         <span className="font-poppins font-bold text-jade">
-                            {selectedCar.deposit}€
-                        </span>
+                                            {selectedCar.deposit}€
+                                        </span>
                                     </div>
                                 )}
                                 <p className="text-sm text-gray-600 font-dm-sans mt-2">

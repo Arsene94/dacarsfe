@@ -535,9 +535,7 @@ class ApiClient {
             searchParams.append('period_id', params.period_id.toString());
         }
         if (typeof params.is_active !== 'undefined') {
-            const value = typeof params.is_active === 'boolean'
-                ? params.is_active ? '1' : '0'
-                : params.is_active.toString();
+            const value = params.is_active ? '1' : '0';
             searchParams.append('is_active', value);
         }
         const query = searchParams.toString();
