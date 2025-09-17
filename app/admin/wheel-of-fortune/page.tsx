@@ -129,21 +129,32 @@ const mapPeriod = (item: any): WheelOfFortunePeriod | null => {
     const end = item.end_at ?? item.end_date ?? item.ends_at ?? item.to ?? null;
 
     const isActiveRaw =
-        item.is_active ??
         item.active ??
+        item.is_active ??
         item.enabled ??
         item.status;
+
+    const normalizedActive =
+        typeof isActiveRaw !== "undefined" ? parseBoolean(isActiveRaw) : undefined;
 
     return {
         id,
         name,
         start_at: typeof start === "string" ? start : null,
         end_at: typeof end === "string" ? end : null,
-        is_active: typeof isActiveRaw !== "undefined" ? parseBoolean(isActiveRaw) : undefined,
+        active: normalizedActive,
+        is_active: normalizedActive,
         description: typeof item.description === "string" ? item.description : null,
         created_at: typeof item.created_at === "string" ? item.created_at : null,
         updated_at: typeof item.updated_at === "string" ? item.updated_at : null,
     };
+};
+
+const isPeriodActive = (period?: WheelOfFortunePeriod | null) => {
+    if (!period) return false;
+    if (typeof period.active === "boolean") return period.active;
+    if (typeof period.is_active === "boolean") return period.is_active;
+    return false;
 };
 
 const mapPrize = (item: any): WheelOfFortuneSlice | null => {
@@ -271,7 +282,7 @@ export default function WheelOfFortuneAdminPage() {
             if (currentSelected && candidateIds.includes(currentSelected)) {
                 nextSelected = currentSelected;
             } else {
-                const activePeriod = mapped.find((item) => item.is_active);
+                const activePeriod = mapped.find((item) => isPeriodActive(item));
                 nextSelected = activePeriod?.id ?? (mapped[0]?.id ?? null);
             }
 
@@ -367,7 +378,7 @@ export default function WheelOfFortuneAdminPage() {
             name: period.name ?? "",
             start: toDateInputValue(period.start_at),
             end: toDateInputValue(period.end_at),
-            isActive: !!period.is_active,
+            isActive: isPeriodActive(period),
             description: period.description ?? "",
         });
         setPeriodFormError(null);
@@ -403,6 +414,7 @@ export default function WheelOfFortuneAdminPage() {
             name: trimmedName,
             start_at: periodForm.start || undefined,
             end_at: periodForm.end || undefined,
+            active: periodForm.isActive,
             is_active: periodForm.isActive,
             description: periodForm.description.trim() || undefined,
         };
@@ -720,7 +732,7 @@ export default function WheelOfFortuneAdminPage() {
                                                 {formatDateRange(period.start_at, period.end_at)}
                                             </p>
                                         </div>
-                                        {period.is_active ? (
+                                        {isPeriodActive(period) ? (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-jade/10 px-3 py-1 text-xs font-semibold text-jade">
                                                 <CheckCircle2 className="h-3.5 w-3.5" /> Activă
                                             </span>

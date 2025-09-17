@@ -30,6 +30,20 @@ const extractArray = (response: any): any[] => {
     return [];
 };
 
+const normalizeActiveFlag = (value: unknown): boolean | undefined => {
+    if (typeof value === "undefined" || value === null) return undefined;
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    const normalized = `${value}`.trim().toLowerCase();
+    if (["1", "true", "yes", "da", "active", "activ"].includes(normalized)) {
+        return true;
+    }
+    if (["0", "false", "no", "inactive", "inactiv", "off"].includes(normalized)) {
+        return false;
+    }
+    return undefined;
+};
+
 const mapPeriod = (item: any): WheelOfFortunePeriod | null => {
     if (!item) return null;
     const id = Number(item.id ?? item.period_id ?? item.value);
@@ -42,20 +56,27 @@ const mapPeriod = (item: any): WheelOfFortunePeriod | null => {
 
     const start = item.start_at ?? item.start_date ?? item.starts_at ?? item.from ?? null;
     const end = item.end_at ?? item.end_date ?? item.ends_at ?? item.to ?? null;
-    const activeRaw = item.is_active ?? item.active ?? item.enabled ?? item.status;
+    const activeRaw = item.active ?? item.is_active ?? item.enabled ?? item.status;
+    const normalizedActive = normalizeActiveFlag(activeRaw);
 
     return {
         id,
         name,
         start_at: typeof start === "string" ? start : null,
         end_at: typeof end === "string" ? end : null,
-        is_active: typeof activeRaw !== "undefined"
-            ? Boolean(activeRaw === true || activeRaw === 1 || `${activeRaw}` === "1" || `${activeRaw}`.toLowerCase() === "true")
-            : undefined,
+        active: normalizedActive,
+        is_active: normalizedActive,
         description: typeof item.description === "string" ? item.description : null,
         created_at: typeof item.created_at === "string" ? item.created_at : null,
         updated_at: typeof item.updated_at === "string" ? item.updated_at : null,
     };
+};
+
+const isPeriodActive = (period?: WheelOfFortunePeriod | null) => {
+    if (!period) return false;
+    if (typeof period.active === "boolean") return period.active;
+    if (typeof period.is_active === "boolean") return period.is_active;
+    return false;
 };
 
 const mapPrize = (item: any): WheelPrize | null => {
@@ -127,19 +148,19 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         setIsLoading(true);
         setLoadError(null);
         try {
-            const activePeriodResponse = await apiClient.getWheelOfFortunePeriods({ is_active: 1, limit: 1 });
+            const activePeriodResponse = await apiClient.getWheelOfFortunePeriods({ active: 1, is_active: 1, limit: 1 });
             const activeCandidates = extractArray(activePeriodResponse)
                 .map(mapPeriod)
                 .filter((item): item is WheelOfFortunePeriod => item !== null);
 
-            let period = activeCandidates.find((item) => item.is_active) ?? activeCandidates[0] ?? null;
+            let period = activeCandidates.find((item) => isPeriodActive(item)) ?? null;
 
             if (!period) {
                 const fallbackResponse = await apiClient.getWheelOfFortunePeriods({ per_page: 20 });
                 const fallbackList = extractArray(fallbackResponse)
                     .map(mapPeriod)
                     .filter((item): item is WheelOfFortunePeriod => item !== null);
-                period = fallbackList.find((item) => item.is_active) ?? fallbackList[0] ?? null;
+                period = fallbackList.find((item) => isPeriodActive(item)) ?? null;
             }
 
             if (!period) {

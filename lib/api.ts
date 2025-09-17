@@ -442,17 +442,24 @@ class ApiClient {
         page?: number;
         per_page?: number;
         limit?: number;
+        active?: number | boolean;
         is_active?: number | boolean;
     } = {}) {
         const searchParams = new URLSearchParams();
         if (params.page) searchParams.append('page', params.page.toString());
         if (params.per_page) searchParams.append('per_page', params.per_page.toString());
         if (params.limit) searchParams.append('limit', params.limit.toString());
+        const appendBooleanParam = (key: string, value: number | boolean) => {
+            const normalized = typeof value === 'boolean'
+                ? value ? '1' : '0'
+                : value.toString();
+            searchParams.append(key, normalized);
+        };
+        if (typeof params.active !== 'undefined') {
+            appendBooleanParam('active', params.active);
+        }
         if (typeof params.is_active !== 'undefined') {
-            const value = typeof params.is_active === 'boolean'
-                ? params.is_active ? '1' : '0'
-                : params.is_active.toString();
-            searchParams.append('is_active', value);
+            appendBooleanParam('is_active', params.is_active);
         }
         const query = searchParams.toString();
         return this.request<any>(`/wheel-of-fortune-periods${query ? `?${query}` : ''}`);
@@ -462,11 +469,15 @@ class ApiClient {
         name: string;
         start_at?: string | null;
         end_at?: string | null;
+        active?: boolean;
         is_active?: boolean;
         description?: string | null;
     }) {
         const body = sanitizePayload({
             ...payload,
+            ...(typeof payload.active === 'boolean'
+                ? { active: payload.active }
+                : {}),
             ...(typeof payload.is_active === 'boolean'
                 ? { is_active: payload.is_active }
                 : {}),
@@ -483,12 +494,16 @@ class ApiClient {
             name?: string;
             start_at?: string | null;
             end_at?: string | null;
+            active?: boolean;
             is_active?: boolean;
             description?: string | null;
         },
     ) {
         const body = sanitizePayload({
             ...payload,
+            ...(typeof payload.active === 'boolean'
+                ? { active: payload.active }
+                : {}),
             ...(typeof payload.is_active === 'boolean'
                 ? { is_active: payload.is_active }
                 : {}),

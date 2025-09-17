@@ -50,6 +50,7 @@ export interface WheelOfFortunePeriod {
   name: string;
   start_at?: string | null;
   end_at?: string | null;
+  active?: boolean;
   is_active?: boolean;
   description?: string | null;
   created_at?: string | null;
