@@ -125,7 +125,10 @@ export const parseStoredWheelPrize = (
     if (!isPlainObject(raw)) return null;
 
     const prize = parsePrize(raw.prize ?? raw.slice ?? raw.wheel_of_fortune);
-    const winnerSource = raw.winner ?? raw.participant ?? raw.customer;
+    const winnerSourceRaw = raw.winner ?? raw.participant ?? raw.customer;
+    const winnerSource = isPlainObject(winnerSourceRaw)
+        ? (winnerSourceRaw as { name?: unknown; phone?: unknown })
+        : undefined;
     const winnerName = normalizeString(winnerSource?.name ?? raw.name);
     const winnerPhone = normalizeString(winnerSource?.phone ?? raw.phone);
     const savedAt = normalizeDateIso(raw.saved_at ?? raw.created_at);
