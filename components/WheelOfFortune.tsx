@@ -200,8 +200,11 @@ const parseIpAddress = (payload: unknown): string | null => {
 const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClose }) => {
     const [prizes, setPrizes] = useState<WheelPrize[]>([]);
     const [activePeriod, setActivePeriod] = useState<WheelOfFortunePeriod | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [availabilityStatus, setAvailabilityStatus] = useState<
+        "unknown" | "available" | "unavailable"
+    >("unknown");
 
     const [isSpinning, setIsSpinning] = useState(false);
     const [rotation, setRotation] = useState(0);
@@ -293,6 +296,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     }, []);
 
     const fetchWheelData = useCallback(async () => {
+        setAvailabilityStatus("unknown");
         setIsLoading(true);
         setLoadError(null);
         try {
@@ -314,8 +318,8 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
             if (!period) {
                 setActivePeriod(null);
                 setPrizes([]);
+                setAvailabilityStatus("unavailable");
                 setLoadError("Momentan nu există o perioadă activă pentru roata norocului.");
-                setIsLoading(false);
                 return;
             }
 
@@ -334,12 +338,16 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
             setPrizes(prizeItems);
 
             if (prizeItems.length === 0) {
+                setAvailabilityStatus("unavailable");
                 setLoadError("Momentan nu sunt premii disponibile pentru această perioadă.");
+            } else {
+                setAvailabilityStatus("available");
             }
         } catch (error) {
             console.error("Failed to load wheel data", error);
             setPrizes([]);
             setActivePeriod(null);
+            setAvailabilityStatus("unknown");
             setLoadError("Nu am putut încărca premiile. Te rugăm să încerci din nou mai târziu.");
         } finally {
             if (mountedRef.current) {
@@ -351,6 +359,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     useEffect(() => {
         fetchWheelData();
     }, [fetchWheelData]);
+
+    useEffect(() => {
+        if (!isPopup) return;
+        if (availabilityStatus !== "unavailable") return;
+        if (onClose) {
+            onClose();
+        }
+    }, [availabilityStatus, isPopup, onClose]);
 
     const segmentAngle = useMemo(
         () => (prizes.length > 0 ? 360 / prizes.length : 0),
@@ -889,6 +905,10 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
             </div>
         </div>
     );
+
+    if (availabilityStatus === "unavailable") {
+        return null;
+    }
 
     if (isPopup) {
         return (
