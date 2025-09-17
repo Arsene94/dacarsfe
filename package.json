@@ -7,7 +7,8 @@
     "build": "npm run build:css && next build",
     "start": "next start",
     "lint": "next lint",
-    "build:css": "tailwindcss -c tailwind.config.ts -i ./app/globals.css -o ./public/tailwind.css --minify"
+    "build:css": "tailwindcss -c tailwind.config.ts -i ./app/globals.css -o ./public/tailwind.css --minify",
+    "images:webp": "node scripts/convert-images.cjs"
   },
   "dependencies": {
     "@next/bundle-analyzer": "^15.5.2",
@@ -24,6 +25,7 @@
     "pdfjs-dist": "^3.11.174",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "sharp": "^0.34.3",
     "vitest": "^3.2.4"
   },
   "devDependencies": {

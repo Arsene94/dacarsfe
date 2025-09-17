@@ -82,6 +82,26 @@ npm run dev
 npm run build
 ```
 
+## Optimizare imagini WebP
+
+Scriptul `npm run images:webp` folosește [Sharp](https://sharp.pixelplumbing.com/) pentru a converti automat imaginile raster în fișiere WebP optimizate.
+
+```bash
+# Conversie rapidă pentru întregul director public/
+npm run images:webp
+
+# Exemplu cu opțiuni suplimentare
+npm run images:webp -- --src assets/raw --dest public/images --quality 85 --effort 6
+```
+
+Opțiuni utile:
+
+- `--src` / `--dest` – specifică directoare sursă și destinație personalizate
+- `--quality` și `--alpha-quality` – controlează nivelul de compresie
+- `--effort` – ajustează timpul petrecut pentru optimizare (0-9)
+- `--lossless` / `--near-lossless` – pentru conversie fără pierderi
+- `--force` – recreează fișierele chiar dacă există deja varianta WebP
+
 ## Configurare API
 
 Adaugă în `.env`:
