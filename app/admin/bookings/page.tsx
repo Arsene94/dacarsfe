@@ -117,6 +117,7 @@ const ReservationsPage = () => {
         phone: b.customer_phone,
         carId: b.car_id,
         carName: b.car_name,
+        carLicensePlate: b.car_license_plate ?? "",
         startDate: b.rental_start_date,
         endDate: b.rental_end_date,
         plan: b.with_deposit ? 1 : 0,
@@ -276,10 +277,12 @@ const ReservationsPage = () => {
       },
       {
         id: "car",
-        header: "Mașină",
-        accessor: (r) => r.carName,
+        header: "Număr înmatriculare",
+        accessor: (r) => r.carLicensePlate || r.carName,
         cell: (r) => (
-          <div className="font-dm-sans text-gray-900 text-xs">{r.carName}</div>
+          <div className="font-dm-sans text-gray-900 text-xs">
+            {r.carLicensePlate || r.carName}
+          </div>
         ),
       },
       {
@@ -764,8 +767,15 @@ const ReservationsPage = () => {
                           Mașină
                         </p>
                         <p className="font-dm-sans font-semibold text-gray-900">
-                          {selectedReservation.carName}
+                          {selectedReservation.carLicensePlate ||
+                            selectedReservation.carName}
                         </p>
+                        {selectedReservation.carLicensePlate &&
+                          selectedReservation.carName && (
+                            <p className="text-sm text-gray-600 font-dm-sans">
+                              {selectedReservation.carName}
+                            </p>
+                          )}
                       </div>
                     </div>
 
