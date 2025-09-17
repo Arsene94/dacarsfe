@@ -229,7 +229,9 @@ const RolesAdminPage = () => {
 
         const mapped = rawList
           .map((item: unknown) => mapRoleResource(item))
-          .filter((item): item is NormalizedRole => item !== null);
+          .filter(
+            (item: NormalizedRole | null): item is NormalizedRole => item !== null,
+          );
 
         setRoles(mapped);
 
