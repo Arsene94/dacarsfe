@@ -112,6 +112,33 @@ const mapPrize = (item: any): WheelPrize | null => {
     };
 };
 
+const IP_ENDPOINTS = [
+    "https://api.ipify.org?format=json",
+    "https://api64.ipify.org?format=json",
+];
+
+const parseIpAddress = (payload: unknown): string | null => {
+    if (!payload) return null;
+    if (typeof payload === "string") {
+        const trimmed = payload.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+    if (typeof payload === "object" && payload !== null) {
+        const record = payload as Record<string, unknown>;
+        const candidates = ["ip", "ip_address", "address", "query"];
+        for (const key of candidates) {
+            const value = record[key];
+            if (typeof value === "string") {
+                const trimmed = value.trim();
+                if (trimmed.length > 0) {
+                    return trimmed;
+                }
+            }
+        }
+    }
+    return null;
+};
+
 const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClose }) => {
     const [prizes, setPrizes] = useState<WheelPrize[]>([]);
     const [activePeriod, setActivePeriod] = useState<WheelOfFortunePeriod | null>(null);
@@ -130,9 +157,11 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     const [participant, setParticipant] = useState<{ name: string; phone: string } | null>(null);
     const [saveState, setSaveState] = useState<"idle" | "saving" | "success" | "error">("idle");
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [clientIp, setClientIp] = useState<string | null>(null);
 
     const mountedRef = useRef(true);
     const spinTimeoutRef = useRef<number | null>(null);
+    const ipFetchRef = useRef(false);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -141,6 +170,48 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
             if (spinTimeoutRef.current) {
                 window.clearTimeout(spinTimeoutRef.current);
             }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (ipFetchRef.current) return;
+        ipFetchRef.current = true;
+
+        let cancelled = false;
+
+        const fetchClientIp = async () => {
+            for (const endpoint of IP_ENDPOINTS) {
+                try {
+                    const response = await fetch(endpoint);
+                    if (!response.ok) {
+                        continue;
+                    }
+
+                    const contentType = response.headers.get("content-type") ?? "";
+                    let ip: string | null = null;
+
+                    if (contentType.includes("application/json")) {
+                        const data = await response.json();
+                        ip = parseIpAddress(data);
+                    } else {
+                        const text = await response.text();
+                        ip = parseIpAddress(text);
+                    }
+
+                    if (ip && !cancelled && mountedRef.current) {
+                        setClientIp(ip);
+                        return;
+                    }
+                } catch (error) {
+                    console.warn("Failed to fetch client IP", error);
+                }
+            }
+        };
+
+        void fetchClientIp();
+
+        return () => {
+            cancelled = true;
         };
     }, []);
 
@@ -242,6 +313,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 wheel_of_fortune_id: prize.id,
                 name: info.name,
                 phone: info.phone,
+                ...(clientIp ? { ip_address: clientIp } : {}),
             });
             if (!mountedRef.current) return;
             setSaveState("success");
@@ -255,7 +327,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                     : "A apărut o eroare la salvarea premiului. Te rugăm să încerci din nou.",
             );
         }
-    }, []);
+    }, [clientIp]);
 
     const handleSpin = () => {
         if (isSpinning || spinsLeft <= 0) return;
