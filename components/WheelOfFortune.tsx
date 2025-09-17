@@ -331,7 +331,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 .filter((item): item is WheelPrize => item !== null)
                 .map((item) => ({
                     ...item,
-                    description: item.description ?? buildDefaultDescription(item) ?? "",
+                    description: item.description ?? buildWheelPrizeDefaultDescription(item) ?? "",
                     color: item.color || "#1E7149",
                 }));
 
