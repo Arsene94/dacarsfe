@@ -7,6 +7,7 @@ import React, {
     useRef,
     useState,
 } from "react";
+import Image from "next/image";
 import {
     AlertCircle,
     Gift,
@@ -748,7 +749,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         })}
 
                         <div className="absolute left-1/2 top-1/2 z-10 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-[#1E7149] bg-white shadow-lg">
-                            <Gift className="h-8 w-8 text-[#1E7149]" />
+                            <Image
+                                src="/images/dacars-icon.svg"
+                                alt="Siglă DaCars"
+                                width={32}
+                                height={32}
+                                className="h-8 w-8"
+                                priority
+                            />
                         </div>
 
                         {isLoading && (
