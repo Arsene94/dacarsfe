@@ -8,7 +8,50 @@ import { Popup } from "@/components/ui/popup";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import apiClient from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { DynamicPrice, DynamicPricePercentage } from "@/types/admin";
+
+const ToggleSwitch = ({
+  checked,
+  onToggle,
+  ariaLabel,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  ariaLabel?: string;
+}) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    aria-label={ariaLabel}
+    onClick={(event) => {
+      event.stopPropagation();
+      onToggle();
+    }}
+    className={cn(
+      "relative inline-flex h-6 w-11 cursor-pointer items-center rounded-full border border-transparent transition-all duration-300 ease-out",
+      "focus:outline-none focus-visible:ring-2 focus-visible:ring-jade/70 focus-visible:ring-offset-2",
+      checked
+        ? "bg-gradient-to-r from-jade to-jadeLight shadow-inner"
+        : "bg-gray-300"
+    )}
+  >
+    <span
+      className={cn(
+        "inline-flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm transition-all duration-300 ease-out",
+        checked ? "translate-x-5" : "translate-x-1"
+      )}
+    >
+      <span
+        className={cn(
+          "h-2 w-2 rounded-full transition-colors duration-300",
+          checked ? "bg-jade" : "bg-gray-400"
+        )}
+      />
+    </span>
+  </button>
+);
 
 const numberOptions = Array.from({ length: 201 }, (_, i) => i - 100);
 
@@ -128,15 +171,10 @@ const DynamicPricesPage = () => {
       header: "Activ",
       accessor: (row: DynamicPrice) => row.enabled,
       cell: (row: DynamicPrice) => (
-        <input
-          type="checkbox"
+        <ToggleSwitch
           checked={row.enabled}
-          onChange={(e) => {
-            e.stopPropagation();
-            handleToggle(row);
-          }}
-          className="h-4 w-4"
-          aria-label="Toggle"
+          onToggle={() => handleToggle(row)}
+          ariaLabel={`Comută statutul pentru perioada ${row.start_from} - ${row.end_to}`}
         />
       ),
     },
