@@ -22,6 +22,7 @@ import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
 import { AdminReservation } from "@/types/admin";
+import type { ReservationWheelPrizeSummary } from "@/types/reservation";
 import { Input } from "@/components/ui/input";
 import DateRangePicker from "@/components/ui/date-range-picker";
 import { Popup } from "@/components/ui/popup";
@@ -29,6 +30,10 @@ import BookingForm from "@/components/admin/BookingForm";
 import BookingContractForm from "@/components/admin/BookingContractForm";
 import { Button } from "@/components/ui/button";
 import apiClient from "@/lib/api";
+import {
+  describeWheelPrizeSummaryAmount,
+  formatWheelPrizeExpiry,
+} from "@/lib/wheelFormatting";
 
 const EMPTY_BOOKING = {
   rental_start_date: "",
@@ -51,6 +56,89 @@ const EMPTY_BOOKING = {
   sub_total: 0,
   total: 0,
   price_per_day: 0,
+  total_before_wheel_prize: null as number | null,
+  wheel_prize_discount: 0,
+  wheel_prize: null as ReservationWheelPrizeSummary | null,
+};
+
+const parseOptionalNumber = (value: unknown): number | null => {
+  if (value == null || value === "") return null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string") {
+    const normalized = Number(value.replace(/[^0-9.,-]/g, "").replace(",", "."));
+    return Number.isFinite(normalized) ? normalized : null;
+  }
+  return null;
+};
+
+const normalizeWheelPrizeSummary = (
+  raw: any,
+): ReservationWheelPrizeSummary | null => {
+  if (!raw) return null;
+  const wheelId =
+    parseOptionalNumber(raw.wheel_of_fortune_id ?? raw.wheelId ?? raw.period_id) ??
+    null;
+  const prizeId =
+    parseOptionalNumber(raw.prize_id ?? raw.id ?? raw.prizeId ?? raw.slice_id) ?? null;
+  const amount = parseOptionalNumber(raw.amount ?? raw.value ?? raw.discount_value);
+  const discountValue =
+    parseOptionalNumber(raw.discount_value ?? raw.discount ?? raw.value) ?? 0;
+
+  return {
+    wheel_of_fortune_id: wheelId,
+    prize_id: prizeId,
+    title: raw.title ?? raw.name ?? "Premiu DaCars",
+    type: raw.type ?? raw.prize_type ?? raw.wheel_of_fortune?.type ?? "other",
+    amount,
+    description: raw.description ?? null,
+    amount_label: raw.amount_label ?? raw.amountLabel ?? null,
+    expires_at: raw.expires_at ?? raw.expiresAt ?? null,
+    discount_value: discountValue,
+  };
+};
+
+const extractWheelPrizeDisplay = (
+  prize: ReservationWheelPrizeSummary | null | undefined,
+  discount: unknown,
+  totalBefore: unknown,
+) => {
+  const normalizedPrize = prize ?? null;
+  const amountLabel = describeWheelPrizeSummaryAmount(normalizedPrize);
+  const expiryLabel = normalizedPrize?.expires_at
+    ? formatWheelPrizeExpiry(normalizedPrize.expires_at)
+    : null;
+  const discountRaw = discount ?? normalizedPrize?.discount_value ?? null;
+  const discountValue =
+    typeof discountRaw === "number"
+      ? discountRaw
+      : parseOptionalNumber(discountRaw) ?? 0;
+  const totalBeforeValue =
+    typeof totalBefore === "number"
+      ? (Number.isFinite(totalBefore) ? totalBefore : null)
+      : parseOptionalNumber(totalBefore);
+
+  return {
+    prize: normalizedPrize,
+    amountLabel,
+    expiryLabel,
+    discountValue,
+    totalBefore: totalBeforeValue ?? null,
+  };
+};
+
+const euroFormatter = new Intl.NumberFormat("ro-RO", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+const EMPTY_WHEEL_PRIZE_DETAILS: ReturnType<typeof extractWheelPrizeDisplay> = {
+  prize: null,
+  amountLabel: null,
+  expiryLabel: null,
+  discountValue: 0,
+  totalBefore: null,
 };
 
 const ReservationsPage = () => {
@@ -76,6 +164,34 @@ const ReservationsPage = () => {
     useState<AdminReservation | null>(null);
   const [editPopupOpen, setEditPopupOpen] = useState(false);
   const [bookingInfo, setBookingInfo] = useState<any>(null);
+
+  const formatEuro = (value: number | string | null | undefined) => {
+    if (typeof value === "string") {
+      const parsed = parseOptionalNumber(value);
+      if (typeof parsed === "number") {
+        return `${euroFormatter.format(parsed)}€`;
+      }
+      return "—";
+    }
+    if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+    return `${euroFormatter.format(value)}€`;
+  };
+
+  const selectedWheelPrizeDetails = selectedReservation
+    ? extractWheelPrizeDisplay(
+        selectedReservation.wheelPrize,
+        selectedReservation.wheelPrizeDiscount,
+        selectedReservation.totalBeforeWheelPrize,
+      )
+    : EMPTY_WHEEL_PRIZE_DETAILS;
+
+  const {
+    prize: selectedWheelPrize,
+    amountLabel: selectedWheelPrizeAmountLabel,
+    expiryLabel: selectedWheelPrizeExpiry,
+    discountValue: selectedWheelPrizeDiscount,
+    totalBefore: selectedTotalBeforeWheelPrize,
+  } = selectedWheelPrizeDetails;
 
   const mapStatus = (status: string): AdminReservation["status"] => {
     switch (status) {
@@ -110,38 +226,54 @@ const ReservationsPage = () => {
       if (startDateFilter) params.start_date = startDateFilter;
       if (endDateFilter) params.end_date = endDateFilter;
       const res = await apiClient.getBookings(params);
-      const mapped: AdminReservation[] = res.data.map((b: any) => ({
-        id: b.booking_number || b.id?.toString(),
-        customerName: b.customer_name,
-        email: b.customer_email,
-        phone: b.customer_phone,
-        carId: b.car_id,
-        carName: b.car_name,
-        carLicensePlate: b.car.license_plate ?? "",
-        startDate: b.rental_start_date,
-        endDate: b.rental_end_date,
-        plan: b.with_deposit ? 1 : 0,
-        pickupTime: new Date(b.rental_start_date).toLocaleTimeString("ro-RO", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        dropoffTime: new Date(b.rental_end_date).toLocaleTimeString("ro-RO", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        days: b.days,
-        couponAmount: b.coupon_amount,
-        subTotal: b.sub_total,
-        taxAmount: b.tax_amount,
-        location: b.location || "",
-        status: mapStatus(b.status),
-        total: b.total,
-        discountCode: b.coupon_code || undefined,
-        createdAt: b.created_at,
-        pricePerDay: b.price_per_day,
-        servicesPrice: b.total_services,
-        discount: b.coupon_amount,
-      }));
+      const mapped: AdminReservation[] = res.data.map((b: any) => {
+        const wheelPrize = normalizeWheelPrizeSummary(b.wheel_prize);
+        const wheelPrizeDiscount =
+          b.wheel_prize_discount ?? wheelPrize?.discount_value ?? null;
+        const normalizedDiscount =
+          typeof wheelPrizeDiscount === "number"
+            ? wheelPrizeDiscount
+            : parseOptionalNumber(wheelPrizeDiscount);
+        const totalBeforeWheelPrize = parseOptionalNumber(
+          b.total_before_wheel_prize,
+        );
+
+        return {
+          id: b.booking_number || b.id?.toString(),
+          customerName: b.customer_name,
+          email: b.customer_email,
+          phone: b.customer_phone,
+          carId: b.car_id,
+          carName: b.car_name,
+          carLicensePlate: b.car.license_plate ?? "",
+          startDate: b.rental_start_date,
+          endDate: b.rental_end_date,
+          plan: b.with_deposit ? 1 : 0,
+          pickupTime: new Date(b.rental_start_date).toLocaleTimeString("ro-RO", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          dropoffTime: new Date(b.rental_end_date).toLocaleTimeString("ro-RO", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          days: b.days,
+          couponAmount: b.coupon_amount,
+          subTotal: b.sub_total,
+          taxAmount: b.tax_amount,
+          location: b.location || "",
+          status: mapStatus(b.status),
+          total: b.total,
+          discountCode: b.coupon_code || undefined,
+          createdAt: b.created_at,
+          pricePerDay: b.price_per_day,
+          servicesPrice: b.total_services,
+          discount: b.coupon_amount,
+          totalBeforeWheelPrize: totalBeforeWheelPrize,
+          wheelPrizeDiscount: normalizedDiscount ?? null,
+          wheelPrize,
+        };
+      });
       const meta = res?.meta || {};
       const total = meta?.total ?? res?.total ?? mapped.length;
       setReservations(mapped);
@@ -378,38 +510,71 @@ const ReservationsPage = () => {
     [handleViewReservation],
   );
 
-  const renderReservationDetails = (r: AdminReservation) => (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-700 font-dm-sans">
-      <div className="flex items-center space-x-2">
-        <span className="font-bold">Preț per zi:</span>
-        <span> {r.pricePerDay}€</span>
-      </div>
-      <div className="flex items-center space-x-2">
-          <span className="font-bold">Zile:</span>
-          <span> {r.days}</span>
-      </div>
-      <div className="flex items-center space-x-2">
-          <span className="font-bold">Servicii:</span>
-          <span>{r.servicesPrice}€</span>
-      </div>
-      <div className="flex items-center space-x-2">
-        <span className="font-bold">Subtotal:</span>
-        <span>{r.subTotal}€</span>
-      </div>
-      {r.discountCode && (
+  const renderReservationDetails = (r: AdminReservation) => {
+    const { prize, amountLabel, expiryLabel, discountValue, totalBefore } =
+      extractWheelPrizeDisplay(r.wheelPrize, r.wheelPrizeDiscount, r.totalBeforeWheelPrize);
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-700 font-dm-sans">
         <div className="flex items-center space-x-2">
-          <span className="font-semibold">Reducere:</span>
-          <span>{r.couponAmount}€</span>
+          <span className="font-bold">Preț per zi:</span>
+          <span>{formatEuro(r.pricePerDay ?? 0)}</span>
         </div>
-      )}
-      {r.notes && (
-        <div className="md:col-span-4">
-          <span className="font-semibold">Notițe: </span>
-          {r.notes}
+        <div className="flex items-center space-x-2">
+          <span className="font-bold">Zile:</span>
+          <span>{r.days}</span>
         </div>
-      )}
-    </div>
-  );
+        <div className="flex items-center space-x-2">
+          <span className="font-bold">Servicii:</span>
+          <span>{formatEuro(r.servicesPrice ?? 0)}</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <span className="font-bold">Subtotal:</span>
+          <span>{formatEuro(r.subTotal ?? 0)}</span>
+        </div>
+        {typeof totalBefore === "number" && (
+          <div className="flex items-center space-x-2">
+            <span className="font-bold">Total înainte premiu:</span>
+            <span>{formatEuro(totalBefore)}</span>
+          </div>
+        )}
+        <div className="flex items-center space-x-2">
+          <span className="font-bold">Roata Norocului:</span>
+          <span>{prize ? prize.title : "—"}</span>
+        </div>
+        {prize && amountLabel && (
+          <div className="flex items-center space-x-2 text-xs text-gray-600">
+            <span className="font-semibold">Valoare premiu:</span>
+            <span>{amountLabel}</span>
+          </div>
+        )}
+        {prize && discountValue > 0 && (
+          <div className="flex items-center space-x-2">
+            <span className="font-semibold">Reducere premiu:</span>
+            <span>-{formatEuro(discountValue)}</span>
+          </div>
+        )}
+        {prize && expiryLabel && (
+          <div className="flex items-center space-x-2 text-xs text-gray-600">
+            <span className="font-semibold">Valabil până la:</span>
+            <span>{expiryLabel}</span>
+          </div>
+        )}
+        {r.discountCode && (
+          <div className="flex items-center space-x-2">
+            <span className="font-semibold">Reducere:</span>
+            <span>{formatEuro(r.couponAmount ?? 0)}</span>
+          </div>
+        )}
+        {r.notes && (
+          <div className="md:col-span-4">
+            <span className="font-semibold">Notițe: </span>
+            {r.notes}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const getPageNumbers = (): (number | "ellipsis")[] => {
     if (lastPage <= 6) {
@@ -843,7 +1008,7 @@ const ReservationsPage = () => {
                           Preț/zi:
                         </span>
                         <span className="font-dm-sans text-gray-900">
-                          {selectedReservation.pricePerDay}€
+                          {formatEuro(selectedReservation.pricePerDay ?? 0)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -851,25 +1016,66 @@ const ReservationsPage = () => {
                           Servicii:
                         </span>
                         <span className="font-dm-sans text-gray-900">
-                          {selectedReservation.servicesPrice}€
+                          {formatEuro(selectedReservation.servicesPrice ?? 0)}
                         </span>
                       </div>
-                      {selectedReservation.discount && selectedReservation.discount > 0 && (
+                      {typeof selectedTotalBeforeWheelPrize === "number" && (
                         <div className="flex items-center justify-between">
                           <span className="font-dm-sans text-gray-600">
-                            Discount:
+                            Total înainte premiu:
                           </span>
                           <span className="font-dm-sans text-gray-900">
-                            -{selectedReservation.discount}€
+                            {formatEuro(selectedTotalBeforeWheelPrize)}
                           </span>
                         </div>
                       )}
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="font-dm-sans text-gray-600">
+                          Premiu Roata Norocului:
+                        </span>
+                        <div className="text-right">
+                          <p className="font-dm-sans text-gray-900">
+                            {selectedWheelPrize ? selectedWheelPrize.title : "—"}
+                          </p>
+                          {selectedWheelPrizeAmountLabel && (
+                            <p className="text-xs text-gray-500">
+                              {selectedWheelPrizeAmountLabel}
+                            </p>
+                          )}
+                          {selectedWheelPrizeExpiry && (
+                            <p className="text-xs text-gray-500">
+                              Valabil până la {selectedWheelPrizeExpiry}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {selectedWheelPrizeDiscount > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="font-dm-sans text-gray-600">
+                            Reducere premiu:
+                          </span>
+                          <span className="font-dm-sans text-gray-900">
+                            -{formatEuro(selectedWheelPrizeDiscount)}
+                          </span>
+                        </div>
+                      )}
+                      {typeof selectedReservation.discount === "number" &&
+                        selectedReservation.discount > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span className="font-dm-sans text-gray-600">
+                              Discount:
+                            </span>
+                            <span className="font-dm-sans text-gray-900">
+                              -{formatEuro(selectedReservation.discount)}
+                            </span>
+                          </div>
+                        )}
                       <div className="flex items-center justify-between">
                         <span className="font-dm-sans text-gray-600">
                           Total:
                         </span>
                         <span className="font-dm-sans font-bold text-berkeley text-lg">
-                          {selectedReservation.total}€
+                          {formatEuro(selectedReservation.total ?? 0)}
                         </span>
                       </div>
                     </div>

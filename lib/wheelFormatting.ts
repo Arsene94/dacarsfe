@@ -1,4 +1,5 @@
 import type { WheelPrize } from "@/types/wheel";
+import type { ReservationWheelPrizeSummary } from "@/types/reservation";
 
 const amountFormatter = new Intl.NumberFormat("ro-RO", {
     maximumFractionDigits: 2,
@@ -52,6 +53,48 @@ export const describeWheelPrizeAmount = (
         return `Bonus de ${formatted}`;
     }
     return formatted;
+};
+
+const toOptionalNumber = (value: unknown): number | null => {
+    if (value == null || value === "") return null;
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "string") {
+        const sanitized = Number(value.replace(/[^0-9.,-]/g, "").replace(",", "."));
+        return Number.isFinite(sanitized) ? sanitized : null;
+    }
+    return null;
+};
+
+export const mapReservationPrizeToWheelPrize = (
+    summary: ReservationWheelPrizeSummary | null | undefined,
+): WheelPrize | null => {
+    if (!summary) return null;
+    return {
+        id: Number(summary.prize_id ?? 0),
+        period_id: Number(summary.wheel_of_fortune_id ?? 0),
+        title: summary.title ?? "Premiu DaCars",
+        description: summary.description ?? null,
+        amount: toOptionalNumber(summary.amount),
+        color: "#000000",
+        probability: 0,
+        type: summary.type ?? "other",
+        created_at: null,
+        updated_at: null,
+    };
+};
+
+export const describeWheelPrizeSummaryAmount = (
+    summary: ReservationWheelPrizeSummary | null | undefined,
+): string | null => {
+    if (!summary) return null;
+    if (summary.amount_label && summary.amount_label.trim().length > 0) {
+        return summary.amount_label;
+    }
+    const prize = mapReservationPrizeToWheelPrize(summary);
+    if (!prize) return null;
+    return describeWheelPrizeAmount(prize);
 };
 
 export const formatWheelPrizeExpiry = (

@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
 import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api";
+import {
+    describeWheelPrizeSummaryAmount,
+    formatWheelPrizeExpiry,
+} from "@/lib/wheelFormatting";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
@@ -18,6 +22,18 @@ const parsePrice = (raw: any): number => {
     if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
     const parsed = parseFloat(String(raw).replace(/[^\d.,]/g, "").replace(",", "."));
     return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const toOptionalNumber = (value: unknown): number | null => {
+    if (value == null || value === "") return null;
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "string") {
+        const parsed = Number(value.replace(/[^0-9.,-]/g, "").replace(",", "."));
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
 };
 
 interface BookingFormProps {
@@ -419,6 +435,32 @@ const BookingForm: React.FC<BookingFormProps> = ({
         originalTotals.current.subtotal || discountedSubtotal;
     const originalTotal = originalTotals.current.total || discountedTotal;
     const restToPay = discountedTotal - (bookingInfo.advance_payment || 0);
+
+    const wheelPrizeSummary = bookingInfo.wheel_prize ?? null;
+    const wheelPrizeDiscountRaw =
+        bookingInfo.wheel_prize_discount ?? wheelPrizeSummary?.discount_value ?? null;
+    const wheelPrizeDiscountValue =
+        typeof wheelPrizeDiscountRaw === "number"
+            ? wheelPrizeDiscountRaw
+            : toOptionalNumber(wheelPrizeDiscountRaw) ?? 0;
+    const wheelPrizeAmountLabel = describeWheelPrizeSummaryAmount(wheelPrizeSummary);
+    const wheelPrizeExpiryLabel = wheelPrizeSummary?.expires_at
+        ? formatWheelPrizeExpiry(wheelPrizeSummary.expires_at)
+        : null;
+    const totalBeforeWheelPrizeValue =
+        typeof bookingInfo.total_before_wheel_prize === "number"
+            ? bookingInfo.total_before_wheel_prize
+            : toOptionalNumber(bookingInfo.total_before_wheel_prize);
+    const wheelPrizeDiscountDisplay = Math.round(wheelPrizeDiscountValue * 100) / 100;
+    const totalBeforeWheelPrizeDisplay =
+        typeof totalBeforeWheelPrizeValue === "number"
+            ? Math.round(totalBeforeWheelPrizeValue * 100) / 100
+            : null;
+    const hasWheelPrize = Boolean(wheelPrizeSummary);
+    const hasWheelPrizeDiscount = wheelPrizeDiscountDisplay > 0;
+    const wheelPrizeTitle = hasWheelPrize
+        ? wheelPrizeSummary?.title ?? "Premiu DaCars"
+        : "—";
 
     const handleUpdateBooking = async () => {
         try {
@@ -935,6 +977,34 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             <span>Subtotal:</span>
                             <span>{originalSubtotal}€</span>
                         </div>
+                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                            <span>Premiu Roata Norocului:</span>
+                            <span>{wheelPrizeTitle}</span>
+                        </div>
+                        {typeof totalBeforeWheelPrizeDisplay === "number" && (
+                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                <span>Total înainte de premiu:</span>
+                                <span>{totalBeforeWheelPrizeDisplay}€</span>
+                            </div>
+                        )}
+                        {hasWheelPrize && wheelPrizeAmountLabel && (
+                            <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
+                                <span>Detalii premiu:</span>
+                                <span className="text-right ms-2">{wheelPrizeAmountLabel}</span>
+                            </div>
+                        )}
+                        {hasWheelPrizeDiscount && (
+                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                <span>Reducere premiu:</span>
+                                <span>-{wheelPrizeDiscountDisplay}€</span>
+                            </div>
+                        )}
+                        {hasWheelPrize && wheelPrizeExpiryLabel && (
+                            <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
+                                <span>Valabil până la:</span>
+                                <span>{wheelPrizeExpiryLabel}</span>
+                            </div>
+                        )}
                         {bookingInfo.advance_payment > 0 && (
                             <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                 <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>

@@ -66,6 +66,9 @@ const EMPTY_BOOKING = {
     sub_total: 0,
     total: 0,
     price_per_day: 0,
+    total_before_wheel_prize: null as number | null,
+    wheel_prize_discount: 0,
+    wheel_prize: null as any,
 };
 
 const CarRentalCalendar: React.FC = () => {
@@ -521,6 +524,10 @@ const CarRentalCalendar: React.FC = () => {
                 status: info.status ?? '',
                 total: info.total ?? 0,
                 advance_payment: info.advance_payment ?? 0,
+                total_before_wheel_prize: info.total_before_wheel_prize ?? null,
+                wheel_prize_discount:
+                    info.wheel_prize_discount ?? info.wheel_prize?.discount_value ?? 0,
+                wheel_prize: info.wheel_prize ?? null,
             };
             setBookingInfo(formatted);
             setEditPopupOpen(true);
