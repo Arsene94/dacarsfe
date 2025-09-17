@@ -24,6 +24,7 @@ import {
     type WheelOfFortunePeriod,
     type WheelOfFortunePrizeWinner,
     type WheelOfFortuneSlice,
+    type WheelOfFortuneType,
 } from "@/types/wheel";
 
 const probabilityFormatter = new Intl.NumberFormat("ro-RO", {
@@ -53,6 +54,40 @@ const formatPrizeType = (type: string | undefined | null) => {
         other: "Alt tip",
     };
     return dictionary[normalized] ?? normalized.replace(/_/g, " ");
+};
+
+const DEFAULT_PRIZE_COLOR = "#1E7149";
+
+const DEFAULT_PRIZE_TYPE: WheelOfFortuneType =
+    WHEEL_OF_FORTUNE_TYPES[0] ?? "percentage_discount";
+
+type PrizeFormState = {
+    title: string;
+    type: WheelOfFortuneType;
+    probability: string;
+    color: string;
+    description: string;
+};
+
+const createEmptyPrizeForm = (): PrizeFormState => ({
+    title: "",
+    type: DEFAULT_PRIZE_TYPE,
+    probability: "",
+    color: DEFAULT_PRIZE_COLOR,
+    description: "",
+});
+
+const normalizePrizeType = (
+    value: unknown,
+    fallback: WheelOfFortuneType = DEFAULT_PRIZE_TYPE,
+): WheelOfFortuneType => {
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (trimmed.length > 0) {
+            return trimmed as WheelOfFortuneType;
+        }
+    }
+    return fallback;
 };
 
 const toNumber = (value: unknown): number => {
@@ -171,18 +206,21 @@ const mapPrize = (item: any): WheelOfFortuneSlice | null => {
         : `Premiu #${id}`;
 
     const descriptionSource = item.description ?? item.details ?? item.text ?? null;
-    const colorSource = item.color ?? item.hex ?? item.swatch ?? "#1E7149";
+    const colorSource = item.color ?? item.hex ?? item.swatch ?? DEFAULT_PRIZE_COLOR;
     const probabilitySource = item.probability ?? item.weight ?? item.chance ?? 0;
-    const typeSource = item.type ?? item.prize_type ?? item.category ?? "other";
+    const typeSource = item.type ?? item.prize_type ?? item.category;
 
     return {
         id,
         period_id: Number.isFinite(periodId) ? periodId : 0,
         title,
         description: typeof descriptionSource === "string" ? descriptionSource : null,
-        color: typeof colorSource === "string" && colorSource.trim().length > 0 ? colorSource : "#1E7149",
+        color:
+            typeof colorSource === "string" && colorSource.trim().length > 0
+                ? colorSource
+                : DEFAULT_PRIZE_COLOR,
         probability: toNumber(probabilitySource),
-        type: typeof typeSource === "string" ? typeSource : "other",
+        type: normalizePrizeType(typeSource, "other"),
         created_at: typeof item.created_at === "string" ? item.created_at : null,
         updated_at: typeof item.updated_at === "string" ? item.updated_at : null,
     };
@@ -243,13 +281,7 @@ export default function WheelOfFortuneAdminPage() {
     const [prizeFormError, setPrizeFormError] = useState<string | null>(null);
     const [prizeSaving, setPrizeSaving] = useState(false);
     const [editingPrize, setEditingPrize] = useState<WheelOfFortuneSlice | null>(null);
-    const [prizeForm, setPrizeForm] = useState({
-        title: "",
-        type: WHEEL_OF_FORTUNE_TYPES[0] ?? "percentage_discount",
-        probability: "",
-        color: "#1E7149",
-        description: "",
-    });
+    const [prizeForm, setPrizeForm] = useState<PrizeFormState>(() => createEmptyPrizeForm());
 
     useEffect(() => {
         selectedPeriodRef.current = selectedPeriodId;
@@ -456,13 +488,7 @@ export default function WheelOfFortuneAdminPage() {
     const openAddPrizeModal = () => {
         if (!selectedPeriodId) return;
         setEditingPrize(null);
-        setPrizeForm({
-            title: "",
-            type: WHEEL_OF_FORTUNE_TYPES[0] ?? "percentage_discount",
-            probability: "",
-            color: "#1E7149",
-            description: "",
-        });
+        setPrizeForm(createEmptyPrizeForm());
         setPrizeFormError(null);
         setIsPrizeModalOpen(true);
     };
@@ -471,9 +497,14 @@ export default function WheelOfFortuneAdminPage() {
         setEditingPrize(prize);
         setPrizeForm({
             title: prize.title ?? "",
-            type: typeof prize.type === "string" ? prize.type : "other",
-            probability: prize.probability.toString(),
-            color: prize.color ?? "#1E7149",
+            type: normalizePrizeType(prize.type, "other"),
+            probability: Number.isFinite(prize.probability)
+                ? prize.probability.toString()
+                : "",
+            color:
+                typeof prize.color === "string" && prize.color.trim().length > 0
+                    ? prize.color
+                    : DEFAULT_PRIZE_COLOR,
             description: prize.description ?? "",
         });
         setPrizeFormError(null);
@@ -506,13 +537,20 @@ export default function WheelOfFortuneAdminPage() {
         setPrizeFormError(null);
         setPrizeSaving(true);
 
+        const normalizedType = normalizePrizeType(prizeForm.type);
+        const normalizedColor =
+            typeof prizeForm.color === "string" && prizeForm.color.trim().length > 0
+                ? prizeForm.color.trim()
+                : DEFAULT_PRIZE_COLOR;
+        const trimmedDescription = prizeForm.description.trim();
+
         const payload = {
             period_id: selectedPeriodId,
             title: trimmedTitle,
-            description: prizeForm.description.trim() || undefined,
-            color: prizeForm.color || "#1E7149",
+            description: trimmedDescription || undefined,
+            color: normalizedColor,
             probability: probabilityValue,
-            type: prizeForm.type || "other",
+            type: normalizedType,
         };
 
         try {
@@ -1010,7 +1048,10 @@ export default function WheelOfFortuneAdminPage() {
                                 id="prize-type"
                                 value={prizeForm.type}
                                 onValueChange={(value) =>
-                                    setPrizeForm((prev) => ({ ...prev, type: value }))
+                                    setPrizeForm((prev) => ({
+                                        ...prev,
+                                        type: normalizePrizeType(value),
+                                    }))
                                 }
                             >
                                 {WHEEL_OF_FORTUNE_TYPES.map((type) => (
@@ -1059,7 +1100,7 @@ export default function WheelOfFortuneAdminPage() {
                                     setPrizeForm((prev) => ({ ...prev, color: event.target.value }))
                                 }
                                 className="flex-1"
-                                placeholder="#1E7149"
+                                placeholder={DEFAULT_PRIZE_COLOR}
                             />
                         </div>
                     </div>
