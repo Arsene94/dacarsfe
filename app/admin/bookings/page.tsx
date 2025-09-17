@@ -117,7 +117,7 @@ const ReservationsPage = () => {
         phone: b.customer_phone,
         carId: b.car_id,
         carName: b.car_name,
-        carLicensePlate: b.car_license_plate ?? "",
+        carLicensePlate: b.car.license_plate ?? "",
         startDate: b.rental_start_date,
         endDate: b.rental_end_date,
         plan: b.with_deposit ? 1 : 0,
