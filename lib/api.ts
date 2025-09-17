@@ -6,6 +6,7 @@ import type {
     CategoryPrice,
     CategoryPriceCalendar,
 } from "@/types/admin";
+import type { WheelOfFortunePrizePayload } from "@/types/wheel";
 
 type CategoryPriceCalendarPayload = Omit<
     CategoryPriceCalendar,
@@ -13,6 +14,16 @@ type CategoryPriceCalendarPayload = Omit<
 >;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+
+const sanitizePayload = <T extends Record<string, any>>(payload: T) => {
+    const cleaned: Record<string, any> = {};
+    Object.entries(payload).forEach(([key, value]) => {
+        if (typeof value !== "undefined") {
+            cleaned[key] = value;
+        }
+    });
+    return cleaned;
+};
 
 class ApiClient {
     private baseURL: string;
@@ -425,6 +436,165 @@ class ApiClient {
             method: 'POST',
             body: JSON.stringify({ phone }),
         });
+    }
+
+    async getWheelOfFortunePeriods(params: {
+        page?: number;
+        per_page?: number;
+        limit?: number;
+        is_active?: number | boolean;
+    } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.page) searchParams.append('page', params.page.toString());
+        if (params.per_page) searchParams.append('per_page', params.per_page.toString());
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (typeof params.is_active !== 'undefined') {
+            const value = typeof params.is_active === 'boolean'
+                ? params.is_active ? '1' : '0'
+                : params.is_active.toString();
+            searchParams.append('is_active', value);
+        }
+        const query = searchParams.toString();
+        return this.request<any>(`/wheel-of-fortune-periods${query ? `?${query}` : ''}`);
+    }
+
+    async createWheelOfFortunePeriod(payload: {
+        name: string;
+        start_at?: string | null;
+        end_at?: string | null;
+        is_active?: boolean;
+        description?: string | null;
+    }) {
+        const body = sanitizePayload({
+            ...payload,
+            ...(typeof payload.is_active === 'boolean'
+                ? { is_active: payload.is_active }
+                : {}),
+        });
+        return this.request<any>(`/wheel-of-fortune-periods`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateWheelOfFortunePeriod(
+        id: number,
+        payload: {
+            name?: string;
+            start_at?: string | null;
+            end_at?: string | null;
+            is_active?: boolean;
+            description?: string | null;
+        },
+    ) {
+        const body = sanitizePayload({
+            ...payload,
+            ...(typeof payload.is_active === 'boolean'
+                ? { is_active: payload.is_active }
+                : {}),
+        });
+        return this.request<any>(`/wheel-of-fortune-periods/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteWheelOfFortunePeriod(id: number) {
+        return this.request<any>(`/wheel-of-fortune-periods/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getWheelOfFortunes(params: {
+        period_id?: number;
+        page?: number;
+        per_page?: number;
+        limit?: number;
+        is_active?: boolean;
+    } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.page) searchParams.append('page', params.page.toString());
+        if (params.per_page) searchParams.append('per_page', params.per_page.toString());
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (typeof params.period_id !== 'undefined') {
+            searchParams.append('period_id', params.period_id.toString());
+        }
+        if (typeof params.is_active !== 'undefined') {
+            const value = typeof params.is_active === 'boolean'
+                ? params.is_active ? '1' : '0'
+                : params.is_active.toString();
+            searchParams.append('is_active', value);
+        }
+        const query = searchParams.toString();
+        return this.request<any>(`/wheel-of-fortunes${query ? `?${query}` : ''}`);
+    }
+
+    async createWheelOfFortune(payload: {
+        period_id: number;
+        title: string;
+        description?: string | null;
+        color: string;
+        probability: number;
+        type: string;
+    }) {
+        const body = sanitizePayload(payload);
+        return this.request<any>(`/wheel-of-fortunes`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateWheelOfFortune(
+        id: number,
+        payload: {
+            period_id?: number;
+            title?: string;
+            description?: string | null;
+            color?: string;
+            probability?: number;
+            type?: string;
+        },
+    ) {
+        const body = sanitizePayload(payload);
+        return this.request<any>(`/wheel-of-fortunes/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteWheelOfFortune(id: number) {
+        return this.request<any>(`/wheel-of-fortunes/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async createWheelOfFortunePrize(payload: WheelOfFortunePrizePayload) {
+        const body = sanitizePayload(payload);
+        return this.request<any>(`/wheel-of-fortune-prizes`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async getWheelOfFortunePrizes(params: {
+        page?: number;
+        per_page?: number;
+        limit?: number;
+        wheel_of_fortune_id?: number;
+        period_id?: number;
+    } = {}) {
+        const searchParams = new URLSearchParams();
+        if (params.page) searchParams.append('page', params.page.toString());
+        if (params.per_page) searchParams.append('per_page', params.per_page.toString());
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (typeof params.wheel_of_fortune_id !== 'undefined') {
+            searchParams.append('wheel_of_fortune_id', params.wheel_of_fortune_id.toString());
+        }
+        if (typeof params.period_id !== 'undefined') {
+            searchParams.append('period_id', params.period_id.toString());
+        }
+        const query = searchParams.toString();
+        return this.request<any>(`/wheel-of-fortune-prizes${query ? `?${query}` : ''}`);
     }
 
     // Authentication helpers
