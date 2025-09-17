@@ -12,6 +12,7 @@ import {
   FolderTree,
   Sparkles,
   Users,
+  Shield,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -30,6 +31,7 @@ const menuItems = [
   { name: "Dynamic Price", href: "/admin/dynamic-prices", icon: Percent },
   { name: "Servicii", href: "/admin/services", icon: ConciergeBell },
   { name: "Utilizatori", href: "/admin/users", icon: Users },
+  { name: "Roluri", href: "/admin/roles", icon: Shield },
   { name: "Wheel of Fortune", href: "/admin/wheel-of-fortune", icon: Sparkles },
   {
     name: "Mockup",

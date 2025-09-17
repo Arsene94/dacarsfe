@@ -6,6 +6,7 @@ import type {
     CategoryPrice,
     CategoryPriceCalendar,
 } from "@/types/admin";
+import type { Role } from "@/types/roles";
 import type { WheelOfFortunePrizePayload } from "@/types/wheel";
 
 type CategoryPriceCalendarPayload = Omit<
@@ -23,6 +24,14 @@ type UserPayload = {
     super_user?: boolean;
     manage_supers?: boolean;
     avatar?: number | string | null;
+} & Record<string, unknown>;
+
+type RolePayload = {
+    slug?: string;
+    name?: string;
+    description?: string | null;
+    is_default?: number | boolean;
+    permissions?: string[];
 } & Record<string, unknown>;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -363,6 +372,59 @@ class ApiClient {
 
     async deleteUser(id: number | string) {
         return this.request<any>(`/users/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getRoles(
+        params: {
+            page?: number;
+            perPage?: number;
+            includePermissions?: boolean;
+        } = {},
+    ) {
+        const searchParams = new URLSearchParams();
+        if (params.page) searchParams.append('page', params.page.toString());
+        if (params.perPage) searchParams.append('per_page', params.perPage.toString());
+        if (params.includePermissions) {
+            searchParams.append('include', 'permissions');
+        }
+        const query = searchParams.toString();
+        return this.request<{ data: Role[]; meta?: any; links?: any }>(
+            `/roles${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async getRole(
+        id: number | string,
+        params: { includePermissions?: boolean } = {},
+    ) {
+        const searchParams = new URLSearchParams();
+        if (params.includePermissions) {
+            searchParams.append('include', 'permissions');
+        }
+        const query = searchParams.toString();
+        return this.request<Role>(`/roles/${id}${query ? `?${query}` : ''}`);
+    }
+
+    async createRole(payload: RolePayload) {
+        const body = sanitizePayload(payload);
+        return this.request<Role>(`/roles`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateRole(id: number | string, payload: RolePayload) {
+        const body = sanitizePayload(payload);
+        return this.request<Role>(`/roles/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteRole(id: number | string) {
+        return this.request<{ message: string }>(`/roles/${id}`, {
             method: 'DELETE',
         });
     }
