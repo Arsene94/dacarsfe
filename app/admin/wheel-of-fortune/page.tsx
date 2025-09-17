@@ -61,12 +61,85 @@ const DEFAULT_PRIZE_COLOR = "#1E7149";
 const DEFAULT_PRIZE_TYPE: WheelOfFortuneType =
     WHEEL_OF_FORTUNE_TYPES[0] ?? "percentage_discount";
 
+const amountFormatter = new Intl.NumberFormat("ro-RO", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+});
+
+const AMOUNT_FIELD_CONFIG: Record<string, {
+    label: string;
+    placeholder: string;
+    helper?: string;
+    step?: string;
+    min?: number;
+    max?: number;
+    requireInteger?: boolean;
+}> = {
+    percentage_discount: {
+        label: "Valoare reducere (%)",
+        placeholder: "Ex. 10",
+        helper: "Introduce procentul exact al reducerii oferite.",
+        step: "0.01",
+        min: 0.01,
+        max: 100,
+    },
+    fixed_discount: {
+        label: "Discount fix (RON)",
+        placeholder: "Ex. 150",
+        helper: "Introduce valoarea reducerii în lei.",
+        step: "0.01",
+        min: 1,
+    },
+    extra_rental_day: {
+        label: "Număr zile gratuite",
+        placeholder: "Ex. 2",
+        helper: "Completează numărul de zile suplimentare oferite.",
+        step: "1",
+        min: 1,
+        requireInteger: true,
+    },
+};
+
+const getAmountFieldConfig = (type: WheelOfFortuneType | string | undefined | null) => {
+    const key = typeof type === "string" ? type : "";
+    return AMOUNT_FIELD_CONFIG[key] ?? null;
+};
+
+const prizeTypeRequiresAmount = (type: WheelOfFortuneType | string | undefined | null) =>
+    Boolean(getAmountFieldConfig(type));
+
+const formatPrizeAmount = (prize: {
+    amount?: number | null;
+    type?: WheelOfFortuneType | string | null;
+} | null | undefined) => {
+    if (!prize) return "—";
+    const { amount } = prize;
+    if (typeof amount !== "number" || !Number.isFinite(amount)) {
+        return "—";
+    }
+    const normalizedType = typeof prize.type === "string" ? prize.type : "other";
+    if (normalizedType === "percentage_discount") {
+        return `${amountFormatter.format(amount)}%`;
+    }
+    if (normalizedType === "fixed_discount") {
+        return `${amountFormatter.format(amount)} RON`;
+    }
+    if (normalizedType === "extra_rental_day") {
+        const formatted = Number.isInteger(amount)
+            ? amount.toString()
+            : amountFormatter.format(amount);
+        return `${formatted} ${formatted === "1" ? "zi" : "zile"}`;
+    }
+    return amountFormatter.format(amount);
+};
+
 type PrizeFormState = {
     title: string;
     type: WheelOfFortuneType;
     probability: string;
     color: string;
     description: string;
+    amount: string;
 };
 
 const createEmptyPrizeForm = (): PrizeFormState => ({
@@ -75,6 +148,7 @@ const createEmptyPrizeForm = (): PrizeFormState => ({
     probability: "",
     color: DEFAULT_PRIZE_COLOR,
     description: "",
+    amount: "",
 });
 
 const normalizePrizeType = (
@@ -100,6 +174,20 @@ const toNumber = (value: unknown): number => {
         return Number.isFinite(parsed) ? parsed : 0;
     }
     return 0;
+};
+
+const toOptionalNumber = (value: unknown): number | null => {
+    if (typeof value === "undefined" || value === null) return null;
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "string") {
+        const normalized = value.replace(/,/g, ".").trim();
+        if (normalized.length === 0) return null;
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
 };
 
 const parseBoolean = (value: unknown): boolean => {
@@ -209,12 +297,20 @@ const mapPrize = (item: any): WheelOfFortuneSlice | null => {
     const colorSource = item.color ?? item.hex ?? item.swatch ?? DEFAULT_PRIZE_COLOR;
     const probabilitySource = item.probability ?? item.weight ?? item.chance ?? 0;
     const typeSource = item.type ?? item.prize_type ?? item.category;
+    const amountSource =
+        item.amount ??
+        item.quantity ??
+        item.days ??
+        item.discount ??
+        item.percentage ??
+        null;
 
     return {
         id,
         period_id: Number.isFinite(periodId) ? periodId : 0,
         title,
         description: typeof descriptionSource === "string" ? descriptionSource : null,
+        amount: toOptionalNumber(amountSource),
         color:
             typeof colorSource === "string" && colorSource.trim().length > 0
                 ? colorSource
@@ -282,6 +378,10 @@ export default function WheelOfFortuneAdminPage() {
     const [prizeSaving, setPrizeSaving] = useState(false);
     const [editingPrize, setEditingPrize] = useState<WheelOfFortuneSlice | null>(null);
     const [prizeForm, setPrizeForm] = useState<PrizeFormState>(() => createEmptyPrizeForm());
+    const amountFieldConfig = useMemo(
+        () => getAmountFieldConfig(prizeForm.type),
+        [prizeForm.type],
+    );
 
     useEffect(() => {
         selectedPeriodRef.current = selectedPeriodId;
@@ -506,6 +606,10 @@ export default function WheelOfFortuneAdminPage() {
                     ? prize.color
                     : DEFAULT_PRIZE_COLOR,
             description: prize.description ?? "",
+            amount:
+                typeof prize.amount === "number" && Number.isFinite(prize.amount)
+                    ? prize.amount.toString()
+                    : "",
         });
         setPrizeFormError(null);
         setIsPrizeModalOpen(true);
@@ -516,6 +620,7 @@ export default function WheelOfFortuneAdminPage() {
         setEditingPrize(null);
         setPrizeSaving(false);
         setPrizeFormError(null);
+        setPrizeForm(createEmptyPrizeForm());
     };
 
     const handlePrizeSubmit = async (event: React.FormEvent) => {
@@ -534,15 +639,65 @@ export default function WheelOfFortuneAdminPage() {
             return;
         }
 
+        const normalizedType = normalizePrizeType(prizeForm.type);
+        const amountConfig = getAmountFieldConfig(normalizedType);
+        const trimmedAmountInput = prizeForm.amount.trim();
+        let amountValue: number | undefined;
+
+        if (amountConfig) {
+            const parsedAmount = toOptionalNumber(trimmedAmountInput);
+            if (parsedAmount === null) {
+                setPrizeFormError(`Introdu o valoare pentru „${amountConfig.label}”.`);
+                return;
+            }
+            if (typeof amountConfig.min === "number" && parsedAmount < amountConfig.min) {
+                setPrizeFormError(
+                    `Valoarea trebuie să fie cel puțin ${formatPrizeAmount({ amount: amountConfig.min, type: normalizedType })}.`,
+                );
+                return;
+            }
+            if (typeof amountConfig.max === "number" && parsedAmount > amountConfig.max) {
+                setPrizeFormError(
+                    `Valoarea trebuie să fie cel mult ${formatPrizeAmount({ amount: amountConfig.max, type: normalizedType })}.`,
+                );
+                return;
+            }
+            if (amountConfig.requireInteger && !Number.isInteger(parsedAmount)) {
+                setPrizeFormError("Valoarea trebuie să fie un număr întreg.");
+                return;
+            }
+            amountValue = parsedAmount;
+        } else if (trimmedAmountInput.length > 0) {
+            const parsedAmount = toOptionalNumber(trimmedAmountInput);
+            if (parsedAmount === null) {
+                setPrizeFormError("Valoarea introdusă pentru premiu nu este validă.");
+                return;
+            }
+            amountValue = parsedAmount;
+        }
+
         setPrizeFormError(null);
         setPrizeSaving(true);
 
-        const normalizedType = normalizePrizeType(prizeForm.type);
         const normalizedColor =
             typeof prizeForm.color === "string" && prizeForm.color.trim().length > 0
                 ? prizeForm.color.trim()
                 : DEFAULT_PRIZE_COLOR;
         const trimmedDescription = prizeForm.description.trim();
+
+        let payloadAmount: number | null | undefined;
+        if (amountConfig) {
+            payloadAmount = typeof amountValue === "number" ? amountValue : null;
+        } else if (typeof amountValue === "number") {
+            payloadAmount = amountValue;
+        } else if (
+            editingPrize &&
+            typeof editingPrize.amount === "number" &&
+            Number.isFinite(editingPrize.amount) &&
+            !amountConfig
+        ) {
+            payloadAmount = null;
+        }
 
         const payload = {
             period_id: selectedPeriodId,
@@ -551,6 +706,7 @@ export default function WheelOfFortuneAdminPage() {
             color: normalizedColor,
             probability: probabilityValue,
             type: normalizedType,
+            ...(typeof payloadAmount !== "undefined" ? { amount: payloadAmount } : {}),
         };
 
         try {
@@ -600,6 +756,12 @@ export default function WheelOfFortuneAdminPage() {
             header: "Tip",
             accessor: (row) => row.type,
             cell: (row) => formatPrizeType(row.type),
+        },
+        {
+            id: "amount",
+            header: "Valoare",
+            accessor: (row) => row.amount ?? "",
+            cell: (row) => formatPrizeAmount(row),
         },
         {
             id: "probability",
@@ -678,6 +840,12 @@ export default function WheelOfFortuneAdminPage() {
                     )}
                 </div>
             ),
+        },
+        {
+            id: "prize_amount",
+            header: "Valoare",
+            accessor: (row) => row.wheel_of_fortune?.amount ?? "",
+            cell: (row) => formatPrizeAmount(row.wheel_of_fortune),
         },
         {
             id: "created_at",
@@ -1048,10 +1216,14 @@ export default function WheelOfFortuneAdminPage() {
                                 id="prize-type"
                                 value={prizeForm.type}
                                 onValueChange={(value) =>
-                                    setPrizeForm((prev) => ({
-                                        ...prev,
-                                        type: normalizePrizeType(value),
-                                    }))
+                                    setPrizeForm((prev) => {
+                                        const nextType = normalizePrizeType(value);
+                                        return {
+                                            ...prev,
+                                            type: nextType,
+                                            amount: prizeTypeRequiresAmount(nextType) ? prev.amount : "",
+                                        };
+                                    })
                                 }
                             >
                                 {WHEEL_OF_FORTUNE_TYPES.map((type) => (
@@ -1078,6 +1250,30 @@ export default function WheelOfFortuneAdminPage() {
                                 required
                             />
                         </div>
+                        {amountFieldConfig && (
+                            <div className="space-y-2">
+                                <label htmlFor="prize-amount" className="text-sm font-medium text-gray-700">
+                                    {amountFieldConfig.label}
+                                </label>
+                                <Input
+                                    id="prize-amount"
+                                    type="number"
+                                    inputMode="decimal"
+                                    step={amountFieldConfig.step}
+                                    min={amountFieldConfig.min}
+                                    max={amountFieldConfig.max}
+                                    value={prizeForm.amount}
+                                    onChange={(event) =>
+                                        setPrizeForm((prev) => ({ ...prev, amount: event.target.value }))
+                                    }
+                                    placeholder={amountFieldConfig.placeholder}
+                                    required={prizeTypeRequiresAmount(prizeForm.type)}
+                                />
+                                {amountFieldConfig.helper && (
+                                    <p className="text-xs text-gray-500">{amountFieldConfig.helper}</p>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-2">

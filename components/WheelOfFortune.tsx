@@ -79,6 +79,82 @@ const isPeriodActive = (period?: WheelOfFortunePeriod | null) => {
     return false;
 };
 
+const amountFormatter = new Intl.NumberFormat("ro-RO", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+});
+
+const toOptionalNumber = (value: unknown): number | null => {
+    if (typeof value === "undefined" || value === null) return null;
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "string") {
+        const normalized = value.replace(/,/g, ".").trim();
+        if (normalized.length === 0) return null;
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+};
+
+const formatPrizeAmount = (
+    prize: Pick<WheelPrize, "amount" | "type"> | null | undefined,
+): string => {
+    if (!prize) return "—";
+    const { amount } = prize;
+    if (typeof amount !== "number" || !Number.isFinite(amount)) {
+        return "—";
+    }
+    const normalizedType = typeof prize.type === "string" ? prize.type : "other";
+    if (normalizedType === "percentage_discount") {
+        return `${amountFormatter.format(amount)}%`;
+    }
+    if (normalizedType === "fixed_discount") {
+        return `${amountFormatter.format(amount)} RON`;
+    }
+    if (normalizedType === "extra_rental_day") {
+        const formatted = Number.isInteger(amount)
+            ? amount.toString()
+            : amountFormatter.format(amount);
+        return `${formatted} ${formatted === "1" ? "zi" : "zile"}`;
+    }
+    return amountFormatter.format(amount);
+};
+
+const describePrizeAmount = (prize: WheelPrize | null | undefined): string | null => {
+    if (!prize) return null;
+    const formatted = formatPrizeAmount(prize);
+    if (formatted === "—") return null;
+    const type = typeof prize.type === "string" ? prize.type : "other";
+    if (type === "percentage_discount") {
+        return `Reducere de ${formatted}`;
+    }
+    if (type === "fixed_discount") {
+        return `Discount de ${formatted}`;
+    }
+    if (type === "extra_rental_day") {
+        return `Bonus de ${formatted}`;
+    }
+    return formatted;
+};
+
+const buildDefaultDescription = (prize: WheelPrize): string | null => {
+    const amountDescription = describePrizeAmount(prize);
+    if (!amountDescription) return null;
+    const type = typeof prize.type === "string" ? prize.type : "other";
+    if (type === "percentage_discount") {
+        return `${amountDescription} la următoarea rezervare.`;
+    }
+    if (type === "fixed_discount") {
+        return `${amountDescription} aplicat la rezervarea ta.`;
+    }
+    if (type === "extra_rental_day") {
+        return `${amountDescription} pentru mașina rezervată.`;
+    }
+    return amountDescription;
+};
+
 const mapPrize = (item: any): WheelPrize | null => {
     if (!item) return null;
     const id = Number(item.id ?? item.wheel_of_fortune_id ?? item.value);
@@ -94,6 +170,13 @@ const mapPrize = (item: any): WheelPrize | null => {
     const probabilitySource = item.probability ?? item.weight ?? item.chance ?? 0;
     const typeSource = item.type ?? item.prize_type ?? item.category ?? "other";
     const periodId = Number(item.period_id ?? item.period?.id);
+    const amountSource =
+        item.amount ??
+        item.quantity ??
+        item.days ??
+        item.discount ??
+        item.percentage ??
+        null;
 
     const probability = typeof probabilitySource === "number"
         ? probabilitySource
@@ -104,6 +187,7 @@ const mapPrize = (item: any): WheelPrize | null => {
         period_id: Number.isFinite(periodId) ? periodId : 0,
         title,
         description: typeof descriptionSource === "string" ? descriptionSource : null,
+        amount: toOptionalNumber(amountSource),
         color: typeof colorSource === "string" && colorSource.trim().length > 0 ? colorSource : "#1E7149",
         probability: Number.isFinite(probability) ? probability : 0,
         type: typeof typeSource === "string" ? typeSource : "other",
@@ -250,7 +334,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 .filter((item): item is WheelPrize => item !== null)
                 .map((item) => ({
                     ...item,
-                    description: item.description ?? "",
+                    description: item.description ?? buildDefaultDescription(item) ?? "",
                     color: item.color || "#1E7149",
                 }));
 
@@ -423,6 +507,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     };
 
     const canSpin = !isSpinning && spinsLeft > 0 && prizes.length > 0 && !isLoading;
+    const selectedPrizeAmountLabel = selectedPrize ? describePrizeAmount(selectedPrize) : null;
 
     const winnerModal = showModal && selectedPrize ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -447,6 +532,9 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         className={`${selectedPrize.type === "try_again" ? "bg-gradient-to-r from-yellow-500 to-orange-500" : "bg-gradient-to-r from-[#1E7149] to-[#195C3B]"} mb-6 rounded-2xl p-6 text-white`}
                     >
                         <h4 className="mb-2 font-['Poppins'] text-xl font-bold">{selectedPrize.title}</h4>
+                        {selectedPrizeAmountLabel && (
+                            <p className="mb-1 font-['Poppins'] text-2xl font-semibold">{selectedPrizeAmountLabel}</p>
+                        )}
                         <p className="font-['DM Sans']">
                             {selectedPrize.description || "Continuă procesul de rezervare pentru a afla mai multe detalii."}
                         </p>

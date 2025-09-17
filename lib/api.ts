@@ -548,6 +548,7 @@ class ApiClient {
         period_id: number;
         title: string;
         description?: string | null;
+        amount?: number | null;
         color: string;
         probability: number;
         type: string;
@@ -565,6 +566,7 @@ class ApiClient {
             period_id?: number;
             title?: string;
             description?: string | null;
+            amount?: number | null;
             color?: string;
             probability?: number;
             type?: string;

@@ -36,6 +36,7 @@ export interface WheelOfFortuneSlice {
   period_id: number;
   title: string;
   description?: string | null;
+  amount?: number | null;
   color: string;
   probability: number;
   type: WheelOfFortuneType;
