@@ -13,6 +13,18 @@ type CategoryPriceCalendarPayload = Omit<
     "id" | "created_at" | "updated_at"
 >;
 
+type UserPayload = {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    username?: string;
+    password?: string;
+    roles?: string[];
+    super_user?: boolean;
+    manage_supers?: boolean;
+    avatar?: number | string | null;
+} & Record<string, unknown>;
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 const sanitizePayload = <T extends Record<string, any>>(payload: T) => {
@@ -275,13 +287,19 @@ class ApiClient {
             search?: string;
             page?: number;
             perPage?: number;
+            limit?: number;
             roles?: string | string[];
+            includeRoles?: boolean;
+            sort?: string;
         } = {},
     ) {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
         if (params.page) searchParams.append('page', params.page.toString());
         if (params.perPage) searchParams.append('per_page', params.perPage.toString());
+        if (typeof params.limit !== 'undefined') {
+            searchParams.append('limit', params.limit.toString());
+        }
         if (params.roles) {
             const values = Array.isArray(params.roles)
                 ? params.roles
@@ -293,8 +311,48 @@ class ApiClient {
                     searchParams.append(key, role);
                 });
         }
+        if (params.includeRoles) {
+            searchParams.append('include', 'roles');
+        }
+        if (params.sort) {
+            searchParams.append('sort', params.sort);
+        }
         const query = searchParams.toString();
         return this.request<any>(`/users${query ? `?${query}` : ''}`);
+    }
+
+    async getUser(
+        id: number | string,
+        params: { includeRoles?: boolean } = {},
+    ) {
+        const searchParams = new URLSearchParams();
+        if (params.includeRoles) {
+            searchParams.append('include', 'roles');
+        }
+        const query = searchParams.toString();
+        return this.request<any>(`/users/${id}${query ? `?${query}` : ''}`);
+    }
+
+    async createUser(payload: UserPayload) {
+        const body = sanitizePayload(payload);
+        return this.request<any>(`/users`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateUser(id: number | string, payload: UserPayload) {
+        const body = sanitizePayload(payload);
+        return this.request<any>(`/users/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteUser(id: number | string) {
+        return this.request<any>(`/users/${id}`, {
+            method: 'DELETE',
+        });
     }
 
     async getCarForBooking(uiPayload: any) {
