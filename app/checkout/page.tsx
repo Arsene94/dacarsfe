@@ -1,13 +1,13 @@
 "use client";
 
-import React, {useEffect, useState, useRef} from "react";
+import React, {useEffect, useState, useRef, useMemo} from "react";
 import {useRouter} from "next/navigation";
 import {Calendar, Gift, Plane, User,} from "lucide-react";
 import {Label} from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import {useBooking} from "@/context/BookingContext";
 import { apiClient } from "@/lib/api";
-import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
+import { describeWheelPrizeAmount, formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
 import {
     getStoredWheelPrize,
     isStoredWheelPrizeActive,
@@ -44,22 +44,15 @@ const parsePrice = (raw: unknown): number => {
     }
 };
 
-const wheelPrizeDateFormatter = new Intl.DateTimeFormat("ro-RO", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
+const priceFormatter = new Intl.NumberFormat("ro-RO", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
 });
 
-const formatWheelPrizeDate = (value?: string | null): string | null => {
-    if (!value) return null;
-    const parsed = Date.parse(value);
-    if (Number.isNaN(parsed)) return null;
-    try {
-        return wheelPrizeDateFormatter.format(new Date(parsed));
-    } catch (error) {
-        console.warn("Failed to format wheel prize date", error);
-        return new Date(parsed).toLocaleDateString("ro-RO");
-    }
+const formatPrice = (value: number): string => {
+    if (!Number.isFinite(value)) return "0";
+    const normalized = Math.round(value * 100) / 100;
+    return priceFormatter.format(normalized);
 };
 
 const ReservationPage = () => {
@@ -337,13 +330,16 @@ const ReservationPage = () => {
         0,
     );
 
+    const selectedCar = booking.selectedCar;
+
     const hasWheelPrize = wheelPrizeRecord ? isStoredWheelPrizeActive(wheelPrizeRecord) : false;
     const wheelPrizeAmountLabel = hasWheelPrize ? describeWheelPrizeAmount(wheelPrizeRecord?.prize) : null;
-    const wheelPrizeExpiryLabel = hasWheelPrize ? formatWheelPrizeDate(wheelPrizeRecord?.expires_at) : null;
+    const wheelPrizeExpiryLabel = hasWheelPrize
+        ? formatWheelPrizeExpiry(wheelPrizeRecord?.expires_at)
+        : null;
 
-    const calculateBaseTotal = () => {
+    const baseTotal = useMemo(() => {
         const selectedCar = booking.selectedCar;
-
         if (!selectedCar || !booking.startDate || !booking.endDate) return 0;
 
         const startDate = new Date(booking.startDate);
@@ -351,10 +347,91 @@ const ReservationPage = () => {
         const timeDiff = endDate.getTime() - startDate.getTime();
         const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
         const bookingWithDeposit = booking.withDeposit;
-        return daysDiff > 0 && bookingWithDeposit
-            ? Number(selectedCar.total_deposit)
-            : Number(selectedCar.total_without_deposit);
-    };
+        const totalWithDeposit = parsePrice(selectedCar.total_deposit);
+        const totalWithoutDeposit = parsePrice(selectedCar.total_without_deposit);
+
+        if (bookingWithDeposit && daysDiff > 0) {
+            return totalWithDeposit;
+        }
+
+        return totalWithoutDeposit;
+    }, [booking.selectedCar, booking.startDate, booking.endDate, booking.withDeposit]);
+
+    const rentalDays = useMemo(() => {
+        const carDays = selectedCar?.days;
+        if (typeof carDays === "number" && Number.isFinite(carDays) && carDays > 0) {
+            return carDays;
+        }
+        if (!booking.startDate || !booking.endDate) return 0;
+        const startDate = new Date(booking.startDate);
+        const endDate = new Date(booking.endDate);
+        const diff = endDate.getTime() - startDate.getTime();
+        if (diff <= 0) return 0;
+        return Math.ceil(diff / (1000 * 3600 * 24));
+    }, [booking.startDate, booking.endDate, selectedCar]);
+
+    const perDayPrice = useMemo(() => {
+        if (!selectedCar) return 0;
+        const rawPerDay = booking.withDeposit
+            ? selectedCar.rental_rate
+            : selectedCar.rental_rate_casco;
+        const parsedPerDay = parsePrice(rawPerDay);
+        if (parsedPerDay > 0) {
+            return parsedPerDay;
+        }
+        if (rentalDays > 0) {
+            return baseTotal / rentalDays;
+        }
+        return 0;
+    }, [selectedCar, booking.withDeposit, rentalDays, baseTotal]);
+
+    const totalBeforeWheel = baseTotal + servicesTotal;
+
+    const wheelPrizeDiscount = useMemo(() => {
+        if (!hasWheelPrize || !wheelPrizeRecord) return 0;
+        if (totalBeforeWheel <= 0) return 0;
+
+        const prize = wheelPrizeRecord.prize;
+        const type = typeof prize.type === "string" ? prize.type : "other";
+        const amount = typeof prize.amount === "number" && Number.isFinite(prize.amount)
+            ? prize.amount
+            : null;
+
+        let discountValue = 0;
+
+        if (type === "percentage_discount" && typeof amount === "number" && amount > 0) {
+            discountValue = (totalBeforeWheel * amount) / 100;
+        } else if (
+            (type === "fixed_discount" || type === "voucher")
+            && typeof amount === "number"
+            && amount > 0
+        ) {
+            discountValue = amount;
+        } else if (type === "extra_rental_day" && typeof amount === "number" && amount > 0) {
+            const bonusDays = Math.max(0, amount);
+            const applicableDays = rentalDays > 0 ? Math.min(bonusDays, rentalDays) : bonusDays;
+            const effectivePerDay = perDayPrice > 0
+                ? perDayPrice
+                : rentalDays > 0
+                    ? baseTotal / rentalDays
+                    : 0;
+            discountValue = effectivePerDay * applicableDays;
+        }
+
+        if (!Number.isFinite(discountValue) || discountValue <= 0) {
+            return 0;
+        }
+
+        const capped = Math.min(totalBeforeWheel, discountValue);
+        return Math.round(capped * 100) / 100;
+    }, [
+        hasWheelPrize,
+        wheelPrizeRecord,
+        totalBeforeWheel,
+        rentalDays,
+        perDayPrice,
+        baseTotal,
+    ]);
 
     const handleDiscountCodeValidation = async (
         force = false,
@@ -485,9 +562,10 @@ const ReservationPage = () => {
         if (availabilityError || !booking.startDate || !booking.endDate) return;
         setIsSubmitting(true);
 
-        const subTotal = calculateBaseTotal();
+        const subTotal = baseTotal;
         const totalServices = servicesTotal;
-        const total = subTotal + totalServices;
+        const totalBeforeWheelPrize = totalBeforeWheel;
+        const totalAfterAdjustments = Math.max(0, totalBeforeWheelPrize - wheelPrizeDiscount);
         const start = new Date(booking.startDate);
         const end = new Date(booking.endDate);
         const daysDiff = Math.ceil(
@@ -495,14 +573,35 @@ const ReservationPage = () => {
         );
         const pricePerDay = daysDiff > 0 ? subTotal / daysDiff : 0;
         const couponAmount = discountAmount;
+        const wheelPrizeDiscountValue = wheelPrizeDiscount;
+        const wheelPrizeDetails = hasWheelPrize && wheelPrizeRecord
+            ? {
+                wheel_of_fortune_id: wheelPrizeRecord.wheel_of_fortune_id,
+                prize_id: wheelPrizeRecord.prize_id ?? wheelPrizeRecord.prize.id,
+                title: wheelPrizeRecord.prize.title,
+                type: wheelPrizeRecord.prize.type,
+                amount:
+                    typeof wheelPrizeRecord.prize.amount === "number"
+                    && Number.isFinite(wheelPrizeRecord.prize.amount)
+                        ? Math.round(wheelPrizeRecord.prize.amount * 100) / 100
+                        : null,
+                description: wheelPrizeRecord.prize.description ?? null,
+                amount_label: wheelPrizeAmountLabel,
+                expires_at: wheelPrizeRecord.expires_at,
+                discount_value: wheelPrizeDiscountValue,
+            }
+            : null;
         const payload = {
             ...formData,
             service_ids: selectedServices.map((s) => s.id),
             price_per_day: pricePerDay,
             total_services: totalServices,
             coupon_amount: couponAmount,
-            total,
+            total: totalAfterAdjustments,
             sub_total: subTotal,
+            total_before_wheel_prize: totalBeforeWheelPrize,
+            wheel_prize_discount: wheelPrizeDiscountValue,
+            wheel_prize: wheelPrizeDetails,
             with_deposit: booking.withDeposit,
         };
 
@@ -521,8 +620,11 @@ const ReservationPage = () => {
                     total_services: totalServices,
                     coupon_amount: couponAmount,
                     selectedCar: selectedCar,
-                    total,
+                    total: totalAfterAdjustments,
                     sub_total: subTotal,
+                    total_before_wheel_prize: totalBeforeWheelPrize,
+                    wheel_prize_discount: wheelPrizeDiscountValue,
+                    wheel_prize: wheelPrizeDetails,
                     reservationId,
                 }),
             );
@@ -534,16 +636,18 @@ const ReservationPage = () => {
         }
     };
 
-    const selectedCar = booking.selectedCar;
-    const baseTotal = calculateBaseTotal();
     const rentalSubtotal = baseTotal;
-    const discountAmount = discountStatus?.isValid
+    const discountAmountRaw = discountStatus?.isValid
         ? booking.withDeposit
             ? parseFloat(discountStatus.discount)
             : parseFloat(discountStatus.discountCasco)
         : 0;
-    const total = baseTotal + servicesTotal;
-    const originalTotal = discountStatus?.isValid ? total + discountAmount : total;
+    const discountAmount = Number.isFinite(discountAmountRaw) ? discountAmountRaw : 0;
+    const total = Math.max(0, totalBeforeWheel - wheelPrizeDiscount);
+    const originalTotal = discountStatus?.isValid
+        ? totalBeforeWheel + discountAmount
+        : totalBeforeWheel;
+    const wheelPrizeApplied = wheelPrizeDiscount > 0;
 
     return (
         <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
@@ -921,6 +1025,11 @@ const ReservationPage = () => {
                                                     : "Valabil 30 de zile de la momentul câștigării."}
                                                 {" "}Beneficiul va fi aplicat de echipa DaCars când finalizezi rezervarea.
                                             </p>
+                                            {wheelPrizeApplied && wheelPrizeDiscount > 0 && (
+                                                <p className="font-dm-sans text-xs font-semibold text-jade">
+                                                    Economisești {formatPrice(wheelPrizeDiscount)}€ la această rezervare.
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -978,8 +1087,8 @@ const ReservationPage = () => {
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="font-dm-sans text-gray-600">Subtotal:</span>
                                     <span className="font-dm-sans font-semibold text-berkeley">
-                    {rentalSubtotal}€
-                  </span>
+                                        {formatPrice(rentalSubtotal)}€
+                                    </span>
                                 </div>
                                 {selectedServices.length > 0 && (
                                     <div className="mt-2">
@@ -1004,6 +1113,16 @@ const ReservationPage = () => {
                                     </div>
                                 )}
                                 <hr className="my-2" />
+                                {wheelPrizeApplied && wheelPrizeDiscount > 0 && (
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="font-dm-sans text-jade">
+                                            Premiu Roata Norocului:
+                                        </span>
+                                        <span className="font-dm-sans text-jade">
+                                            -{formatPrice(wheelPrizeDiscount)}€
+                                        </span>
+                                    </div>
+                                )}
                                 {discountStatus?.isValid && discountAmount > 0 && (
                                     <>
                                         <div className="flex justify-between items-center mb-2">
@@ -1011,13 +1130,13 @@ const ReservationPage = () => {
                           Total înainte de reducere:
                         </span>
                                             <span className="font-dm-sans text-gray-600">
-                          {originalTotal}€
+                                                {formatPrice(originalTotal)}€
                         </span>
                                         </div>
                                         <div className="flex justify-between items-center mb-2">
                                             <span className="font-dm-sans text-jade">Reducere:</span>
                                             <span className="font-dm-sans text-jade">
-                          -{discountAmount}€
+                                                -{formatPrice(discountAmount)}€
                         </span>
                                         </div>
                                     </>
@@ -1027,7 +1146,7 @@ const ReservationPage = () => {
                     Total:
                   </span>
                                     <span className="font-poppins font-bold text-jade">
-                        {total}€ {booking.withDeposit && (
+                                        {formatPrice(total)}€ {booking.withDeposit && (
                                         <span className=" text-xs font-dm-sans text-gray-600">
                             (+{selectedCar.deposit}€ garanție)
                           </span>

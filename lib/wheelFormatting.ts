@@ -5,6 +5,12 @@ const amountFormatter = new Intl.NumberFormat("ro-RO", {
     minimumFractionDigits: 0,
 });
 
+const expiryFormatter = new Intl.DateTimeFormat("ro-RO", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+});
+
 export const formatWheelPrizeAmount = (
     prize: Pick<WheelPrize, "amount" | "type"> | null | undefined,
 ): string => {
@@ -46,6 +52,20 @@ export const describeWheelPrizeAmount = (
         return `Bonus de ${formatted}`;
     }
     return formatted;
+};
+
+export const formatWheelPrizeExpiry = (
+    value?: string | null,
+): string | null => {
+    if (!value) return null;
+    const parsed = Date.parse(value);
+    if (Number.isNaN(parsed)) return null;
+    try {
+        return expiryFormatter.format(new Date(parsed));
+    } catch (error) {
+        console.warn("Failed to format wheel prize expiry", error);
+        return new Date(parsed).toLocaleDateString("ro-RO");
+    }
 };
 
 export const buildWheelPrizeDefaultDescription = (
