@@ -4,6 +4,7 @@ export interface AdminReservation {
   phone: string;
   carId: number;
   carName: string;
+  carLicensePlate?: string;
   startDate: string;
   endDate: string;
   plan: number,
