@@ -680,6 +680,10 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         </div>
     ) : null;
 
+    const wheelSizeClass = isPopup
+        ? "w-[260px] sm:w-[320px] md:w-[420px] lg:w-[480px] xl:w-[520px]"
+        : "w-[340px] sm:w-[480px] md:w-[620px] lg:w-[700px]";
+
     const wheelContent = (
         <div className="flex flex-col items-center justify-center gap-12 lg:flex-row">
             <div className="relative">
@@ -689,7 +693,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                     />
                 </div>
 
-                <div className="relative mx-auto aspect-square w-[340px] sm:w-[480px] md:w-[620px] lg:w-[700px]">
+                <div className={`relative mx-auto aspect-square ${wheelSizeClass}`}>
                     <div
                         className="relative h-full w-full overflow-hidden rounded-full border-8 border-white shadow-2xl"
                         style={{
@@ -913,7 +917,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     if (isPopup) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-                <div className="relative w-full max-w-6xl overflow-y-auto rounded-3xl bg-gradient-to-br from-[#1A3661] to-[#2a4a73] p-8">
+                <div className="relative w-full max-w-6xl overflow-y-auto rounded-3xl bg-gradient-to-br from-[#1A3661] to-[#2a4a73] p-6 sm:p-8 max-h-[90vh]">
                     <button
                         type="button"
                         onClick={handleClosePopup}
