@@ -158,6 +158,459 @@ const createDefaultPreviewContext = (
   },
 });
 
+type TwigVariableInfo = {
+  path: string;
+  expectsArray: boolean;
+};
+
+const TWIG_RESERVED_TOKENS = new Set([
+  "and",
+  "as",
+  "attribute",
+  "autoescape",
+  "block",
+  "by",
+  "constant",
+  "cycle",
+  "date",
+  "defined",
+  "divisibleby",
+  "do",
+  "else",
+  "elseif",
+  "embed",
+  "endautoescape",
+  "endblock",
+  "endembed",
+  "endfilter",
+  "endfor",
+  "endif",
+  "extends",
+  "false",
+  "filter",
+  "for",
+  "from",
+  "if",
+  "import",
+  "in",
+  "include",
+  "is",
+  "iterable",
+  "loop",
+  "macro",
+  "not",
+  "null",
+  "only",
+  "or",
+  "parent",
+  "random",
+  "range",
+  "same",
+  "starts",
+  "ends",
+  "matches",
+  "set",
+  "true",
+  "with",
+  "without",
+  "trans",
+  "endtrans",
+  "spaceless",
+  "endspaceless",
+  "upper",
+  "lower",
+  "title",
+  "capitalize",
+  "escape",
+  "e",
+  "raw",
+  "default",
+  "length",
+  "keys",
+  "values",
+  "first",
+  "last",
+  "sort",
+  "reverse",
+  "merge",
+  "map",
+  "filter",
+  "reduce",
+  "json_encode",
+  "join",
+  "abs",
+  "round",
+  "number_format",
+]);
+
+const EXACT_MOCK_VALUES: Record<string, unknown> = {
+  customer_name: "Ion Popescu",
+  customer_email: "ion.popescu@example.com",
+  booking_number: "DAC-12345",
+  booking_reference: "DAC-12345",
+  pickup_date: "2024-07-01",
+  dropoff_date: "2024-07-07",
+  pickup_time: "08:30",
+  dropoff_time: "09:00",
+  pickup_location: "Aeroportul Henri Coandă, Otopeni",
+  dropoff_location: "Aeroportul Henri Coandă, Otopeni",
+  total_price: "350 €",
+  advance_paid: "50 €",
+  balance_due: "300 €",
+  currency: "EUR",
+  notes: "Vă rugăm să ne sunați când ajungeți în aeroport.",
+  support: {
+    phone: "+40 722 123 456",
+    email: "contact@dacars.ro",
+  },
+};
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  value != null && typeof value === "object" && !Array.isArray(value);
+
+const cloneContext = (value: unknown): Record<string, unknown> => {
+  if (!isPlainObject(value)) {
+    return {};
+  }
+  try {
+    return structuredClone(value);
+  } catch {
+    return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  }
+};
+
+const normalizeTwigPath = (input: string): string => {
+  if (!input) return "";
+  const bracketNormalized = input
+    .replace(/\[\s*(["']?)([^"'\]]+)\1\s*\]/g, ".$2")
+    .replace(/::/g, ".");
+  const trimmed = bracketNormalized.replace(/^\.+|\.+$/g, "");
+  if (!trimmed) return "";
+  const segments = trimmed.split(".").filter(Boolean);
+  if (segments.length === 0) return "";
+  if (TWIG_RESERVED_TOKENS.has(segments[0])) return "";
+  return segments.join(".");
+};
+
+const ensureVariableInfo = (
+  info: Map<string, { expectsArray: boolean }>,
+  path: string,
+  expectsArray: boolean,
+) => {
+  if (!path) return;
+  const existing = info.get(path);
+  if (existing) {
+    if (expectsArray && !existing.expectsArray) {
+      info.set(path, { expectsArray: true });
+    }
+    return;
+  }
+  info.set(path, { expectsArray });
+};
+
+const collectTwigSources = (
+  content: string,
+  templateCache: Record<string, string>,
+): string[] => {
+  const sources: string[] = [];
+  const visited = new Set<string>();
+
+  const walk = (source: string) => {
+    sources.push(source);
+    const includePattern = /{%-?\s*(extends|include|embed)\s+(["'])([^"']+)\2[^%]*%}/gi;
+    let match: RegExpExecArray | null;
+    while ((match = includePattern.exec(source)) !== null) {
+      const path = match[3];
+      if (!path || visited.has(path)) continue;
+      visited.add(path);
+      const referenced = templateCache[path];
+      if (typeof referenced === "string") {
+        walk(referenced);
+      }
+    }
+  };
+
+  walk(content);
+  return sources;
+};
+
+const extractTwigVariables = (
+  content: string,
+  templateCache: Record<string, string>,
+): TwigVariableInfo[] => {
+  if (!content) return [];
+
+  const sources = collectTwigSources(content, templateCache);
+  const expressionPattern = /({[{%]-?)([\s\S]*?)(-?[}%]})/g;
+  const attributePattern = /attribute\(\s*([A-Za-z_][\w\.]*)\s*,\s*['"]([^'"\s]+)['"]\s*\)/g;
+  const loopPattern = /\bfor\s+([A-Za-z_][\w\.]*)\s*(?:,\s*([A-Za-z_][\w\.]*))?\s+in\s+([A-Za-z_][\w\.[\]'"-]*)/g;
+  const infoMap = new Map<string, { expectsArray: boolean }>();
+  const arrayLike = new Set<string>();
+
+  sources.forEach((source) => {
+    let match: RegExpExecArray | null;
+    while ((match = expressionPattern.exec(source)) !== null) {
+      const inner = match[2] ?? "";
+      const skipTokens = new Set<string>();
+
+      const bracketNormalized = inner.replace(/\[\s*(["']?)([^"'\]]+)\1\s*\]/g, ".$2");
+
+      const setMatch = bracketNormalized.match(/^\s*set\s+([^=]+)=/);
+      if (setMatch) {
+        const leftSideTokens = setMatch[1]
+          .split(/[,\s]+/)
+          .map((token) => normalizeTwigPath(token))
+          .filter(Boolean);
+        leftSideTokens.forEach((token) => skipTokens.add(token));
+      }
+
+      let loopMatch: RegExpExecArray | null;
+      while ((loopMatch = loopPattern.exec(bracketNormalized)) !== null) {
+        const loopVar = normalizeTwigPath(loopMatch[1]);
+        if (loopVar) skipTokens.add(loopVar);
+        const secondVar = normalizeTwigPath(loopMatch[2] ?? "");
+        if (secondVar) skipTokens.add(secondVar);
+        const collectionRaw = loopMatch[3] ?? "";
+        const collectionPath = normalizeTwigPath(collectionRaw.split("|")[0] ?? "");
+        if (collectionPath) {
+          arrayLike.add(collectionPath);
+          ensureVariableInfo(infoMap, collectionPath, true);
+        }
+      }
+
+      let attributeMatch: RegExpExecArray | null;
+      while ((attributeMatch = attributePattern.exec(bracketNormalized)) !== null) {
+        const base = normalizeTwigPath(attributeMatch[1]);
+        const attributeKey = normalizeTwigPath(attributeMatch[2]);
+        if (!base || !attributeKey) continue;
+        const combined = normalizeTwigPath(`${base}.${attributeKey}`);
+        if (combined) {
+          ensureVariableInfo(infoMap, combined, arrayLike.has(combined));
+        }
+      }
+
+      const cleaned = bracketNormalized
+        .replace(/(['"])(?:\\.|(?!\1).)*\1/g, " ")
+        .replace(/#[^\n\r]*/g, " ")
+        .replace(/[(){}\[\],]/g, " ")
+        .replace(/\b\d+\b/g, " ");
+
+      const tokens = cleaned.match(/[A-Za-z_][A-Za-z0-9_\.]+/g) ?? [];
+      tokens.forEach((token) => {
+        const normalized = normalizeTwigPath(token);
+        if (!normalized) return;
+        if (skipTokens.has(normalized)) return;
+        const root = normalized.split(".")[0];
+        if (TWIG_RESERVED_TOKENS.has(normalized) || TWIG_RESERVED_TOKENS.has(root)) {
+          return;
+        }
+        const expectsArray = arrayLike.has(normalized);
+        ensureVariableInfo(infoMap, normalized, expectsArray);
+      });
+    }
+  });
+
+  return Array.from(infoMap.entries()).map(([path, value]) => ({
+    path,
+    expectsArray: value.expectsArray || arrayLike.has(path),
+  }));
+};
+
+const getDeepValue = (source: unknown, path: string): unknown => {
+  if (!path) return undefined;
+  const segments = path.split(".").filter(Boolean);
+  if (segments.length === 0) return undefined;
+  let current: unknown = source;
+  for (const segment of segments) {
+    if (current == null) return undefined;
+    const isIndex = /^\d+$/.test(segment);
+    if (isIndex) {
+      const index = Number(segment);
+      if (Array.isArray(current)) {
+        current = current[index];
+      } else if (isPlainObject(current)) {
+        current = (current as Record<string, unknown>)[segment];
+      } else {
+        return undefined;
+      }
+    } else if (isPlainObject(current)) {
+      current = (current as Record<string, unknown>)[segment];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+};
+
+const setDeepValue = (
+  target: Record<string, unknown>,
+  path: string,
+  value: unknown,
+) => {
+  const segments = path.split(".").filter(Boolean);
+  if (segments.length === 0) return;
+
+  let current: unknown = target;
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    const isIndex = /^\d+$/.test(segment);
+    const isLast = index === segments.length - 1;
+    const nextSegment = segments[index + 1];
+    const nextIsIndex = nextSegment ? /^\d+$/.test(nextSegment) : false;
+
+    if (isLast) {
+      if (isIndex) {
+        if (Array.isArray(current)) {
+          (current as unknown[])[Number(segment)] = value;
+        } else if (isPlainObject(current)) {
+          (current as Record<string, unknown>)[segment] = value;
+        }
+      } else if (isPlainObject(current)) {
+        (current as Record<string, unknown>)[segment] = value;
+      }
+      return;
+    }
+
+    if (isIndex) {
+      if (Array.isArray(current)) {
+        if (current[Number(segment)] == null) {
+          current[Number(segment)] = nextIsIndex ? [] : {};
+        }
+        current = current[Number(segment)];
+      } else if (isPlainObject(current)) {
+        const container = current as Record<string, unknown>;
+        if (container[segment] == null) {
+          container[segment] = nextIsIndex ? [] : {};
+        }
+        current = container[segment];
+      } else {
+        return;
+      }
+    } else if (isPlainObject(current)) {
+      const container = current as Record<string, unknown>;
+      if (
+        container[segment] == null ||
+        (nextIsIndex && !Array.isArray(container[segment])) ||
+        (!nextIsIndex && !isPlainObject(container[segment]))
+      ) {
+        container[segment] = nextIsIndex ? [] : {};
+      }
+      current = container[segment];
+    } else {
+      return;
+    }
+  }
+};
+
+const createArrayMock = (path: string): unknown[] => {
+  const key = path.split(".").pop()?.toLowerCase() ?? "";
+  if (key.includes("menu") || key.includes("link")) {
+    return [
+      { label: "Element 1", url: "https://dacars.ro" },
+      { label: "Element 2", url: "https://dacars.ro/oferte" },
+    ];
+  }
+  if (key.includes("extra")) {
+    return [
+      { name: "Scaun copil", price: "15 €" },
+      { name: "Șofer adițional", price: "25 €" },
+    ];
+  }
+  if (key.includes("social")) {
+    return [
+      { label: "Facebook", url: "https://www.facebook.com/DaCars" },
+      { label: "Instagram", url: "https://www.instagram.com/DaCars" },
+    ];
+  }
+  if (key.includes("item") || key.includes("line") || key.includes("entry")) {
+    return [
+      { name: "Element 1", value: "Exemplu" },
+      { name: "Element 2", value: "Exemplu" },
+    ];
+  }
+  return [
+    { name: "Element 1", value: "Exemplu" },
+    { name: "Element 2", value: "Exemplu" },
+  ];
+};
+
+const generateMockValueForPath = (
+  path: string,
+  fallback: Record<string, unknown>,
+  expectsArray: boolean,
+): unknown => {
+  const existing = getDeepValue(fallback, path);
+  if (existing !== undefined) {
+    return existing;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(EXACT_MOCK_VALUES, path)) {
+    return EXACT_MOCK_VALUES[path];
+  }
+
+  if (expectsArray) {
+    return createArrayMock(path);
+  }
+
+  const key = path.split(".").pop() ?? path;
+  const lowerKey = key.toLowerCase();
+
+  if (lowerKey.includes("email")) return "exemplu@dacars.ro";
+  if (lowerKey.includes("phone") || lowerKey.includes("tel")) return "+40 712 345 678";
+  if (lowerKey.includes("url") || lowerKey.includes("link"))
+    return "https://dacars.ro/exemplu";
+  if (lowerKey.includes("logo") || lowerKey.includes("image") || lowerKey.includes("photo"))
+    return "https://via.placeholder.com/640x320.png?text=DaCars";
+  if (lowerKey.includes("date")) return "2024-07-01";
+  if (lowerKey.includes("time") || lowerKey.includes("hour")) return "10:30";
+  if (
+    lowerKey.includes("price") ||
+    lowerKey.includes("amount") ||
+    lowerKey.includes("total") ||
+    lowerKey.includes("sum") ||
+    lowerKey.includes("value") ||
+    lowerKey.includes("fee") ||
+    lowerKey.includes("cost")
+  ) {
+    return "100 €";
+  }
+  if (lowerKey.includes("currency")) return "EUR";
+  if (lowerKey.includes("status")) return "confirmat";
+  if (lowerKey.includes("address") || lowerKey.includes("location"))
+    return "Str. Exemplu nr. 10, București";
+  if (lowerKey.includes("name") || lowerKey.includes("title")) return "Exemplu";
+  if (
+    lowerKey.includes("number") ||
+    lowerKey.includes("code") ||
+    lowerKey.includes("reference") ||
+    lowerKey.includes("id")
+  ) {
+    return "DAC-0001";
+  }
+  if (lowerKey.startsWith("is_") || lowerKey.startsWith("has") || lowerKey.includes("enabled")) {
+    return true;
+  }
+  if (lowerKey.includes("count") || lowerKey.includes("quantity") || lowerKey.includes("qty")) {
+    return 1;
+  }
+  if (lowerKey.includes("percent") || lowerKey.includes("percentage")) {
+    return "15%";
+  }
+  if (
+    lowerKey.includes("notes") ||
+    lowerKey.includes("message") ||
+    lowerKey.includes("comment") ||
+    lowerKey.includes("description")
+  ) {
+    return "Text exemplu pentru previzualizare.";
+  }
+  if (lowerKey.includes("iban")) return "RO49AAAA1B31007593840000";
+  if (lowerKey.includes("bank")) return "Banca Exemplu";
+  if (lowerKey.includes("company")) return "SC Exemplu SRL";
+
+  return `valoare ${path.replace(/\./g, "_")}`;
+};
+
 const formatDateTime = (value?: string) => {
   if (!value) return "";
   const date = new Date(value);
@@ -194,6 +647,19 @@ const MailBrandingPage = () => {
   const [previewContextError, setPreviewContextError] = useState<string | null>(null);
   const [debouncedContent, setDebouncedContent] = useState<string>("");
   const [debouncedContext, setDebouncedContext] = useState<Record<string, unknown>>({});
+
+  const computeBasePreviewContext = useCallback(() => {
+    const siteDetails =
+      brandingForm != null
+        ? mapFormSiteToDetails(brandingForm.site)
+        : brandingData?.resolved_site ?? brandingData?.site ?? null;
+    const colorsData =
+      brandingForm?.colors ??
+      brandingData?.resolved_colors ??
+      brandingData?.colors ??
+      null;
+    return createDefaultPreviewContext(siteDetails, colorsData ?? null);
+  }, [brandingForm, brandingData]);
 
   useEffect(() => {
     let cancelled = false;
@@ -362,6 +828,51 @@ const MailBrandingPage = () => {
   }, [mergedPreviewContext]);
 
   useEffect(() => {
+    if (!debouncedContent.trim() || !selectedTemplateKey) return;
+
+    const currentTemplate = templateDetails[selectedTemplateKey];
+    const cacheForExtraction = currentTemplate?.path
+      ? { ...templateCache, [currentTemplate.path]: debouncedContent }
+      : templateCache;
+
+    const variables = extractTwigVariables(debouncedContent, cacheForExtraction);
+    if (variables.length === 0) return;
+
+    const baseContext = computeBasePreviewContext();
+    let updatedContext: Record<string, unknown> | null = null;
+
+    setPreviewContext((previous) => {
+      const draft = cloneContext(previous);
+      let changed = false;
+      variables.forEach(({ path, expectsArray }) => {
+        if (!path) return;
+        if (getDeepValue(draft, path) === undefined) {
+          const mockValue = generateMockValueForPath(path, baseContext, expectsArray);
+          setDeepValue(draft, path, mockValue);
+          changed = true;
+        }
+      });
+      if (changed) {
+        updatedContext = draft;
+        return draft;
+      }
+      return previous;
+    });
+
+    if (updatedContext) {
+      setPreviewContextText(JSON.stringify(updatedContext, null, 2));
+      setPreviewContextError(null);
+    }
+  }, [
+    debouncedContent,
+    selectedTemplateKey,
+    templateDetails,
+    templateCache,
+    computeBasePreviewContext,
+    previewContext,
+  ]);
+
+  useEffect(() => {
     if (!twigEngine) return;
     if (!debouncedContent) {
       setPreviewHtml("");
@@ -370,9 +881,10 @@ const MailBrandingPage = () => {
     }
 
     const currentTemplate = selectedTemplateKey ? templateDetails[selectedTemplateKey] : null;
+    let compiledTemplate: any = null;
     if (currentTemplate?.path) {
       try {
-        twigEngine.twig({
+        compiledTemplate = twigEngine.twig({
           id: currentTemplate.path,
           data: debouncedContent,
           allowInlineIncludes: true,
@@ -383,10 +895,12 @@ const MailBrandingPage = () => {
     }
 
     try {
-      const template = twigEngine.twig({
-        data: debouncedContent,
-        allowInlineIncludes: true,
-      });
+      const template =
+        compiledTemplate ??
+        twigEngine.twig({
+          data: debouncedContent,
+          allowInlineIncludes: true,
+        });
       const output = template.render(debouncedContext ?? {});
       setPreviewHtml(output);
       setPreviewError(null);
@@ -642,14 +1156,12 @@ const MailBrandingPage = () => {
     }
   };
 
-  const resetPreviewContext = () => {
-    const site = brandingData?.resolved_site ?? brandingData?.site ?? null;
-    const colors = brandingData?.resolved_colors ?? brandingData?.colors ?? null;
-    const preview = createDefaultPreviewContext(site, colors);
+  const resetPreviewContext = useCallback(() => {
+    const preview = computeBasePreviewContext();
     setPreviewContext(preview);
     setPreviewContextText(JSON.stringify(preview, null, 2));
     setPreviewContextError(null);
-  };
+  }, [computeBasePreviewContext]);
 
   const isTemplateDirty = templateContent !== originalTemplateContent;
 
