@@ -1193,10 +1193,11 @@ const MailBrandingPage = () => {
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <style>
         :root { color-scheme: light; }
-        body { margin: 0; padding: 0; background: #f3f4f6; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        html, body { width: 100%; min-height: 100%; margin: 0; padding: 0; background: #f3f4f6; overflow-x: hidden; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
         body * { box-sizing: border-box; }
-        .email-preview-wrapper { width: 100%; min-height: 100vh; background: #f3f4f6; padding: 24px 12px; }
-        .email-preview-container { margin: 0 auto; max-width: 600px; }
+        .email-preview-wrapper { width: 100%; min-height: 100vh; background: #f3f4f6; padding: 24px 12px; display: flex; justify-content: center; align-items: flex-start; }
+        .email-preview-container { position: relative; margin: 0 auto; max-width: none; width: auto; transform-origin: top center; }
         img { max-width: 100%; height: auto; }
         a { color: inherit; }
       </style>
@@ -1231,16 +1232,71 @@ const MailBrandingPage = () => {
       const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
       if (!doc) return;
 
-      const scrollHeight =
-        doc.documentElement?.scrollHeight ??
-        doc.body?.scrollHeight ??
+      const html = doc.documentElement;
+      const body = doc.body;
+      if (html) {
+        html.style.overflowX = "hidden";
+        html.style.backgroundColor = "#f3f4f6";
+      }
+      if (body) {
+        body.style.overflowX = "hidden";
+        body.style.backgroundColor = "#f3f4f6";
+      }
+
+      const container = doc.querySelector<HTMLElement>(".email-preview-container");
+      const wrapper = doc.querySelector<HTMLElement>(".email-preview-wrapper");
+
+      if (wrapper) {
+        wrapper.style.display = "flex";
+        wrapper.style.justifyContent = "center";
+        wrapper.style.alignItems = "flex-start";
+        wrapper.style.width = "100%";
+      }
+
+      const frameBounds = iframe.getBoundingClientRect();
+      const frameWidth = frameBounds.width || iframe.clientWidth;
+
+      if (container && frameWidth > 0) {
+        const contentWidth = Math.max(
+          container.scrollWidth,
+          body?.scrollWidth ?? 0,
+          html?.scrollWidth ?? 0,
+        );
+
+        container.style.margin = "0 auto";
+        container.style.transformOrigin = "top center";
+
+        if (contentWidth > 0) {
+          const scale = Math.min(1, frameWidth / contentWidth);
+          container.style.maxWidth = `${contentWidth}px`;
+          container.style.width = `${contentWidth}px`;
+
+          if (scale < 0.999) {
+            container.style.transform = `scale(${scale})`;
+          } else {
+            container.style.removeProperty("transform");
+          }
+        } else {
+          container.style.removeProperty("transform");
+          container.style.removeProperty("width");
+          container.style.removeProperty("maxWidth");
+        }
+      }
+
+      const measuredHeight =
+        wrapper?.getBoundingClientRect().height ??
+        container?.getBoundingClientRect().height ??
+        body?.getBoundingClientRect().height ??
+        html?.getBoundingClientRect().height ??
+        html?.scrollHeight ??
+        body?.scrollHeight ??
         iframe.clientHeight;
 
-      if (!scrollHeight || Number.isNaN(scrollHeight)) {
+      if (!measuredHeight || Number.isNaN(measuredHeight)) {
         return;
       }
 
-      const normalized = Math.max(620, Math.min(scrollHeight + 24, 1400));
+      const normalized = Math.max(620, Math.min(Math.ceil(measuredHeight) + 24, 1400));
       setPreviewFrameHeight((current) => {
         if (Math.abs(current - normalized) < 8) {
           return current;
@@ -1248,7 +1304,7 @@ const MailBrandingPage = () => {
         return normalized;
       });
     } catch (error) {
-      console.error("Nu s-a putut ajusta înălțimea previzualizării:", error);
+      console.error("Nu s-a putut ajusta previzualizarea:", error);
     }
   }, []);
 
@@ -1266,6 +1322,14 @@ const MailBrandingPage = () => {
     iframe.addEventListener("load", handleLoad);
     return () => {
       iframe.removeEventListener("load", handleLoad);
+    };
+  }, [adjustPreviewHeight]);
+
+  useEffect(() => {
+    const handleResize = () => adjustPreviewHeight();
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
     };
   }, [adjustPreviewHeight]);
 
