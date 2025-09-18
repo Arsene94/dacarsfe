@@ -141,6 +141,26 @@ const EMPTY_WHEEL_PRIZE_DETAILS: ReturnType<typeof extractWheelPrizeDisplay> = {
   totalBefore: null,
 };
 
+const toLocalDateTimeInput = (iso?: string | null) => {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const tzOffset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - tzOffset * 60000);
+  return local.toISOString().slice(0, 16);
+};
+
+const normalizeBoolean = (value: unknown, defaultValue = false) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["1", "true", "da", "yes"].includes(normalized)) return true;
+    if (["0", "false", "nu", "no"].includes(normalized)) return false;
+  }
+  return defaultValue;
+};
+
 const ReservationsPage = () => {
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -292,6 +312,133 @@ const ReservationsPage = () => {
     setSelectedReservation(reservation);
     setShowModal(true);
   }, []);
+
+  const handleEditReservation = useCallback(
+    async (reservationId: string) => {
+      try {
+        const res = await apiClient.getBookingInfo(reservationId);
+        const raw = (res as any)?.data ?? res;
+        const info = raw?.data ?? raw ?? {};
+
+        const serviceIds = Array.isArray(info?.service_ids)
+          ? info.service_ids
+          : Array.isArray(info?.services)
+          ? info.services.map((s: any) => s.id)
+          : [];
+        const normalizedServiceIds = serviceIds.map((id: any) => {
+          const parsed = parseOptionalNumber(id);
+          return parsed != null ? parsed : id;
+        });
+
+        const pricePerDay =
+          parseOptionalNumber(info?.price_per_day ?? info?.pricePerDay) ?? 0;
+        const originalPricePerDay =
+          parseOptionalNumber(
+            info?.original_price_per_day ?? info?.price_per_day ?? info?.pricePerDay,
+          ) ?? pricePerDay;
+        const basePrice =
+          parseOptionalNumber(info?.base_price ?? pricePerDay) ?? pricePerDay;
+        const basePriceCasco =
+          parseOptionalNumber(
+            info?.base_price_casco ?? info?.rental_rate_casco ?? basePrice,
+          ) ?? basePrice;
+        const totalServices =
+          parseOptionalNumber(info?.total_services) ??
+          (Array.isArray(info?.services)
+            ? info.services.reduce((sum: number, svc: any) => {
+                const price = parseOptionalNumber(svc?.price ?? svc?.pivot?.price);
+                return sum + (price ?? 0);
+              }, 0)
+            : 0);
+        const totalBeforeWheelPrize =
+          parseOptionalNumber(
+            info?.total_before_wheel_prize ?? info?.totalBeforeWheelPrize,
+          ) ?? null;
+        const wheelPrizeDiscount =
+          parseOptionalNumber(
+            info?.wheel_prize_discount ?? info?.wheel_prize?.discount_value,
+          ) ?? 0;
+        const advancePayment =
+          parseOptionalNumber(info?.advance_payment ?? info?.advancePayment) ?? 0;
+        const couponAmount =
+          parseOptionalNumber(info?.coupon_amount ?? info?.discount) ??
+          info?.coupon_amount ??
+          0;
+        const subTotal =
+          parseOptionalNumber(info?.sub_total ?? info?.subTotal) ?? info?.sub_total ?? 0;
+        const total =
+          parseOptionalNumber(info?.total) ?? info?.total ??
+          parseOptionalNumber(info?.total_price) ?? info?.total_price ?? 0;
+        const taxAmount =
+          parseOptionalNumber(info?.tax_amount ?? info?.taxAmount) ??
+          info?.tax_amount ??
+          0;
+
+        const formatted = {
+          ...EMPTY_BOOKING,
+          ...info,
+          id: info?.id ?? reservationId,
+          booking_number: info?.booking_number ?? info?.id ?? reservationId,
+          rental_start_date: toLocalDateTimeInput(info?.rental_start_date),
+          rental_end_date: toLocalDateTimeInput(info?.rental_end_date),
+          coupon_amount: couponAmount,
+          coupon_type: info?.coupon_type ?? info?.discount_type ?? null,
+          coupon_code: info?.coupon_code ?? "",
+          customer_name: info?.customer_name ?? info?.customer?.name ?? "",
+          customer_email: info?.customer_email ?? info?.customer?.email ?? "",
+          customer_phone: info?.customer_phone ?? info?.customer?.phone ?? "",
+          customer_age: info?.customer_age ?? info?.customer?.age ?? "",
+          customer_id: info?.customer_id ?? info?.customer?.id ?? "",
+          car_id: info?.car_id ?? info?.car?.id ?? null,
+          car_name: info?.car_name ?? info?.car?.name ?? "",
+          car_image:
+            info?.car_image ??
+            info?.car?.image_preview ??
+            info?.image_preview ??
+            info?.car?.image ??
+            "",
+          car_license_plate:
+            info?.car?.license_plate ?? info?.license_plate ?? info?.car?.plate ?? "",
+          car_transmission:
+            info?.car?.transmission?.name ?? info?.transmission_name ?? "",
+          car_fuel: info?.car?.fuel?.name ?? info?.fuel_name ?? "",
+          car_deposit:
+            parseOptionalNumber(info?.car_deposit ?? info?.car?.deposit) ??
+            info?.car_deposit ??
+            info?.car?.deposit ??
+            null,
+          service_ids: normalizedServiceIds,
+          services: Array.isArray(info?.services) ? info.services : [],
+          total_services: totalServices ?? 0,
+          sub_total: subTotal,
+          total,
+          tax_amount: taxAmount,
+          price_per_day: pricePerDay,
+          original_price_per_day: originalPricePerDay,
+          base_price: basePrice,
+          base_price_casco: basePriceCasco,
+          days: parseOptionalNumber(info?.days ?? info?.total_days) ?? info?.days ?? 0,
+          keep_old_price: normalizeBoolean(info?.keep_old_price, true),
+          send_email: normalizeBoolean(info?.send_email, false),
+          with_deposit: normalizeBoolean(info?.with_deposit, true),
+          status: info?.status ?? "",
+          total_before_wheel_prize: totalBeforeWheelPrize,
+          wheel_prize_discount: wheelPrizeDiscount,
+          wheel_prize: info?.wheel_prize ?? null,
+          advance_payment: advancePayment,
+          note: info?.note ?? info?.notes ?? "",
+          currency_id: info?.currency_id ?? info?.currencyId ?? "",
+        };
+
+        setBookingInfo(formatted);
+        setEditPopupOpen(true);
+        setShowModal(false);
+      } catch (error) {
+        console.error("Error fetching booking info", error);
+      }
+    },
+    [],
+  );
 
   const clearAllFilters = useCallback(() => {
     setSearchTerm("");
@@ -492,6 +639,7 @@ const ReservationsPage = () => {
               <Eye className="h-4 w-4" />
             </button>
             <button
+              onClick={() => handleEditReservation(r.id)}
               className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
               aria-label="Editează"
             >
@@ -507,7 +655,7 @@ const ReservationsPage = () => {
         ),
       },
     ],
-    [handleViewReservation],
+    [handleViewReservation, handleEditReservation],
   );
 
   const renderReservationDetails = (r: AdminReservation) => {
@@ -1103,6 +1251,7 @@ const ReservationsPage = () => {
                   Confirmă Rezervarea
                 </button>
                 <button
+                  onClick={() => handleEditReservation(selectedReservation.id)}
                   className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-gray-50 transition-colors"
                   aria-label="Editează rezervarea"
                 >
@@ -1128,6 +1277,7 @@ const ReservationsPage = () => {
             }}
             bookingInfo={bookingInfo}
             setBookingInfo={setBookingInfo}
+            onUpdated={fetchBookings}
           />
         )}
         <BookingContractForm
