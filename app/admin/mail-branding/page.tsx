@@ -436,7 +436,7 @@ const createListEntryMock = (
     summary: overrides.summary ?? overrides.value ?? label,
     amount: overrides.amount ?? "100 €",
     icon: overrides.icon ?? "✅",
-    char: overrides.char ?? label.charAt(0) || "A",
+    char: overrides.char ?? (label.charAt(0) || "A"),
     url: overrides.url ?? "https://dacars.ro",
     href: overrides.href ?? overrides.url ?? "https://dacars.ro",
     badge: overrides.badge ?? "Nou",
