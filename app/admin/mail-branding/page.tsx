@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,9 @@ import type {
   MailBrandingSettings,
   MailMenuLink,
   MailSiteDetails,
+  MailTemplateAttachment,
   MailTemplateDetail,
+  MailTemplateUpdatePayload,
   MailTemplateSummary,
 } from "@/types/mail";
 
@@ -277,6 +279,64 @@ const cloneContext = (value: unknown): Record<string, unknown> => {
   } catch {
     return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
   }
+};
+
+const getAttachmentDisplayName = (attachment: MailTemplateAttachment): string => {
+  const fileName = attachment["file_name"];
+  const candidates = [
+    attachment.name,
+    attachment.filename,
+    attachment.original_name,
+    attachment.title,
+    typeof fileName === "string" ? fileName : null,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  if (typeof attachment.url === "string" && attachment.url.trim().length > 0) {
+    const parts = attachment.url.split("/");
+    const last = parts[parts.length - 1];
+    if (last && last.trim().length > 0) {
+      return last.trim();
+    }
+  }
+
+  return attachment.uuid;
+};
+
+const formatAttachmentSize = (
+  value: MailTemplateAttachment["size"],
+): string | null => {
+  const numericValue =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+      ? Number.parseFloat(value)
+      : Number.NaN;
+
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return null;
+  }
+
+  if (numericValue === 0) {
+    return "0 B";
+  }
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = numericValue;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+
+  const formatted = size >= 10 || unitIndex === 0 ? Math.round(size) : Number(size.toFixed(1));
+  return `${formatted} ${units[unitIndex]}`;
 };
 
 const normalizeTwigPath = (input: string): string => {
@@ -635,9 +695,15 @@ const MailBrandingPage = () => {
   const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>("");
   const [templateContent, setTemplateContent] = useState<string>("");
   const [originalTemplateContent, setOriginalTemplateContent] = useState<string>("");
+  const [templateTitle, setTemplateTitle] = useState<string>("");
+  const [originalTemplateTitle, setOriginalTemplateTitle] = useState<string>("");
+  const [templateSubject, setTemplateSubject] = useState<string>("");
+  const [originalTemplateSubject, setOriginalTemplateSubject] = useState<string>("");
   const [templateStatus, setTemplateStatus] = useState<StatusMessage | null>(null);
   const [templateSaving, setTemplateSaving] = useState<boolean>(false);
   const [templateLoading, setTemplateLoading] = useState<boolean>(false);
+  const [attachmentUploading, setAttachmentUploading] = useState<boolean>(false);
+  const [attachmentDeleting, setAttachmentDeleting] = useState<string | null>(null);
 
   const [twigEngine, setTwigEngine] = useState<any>(null);
   const [previewHtml, setPreviewHtml] = useState<string>("");
@@ -660,6 +726,33 @@ const MailBrandingPage = () => {
       null;
     return createDefaultPreviewContext(siteDetails, colorsData ?? null);
   }, [brandingForm, brandingData]);
+
+  const applyTemplateDetail = useCallback(
+    (detail: MailTemplateDetail | null) => {
+      const contents = detail?.contents ?? "";
+      const title =
+        typeof detail?.title === "string" && detail.title.trim().length > 0
+          ? detail.title
+          : detail?.title === null
+          ? ""
+          : detail?.title ?? "";
+      const subject =
+        typeof detail?.subject === "string" && detail.subject.trim().length > 0
+          ? detail.subject
+          : detail?.subject === null
+          ? ""
+          : detail?.subject ?? "";
+
+      setTemplateContent(contents);
+      setOriginalTemplateContent(contents);
+      setDebouncedContent(contents);
+      setTemplateTitle(title);
+      setOriginalTemplateTitle(title);
+      setTemplateSubject(subject);
+      setOriginalTemplateSubject(subject);
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -751,8 +844,14 @@ const MailBrandingPage = () => {
         const cacheMap: Record<string, string> = {};
         detailsEntries.forEach((detail) => {
           if (detail) {
-            detailMap[detail.key] = detail;
-            cacheMap[detail.path] = detail.contents;
+            const normalized: MailTemplateDetail = {
+              ...detail,
+              attachments: Array.isArray(detail.attachments)
+                ? detail.attachments
+                : [],
+            };
+            detailMap[normalized.key] = normalized;
+            cacheMap[normalized.path] = normalized.contents;
           }
         });
 
@@ -764,9 +863,9 @@ const MailBrandingPage = () => {
           setSelectedTemplateKey(initialKey);
           const initialDetail = detailMap[initialKey];
           if (initialDetail) {
-            setTemplateContent(initialDetail.contents);
-            setOriginalTemplateContent(initialDetail.contents);
-            setDebouncedContent(initialDetail.contents);
+            applyTemplateDetail(initialDetail);
+          } else {
+            applyTemplateDetail(null);
           }
         }
       })
@@ -789,7 +888,7 @@ const MailBrandingPage = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [applyTemplateDetail]);
 
   useEffect(() => {
     if (!twigEngine) return;
@@ -1056,30 +1155,31 @@ const MailBrandingPage = () => {
     (key: string) => {
       setSelectedTemplateKey(key);
       setTemplateStatus(null);
+      setAttachmentUploading(false);
+      setAttachmentDeleting(null);
       if (!key) {
-        setTemplateContent("");
-        setOriginalTemplateContent("");
-        setDebouncedContent("");
+        applyTemplateDetail(null);
         return;
       }
       const detail = templateDetails[key];
       if (detail) {
-        setTemplateContent(detail.contents);
-        setOriginalTemplateContent(detail.contents);
-        setDebouncedContent(detail.contents);
+        applyTemplateDetail(detail);
         return;
       }
+      applyTemplateDetail(null);
       setTemplateLoading(true);
       apiClient
         .getMailTemplate(key)
         .then((response) => {
           const data = response?.data;
           if (!data) return;
-          setTemplateDetails((prev) => ({ ...prev, [data.key]: data }));
-          setTemplateCache((prev) => ({ ...prev, [data.path]: data.contents }));
-          setTemplateContent(data.contents);
-          setOriginalTemplateContent(data.contents);
-          setDebouncedContent(data.contents);
+          const normalized: MailTemplateDetail = {
+            ...data,
+            attachments: Array.isArray(data.attachments) ? data.attachments : [],
+          };
+          setTemplateDetails((prev) => ({ ...prev, [normalized.key]: normalized }));
+          setTemplateCache((prev) => ({ ...prev, [normalized.path]: normalized.contents }));
+          applyTemplateDetail(normalized);
         })
         .catch((error) => {
           setTemplateStatus({
@@ -1094,29 +1194,56 @@ const MailBrandingPage = () => {
           setTemplateLoading(false);
         });
     },
-    [templateDetails],
+    [templateDetails, applyTemplateDetail],
   );
 
   const handleTemplateSave = () => {
     if (!selectedTemplateKey) return;
+    const payload: MailTemplateUpdatePayload = {};
+    if (templateContent !== originalTemplateContent) {
+      payload.contents = templateContent;
+    }
+    if (templateTitle !== originalTemplateTitle) {
+      payload.title = templateTitle;
+    }
+    if (templateSubject !== originalTemplateSubject) {
+      payload.subject = templateSubject;
+    }
+
+    if (Object.keys(payload).length === 0) {
+      setTemplateStatus({
+        type: "error",
+        text: "Nu există modificări de salvat.",
+      });
+      return;
+    }
+
     setTemplateSaving(true);
     setTemplateStatus(null);
     apiClient
-      .updateMailTemplate(selectedTemplateKey, templateContent)
+      .updateMailTemplate(selectedTemplateKey, payload)
       .then((response) => {
         const data = response?.data;
         if (!data) return;
-        setTemplateDetails((prev) => ({ ...prev, [data.key]: data }));
+        const normalized: MailTemplateDetail = {
+          ...data,
+          attachments: Array.isArray(data.attachments) ? data.attachments : [],
+        };
+        setTemplateDetails((prev) => ({ ...prev, [normalized.key]: normalized }));
         setTemplates((prev) =>
           prev.map((item) =>
-            item.key === data.key
-              ? { ...item, updated_at: data.updated_at }
+            item.key === normalized.key
+              ? {
+                  ...item,
+                  updated_at: normalized.updated_at,
+                  title: normalized.title,
+                  subject: normalized.subject,
+                }
               : item,
           ),
         );
-        setTemplateCache((prev) => ({ ...prev, [data.path]: data.contents }));
-        setOriginalTemplateContent(data.contents);
-        setDebouncedContent(data.contents);
+        setTemplateCache((prev) => ({ ...prev, [normalized.path]: normalized.contents }));
+        applyTemplateDetail(normalized);
         setTemplateStatus({
           type: "success",
           text: "Template-ul a fost salvat.",
@@ -1131,6 +1258,90 @@ const MailBrandingPage = () => {
       })
       .finally(() => {
         setTemplateSaving(false);
+      });
+  };
+
+  const handleAttachmentUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.target;
+    const file = input.files?.[0] ?? null;
+    input.value = "";
+    if (!selectedTemplateKey || !file) {
+      return;
+    }
+
+    setAttachmentUploading(true);
+    setTemplateStatus(null);
+    apiClient
+      .uploadMailTemplateAttachment(selectedTemplateKey, file)
+      .then((response) => {
+        const attachmentsFromResponse = Array.isArray(response?.data?.attachments)
+          ? (response.data.attachments as MailTemplateAttachment[])
+          : null;
+        setTemplateDetails((prev) => {
+          const existing = prev[selectedTemplateKey];
+          if (!existing) return prev;
+          const nextAttachments = attachmentsFromResponse ?? existing.attachments ?? [];
+          const updated: MailTemplateDetail = {
+            ...existing,
+            attachments: nextAttachments,
+          };
+          return { ...prev, [selectedTemplateKey]: updated };
+        });
+        setTemplateStatus({
+          type: "success",
+          text: "Atașamentul a fost încărcat.",
+        });
+      })
+      .catch((error) => {
+        setTemplateStatus({
+          type: "error",
+          text:
+            error instanceof Error
+              ? error.message
+              : "Nu s-a putut încărca atașamentul.",
+        });
+      })
+      .finally(() => {
+        setAttachmentUploading(false);
+      });
+  };
+
+  const handleAttachmentDelete = (uuid: string) => {
+    if (!selectedTemplateKey || !uuid) return;
+    setAttachmentDeleting(uuid);
+    setTemplateStatus(null);
+    apiClient
+      .deleteMailTemplateAttachment(selectedTemplateKey, uuid)
+      .then((response) => {
+        const attachmentsFromResponse = Array.isArray(response?.data?.attachments)
+          ? (response.data.attachments as MailTemplateAttachment[])
+          : null;
+        setTemplateDetails((prev) => {
+          const existing = prev[selectedTemplateKey];
+          if (!existing) return prev;
+          const nextAttachments = attachmentsFromResponse ?? existing.attachments ?? [];
+          const updated: MailTemplateDetail = {
+            ...existing,
+            attachments: nextAttachments,
+          };
+          return { ...prev, [selectedTemplateKey]: updated };
+        });
+        setTemplateStatus({
+          type: "success",
+          text: "Atașamentul a fost șters.",
+        });
+      })
+      .catch((error) => {
+        setTemplateStatus({
+          type: "error",
+          text:
+            error instanceof Error
+              ? error.message
+              : "Nu s-a putut șterge atașamentul.",
+        });
+      })
+      .finally(() => {
+        setAttachmentDeleting(null);
       });
   };
 
@@ -1163,7 +1374,18 @@ const MailBrandingPage = () => {
     setPreviewContextError(null);
   }, [computeBasePreviewContext]);
 
-  const isTemplateDirty = templateContent !== originalTemplateContent;
+  const currentTemplate = selectedTemplateKey
+    ? templateDetails[selectedTemplateKey] ?? null
+    : null;
+  const attachmentsList = currentTemplate?.attachments;
+  const currentAttachments: MailTemplateAttachment[] = Array.isArray(attachmentsList)
+    ? attachmentsList
+    : [];
+
+  const isTemplateDirty =
+    templateContent !== originalTemplateContent ||
+    templateTitle !== originalTemplateTitle ||
+    templateSubject !== originalTemplateSubject;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -1483,6 +1705,29 @@ const MailBrandingPage = () => {
                 )}
               </div>
 
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="template-title">Titlu email</Label>
+                  <Input
+                    id="template-title"
+                    value={templateTitle}
+                    onChange={(event) => setTemplateTitle(event.target.value)}
+                    placeholder="Titlu pentru lista de template-uri"
+                    disabled={!selectedTemplateKey}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="template-subject">Subiect email</Label>
+                  <Input
+                    id="template-subject"
+                    value={templateSubject}
+                    onChange={(event) => setTemplateSubject(event.target.value)}
+                    placeholder="Subiectul emailului"
+                    disabled={!selectedTemplateKey}
+                  />
+                </div>
+              </div>
+
               <div>
                 <Label htmlFor="twig-editor">Conținut Twig</Label>
                 <textarea
@@ -1493,6 +1738,100 @@ const MailBrandingPage = () => {
                   placeholder="{% block body %}...{% endblock %}"
                   spellCheck={false}
                 />
+              </div>
+
+              <div className="space-y-4 rounded-2xl border border-gray-200 p-4 sm:p-6">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-base font-semibold text-berkeley">Atașamente</h3>
+                    <p className="text-xs text-gray-500">
+                      Fișierele încărcate aici vor fi trimise împreună cu acest email.
+                    </p>
+                  </div>
+                  <label
+                    className={`inline-flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm font-medium transition ${
+                      !selectedTemplateKey || templateLoading || attachmentUploading
+                        ? "cursor-not-allowed border-gray-300 text-gray-400"
+                        : "cursor-pointer border-jade text-jade hover:bg-jade/10"
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      className="sr-only"
+                      onChange={handleAttachmentUpload}
+                      disabled={
+                        !selectedTemplateKey || templateLoading || attachmentUploading
+                      }
+                    />
+                    {attachmentUploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Plus className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {attachmentUploading ? "Se încarcă..." : "Adaugă fișier"}
+                  </label>
+                </div>
+                <ul className="space-y-3">
+                  {currentAttachments.length === 0 ? (
+                    <li className="rounded-xl border border-dashed border-gray-200 px-4 py-3 text-sm text-gray-500">
+                      Nu există atașamente pentru acest template.
+                    </li>
+                  ) : (
+                    currentAttachments.map((attachment) => {
+                      const name = getAttachmentDisplayName(attachment);
+                      const sizeLabel = formatAttachmentSize(attachment.size);
+                      const uuid =
+                        typeof attachment.uuid === "string" && attachment.uuid.length > 0
+                          ? attachment.uuid
+                          : name;
+                      return (
+                        <li
+                          key={uuid}
+                          className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3"
+                        >
+                          <div className="min-w-0 space-y-1">
+                            {typeof attachment.url === "string" && attachment.url ? (
+                              <a
+                                href={attachment.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block truncate text-sm font-medium text-berkeley hover:underline"
+                              >
+                                {name}
+                              </a>
+                            ) : (
+                              <span className="block truncate text-sm font-medium text-berkeley">
+                                {name}
+                              </span>
+                            )}
+                            {sizeLabel && (
+                              <p className="text-xs text-gray-500">{sizeLabel}</p>
+                            )}
+                          </div>
+                          {typeof attachment.uuid === "string" && attachment.uuid.length > 0 && (
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              className="flex items-center gap-2"
+                              onClick={() => handleAttachmentDelete(attachment.uuid)}
+                              disabled={
+                                attachmentDeleting === attachment.uuid || attachmentUploading
+                              }
+                            >
+                              {attachmentDeleting === attachment.uuid ? (
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                              )}
+                              Șterge
+                            </Button>
+                          )}
+                        </li>
+                      );
+                    })
+                  )}
+                </ul>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

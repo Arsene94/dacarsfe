@@ -54,11 +54,26 @@ export interface MailTemplateSummary {
   key: string;
   path: string;
   name: string;
+  title?: string | null;
+  subject?: string | null;
   updated_at: string;
+}
+
+export interface MailTemplateAttachment {
+  uuid: string;
+  name?: string | null;
+  filename?: string | null;
+  original_name?: string | null;
+  title?: string | null;
+  size?: number | string | null;
+  mime_type?: string | null;
+  url?: string | null;
+  [key: string]: unknown;
 }
 
 export interface MailTemplateDetail extends MailTemplateSummary {
   contents: string;
+  attachments?: MailTemplateAttachment[];
 }
 
 export interface MailTemplatesResponse {
@@ -69,6 +84,15 @@ export interface MailTemplateDetailResponse {
   data: MailTemplateDetail;
 }
 
-export interface MailTemplateUpdatePayload {
+export type MailTemplateUpdatePayload = Partial<{
   contents: string;
+  title: string | null;
+  subject: string | null;
+}>;
+
+export interface MailTemplateAttachmentsResponse {
+  data: {
+    attachments: MailTemplateAttachment[];
+    attachment?: MailTemplateAttachment;
+  };
 }

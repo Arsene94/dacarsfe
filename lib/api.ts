@@ -9,7 +9,9 @@ import type {
 import type {
     MailBrandingResponse,
     MailBrandingUpdatePayload,
+    MailTemplateAttachmentsResponse,
     MailTemplateDetailResponse,
+    MailTemplateUpdatePayload,
     MailTemplatesResponse,
 } from "@/types/mail";
 import type { Role } from "@/types/roles";
@@ -770,11 +772,33 @@ class ApiClient {
         return this.request<MailTemplateDetailResponse>(`/mail-templates/${key}`);
     }
 
-    async updateMailTemplate(templateKey: string, contents: string) {
+    async updateMailTemplate(templateKey: string, payload: MailTemplateUpdatePayload) {
         const key = encodeURIComponent(templateKey.trim());
         return this.request<MailTemplateDetailResponse>(`/mail-templates/${key}`, {
             method: 'PUT',
-            body: JSON.stringify({ contents }),
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async uploadMailTemplateAttachment(templateKey: string, file: File | Blob) {
+        const key = encodeURIComponent(templateKey.trim());
+        const formData = new FormData();
+        const fileName =
+            'name' in file && typeof file.name === 'string' && file.name.length > 0
+                ? file.name
+                : 'attachment';
+        formData.append('file', file, fileName);
+        return this.request<MailTemplateAttachmentsResponse>(`/mail-templates/${key}/attachments`, {
+            method: 'POST',
+            body: formData,
+        });
+    }
+
+    async deleteMailTemplateAttachment(templateKey: string, attachmentUuid: string) {
+        const key = encodeURIComponent(templateKey.trim());
+        const attachment = encodeURIComponent(attachmentUuid.trim());
+        return this.request<MailTemplateAttachmentsResponse>(`/mail-templates/${key}/attachments/${attachment}`, {
+            method: 'DELETE',
         });
     }
 
