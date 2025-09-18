@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
 
@@ -122,43 +122,113 @@ const mapFormSiteToDetails = (form: MailSiteFormState): MailSiteDetails => {
 const createDefaultPreviewContext = (
   site?: MailSiteDetails | null,
   colors?: MailBrandingColors | null,
-): Record<string, unknown> => ({
-  site: site ?? null,
-  colors: colors ?? null,
-  customer_name: "Ion Popescu",
-  customer_email: "ion.popescu@example.com",
-  booking_number: "DAC-12345",
-  booking_reference: "DAC-12345",
-  booking_created_at: "2024-06-15 10:30",
-  pickup_date: "2024-07-01",
-  pickup_time: "08:30",
-  pickup_location: site?.address ?? "Aeroportul Henri Coandă, Otopeni",
-  dropoff_date: "2024-07-07",
-  dropoff_time: "09:00",
-  dropoff_location: site?.address ?? "Aeroportul Henri Coandă, Otopeni",
-  car: {
-    name: "Dacia Logan",
-    category: "Economy",
-    year: 2024,
-    transmission: "Manuală",
-    fuel: "Benzină",
-    plate_number: "B-99-DAC",
-    image_url: "https://via.placeholder.com/640x320.png?text=DaCars",
-  },
-  total_price: "350 €",
-  currency: "EUR",
-  advance_paid: "50 €",
-  balance_due: "300 €",
-  extras: [
-    { name: "Scaun copil", price: "15 €" },
-    { name: "Șofer adițional", price: "25 €" },
-  ],
-  notes: "Vă rugăm să ne sunați când ajungeți în aeroport.",
-  support: {
-    phone: site?.support_phone ?? "+40 722 123 456",
-    email: site?.email ?? "contact@dacars.ro",
-  },
-});
+): Record<string, unknown> => {
+  const baseContext: Record<string, unknown> = {
+    site: site ?? null,
+    colors: colors ?? null,
+    customer_name: "Ion Popescu",
+    customer_email: "ion.popescu@example.com",
+    booking_number: "DAC-12345",
+    booking_reference: "DAC-12345",
+    booking_created_at: "2024-06-15 10:30",
+    pickup_date: "2024-07-01",
+    pickup_time: "08:30",
+    pickup_location: site?.address ?? "Aeroportul Henri Coandă, Otopeni",
+    dropoff_date: "2024-07-07",
+    dropoff_time: "09:00",
+    dropoff_location: site?.address ?? "Aeroportul Henri Coandă, Otopeni",
+    car: {
+      name: "Dacia Logan",
+      category: "Economy",
+      year: 2024,
+      transmission: "Manuală",
+      fuel: "Benzină",
+      plate_number: "B-99-DAC",
+      image_url: "https://via.placeholder.com/640x320.png?text=DaCars",
+    },
+    total_price: "350 €",
+    currency: "EUR",
+    advance_paid: "50 €",
+    balance_due: "300 €",
+    extras: [
+      enhancePreviewValue({ name: "Scaun copil", price: "15 €" }),
+      enhancePreviewValue({ name: "Șofer adițional", price: "25 €" }),
+    ],
+    notes: "Vă rugăm să ne sunați când ajungeți în aeroport.",
+    support: {
+      phone: site?.support_phone ?? "+40 722 123 456",
+      email: site?.email ?? "contact@dacars.ro",
+    },
+    hero_icon_char: "🚗",
+    hero_badge_label: "Oferta săptămânii",
+    hero_badge_color: colors?.jadeLight ?? "#38B275",
+    hero_badge_text_color: "#FFFFFF",
+    hero_badge_background: "#E8F8F0",
+    hero_title: "Rezervarea ta este confirmată",
+    hero_subtitle: "Mulțumim că ai ales DaCars pentru următoarea călătorie.",
+    hero_description:
+      "Predarea și preluarea au loc direct în aeroport. Verifică detaliile de mai jos înainte de plecare.",
+    hero_support_message: "Echipa noastră este disponibilă non-stop dacă ai nevoie de ajutor.",
+    hero_primary_action: createActionMock(
+      "Vezi rezervarea",
+      site?.url ? `${site.url.replace(/\/?$/, "")}/rezervari` : "https://dacars.ro/rezervari",
+    ),
+    hero_secondary_action: createActionMock(
+      "Contactează-ne",
+      site?.email ? `mailto:${site.email}` : "mailto:contact@dacars.ro",
+    ),
+    hero_primary_button: createActionMock(
+      "Confirmă sosirea",
+      site?.url ? `${site.url.replace(/\/?$/, "")}/check-in` : "https://dacars.ro/check-in",
+    ),
+    hero_secondary_button: createActionMock(
+      "Modifică rezervarea",
+      site?.url ? `${site.url.replace(/\/?$/, "")}/modifica` : "https://dacars.ro/modifica",
+    ),
+    hero_features: enhancePreviewValue([
+      createListEntryMock("Predare rapidă", {
+        description: "Preluare în mai puțin de 5 minute direct din aeroport.",
+        icon: "⚡️",
+      }),
+      createListEntryMock("Asistență 24/7", {
+        description: "Suntem disponibili telefonic și pe WhatsApp în orice moment.",
+        icon: "📞",
+      }),
+      createListEntryMock("Fără garanție ascunsă", {
+        description: "Plătești exact cât ai confirmat în rezervare, fără surprize.",
+        icon: "✅",
+      }),
+    ]),
+    hero_steps: enhancePreviewValue([
+      createListEntryMock("Completezi formularul", {
+        description: "Îți introduci datele și alegi mașina potrivită.",
+        char: "1",
+      }),
+      createListEntryMock("Confirmi rezervarea", {
+        description: "Primești imediat toate detaliile prin email.",
+        char: "2",
+      }),
+      createListEntryMock("Ne vedem la aeroport", {
+        description: "Predăm mașina și ești gata de drum.",
+        char: "3",
+      }),
+    ]),
+    hero_stats: enhancePreviewValue([
+      createListEntryMock("12.500+", {
+        title: "Clienți mulțumiți",
+        description: "Au ales DaCars pentru vacanțe fără griji.",
+        icon: "🎉",
+      }),
+      createListEntryMock("98%", {
+        title: "Recomandă DaCars",
+        description: "Feedback excelent pentru echipa noastră.",
+        icon: "👍",
+      }),
+    ]),
+  };
+
+  return enhancePreviewValue(baseContext) as Record<string, unknown>;
+};
 
 type TwigVariableInfo = {
   path: string;
@@ -267,6 +337,116 @@ const EXACT_MOCK_VALUES: Record<string, unknown> = {
   },
 };
 
+const STRINGIFIER_KEYS = [
+  "title",
+  "label",
+  "name",
+  "heading",
+  "subtitle",
+  "text",
+  "description",
+  "value",
+  "badge",
+  "char",
+  "summary",
+  "display",
+];
+
+const enhancePreviewValue = (input: unknown): unknown => {
+  if (Array.isArray(input)) {
+    for (let index = 0; index < input.length; index += 1) {
+      input[index] = enhancePreviewValue(input[index]);
+    }
+    return input;
+  }
+
+  if (isPlainObject(input)) {
+    const target = input as Record<string | symbol, unknown>;
+    Reflect.ownKeys(target).forEach((key) => {
+      const current = Reflect.get(target, key);
+      Reflect.set(target, key, enhancePreviewValue(current));
+    });
+
+    const shouldStringify = STRINGIFIER_KEYS.some((key) => {
+      const candidate = Reflect.get(target, key);
+      return typeof candidate === "string" && candidate.trim().length > 0;
+    });
+
+    if (shouldStringify) {
+      Object.defineProperty(target, "toString", {
+        value(this: Record<string, unknown>) {
+          for (const key of STRINGIFIER_KEYS) {
+            const candidate = this[key];
+            if (typeof candidate === "string" && candidate.trim().length > 0) {
+              return candidate;
+            }
+          }
+          const fallback = this.valueOf();
+          return typeof fallback === "string" ? fallback : "[object Object]";
+        },
+        configurable: true,
+        enumerable: false,
+      });
+
+      Object.defineProperty(target, Symbol.toPrimitive, {
+        value(this: Record<string, unknown>) {
+          const toStringFn = (this as unknown as { toString(): string }).toString;
+          return typeof toStringFn === "function" ? toStringFn.call(this) : "[object Object]";
+        },
+        configurable: true,
+        enumerable: false,
+      });
+    }
+
+    return target;
+  }
+
+  return input;
+};
+
+const createActionMock = (label: string, url: string): Record<string, unknown> => {
+  const action: Record<string, unknown> = {
+    label,
+    title: label,
+    text: label,
+    description: `Află mai multe despre ${label.toLowerCase()}.`,
+    value: label,
+    url,
+    href: url,
+    button_label: label,
+    button_text: label,
+  };
+
+  return enhancePreviewValue(action) as Record<string, unknown>;
+};
+
+const createListEntryMock = (
+  label: string,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> => {
+  const entry: Record<string, unknown> = {
+    label,
+    title: overrides.title ?? label,
+    heading: overrides.heading ?? overrides.title ?? label,
+    subtitle: overrides.subtitle ?? `Subtitlu ${label.toLowerCase()}`,
+    description:
+      overrides.description ?? overrides.text ?? "Text exemplu pentru previzualizare.",
+    text: overrides.text ?? overrides.description ?? "Text exemplu pentru previzualizare.",
+    value: overrides.value ?? label,
+    summary: overrides.summary ?? overrides.value ?? label,
+    amount: overrides.amount ?? "100 €",
+    icon: overrides.icon ?? "✅",
+    char: overrides.char ?? label.charAt(0) || "A",
+    url: overrides.url ?? "https://dacars.ro",
+    href: overrides.href ?? overrides.url ?? "https://dacars.ro",
+    badge: overrides.badge ?? "Nou",
+    color: overrides.color ?? "#206442",
+    ...overrides,
+  };
+
+  return enhancePreviewValue(entry) as Record<string, unknown>;
+};
+
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value != null && typeof value === "object" && !Array.isArray(value);
 
@@ -274,11 +454,38 @@ const cloneContext = (value: unknown): Record<string, unknown> => {
   if (!isPlainObject(value)) {
     return {};
   }
-  try {
-    return structuredClone(value);
-  } catch {
-    return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
-  }
+
+  const cloneValue = (input: unknown): unknown => {
+    if (Array.isArray(input)) {
+      return input.map((item) => cloneValue(item));
+    }
+
+    if (isPlainObject(input)) {
+      const result: Record<string, unknown> = {};
+      Object.entries(input).forEach(([key, entry]) => {
+        result[key] = cloneValue(entry);
+      });
+
+      Object.getOwnPropertySymbols(input).forEach((symbol) => {
+        const descriptor = Object.getOwnPropertyDescriptor(input, symbol);
+        if (descriptor) {
+          Object.defineProperty(result, symbol, {
+            value: cloneValue(descriptor.value),
+            enumerable: descriptor.enumerable ?? false,
+            configurable: true,
+            writable: true,
+          });
+        }
+      });
+
+      return result;
+    }
+
+    return input;
+  };
+
+  const cloned = cloneValue(value) as Record<string, unknown>;
+  return enhancePreviewValue(cloned) as Record<string, unknown>;
 };
 
 const getAttachmentDisplayName = (attachment: MailTemplateAttachment): string => {
@@ -566,32 +773,80 @@ const createArrayMock = (path: string): unknown[] => {
   const key = path.split(".").pop()?.toLowerCase() ?? "";
   if (key.includes("menu") || key.includes("link")) {
     return [
-      { label: "Element 1", url: "https://dacars.ro" },
-      { label: "Element 2", url: "https://dacars.ro/oferte" },
-    ];
-  }
-  if (key.includes("extra")) {
-    return [
-      { name: "Scaun copil", price: "15 €" },
-      { name: "Șofer adițional", price: "25 €" },
+      createListEntryMock("Acasă", { url: "https://dacars.ro" }),
+      createListEntryMock("Rezervă acum", { url: "https://dacars.ro/checkout" }),
     ];
   }
   if (key.includes("social")) {
     return [
-      { label: "Facebook", url: "https://www.facebook.com/DaCars" },
-      { label: "Instagram", url: "https://www.instagram.com/DaCars" },
+      createListEntryMock("Facebook", { url: "https://www.facebook.com/DaCars", icon: "📘" }),
+      createListEntryMock("Instagram", {
+        url: "https://www.instagram.com/DaCars",
+        icon: "📸",
+      }),
+      createListEntryMock("TikTok", { url: "https://www.tiktok.com/@DaCars", icon: "🎵" }),
     ];
   }
-  if (key.includes("item") || key.includes("line") || key.includes("entry")) {
+  if (key.includes("extra") || key.includes("addon") || key.includes("benefit")) {
     return [
-      { name: "Element 1", value: "Exemplu" },
-      { name: "Element 2", value: "Exemplu" },
+      createListEntryMock("Scaun copil", {
+        description: "Pentru cei mici, confort și siguranță în plus.",
+        price: "15 €",
+        amount: "15 €",
+        icon: "👶",
+      }),
+      createListEntryMock("Șofer adițional", {
+        description: "Permite împărțirea călătoriei cu un prieten.",
+        price: "25 €",
+        amount: "25 €",
+        icon: "🧑‍🤝‍🧑",
+      }),
     ];
   }
-  return [
-    { name: "Element 1", value: "Exemplu" },
-    { name: "Element 2", value: "Exemplu" },
-  ];
+  if (key.includes("action") || key.includes("button") || key.includes("cta")) {
+    return [
+      createActionMock("Confirmă rezervarea", "https://dacars.ro/confirmare"),
+      createActionMock("Solicită modificări", "mailto:contact@dacars.ro"),
+    ];
+  }
+  if (key.includes("step") || key.includes("timeline") || key.includes("progress")) {
+    return [
+      createListEntryMock("Completezi formularul", {
+        description: "Alegi perioada și mașina preferată.",
+        char: "1",
+      }),
+      createListEntryMock("Confirmi detaliile", {
+        description: "Primești rezumatul pe email imediat.",
+        char: "2",
+      }),
+      createListEntryMock("Ridici mașina", {
+        description: "Ne întâlnim în aeroport la ora stabilită.",
+        char: "3",
+      }),
+    ];
+  }
+  if (key.includes("stat") || key.includes("metric") || key.includes("counter")) {
+    return [
+      createListEntryMock("12.500+", {
+        title: "Clienți fericiți",
+        description: "Șoferi care au avut încredere în DaCars.",
+        icon: "🚗",
+      }),
+      createListEntryMock("98%", {
+        title: "Recomandă mai departe",
+        description: "Rating mediu primit după rezervări.",
+        icon: "⭐️",
+      }),
+    ];
+  }
+  if (key.includes("item") || key.includes("line") || key.includes("entry") || key.includes("row")) {
+    return [
+      createListEntryMock("Element 1", { description: "Detaliu exemplu." }),
+      createListEntryMock("Element 2", { description: "Alt detaliu exemplu." }),
+    ];
+  }
+
+  return [createListEntryMock("Element 1"), createListEntryMock("Element 2")];
 };
 
 const generateMockValueForPath = (
@@ -621,6 +876,9 @@ const generateMockValueForPath = (
     return "https://dacars.ro/exemplu";
   if (lowerKey.includes("logo") || lowerKey.includes("image") || lowerKey.includes("photo"))
     return "https://via.placeholder.com/640x320.png?text=DaCars";
+  if (lowerKey.includes("icon") && lowerKey.includes("char")) return "🚗";
+  if (lowerKey.includes("icon")) return "🚘";
+  if (lowerKey.includes("emoji")) return "🚗";
   if (lowerKey.includes("date")) return "2024-07-01";
   if (lowerKey.includes("time") || lowerKey.includes("hour")) return "10:30";
   if (
@@ -638,6 +896,17 @@ const generateMockValueForPath = (
   if (lowerKey.includes("status")) return "confirmat";
   if (lowerKey.includes("address") || lowerKey.includes("location"))
     return "Str. Exemplu nr. 10, București";
+  if (lowerKey.includes("badge") && lowerKey.includes("label")) return "Oferta săptămânii";
+  if (lowerKey.includes("badge") && lowerKey.includes("text")) return "#FFFFFF";
+  if (lowerKey.includes("badge") && lowerKey.includes("color")) return "#38B275";
+  if (lowerKey.includes("background")) return "#F5F7FA";
+  if (lowerKey.includes("color") || lowerKey.includes("hex")) {
+    return lowerKey.includes("text") ? "#1A3661" : "#206442";
+  }
+  if (lowerKey.includes("label")) return "Etichetă exemplu";
+  if (lowerKey.includes("subtitle") || lowerKey.includes("headline"))
+    return "Subtitlu de previzualizare";
+  if (lowerKey.includes("heading")) return "Titlu secțiune";
   if (lowerKey.includes("name") || lowerKey.includes("title")) return "Exemplu";
   if (
     lowerKey.includes("number") ||
@@ -646,6 +915,9 @@ const generateMockValueForPath = (
     lowerKey.includes("id")
   ) {
     return "DAC-0001";
+  }
+  if (lowerKey.includes("action") || lowerKey.includes("button") || lowerKey.includes("cta")) {
+    return createActionMock("Vezi detalii", "https://dacars.ro/detalii");
   }
   if (lowerKey.startsWith("is_") || lowerKey.startsWith("has") || lowerKey.includes("enabled")) {
     return true;
@@ -713,6 +985,8 @@ const MailBrandingPage = () => {
   const [previewContextError, setPreviewContextError] = useState<string | null>(null);
   const [debouncedContent, setDebouncedContent] = useState<string>("");
   const [debouncedContext, setDebouncedContext] = useState<Record<string, unknown>>({});
+  const previewIframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [previewFrameHeight, setPreviewFrameHeight] = useState<number>(720);
 
   const computeBasePreviewContext = useCallback(() => {
     const siteDetails =
@@ -908,6 +1182,36 @@ const MailBrandingPage = () => {
     return () => window.clearTimeout(handle);
   }, [templateContent]);
 
+  const previewDocument = useMemo(() => {
+    if (!previewHtml || !previewHtml.trim()) {
+      return "";
+    }
+
+    const trimmed = previewHtml.trim();
+    const headStyles = `
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <style>
+        :root { color-scheme: light; }
+        body { margin: 0; padding: 0; background: #f3f4f6; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        body * { box-sizing: border-box; }
+        .email-preview-wrapper { width: 100%; min-height: 100vh; background: #f3f4f6; padding: 24px 12px; }
+        .email-preview-container { margin: 0 auto; max-width: 600px; }
+        img { max-width: 100%; height: auto; }
+        a { color: inherit; }
+      </style>
+    `;
+
+    if (/<html[\s>]/i.test(trimmed)) {
+      if (/<head[\s>]/i.test(trimmed)) {
+        return trimmed.replace(/<head([^>]*)>/i, `<head$1>${headStyles}`);
+      }
+      return trimmed.replace(/<html([^>]*)>/i, `<html$1><head>${headStyles}</head>`);
+    }
+
+    return `<!DOCTYPE html><html><head>${headStyles}</head><body><div class="email-preview-wrapper"><div class="email-preview-container">${trimmed}</div></div></body></html>`;
+  }, [previewHtml]);
+
   const mergedPreviewContext = useMemo(() => {
     if (!brandingForm) return previewContext;
     const siteDetails = mapFormSiteToDetails(brandingForm.site);
@@ -919,12 +1223,64 @@ const MailBrandingPage = () => {
     return nextContext;
   }, [previewContext, brandingForm]);
 
+  const adjustPreviewHeight = useCallback(() => {
+    const iframe = previewIframeRef.current;
+    if (!iframe) return;
+
+    try {
+      const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
+      if (!doc) return;
+
+      const scrollHeight =
+        doc.documentElement?.scrollHeight ??
+        doc.body?.scrollHeight ??
+        iframe.clientHeight;
+
+      if (!scrollHeight || Number.isNaN(scrollHeight)) {
+        return;
+      }
+
+      const normalized = Math.max(620, Math.min(scrollHeight + 24, 1400));
+      setPreviewFrameHeight((current) => {
+        if (Math.abs(current - normalized) < 8) {
+          return current;
+        }
+        return normalized;
+      });
+    } catch (error) {
+      console.error("Nu s-a putut ajusta înălțimea previzualizării:", error);
+    }
+  }, []);
+
   useEffect(() => {
     const handle = window.setTimeout(() => {
       setDebouncedContext(mergedPreviewContext);
     }, 250);
     return () => window.clearTimeout(handle);
   }, [mergedPreviewContext]);
+
+  useEffect(() => {
+    const iframe = previewIframeRef.current;
+    if (!iframe) return;
+    const handleLoad = () => adjustPreviewHeight();
+    iframe.addEventListener("load", handleLoad);
+    return () => {
+      iframe.removeEventListener("load", handleLoad);
+    };
+  }, [adjustPreviewHeight]);
+
+  useEffect(() => {
+    if (!previewDocument) {
+      setPreviewFrameHeight(640);
+      return;
+    }
+
+    const handle = window.setTimeout(() => {
+      adjustPreviewHeight();
+    }, 200);
+
+    return () => window.clearTimeout(handle);
+  }, [previewDocument, adjustPreviewHeight]);
 
   useEffect(() => {
     if (!debouncedContent.trim() || !selectedTemplateKey) return;
@@ -952,8 +1308,8 @@ const MailBrandingPage = () => {
         }
       });
       if (changed) {
-        updatedContext = draft;
-        return draft;
+        updatedContext = enhancePreviewValue(draft) as Record<string, unknown>;
+        return updatedContext;
       }
       return previous;
     });
@@ -1135,8 +1491,9 @@ const MailBrandingPage = () => {
           }
         }
 
-        setPreviewContext(mergedPreview);
-        setPreviewContextText(JSON.stringify(mergedPreview, null, 2));
+        const normalizedPreview = enhancePreviewValue(mergedPreview) as Record<string, unknown>;
+        setPreviewContext(normalizedPreview);
+        setPreviewContextText(JSON.stringify(normalizedPreview, null, 2));
         setPreviewContextError(null);
       })
       .catch((error) => {
@@ -1355,7 +1712,8 @@ const MailBrandingPage = () => {
     try {
       const parsed = JSON.parse(value);
       if (parsed && typeof parsed === "object") {
-        setPreviewContext(parsed as Record<string, unknown>);
+        const enhanced = enhancePreviewValue(parsed) as Record<string, unknown>;
+        setPreviewContext(enhanced);
         setPreviewContextError(null);
       }
     } catch (error) {
@@ -1901,14 +2259,26 @@ const MailBrandingPage = () => {
                     Biblioteca Twig se încarcă... previzualizarea va fi disponibilă în scurt timp.
                   </div>
                 )}
-                <div className="max-h-[600px] overflow-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
-                  {previewHtml ? (
-                    <div
-                      className="mx-auto min-w-[320px] max-w-[720px] rounded-xl bg-white p-6 shadow"
-                      dangerouslySetInnerHTML={{ __html: previewHtml }}
-                    />
+                <div className="flex justify-center">
+                  {previewDocument ? (
+                    <div className="relative w-full max-w-[24rem]">
+                      <div className="relative mx-auto rounded-[2.75rem] border border-gray-200 bg-gradient-to-b from-white to-gray-100 p-4 shadow-lg">
+                        <div className="pointer-events-none absolute inset-x-12 top-4 mx-auto h-6 rounded-full border border-gray-200 bg-white/80 shadow-sm" />
+                        <div className="pointer-events-none absolute left-1/2 top-6 h-1.5 w-16 -translate-x-1/2 rounded-full bg-gray-300" />
+                        <div className="pointer-events-none absolute left-1/2 top-[3.4rem] h-1 w-8 -translate-x-1/2 rounded-full bg-gray-300/70" />
+                        <div className="relative mt-12 overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-inner">
+                          <iframe
+                            ref={previewIframeRef}
+                            title="Previzualizare email"
+                            className="h-full w-full border-0 bg-white"
+                            style={{ height: `${previewFrameHeight}px` }}
+                            srcDoc={previewDocument}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   ) : (
-                    <div className="text-sm text-gray-500">
+                    <div className="w-full rounded-xl border border-gray-200 bg-white px-4 py-6 text-sm text-gray-500">
                       Introdu conținut Twig pentru a genera previzualizarea.
                     </div>
                   )}
