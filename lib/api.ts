@@ -6,6 +6,12 @@ import type {
     CategoryPrice,
     CategoryPriceCalendar,
 } from "@/types/admin";
+import type {
+    MailBrandingResponse,
+    MailBrandingUpdatePayload,
+    MailTemplateDetailResponse,
+    MailTemplatesResponse,
+} from "@/types/mail";
 import type { Role } from "@/types/roles";
 import type { WheelOfFortunePrizePayload } from "@/types/wheel";
 
@@ -742,6 +748,34 @@ class ApiClient {
         }
         const query = searchParams.toString();
         return this.request<any>(`/wheel-of-fortune-prizes${query ? `?${query}` : ''}`);
+    }
+
+    async getMailBrandingSettings() {
+        return this.request<MailBrandingResponse>(`/mail-branding-settings`);
+    }
+
+    async updateMailBrandingSettings(payload: MailBrandingUpdatePayload) {
+        return this.request<MailBrandingResponse>(`/mail-branding-settings`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async getMailTemplates() {
+        return this.request<MailTemplatesResponse>(`/mail-templates`);
+    }
+
+    async getMailTemplate(templateKey: string) {
+        const key = encodeURIComponent(templateKey.trim());
+        return this.request<MailTemplateDetailResponse>(`/mail-templates/${key}`);
+    }
+
+    async updateMailTemplate(templateKey: string, contents: string) {
+        const key = encodeURIComponent(templateKey.trim());
+        return this.request<MailTemplateDetailResponse>(`/mail-templates/${key}`, {
+            method: 'PUT',
+            body: JSON.stringify({ contents }),
+        });
     }
 
     // Authentication helpers
