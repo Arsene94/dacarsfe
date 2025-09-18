@@ -2,10 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import type { Editor, EditorConfiguration } from "codemirror";
-import "codemirror/lib/codemirror.css";
-import "codemirror/theme/idea.css";
-import "codemirror/addon/fold/foldgutter.css";
+import type { EditorView } from "@codemirror/view";
 import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -53,16 +50,6 @@ type MailBrandingFormState = {
   site: MailSiteFormState;
   colors: MailBrandingColors;
 };
-
-type ExtendedEditorConfiguration = EditorConfiguration & {
-  placeholder?: string;
-  autoCloseTags?: boolean;
-  autoCloseBrackets?: boolean;
-  matchTags?: boolean | { bothTags?: boolean };
-  foldGutter?: boolean;
-};
-
-type CodeMirrorModule = typeof import("codemirror");
 
 const createEmptyLink = (): MailMenuLink => ({ label: "", url: "" });
 
@@ -1004,7 +991,7 @@ const MailBrandingPage = () => {
 
   const templateEditorLabelId = useId();
   const codeMirrorContainerRef = useRef<HTMLDivElement | null>(null);
-  const codeMirrorInstanceRef = useRef<Editor | null>(null);
+  const codeMirrorInstanceRef = useRef<EditorView | null>(null);
   const isCodeMirrorSyncingRef = useRef(false);
   const templateContentRef = useRef(templateContent);
 
@@ -1078,137 +1065,168 @@ const MailBrandingPage = () => {
     }
 
     let cancelled = false;
-    let cleanup: (() => void) | undefined;
 
     const mountEditor = async () => {
       try {
-        const cmModule = await import("codemirror");
-        if (cancelled) return;
-
-        const CodeMirrorLib: CodeMirrorModule =
-          (cmModule as { default?: CodeMirrorModule }).default ?? (cmModule as CodeMirrorModule);
-
-        await Promise.all([
-          import("codemirror/mode/xml/xml"),
-          import("codemirror/mode/javascript/javascript"),
-          import("codemirror/mode/css/css"),
-          import("codemirror/mode/htmlmixed/htmlmixed"),
-          import("codemirror/mode/twig/twig"),
-          import("codemirror/addon/edit/closetag"),
-          import("codemirror/addon/edit/closebrackets"),
-          import("codemirror/addon/edit/matchtags"),
-          import("codemirror/addon/display/placeholder"),
-          import("codemirror/addon/fold/foldcode"),
-          import("codemirror/addon/fold/foldgutter"),
-          import("codemirror/addon/fold/xml-fold"),
-          import("codemirror/addon/selection/active-line"),
+        const [
+          stateModule,
+          viewModule,
+          commandsModule,
+          languageModule,
+          autocompleteModule,
+          htmlModule,
+          twigModule,
+        ] = await Promise.all([
+          import("@codemirror/state"),
+          import("@codemirror/view"),
+          import("@codemirror/commands"),
+          import("@codemirror/language"),
+          import("@codemirror/autocomplete"),
+          import("@codemirror/lang-html"),
+          import("@ssddanbrown/codemirror-lang-twig"),
         ]);
 
         if (cancelled) {
           return;
         }
 
+        const { EditorState } = stateModule;
+        const {
+          EditorView: CMEditorView,
+          keymap,
+          lineNumbers,
+          highlightActiveLine,
+          highlightActiveLineGutter,
+          highlightSpecialChars,
+          drawSelection,
+          dropCursor,
+          rectangularSelection,
+          placeholder,
+        } = viewModule;
+        const { history, historyKeymap, indentWithTab, defaultKeymap } = commandsModule;
+        const {
+          indentOnInput,
+          syntaxHighlighting,
+          defaultHighlightStyle,
+          foldGutter,
+          foldKeymap,
+          indentUnit,
+          bracketMatching,
+        } = languageModule;
+        const { closeBrackets, closeBracketsKeymap, completionKeymap } = autocompleteModule;
+        const { autoCloseTags } = htmlModule;
+        const { twig } = twigModule;
+
         const fallbackElement = containerElement.querySelector<HTMLElement>(
           "[data-codemirror-fallback]",
         );
         fallbackElement?.remove();
 
-        const config: ExtendedEditorConfiguration = {
-          value: templateContentRef.current ?? "",
-          mode: "twig",
-          theme: "idea",
-          lineNumbers: true,
-          lineWrapping: true,
-          indentUnit: 2,
-          tabSize: 2,
-          indentWithTabs: false,
-          autoCloseTags: true,
-          autoCloseBrackets: true,
-          matchTags: { bothTags: true },
-          styleActiveLine: true,
-          foldGutter: true,
-          gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
-          placeholder: "{% block body %}...{% endblock %}",
-        };
-
-        const editor = CodeMirrorLib(containerElement, config) as Editor;
-        codeMirrorInstanceRef.current = editor;
-
-        const wrapper = editor.getWrapperElement();
-        wrapper.classList.add(
-          "w-full",
-          "border",
-          "border-gray-300",
-          "rounded-xl",
-          "bg-white",
-          "shadow-sm",
-          "transition",
+        const theme = CMEditorView.theme(
+          {
+            "&": {
+              border: "1px solid #d1d5db",
+              borderRadius: "0.75rem",
+              backgroundColor: "#ffffff",
+              transition: "box-shadow 0.2s ease, border-color 0.2s ease",
+            },
+            "&.cm-editor": {
+              fontFamily:
+                "'Fira Code', 'SFMono-Regular', Menlo, Monaco, 'Courier New', monospace",
+              fontSize: "0.875rem",
+            },
+            "&.cm-focused": {
+              outline: "none",
+              borderColor: "transparent",
+              boxShadow: "0 0 0 2px rgba(56, 178, 117, 0.35)",
+            },
+            ".cm-scroller": {
+              lineHeight: "1.5",
+              padding: "12px 16px",
+              backgroundColor: "transparent",
+            },
+            ".cm-content": {
+              minHeight: "360px",
+            },
+            ".cm-gutters": {
+              backgroundColor: "transparent",
+              border: "none",
+            },
+          },
+          { dark: false },
         );
-        wrapper.setAttribute("aria-labelledby", templateEditorLabelId);
-        wrapper.setAttribute("role", "textbox");
-        wrapper.setAttribute("aria-multiline", "true");
 
-        const scroller = wrapper.querySelector<HTMLElement>(".CodeMirror-scroll");
-        if (scroller) {
-          scroller.style.padding = "12px 16px";
-          scroller.style.fontFamily =
-            "'Fira Code', 'SFMono-Regular', Menlo, Monaco, 'Courier New', monospace";
-          scroller.style.fontSize = "0.875rem";
-          scroller.style.lineHeight = "1.5";
-          scroller.style.color = "#191919";
-          scroller.style.minHeight = "360px";
-          scroller.style.background = "transparent";
-        }
-
-        const gutters = wrapper.querySelector<HTMLElement>(".CodeMirror-gutters");
-        if (gutters) {
-          gutters.style.background = "transparent";
-          gutters.style.border = "none";
-        }
-
-        const handleFocus = (instance: Editor) => {
-          void instance;
-          wrapper.classList.remove("border-gray-300");
-          wrapper.classList.add("border-transparent", "ring-2", "ring-offset-0", "ring-jade");
-        };
-
-        const handleBlur = () => {
-          wrapper.classList.remove("border-transparent", "ring-2", "ring-offset-0", "ring-jade");
-          wrapper.classList.add("border-gray-300");
-        };
-
-        const handleChange = (instance: Editor) => {
-          if (isCodeMirrorSyncingRef.current) return;
-          const newValue = instance.getValue();
+        const updateListener = CMEditorView.updateListener.of((update) => {
+          if (!update.docChanged || isCodeMirrorSyncingRef.current) {
+            return;
+          }
+          const newValue = update.state.doc.toString();
           templateContentRef.current = newValue;
           setTemplateContent((prev) => (prev === newValue ? prev : newValue));
-        };
+        });
 
-        editor.on("focus", handleFocus);
-        editor.on("blur", handleBlur);
-        editor.on("change", handleChange);
-        editor.refresh();
+        const extensions = [
+          lineNumbers(),
+          highlightActiveLineGutter(),
+          highlightSpecialChars(),
+          history(),
+          drawSelection(),
+          dropCursor(),
+          rectangularSelection(),
+          indentOnInput(),
+          syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+          bracketMatching(),
+          closeBrackets({ brackets: ["(", "[", "{", "'", "\"", "<"] }),
+          foldGutter(),
+          autoCloseTags,
+          indentUnit.of("  "),
+          EditorState.tabSize.of(2),
+          keymap.of([
+            ...defaultKeymap,
+            ...historyKeymap,
+            ...closeBracketsKeymap,
+            ...foldKeymap,
+            ...completionKeymap,
+            indentWithTab,
+          ]),
+          twig(),
+          highlightActiveLine(),
+          CMEditorView.lineWrapping,
+          placeholder("{% block body %}...{% endblock %}"),
+          theme,
+          updateListener,
+        ];
 
-        cleanup = () => {
-          editor.off("focus", handleFocus);
-          editor.off("blur", handleBlur);
-          editor.off("change", handleChange);
-          const currentWrapper = editor.getWrapperElement();
-          if (currentWrapper && currentWrapper.parentElement) {
-            currentWrapper.parentElement.removeChild(currentWrapper);
-          }
-        };
+        const state = EditorState.create({
+          doc: templateContentRef.current ?? "",
+          extensions,
+        });
+
+        const view = new CMEditorView({
+          state,
+          parent: containerElement,
+        });
+
+        view.dom.classList.add("w-full", "shadow-sm");
+        view.dom.setAttribute("aria-labelledby", templateEditorLabelId);
+        view.dom.setAttribute("role", "textbox");
+        view.dom.setAttribute("aria-multiline", "true");
+
+        codeMirrorInstanceRef.current = view;
       } catch (error) {
         console.error("Nu s-a putut încărca editorul CodeMirror:", error);
       }
     };
 
-    mountEditor();
+    void mountEditor();
 
     return () => {
       cancelled = true;
-      cleanup?.();
-      codeMirrorInstanceRef.current = null;
+      const instance = codeMirrorInstanceRef.current;
+      if (instance) {
+        instance.destroy();
+        codeMirrorInstanceRef.current = null;
+      }
       isCodeMirrorSyncingRef.current = false;
       if (containerElement) {
         containerElement.innerHTML = "";
@@ -1217,26 +1235,28 @@ const MailBrandingPage = () => {
   }, [templateEditorLabelId]);
 
   useEffect(() => {
-    const editor = codeMirrorInstanceRef.current;
-    if (!editor) {
+    const view = codeMirrorInstanceRef.current;
+    if (!view) {
       return;
     }
 
-    const currentValue = editor.getValue();
+    const currentValue = view.state.doc.toString();
     if (currentValue === templateContent) {
       return;
     }
 
-    const doc = editor.getDoc();
-    const cursor = doc.getCursor();
-    const scrollInfo = editor.getScrollInfo();
+    const { scrollTop, scrollLeft } = view.scrollDOM;
+    const { main } = view.state.selection;
+    const anchor = Math.min(main.anchor, templateContent.length);
+    const head = Math.min(main.head, templateContent.length);
 
     isCodeMirrorSyncingRef.current = true;
-    editor.operation(() => {
-      editor.setValue(templateContent);
-      doc.setCursor(cursor);
+    view.dispatch({
+      changes: { from: 0, to: currentValue.length, insert: templateContent },
+      selection: { anchor, head },
     });
-    editor.scrollTo(scrollInfo.left, scrollInfo.top);
+    view.scrollDOM.scrollTop = scrollTop;
+    view.scrollDOM.scrollLeft = scrollLeft;
     isCodeMirrorSyncingRef.current = false;
   }, [templateContent]);
 
