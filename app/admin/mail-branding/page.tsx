@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import type { Editor, EditorConfiguration } from "codemirror";
+import "codemirror/lib/codemirror.css";
+import "codemirror/theme/idea.css";
+import "codemirror/addon/fold/foldgutter.css";
 import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -49,6 +53,16 @@ type MailBrandingFormState = {
   site: MailSiteFormState;
   colors: MailBrandingColors;
 };
+
+type ExtendedEditorConfiguration = EditorConfiguration & {
+  placeholder?: string;
+  autoCloseTags?: boolean;
+  autoCloseBrackets?: boolean;
+  matchTags?: boolean | { bothTags?: boolean };
+  foldGutter?: boolean;
+};
+
+type CodeMirrorModule = typeof import("codemirror");
 
 const createEmptyLink = (): MailMenuLink => ({ label: "", url: "" });
 
@@ -988,6 +1002,12 @@ const MailBrandingPage = () => {
   const previewIframeRef = useRef<HTMLIFrameElement | null>(null);
   const [previewFrameHeight, setPreviewFrameHeight] = useState<number>(720);
 
+  const templateEditorLabelId = useId();
+  const codeMirrorContainerRef = useRef<HTMLDivElement | null>(null);
+  const codeMirrorInstanceRef = useRef<Editor | null>(null);
+  const isCodeMirrorSyncingRef = useRef(false);
+  const templateContentRef = useRef(templateContent);
+
   const computeBasePreviewContext = useCallback(() => {
     const siteDetails =
       brandingForm != null
@@ -1046,6 +1066,179 @@ const MailBrandingPage = () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    templateContentRef.current = templateContent;
+  }, [templateContent]);
+
+  useEffect(() => {
+    const containerElement = codeMirrorContainerRef.current;
+    if (codeMirrorInstanceRef.current || !containerElement) {
+      return;
+    }
+
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
+
+    const mountEditor = async () => {
+      try {
+        const cmModule = await import("codemirror");
+        if (cancelled) return;
+
+        const CodeMirrorLib: CodeMirrorModule =
+          (cmModule as { default?: CodeMirrorModule }).default ?? (cmModule as CodeMirrorModule);
+
+        await Promise.all([
+          import("codemirror/mode/xml/xml"),
+          import("codemirror/mode/javascript/javascript"),
+          import("codemirror/mode/css/css"),
+          import("codemirror/mode/htmlmixed/htmlmixed"),
+          import("codemirror/mode/twig/twig"),
+          import("codemirror/addon/edit/closetag"),
+          import("codemirror/addon/edit/closebrackets"),
+          import("codemirror/addon/edit/matchtags"),
+          import("codemirror/addon/display/placeholder"),
+          import("codemirror/addon/fold/foldcode"),
+          import("codemirror/addon/fold/foldgutter"),
+          import("codemirror/addon/fold/xml-fold"),
+          import("codemirror/addon/selection/active-line"),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        const fallbackElement = containerElement.querySelector<HTMLElement>(
+          "[data-codemirror-fallback]",
+        );
+        fallbackElement?.remove();
+
+        const config: ExtendedEditorConfiguration = {
+          value: templateContentRef.current ?? "",
+          mode: "twig",
+          theme: "idea",
+          lineNumbers: true,
+          lineWrapping: true,
+          indentUnit: 2,
+          tabSize: 2,
+          indentWithTabs: false,
+          autoCloseTags: true,
+          autoCloseBrackets: true,
+          matchTags: { bothTags: true },
+          styleActiveLine: true,
+          foldGutter: true,
+          gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+          placeholder: "{% block body %}...{% endblock %}",
+        };
+
+        const editor = CodeMirrorLib(containerElement, config) as Editor;
+        codeMirrorInstanceRef.current = editor;
+
+        const wrapper = editor.getWrapperElement();
+        wrapper.classList.add(
+          "w-full",
+          "border",
+          "border-gray-300",
+          "rounded-xl",
+          "bg-white",
+          "shadow-sm",
+          "transition",
+        );
+        wrapper.setAttribute("aria-labelledby", templateEditorLabelId);
+        wrapper.setAttribute("role", "textbox");
+        wrapper.setAttribute("aria-multiline", "true");
+
+        const scroller = wrapper.querySelector<HTMLElement>(".CodeMirror-scroll");
+        if (scroller) {
+          scroller.style.padding = "12px 16px";
+          scroller.style.fontFamily =
+            "'Fira Code', 'SFMono-Regular', Menlo, Monaco, 'Courier New', monospace";
+          scroller.style.fontSize = "0.875rem";
+          scroller.style.lineHeight = "1.5";
+          scroller.style.color = "#191919";
+          scroller.style.minHeight = "360px";
+          scroller.style.background = "transparent";
+        }
+
+        const gutters = wrapper.querySelector<HTMLElement>(".CodeMirror-gutters");
+        if (gutters) {
+          gutters.style.background = "transparent";
+          gutters.style.border = "none";
+        }
+
+        const handleFocus = (instance: Editor) => {
+          void instance;
+          wrapper.classList.remove("border-gray-300");
+          wrapper.classList.add("border-transparent", "ring-2", "ring-offset-0", "ring-jade");
+        };
+
+        const handleBlur = () => {
+          wrapper.classList.remove("border-transparent", "ring-2", "ring-offset-0", "ring-jade");
+          wrapper.classList.add("border-gray-300");
+        };
+
+        const handleChange = (instance: Editor) => {
+          if (isCodeMirrorSyncingRef.current) return;
+          const newValue = instance.getValue();
+          templateContentRef.current = newValue;
+          setTemplateContent((prev) => (prev === newValue ? prev : newValue));
+        };
+
+        editor.on("focus", handleFocus);
+        editor.on("blur", handleBlur);
+        editor.on("change", handleChange);
+        editor.refresh();
+
+        cleanup = () => {
+          editor.off("focus", handleFocus);
+          editor.off("blur", handleBlur);
+          editor.off("change", handleChange);
+          const currentWrapper = editor.getWrapperElement();
+          if (currentWrapper && currentWrapper.parentElement) {
+            currentWrapper.parentElement.removeChild(currentWrapper);
+          }
+        };
+      } catch (error) {
+        console.error("Nu s-a putut încărca editorul CodeMirror:", error);
+      }
+    };
+
+    mountEditor();
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+      codeMirrorInstanceRef.current = null;
+      isCodeMirrorSyncingRef.current = false;
+      if (containerElement) {
+        containerElement.innerHTML = "";
+      }
+    };
+  }, [templateEditorLabelId]);
+
+  useEffect(() => {
+    const editor = codeMirrorInstanceRef.current;
+    if (!editor) {
+      return;
+    }
+
+    const currentValue = editor.getValue();
+    if (currentValue === templateContent) {
+      return;
+    }
+
+    const doc = editor.getDoc();
+    const cursor = doc.getCursor();
+    const scrollInfo = editor.getScrollInfo();
+
+    isCodeMirrorSyncingRef.current = true;
+    editor.operation(() => {
+      editor.setValue(templateContent);
+      doc.setCursor(cursor);
+    });
+    editor.scrollTo(scrollInfo.left, scrollInfo.top);
+    isCodeMirrorSyncingRef.current = false;
+  }, [templateContent]);
 
   useEffect(() => {
     let active = true;
@@ -2150,16 +2343,16 @@ const MailBrandingPage = () => {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="twig-editor">Conținut Twig</Label>
-                <textarea
-                  id="twig-editor"
-                  value={templateContent}
-                  onChange={(event) => setTemplateContent(event.target.value)}
-                  className="min-h-[360px] w-full rounded-xl border border-gray-300 bg-white px-4 py-3 font-mono text-sm leading-6 text-[#191919] shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-jade"
-                  placeholder="{% block body %}...{% endblock %}"
-                  spellCheck={false}
-                />
+              <div className="space-y-2">
+                <Label id={templateEditorLabelId}>Conținut Twig</Label>
+                <div ref={codeMirrorContainerRef} className="min-h-[360px]" data-codemirror-container>
+                  <div
+                    data-codemirror-fallback
+                    className="flex min-h-[360px] items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500"
+                  >
+                    Editorul se încarcă...
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-4 rounded-2xl border border-gray-200 p-4 sm:p-6">
