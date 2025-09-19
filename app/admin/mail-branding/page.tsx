@@ -1309,7 +1309,7 @@ const MailBrandingPage = () => {
           html({ matchClosingTags: false, autoCloseTags: false }),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
           bracketMatching(),
-          closeBrackets({ brackets: ["(", "[", "{", "'", "\"", "<"] }),
+          closeBrackets(),
           foldGutter(),
           autoCloseTags,
           indentUnit.of("  "),
