@@ -51,7 +51,7 @@ type MailBrandingFormState = {
   colors: MailBrandingColors;
 };
 
-const MOBILE_PREVIEW_WIDTH = 414;
+const MOBILE_PREVIEW_WIDTH = 480;
 const PREVIEW_FRAME_OUTER_WIDTH = MOBILE_PREVIEW_WIDTH + 48;
 const PREVIEW_CARD_MAX_WIDTH = PREVIEW_FRAME_OUTER_WIDTH + 32;
 
