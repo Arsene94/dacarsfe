@@ -3018,8 +3018,8 @@ const MailBrandingPage = () => {
                       <Editor
                         className="monaco-mail-editor"
                         value={templateContent}
-                        defaultLanguage="twig"
-                        language="twig"
+                        defaultLanguage="html"
+                        language="html"
                         theme="mail-branding"
                         path={editorModelPath}
                         beforeMount={handleEditorWillMount}
