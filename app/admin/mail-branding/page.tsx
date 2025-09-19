@@ -538,6 +538,29 @@ const cloneContext = (value: unknown): Record<string, unknown> => {
   return enhancePreviewValue(cloned) as Record<string, unknown>;
 };
 
+const normalizeAvailableVariables = (input: unknown): string[] => {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  const unique = new Set<string>();
+  const result: string[] = [];
+
+  input.forEach((entry) => {
+    if (typeof entry !== "string") {
+      return;
+    }
+    const trimmed = entry.trim();
+    if (!trimmed || unique.has(trimmed)) {
+      return;
+    }
+    unique.add(trimmed);
+    result.push(trimmed);
+  });
+
+  return result;
+};
+
 const getAttachmentDisplayName = (attachment: MailTemplateAttachment): string => {
   const fileName = attachment["file_name"];
   const candidates = [
@@ -1026,6 +1049,8 @@ const MailBrandingPage = () => {
   const [templateLoading, setTemplateLoading] = useState<boolean>(false);
   const [attachmentUploading, setAttachmentUploading] = useState<boolean>(false);
   const [attachmentDeleting, setAttachmentDeleting] = useState<string | null>(null);
+  const [variableSelectValue, setVariableSelectValue] = useState<string>("");
+  const [detectedVariables, setDetectedVariables] = useState<string[]>([]);
 
   const [twigEngine, setTwigEngine] = useState<any>(null);
   const [previewHtml, setPreviewHtml] = useState<string>("");
@@ -1037,6 +1062,7 @@ const MailBrandingPage = () => {
   const [previewFrameHeight, setPreviewFrameHeight] = useState<number>(720);
 
   const templateEditorLabelId = useId();
+  const templateVariableSelectId = useId();
   const codeMirrorContainerRef = useRef<HTMLDivElement | null>(null);
   const codeMirrorInstanceRef = useRef<EditorView | null>(null);
   const isCodeMirrorSyncingRef = useRef(false);
@@ -1054,6 +1080,28 @@ const MailBrandingPage = () => {
       null;
     return createDefaultPreviewContext(siteDetails, colorsData ?? null);
   }, [brandingForm, brandingData]);
+
+  const normalizeTemplateDetail = useCallback(
+    (detail: MailTemplateDetail | null | undefined): MailTemplateDetail | null => {
+      if (!detail) {
+        return null;
+      }
+
+      const attachments = Array.isArray(detail.attachments) ? detail.attachments : [];
+      const availableVariables = normalizeAvailableVariables(detail.available_variables);
+      const exampleContext = isPlainObject(detail.example_context)
+        ? cloneContext(detail.example_context)
+        : null;
+
+      return {
+        ...detail,
+        attachments,
+        available_variables: availableVariables,
+        example_context: exampleContext,
+      };
+    },
+    [],
+  );
 
   const applyTemplateDetail = useCallback(
     (detail: MailTemplateDetail | null) => {
@@ -1074,12 +1122,26 @@ const MailBrandingPage = () => {
       setTemplateContent(contents);
       setOriginalTemplateContent(contents);
       setDebouncedContent(contents);
+      templateContentRef.current = contents;
       setTemplateTitle(title);
       setOriginalTemplateTitle(title);
       setTemplateSubject(subject);
       setOriginalTemplateSubject(subject);
+      setVariableSelectValue("");
+      setDetectedVariables([]);
+
+      const basePreview = computeBasePreviewContext();
+      const examplePreview =
+        detail?.example_context && isPlainObject(detail.example_context)
+          ? cloneContext(detail.example_context)
+          : {};
+      const mergedPreview = enhancePreviewValue({
+        ...cloneContext(basePreview),
+        ...(isPlainObject(examplePreview) ? examplePreview : {}),
+      }) as Record<string, unknown>;
+      setPreviewContext(mergedPreview);
     },
-    [],
+    [computeBasePreviewContext],
   );
 
   useEffect(() => {
@@ -1495,7 +1557,7 @@ const MailBrandingPage = () => {
         const detailsEntries = await Promise.all(
           list.map((item) =>
             apiClient
-              .getMailTemplate(item.key)
+              .getMailTemplateDetail(item.key)
               .then((res) => res?.data)
               .catch((error) => {
                 console.error(`Nu s-a putut încărca template-ul ${item.key}:`, error);
@@ -1509,13 +1571,8 @@ const MailBrandingPage = () => {
         const detailMap: Record<string, MailTemplateDetail> = {};
         const cacheMap: Record<string, string> = {};
         detailsEntries.forEach((detail) => {
-          if (detail) {
-            const normalized: MailTemplateDetail = {
-              ...detail,
-              attachments: Array.isArray(detail.attachments)
-                ? detail.attachments
-                : [],
-            };
+          const normalized = normalizeTemplateDetail(detail);
+          if (normalized) {
             detailMap[normalized.key] = normalized;
             cacheMap[normalized.path] = normalized.contents;
           }
@@ -1554,7 +1611,7 @@ const MailBrandingPage = () => {
     return () => {
       active = false;
     };
-  }, [applyTemplateDetail]);
+  }, [applyTemplateDetail, normalizeTemplateDetail]);
 
   useEffect(() => {
     if (!twigEngine) return;
@@ -1704,7 +1761,18 @@ const MailBrandingPage = () => {
       : templateCache;
 
     const variables = extractTwigVariables(debouncedContent, cacheForExtraction);
-    if (variables.length === 0) return;
+    const variablePaths = Array.from(
+      new Set(
+        variables
+          .map((item) => item.path)
+          .filter((path): path is string => typeof path === "string" && path.trim().length > 0),
+      ),
+    );
+    setDetectedVariables(variablePaths);
+
+    if (variablePaths.length === 0) {
+      return;
+    }
 
     const baseContext = computeBasePreviewContext();
     let updatedContext: Record<string, unknown> | null = null;
@@ -1921,14 +1989,11 @@ const MailBrandingPage = () => {
       applyTemplateDetail(null);
       setTemplateLoading(true);
       apiClient
-        .getMailTemplate(key)
+        .getMailTemplateDetail(key)
         .then((response) => {
           const data = response?.data;
-          if (!data) return;
-          const normalized: MailTemplateDetail = {
-            ...data,
-            attachments: Array.isArray(data.attachments) ? data.attachments : [],
-          };
+          const normalized = normalizeTemplateDetail(data);
+          if (!normalized) return;
           setTemplateDetails((prev) => ({ ...prev, [normalized.key]: normalized }));
           setTemplateCache((prev) => ({ ...prev, [normalized.path]: normalized.contents }));
           applyTemplateDetail(normalized);
@@ -1946,7 +2011,7 @@ const MailBrandingPage = () => {
           setTemplateLoading(false);
         });
     },
-    [templateDetails, applyTemplateDetail],
+    [templateDetails, applyTemplateDetail, normalizeTemplateDetail],
   );
 
   const handleTemplateSave = () => {
@@ -1976,11 +2041,8 @@ const MailBrandingPage = () => {
       .updateMailTemplate(selectedTemplateKey, payload)
       .then((response) => {
         const data = response?.data;
-        if (!data) return;
-        const normalized: MailTemplateDetail = {
-          ...data,
-          attachments: Array.isArray(data.attachments) ? data.attachments : [],
-        };
+        const normalized = normalizeTemplateDetail(data);
+        if (!normalized) return;
         setTemplateDetails((prev) => ({ ...prev, [normalized.key]: normalized }));
         setTemplates((prev) =>
           prev.map((item) =>
@@ -2011,6 +2073,40 @@ const MailBrandingPage = () => {
       .finally(() => {
         setTemplateSaving(false);
       });
+  };
+
+  const handleVariableSelect = (event: ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = event.target.value;
+    setVariableSelectValue(selectedValue);
+
+    if (!selectedValue) {
+      return;
+    }
+
+    const snippet = `{{ ${selectedValue} }}`;
+    const view = codeMirrorInstanceRef.current;
+
+    if (view) {
+      const { state } = view;
+      const { main } = state.selection;
+      const from = Math.min(main.from, main.to);
+      const to = Math.max(main.from, main.to);
+      view.dispatch({
+        changes: { from, to, insert: snippet },
+        selection: { anchor: from + snippet.length, head: from + snippet.length },
+        scrollIntoView: true,
+      });
+      view.focus();
+    } else {
+      const base = templateContentRef.current ?? templateContent ?? "";
+      const shouldAddSpace = base.length > 0 && !/\s$/.test(base);
+      const nextValue = shouldAddSpace ? `${base} ${snippet}` : `${base}${snippet}`;
+      templateContentRef.current = nextValue;
+      setTemplateContent(nextValue);
+      setDebouncedContent(nextValue);
+    }
+
+    setVariableSelectValue("");
   };
 
   const handleAttachmentUpload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -2104,6 +2200,38 @@ const MailBrandingPage = () => {
   const currentAttachments: MailTemplateAttachment[] = Array.isArray(attachmentsList)
     ? attachmentsList
     : [];
+
+  const availableVariables = useMemo(() => {
+    const detail = selectedTemplateKey ? templateDetails[selectedTemplateKey] : null;
+    const fromApi = detail?.available_variables
+      ? normalizeAvailableVariables(detail.available_variables)
+      : [];
+    const combined: string[] = [];
+    const seen = new Set<string>();
+
+    const addValue = (value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed || seen.has(trimmed)) {
+        return;
+      }
+      seen.add(trimmed);
+      combined.push(trimmed);
+    };
+
+    fromApi.forEach((value) => {
+      if (typeof value === "string") {
+        addValue(value);
+      }
+    });
+
+    detectedVariables.forEach((value) => {
+      if (typeof value === "string") {
+        addValue(value);
+      }
+    });
+
+    return combined;
+  }, [selectedTemplateKey, templateDetails, detectedVariables]);
 
   const isTemplateDirty =
     templateContent !== originalTemplateContent ||
@@ -2457,6 +2585,33 @@ const MailBrandingPage = () => {
                 <h3 id={templateEditorLabelId} className="text-lg font-semibold text-berkeley">
                   Conținut Twig
                 </h3>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="space-y-2 sm:w-72">
+                    <Label htmlFor={templateVariableSelectId}>Variabile disponibile</Label>
+                    <Select
+                      id={templateVariableSelectId}
+                      value={variableSelectValue}
+                      onChange={handleVariableSelect}
+                      disabled={!selectedTemplateKey || availableVariables.length === 0}
+                    >
+                      <option value="" disabled>
+                        {availableVariables.length === 0
+                          ? "Nu există variabile pentru acest template"
+                          : "Inserează o variabilă"}
+                      </option>
+                      {availableVariables.map((variable) => (
+                        <option key={variable} value={variable}>
+                          {variable}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  {availableVariables.length > 0 && (
+                    <p className="text-xs text-gray-500 sm:text-right">
+                      Selectează o variabilă pentru a o insera la poziția cursorului din editor.
+                    </p>
+                  )}
+                </div>
                 <div
                   ref={codeMirrorContainerRef}
                   className="mt-4 min-h-[360px]"

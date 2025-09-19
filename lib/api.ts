@@ -767,7 +767,7 @@ class ApiClient {
         return this.request<MailTemplatesResponse>(`/mail-templates`);
     }
 
-    async getMailTemplate(templateKey: string) {
+    async getMailTemplateDetail(templateKey: string) {
         const key = encodeURIComponent(templateKey.trim());
         return this.request<MailTemplateDetailResponse>(`/mail-templates/${key}`);
     }

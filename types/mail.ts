@@ -74,6 +74,8 @@ export interface MailTemplateAttachment {
 export interface MailTemplateDetail extends MailTemplateSummary {
   contents: string;
   attachments?: MailTemplateAttachment[];
+  example_context?: Record<string, unknown> | null;
+  available_variables?: string[] | null;
 }
 
 export interface MailTemplatesResponse {
