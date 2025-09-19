@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { TemplateHelperSelect } from "@/components/admin/mail-branding/TemplateHelperSelect";
 import apiClient from "@/lib/api";
 import type {
   MailBrandingColors,
@@ -2362,8 +2363,7 @@ const MailBrandingPage = () => {
       });
   };
 
-  const handleVariableSelect = (event: ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = event.target.value;
+  const handleVariableSelect = (selectedValue: string) => {
     setVariableSelectValue(selectedValue);
 
     if (!selectedValue) {
@@ -2375,8 +2375,7 @@ const MailBrandingPage = () => {
     setVariableSelectValue("");
   };
 
-  const handleFunctionSelect = (event: ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = event.target.value;
+  const handleFunctionSelect = (selectedValue: string) => {
     setFunctionSelectValue(selectedValue);
 
     if (!selectedValue) {
@@ -2919,69 +2918,53 @@ const MailBrandingPage = () => {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                     <div className="space-y-2 sm:w-72">
                       <Label htmlFor={templateVariableSelectId}>Variabile disponibile</Label>
-                      <div className="relative">
-                        <Code2
-                          aria-hidden="true"
-                          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-                        />
-                        <Select
-                          id={templateVariableSelectId}
-                          value={variableSelectValue}
-                          onChange={handleVariableSelect}
-                          disabled={
-                            !selectedTemplateKey || availableVariableMetadata.length === 0
-                          }
-                          className="pl-10"
-                        >
-                          <option value="" disabled>
-                            {availableVariableMetadata.length === 0
-                              ? "Nu există variabile pentru acest template"
-                              : "Inserează o variabilă"}
-                          </option>
-                          {availableVariableMetadata.map((entry) => (
-                            <option
-                              key={entry.key}
-                              value={entry.key}
-                              title={describeVariableEntry(entry)}
-                            >
-                              {entry.description
-                                ? `{{ ${entry.key} }} — ${entry.description}`
-                                : `{{ ${entry.key} }}`}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
+                      <TemplateHelperSelect
+                        id={templateVariableSelectId}
+                        value={variableSelectValue}
+                        onChange={handleVariableSelect}
+                        disabled={
+                          !selectedTemplateKey || availableVariableMetadata.length === 0
+                        }
+                        icon={<Code2 className="h-4 w-4" />}
+                        placeholder={
+                          !selectedTemplateKey
+                            ? "Selectează un template pentru a folosi variabilele"
+                            : availableVariableMetadata.length === 0
+                            ? "Nu există variabile pentru acest template"
+                            : "Inserează o variabilă"
+                        }
+                        emptyMessage="Nu există variabile pentru acest template"
+                        items={availableVariableMetadata.map((entry) => ({
+                          value: entry.key,
+                          label: entry.key,
+                          description: describeVariableEntry(entry),
+                          buttonLabel: `{{ ${entry.key} }}`,
+                          title: describeVariableEntry(entry),
+                        }))}
+                      />
                     </div>
                     <div className="space-y-2 sm:w-72">
                       <Label htmlFor={templateFunctionSelectId}>Fragmente Twig</Label>
-                      <div className="relative">
-                        <FunctionSquare
-                          aria-hidden="true"
-                          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-                        />
-                        <Select
-                          id={templateFunctionSelectId}
-                          value={functionSelectValue}
-                          onChange={handleFunctionSelect}
-                          disabled={!selectedTemplateKey}
-                          className="pl-10"
-                        >
-                          <option value="" disabled>
-                            {selectedTemplateKey
-                              ? "Inserează un fragment Twig"
-                              : "Selectează un template pentru a folosi fragmentele"}
-                          </option>
-                          {TWIG_FUNCTION_SNIPPETS.map((snippet) => (
-                            <option
-                              key={snippet.value}
-                              value={snippet.value}
-                              title={snippet.description}
-                            >
-                              {`${snippet.label} — ${snippet.description}`}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
+                      <TemplateHelperSelect
+                        id={templateFunctionSelectId}
+                        value={functionSelectValue}
+                        onChange={handleFunctionSelect}
+                        disabled={!selectedTemplateKey}
+                        icon={<FunctionSquare className="h-4 w-4" />}
+                        placeholder={
+                          selectedTemplateKey
+                            ? "Inserează un fragment Twig"
+                            : "Selectează un template pentru a folosi fragmentele"
+                        }
+                        items={TWIG_FUNCTION_SNIPPETS.map((snippet) => ({
+                          value: snippet.value,
+                          label: snippet.label,
+                          description: snippet.description,
+                          buttonLabel: snippet.label,
+                          title: snippet.description,
+                          disabled: Boolean(!snippet.value),
+                        }))}
+                      />
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 lg:max-w-sm lg:text-right">
