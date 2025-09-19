@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import type { EditorView } from "@codemirror/view";
+import type { Decoration as ViewDecoration, EditorView } from "@codemirror/view";
 import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -1231,7 +1231,7 @@ const MailBrandingPage = () => {
           /\{\{[\s\S]*?\}\}|\{#[\s\S]*?#\}|\{%[\s\S]*?%\}/g;
 
         const buildTwigDecorations = (view: any) => {
-          const builder = new RangeSetBuilder<Decoration>();
+          const builder = new RangeSetBuilder<ViewDecoration>();
           const processedStarts = new Set<number>();
           let hasDecorations = false;
 
