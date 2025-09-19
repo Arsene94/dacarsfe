@@ -5,6 +5,7 @@ import {
   type ChangeEvent as ReactChangeEvent,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
+  type ReactElement,
   type ReactNode,
   cloneElement,
   isValidElement,
@@ -126,8 +127,9 @@ export function TemplateHelperSelect({
     if (!isValidElement(icon)) {
       return icon;
     }
-    return cloneElement(icon, {
-      className: cn("h-4 w-4 text-gray-400", icon.props.className),
+    const iconElement = icon as ReactElement<{ className?: string }>;
+    return cloneElement(iconElement, {
+      className: cn("h-4 w-4 text-gray-400", iconElement.props.className),
       "aria-hidden": true,
     });
   }, [icon]);
