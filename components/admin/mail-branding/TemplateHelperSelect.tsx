@@ -264,27 +264,35 @@ export function TemplateHelperSelect({
       return;
     }
 
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (containerRef.current && !containerRef.current.contains(target)) {
+    const handlePointerDown = (event: Event) => {
+      const target = event.target as Node | null;
+      if (
+        target &&
+        containerRef.current &&
+        !containerRef.current.contains(target)
+      ) {
         closeList();
       }
     };
 
     const handleFocusOut = (event: FocusEvent) => {
-      const target = event.target as Node;
-      if (containerRef.current && !containerRef.current.contains(target)) {
+      const target = event.target as Node | null;
+      if (
+        target &&
+        containerRef.current &&
+        !containerRef.current.contains(target)
+      ) {
         closeList();
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
     document.addEventListener("focusin", handleFocusOut);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
       document.removeEventListener("focusin", handleFocusOut);
     };
   }, [closeList, isOpen]);
