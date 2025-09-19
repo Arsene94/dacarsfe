@@ -1,155 +1,134 @@
-# DaCars - Website Închirieri Auto
+# DaCars – Platformă Next.js pentru închirieri auto
 
-Website modern și funcțional pentru DaCars - serviciu de închirieri auto în România, cu focus pe românii care călătoresc și au nevoie de o mașină la întoarcerea acasă.
+Aplicația DaCars oferă o experiență completă de închirieri auto pentru clienți și echipa operațională. Frontend-ul este construit cu Next.js 15 și React 18, folosește TypeScript și Tailwind CSS pentru un design modern și performanțe ridicate, iar zona de administrare integrează fluxuri avansate pentru gestiunea flotei, rezervărilor și campaniilor de marketing.
 
-## Funcționalități Principale
+## Cuprins
+- [Stack tehnologic](#stack-tehnologic)
+- [Funcționalități principale](#funcționalități-principale)
+- [Structura proiectului](#structura-proiectului)
+- [Fluxuri de date și module cheie](#fluxuri-de-date-și-module-cheie)
+- [Integrare cu backend-ul Laravel](#integrare-cu-backend-ul-laravel)
+- [Configurare și rulare](#configurare-și-rulare)
+- [Calitate și testare](#calitate-și-testare)
+- [Ghid de dezvoltare](#ghid-de-dezvoltare)
+- [Extensibilitate și următori pași](#extensibilitate-și-următori-pași)
 
-### 🎯 Core Features
-- **Homepage complet** cu hero section, beneficii, flotă auto, oferte speciale
-- **Pagină flotă** cu sistem avansat de filtrare și sortare
-- **Sistem de rezervare** cu formular validat și calcul automat al prețului
-- **Roată a norocului** cu premii și reduceri din API Laravel
-- **Design responsive** optimizat pentru toate dispozitivele
-- **Integrare Google Maps** pentru locația din Otopeni
+## Stack tehnologic
+- **Next.js 15 (App Router)** pentru renderizare hibridă și optimizări avansate (React Compiler, Turbopack, optimizări CSS).
+- **React 18 + TypeScript** cu configurație strictă pentru tipuri și alias-uri de import.
+- **Tailwind CSS** personalizat cu identitatea vizuală DaCars (culori, fonturi Poppins și DM Sans, animații).
+- **Librărie UI proprie** (buton, input, tabel, select, date range) pentru consistență și accesibilitate.
+- **Integrare Monaco Editor, CKEditor, Lucide Icons, Next Themes** pentru funcționalități din zona de administrare.
+- **Vitest + ESLint** pentru testare și analiză statică.
 
-### 🎨 Design & UX
-- **Identitate vizuală consistentă**: Berkeley Blue, Jade Green, Eefie Black
-- **Tipografie premium**: Poppins pentru titluri, DM Sans pentru text
-- **Animații subtile** și micro-interacțiuni pentru engagement
-- **Layout aerisit** cu spațiu alb generos
-- **CTA-uri optimizate** pentru conversii maxime
+## Funcționalități principale
+### Site public
+- **Landing page** cu hero, beneficii, flotă, oferte, proces și secțiune de contact optimizate pentru conversie.
+- **Carousel flotă și carduri dinamice** ce preiau mașinile din API și afișează specificații cheie (pasageri, transmisie, combustibil, preț).
+- **Listare completă a flotei** cu filtrare după tip, transmisie, combustibil, număr de locuri, sortare și căutare liberă, plus infinite scroll și sincronizare URL pentru share-uire rapidă.
+- **Hărți și contacte** cu încărcare lazy pentru Google Maps, optimizarea datelor de contact și integrarea formularului de rezervare rapidă.
 
-### 🎡 Roata Norocului
-- **Integrare API Laravel** pentru premii și probabilități
-- **Sistem de coduri de reducere** cu validare în timp real
-- **Aplicare automată** a reducerilor la rezervare
-- **Design interactiv** cu animații fluide
-- **Tracking utilizatori** pentru prevenirea abuzurilor
+### Rezervare end-to-end
+- **Context global pentru selecția clientului** (dates, mașină, garanție) persistat în `localStorage` și expus componentelor din checkout.
+- **Formular checkout bogat** cu validări în timp real, input de telefon internațional, servicii suplimentare, verificări de disponibilitate și calcul automat al prețului cu/ fără garanție.
+- **Pagină de confirmare** care rezumă rezervarea, serviciile, reducerile aplicate și premiile câștigate la roata norocului.
 
-## Structura API Laravel
+### Roata Norocului
+- **Componente dedicate** pentru afișarea roții, selectarea și persistarea premiilor și urmărirea stării utilizatorului (localStorage cu TTL, validator de coduri).
+- **Formatare și descriere inteligentă a premiilor** (discount procentual, sumă fixă, zile bonus) și afișarea perioadei de valabilitate.
+- **Servicii de API** pentru listarea premiilor, rularea roții, validarea și aplicarea reducerilor direct din backend-ul Laravel.
 
-### Endpoint-uri necesare:
+### Zona administrativă
+- **Layout protejat de autentificare** cu redirecționări în funcție de sesiune și meniu lateral adaptat rolului.
+- **Dashboard rezervări** cu statistici zilnice, tabel sortabil, pop-up-uri pentru detalii și generare contracte, plus integrare cu widget-ul de activitate.
+- **Calendar flotă** cu timeline interactiv, lazy loading pentru mașini și rezervări, drag & drop și crearea rapidă a rezervărilor.
+- **Management flotă** (CRUD mașini, upload multi-imagine, editor rich-text, filtre de căutare, categorii, transmisii, carburant).
+- **Module suplimentare** pentru rezervări, servicii extra, categorii cu prețuri dinamice, calendar de tarife și administrator de tipuri/roluri utilizatori.
 
-```php
-// Obține premiile disponibile
-GET /api/wheel/prizes
-Response: {
-  "prizes": [
-    {
-      "id": 1,
-      "name": "10% Reducere",
-      "description": "Reducere 10% la următoarea rezervare",
-      "discount_percentage": 10,
-      "probability": 25,
-      "color": "#1E7149",
-      "icon": "gift",
-      "is_active": true
-    }
-  ]
-}
+### Automatizări și email marketing
+- **Editor de branding email** cu Monaco Editor, inserție de variabile Twig și gestiune culori/meniuri, pentru personalizarea template-urilor Laravel Mailcoach.
+- **Configurație integrată pentru fișiere atașate și preview mobil** în zona de administrare a campaniilor.
 
-// Învârte roata
-POST /api/wheel/spin
-Body: { "user_id": "optional" }
-Response: {
-  "success": true,
-  "prize": { /* obiect premiu */ },
-  "code": "WHEEL10",
-  "message": "Felicitări! Ai câștigat 10% reducere!"
-}
-
-// Validează cod de reducere
-POST /api/wheel/validate-code
-Body: { "code": "WHEEL10" }
-Response: { "valid": true, "discount": 10 }
-
-// Aplică reducerea
-POST /api/wheel/apply-discount
-Body: { "code": "WHEEL10", "reservation": { /* date rezervare */ } }
-Response: { "success": true, "new_total": 45.50 }
+## Structura proiectului
 ```
-
-## Instalare și Rulare
-
-```bash
-# Instalează dependențele
-npm install
-
-# Pornește serverul de dezvoltare
-npm run dev
-
-# Build pentru producție
-npm run build
+├── app/                # Rutele Next.js (public + admin + API routes)
+│   ├── page.tsx        # Landing public
+│   ├── cars/           # Listare flotă
+│   ├── checkout/       # Flux rezervare
+│   ├── success/        # Confirmare rezervare
+│   └── admin/          # Consolă operațională (dashboard, flotă, mail etc.)
+├── components/         # Secțiuni UI reutilizabile (public & admin)
+├── context/            # Context API (autentificare, rezervări)
+├── lib/                # Utilitare, API client, mapări filtre, stocare premii
+├── services/           # Servicii API specifice (roata norocului)
+├── types/              # Contracte TypeScript pentru datele backend
+├── public/             # Active statice (imagini optimizate, CSS generat)
+└── scripts/            # Task-uri auxiliare (optimizare imagini WebP)
 ```
+Fiecare domeniu este izolat: componentele publice trăiesc în rădăcina `components/`, iar zona admin folosește subdirectoare dedicate și tipuri specifice pentru a menține un cod scalabil.
 
-## Optimizare imagini WebP
+## Fluxuri de date și module cheie
+### Client API unificat
+- `lib/api.ts` centralizează toate apelurile la backend-ul Laravel (mașini, rezervări, servicii, utilizatori, wheel of fortune etc.), atașează tokenul de autentificare și normalizează răspunsurile JSON/PDF.
+- `lib/mapFilters.ts` și `lib/qs.ts` traduc filtrele UI în parametri REST compatibili cu controllerele Laravel.
+- `app/api/proxy/route.ts` expune un endpoint serverless pentru a proxy-a fișiere (de ex. contracte PDF) direct din backend, cu antete CORS și cache control.
 
-Scriptul `npm run images:webp` folosește [Sharp](https://sharp.pixelplumbing.com/) pentru a converti automat imaginile raster în fișiere WebP optimizate.
+### Gestionarea autentificării și sesiunii
+- `AuthContext` gestionează logarea, persistă tokenul în `localStorage`, rehidratează utilizatorul la refresh și sincronizează starea cu sidebar-ul admin.
+- `app/admin/layout.tsx` impune protecția rutelor, redirecționează vizitatorii neautentificați către `/admin/login` și injectează `AdminSidebar` în toate paginile private.
 
-```bash
-# Conversie rapidă pentru întregul director public/
-npm run images:webp
+### Persistența selecției de rezervare
+- `BookingContext` memorează datele selectate de client (interval, mașină, tip garanție) și le pune la dispoziția formularului checkout; contextul se resetează la finalizarea comenzii.
 
-# Exemplu cu opțiuni suplimentare
-npm run images:webp -- --src assets/raw --dest public/images --quality 85 --effort 6
-```
+### Stocarea premiilor din Roata Norocului
+- `WheelOfFortune` sincronizează premiile disponibile, folosește `wheelStorage` pentru a salva premiul câștigat cu TTL 30 de zile și expune câmpuri pentru validare și reactivare la următoarea vizită.
+- `wheelFormatting` descrie textual tipul premiului și formatul reducerilor pentru afișare coerentă în admin și în ecranele publice.
 
-Opțiuni utile:
+### Calendar flotă și rezervări
+- `CarRentalCalendar` aduce în pagină sute de rezervări cu paginare incrementală, permite selecții multiple, crearea de booking-uri și navigarea pe ani/luni într-o interfață optimizată pentru densitate mare de date.
+- `app/admin/bookings/page.tsx` și `app/admin/page.tsx` reutilizează componente comune (`Popup`, `DataTable`) pentru a afișa detalii, a edita rezervări și a genera contracte rapid.
 
-- `--src` / `--dest` – specifică directoare sursă și destinație personalizate
-- `--quality` și `--alpha-quality` – controlează nivelul de compresie
-- `--effort` – ajustează timpul petrecut pentru optimizare (0-9)
-- `--lossless` / `--near-lossless` – pentru conversie fără pierderi
-- `--force` – recreează fișierele chiar dacă există deja varianta WebP
+## Integrare cu backend-ul Laravel
+Aplicația presupune un backend Laravel ce expune API-uri REST securizate.
 
-## Configurare API
+| Variabilă | Rol | Implicit |
+|-----------|-----|----------|
+| `NEXT_PUBLIC_API_URL` | Punctul de intrare al API-ului public (mașini, rezervări, wheel). | `http://localhost:8000/api/v1` |
+| `NEXT_PUBLIC_BACKEND_URL` | Baza pentru proxy-ul de fișiere (PDF, contracte). | `http://127.0.0.1:8000` |
+| `NEXT_PUBLIC_STORAGE_URL` | URL-ul pentru imaginile din storage Laravel (folosit în cardurile mașinilor). | `https://backend.dacars.ro/storage` |
+| `CUSTOM_KEY` | Cheie opțională pentru logica custom din `next.config.js`. | – |
+| `ANALYZE` | Activează bundle analyzer (setare Next.js). | – |
 
-Adaugă în `.env`:
-```
-REACT_APP_API_URL=http://localhost:8000/api
-```
+Tokenul de autentificare este setat prin `apiClient.setToken` după login și salvat în `localStorage` sub `auth_token`. Toate request-urile includ antetul `X-API-KEY`, iar metodele standard `getCars`, `getBookings`, `getServices`, `getWheelPrizes` mapează răspunsurile la structurile TypeScript definite în `types/`.
 
-## Tehnologii Utilizate
+## Configurare și rulare
+1. **Instalare dependențe**: `npm install`.
+2. **Configurare `.env.local`** cu variabilele din tabelul de mai sus.
+3. **Rulare în dezvoltare**: `npm run dev` (pornește Next.js cu Turbopack și reîncarcare live).
+4. **Build de producție**: `npm run build` (compilează Tailwind, apoi rulează `next build`).
+5. **Pornire server producție**: `npm run start`.
+6. **Linting**: `npm run lint` pentru a valida regulile ESLint/TypeScript.
+7. **Optimizare imagini**: `npm run images:webp` rulează scriptul `scripts/convert-images.cjs` care convertește întreg directorul `public/` în WebP (acceptă opțiuni precum `--quality`, `--effort`, `--lossless`).
 
-- **React 18** cu TypeScript
-- **React Router** pentru navigare
-- **Tailwind CSS** pentru styling
-- **Lucide React** pentru iconuri
-- **Vite** pentru build și development
+> **Sfat:** în mediile CI setați `CI=1` înainte de `npm run lint` pentru a opri fix-urile interactive.
 
-## Structura Proiectului
+## Calitate și testare
+- **ESLint + TypeScript strict**: se rulează prin `npm run lint`, folosind `eslint-config-next`, `eslint-plugin-react`, `eslint-plugin-tailwindcss` și reguli suplimentare pentru accesibilitate.
+- **Vitest**: configurat cu mediu `jsdom` pentru testarea componentelor React; se rulează cu `npx vitest` sau adăugați script dedicat dacă este necesar.
+- **Security & performance**: `next.config.js` adaugă antete HTTP (CSP, X-Frame-Options, Accept-CH) și optimizează imaginile, CSS-ul și importurile pentru bundle-uri mici.
 
-```
-src/
-├── components/          # Componente reutilizabile
-│   ├── Header.tsx
-│   ├── Footer.tsx
-│   ├── SpinWheel.tsx
-│   └── SpinWheelButton.tsx
-├── pages/              # Pagini principale
-│   ├── HomePage.tsx
-│   ├── FleetPage.tsx
-│   ├── ReservationPage.tsx
-│   └── SuccessPage.tsx
-├── services/           # Servicii API
-│   └── wheelApi.ts
-└── App.tsx            # Componenta principală
-```
+## Ghid de dezvoltare
+- **Design system**: Folosiți `components/ui` pentru elementele de bază și respectați tokenii din Tailwind (`berkeley`, `jade`, animațiile custom).
+- **Fonturi**: `app/layout.tsx` încarcă Poppins și DM Sans prin `next/font`; aplicați clasele `font-poppins`/`font-dm-sans` pentru consistență.
+- **Accesibilitate**: componentele includ atribute `aria-*` și etichete; păstrați-le când extindeți comportamentele (vezi `app/cars/page.tsx` pentru exemple de butoane și etichete).
+- **State management**: utilizați `AuthContext` și `BookingContext` în loc de state locale atunci când informația trebuie împărtășită între pagini.
+- **API layer**: adăugați metode noi în `lib/api.ts` și exportați tipuri în `types/` pentru a păstra contractul clar între frontend și backend.
 
-## Caracteristici Roata Norocului
+## Extensibilitate și următori pași
+- **Monitorizare și analytics**: integrați servicii suplimentare în `app/layout.tsx` sau `components/PageTransition.tsx` pentru tracking al conversiilor.
+- **Raportări avansate**: reutilizați `DataTable` și `Popup` pentru a construi rapoarte custom (ex. utilizare flotă pe luni).
+- **Automatizări marketing**: extindeți editorul de template-uri cu validări suplimentare și preview-uri pentru alte rezoluții folosind componentele existente din `mail-branding`.
+- **Internaționalizare**: proiectul include alias `@/locales/*` în `tsconfig.json`, pregătit pentru adăugarea de mesaje și traduceri viitoare.
 
-- **Design interactiv** cu segmente colorate pentru fiecare premiu
-- **Animații fluide** cu CSS transforms și transitions
-- **Sistem de probabilități** controlat din backend
-- **Validare coduri** în timp real
-- **Aplicare automată** a reducerilor la checkout
-- **Tracking utilizatori** pentru prevenirea abuzurilor
-- **Responsive design** pentru mobile și desktop
-
-## Optimizări SEO
-
-- Meta tags optimizate pentru închirieri auto România
-- Structured data pentru Google
-- Imagini optimizate cu alt text descriptiv
-- URLs prietenoase pentru SEO
-- Performance optimizat pentru Core Web Vitals
+---
+Pentru întrebări sau contribuții suplimentare, deschideți un ticket sau contactați echipa DaCars.
