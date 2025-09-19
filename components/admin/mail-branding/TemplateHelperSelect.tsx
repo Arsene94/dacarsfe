@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type AriaAttributes,
   type ButtonHTMLAttributes,
   type ChangeEvent as ReactChangeEvent,
   type FocusEvent as ReactFocusEvent,
@@ -127,7 +128,9 @@ export function TemplateHelperSelect({
     if (!isValidElement(icon)) {
       return icon;
     }
-    const iconElement = icon as ReactElement<{ className?: string }>;
+    const iconElement = icon as ReactElement<
+      { className?: string } & AriaAttributes
+    >;
     return cloneElement(iconElement, {
       className: cn("h-4 w-4 text-gray-400", iconElement.props.className),
       "aria-hidden": true,
