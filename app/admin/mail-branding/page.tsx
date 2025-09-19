@@ -17,6 +17,7 @@ import type {
   MailSiteDetails,
   MailTemplateAttachment,
   MailTemplateDetail,
+  MailTemplateVariableDetail,
   MailTemplateUpdatePayload,
   MailTemplateSummary,
 } from "@/types/mail";
@@ -133,6 +134,14 @@ type TwigFunctionSnippet = {
   snippet: string;
   placeholder?: string;
   mode?: SnippetMode;
+};
+
+type VariableMetadataSource = "detail" | "api" | "detected";
+
+type VariableMetadataEntry = {
+  key: string;
+  description: string | null;
+  source: VariableMetadataSource;
 };
 
 const TWIG_FUNCTION_SNIPPETS: readonly TwigFunctionSnippet[] = [
@@ -735,6 +744,55 @@ const normalizeAvailableVariables = (input: unknown): string[] => {
   return result;
 };
 
+const normalizeAvailableVariableDetails = (
+  input: unknown,
+): MailTemplateVariableDetail[] => {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  const unique = new Set<string>();
+  const details: MailTemplateVariableDetail[] = [];
+
+  input.forEach((entry) => {
+    if (!isPlainObject(entry)) {
+      return;
+    }
+
+    const rawKey = entry.key;
+    if (typeof rawKey !== "string") {
+      return;
+    }
+
+    const key = rawKey.trim();
+    if (!key || unique.has(key)) {
+      return;
+    }
+
+    unique.add(key);
+
+    const detail: MailTemplateVariableDetail = { key };
+
+    if (typeof entry.description === "string") {
+      const trimmedDescription = entry.description.trim();
+      detail.description = trimmedDescription.length > 0 ? trimmedDescription : null;
+    } else if (entry.description === null) {
+      detail.description = null;
+    }
+
+    Object.entries(entry).forEach(([entryKey, value]) => {
+      if (entryKey === "key" || entryKey === "description") {
+        return;
+      }
+      detail[entryKey] = value;
+    });
+
+    details.push(detail);
+  });
+
+  return details;
+};
+
 const getAttachmentDisplayName = (attachment: MailTemplateAttachment): string => {
   const fileName = attachment["file_name"];
   const candidates = [
@@ -1265,6 +1323,9 @@ const MailBrandingPage = () => {
 
       const attachments = Array.isArray(detail.attachments) ? detail.attachments : [];
       const availableVariables = normalizeAvailableVariables(detail.available_variables);
+      const availableVariableDetails = normalizeAvailableVariableDetails(
+        detail.available_variable_details,
+      );
       const exampleContext = isPlainObject(detail.example_context)
         ? cloneContext(detail.example_context)
         : null;
@@ -1273,6 +1334,7 @@ const MailBrandingPage = () => {
         ...detail,
         attachments,
         available_variables: availableVariables,
+        available_variable_details: availableVariableDetails,
         example_context: exampleContext,
       };
     },
@@ -2427,37 +2489,79 @@ const MailBrandingPage = () => {
     ? attachmentsList
     : [];
 
-  const availableVariables = useMemo(() => {
+  const availableVariableMetadata = useMemo(() => {
     const detail = selectedTemplateKey ? templateDetails[selectedTemplateKey] : null;
-    const fromApi = detail?.available_variables
-      ? normalizeAvailableVariables(detail.available_variables)
+    const fromApi = Array.isArray(detail?.available_variables)
+      ? detail?.available_variables
       : [];
-    const combined: string[] = [];
+    const detailEntries = Array.isArray(detail?.available_variable_details)
+      ? detail.available_variable_details
+      : [];
+
+    const descriptionMap = new Map<string, string | null>();
+    detailEntries.forEach((entry) => {
+      if (!entry || typeof entry.key !== "string") {
+        return;
+      }
+      const key = entry.key.trim();
+      if (!key || descriptionMap.has(key)) {
+        return;
+      }
+      const description =
+        typeof entry.description === "string" && entry.description.trim().length > 0
+          ? entry.description.trim()
+          : null;
+      descriptionMap.set(key, description);
+    });
+
+    const combined: VariableMetadataEntry[] = [];
     const seen = new Set<string>();
 
-    const addValue = (value: string) => {
-      const trimmed = value.trim();
+    const addValue = (value: string, source: VariableMetadataSource) => {
+      const trimmed = typeof value === "string" ? value.trim() : "";
       if (!trimmed || seen.has(trimmed)) {
         return;
       }
       seen.add(trimmed);
-      combined.push(trimmed);
+      const description = descriptionMap.has(trimmed)
+        ? descriptionMap.get(trimmed) ?? null
+        : null;
+      combined.push({ key: trimmed, description, source });
     };
+
+    detailEntries.forEach((entry) => {
+      if (entry && typeof entry.key === "string") {
+        addValue(entry.key, "detail");
+      }
+    });
 
     fromApi.forEach((value) => {
       if (typeof value === "string") {
-        addValue(value);
+        addValue(value, "api");
       }
     });
 
     detectedVariables.forEach((value) => {
       if (typeof value === "string") {
-        addValue(value);
+        addValue(value, "detected");
       }
     });
 
     return combined;
   }, [selectedTemplateKey, templateDetails, detectedVariables]);
+
+  const describeVariableEntry = useCallback(
+    (entry: VariableMetadataEntry) => {
+      if (entry.description && entry.description.length > 0) {
+        return entry.description;
+      }
+      if (entry.source === "detected") {
+        return "Variabilă detectată automat din conținut.";
+      }
+      return "Nu există o descriere pentru această variabilă.";
+    },
+    [],
+  );
 
   const isTemplateDirty =
     templateContent !== originalTemplateContent ||
@@ -2811,7 +2915,7 @@ const MailBrandingPage = () => {
                 <h3 id={templateEditorLabelId} className="text-lg font-semibold text-berkeley">
                   Conținut Twig
                 </h3>
-                <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                     <div className="space-y-2 sm:w-72">
                       <Label htmlFor={templateVariableSelectId}>Variabile disponibile</Label>
@@ -2824,17 +2928,25 @@ const MailBrandingPage = () => {
                           id={templateVariableSelectId}
                           value={variableSelectValue}
                           onChange={handleVariableSelect}
-                          disabled={!selectedTemplateKey || availableVariables.length === 0}
+                          disabled={
+                            !selectedTemplateKey || availableVariableMetadata.length === 0
+                          }
                           className="pl-10"
                         >
                           <option value="" disabled>
-                            {availableVariables.length === 0
+                            {availableVariableMetadata.length === 0
                               ? "Nu există variabile pentru acest template"
                               : "Inserează o variabilă"}
                           </option>
-                          {availableVariables.map((variable) => (
-                            <option key={variable} value={variable}>
-                              {variable}
+                          {availableVariableMetadata.map((entry) => (
+                            <option
+                              key={entry.key}
+                              value={entry.key}
+                              title={describeVariableEntry(entry)}
+                            >
+                              {entry.description
+                                ? `{{ ${entry.key} }} — ${entry.description}`
+                                : `{{ ${entry.key} }}`}
                             </option>
                           ))}
                         </Select>
@@ -2875,6 +2987,26 @@ const MailBrandingPage = () => {
                   <p className="text-xs text-gray-500 lg:max-w-sm lg:text-right">
                     Selectează o variabilă sau un fragment Twig pentru a-l insera la poziția cursorului din editor.
                   </p>
+                  {availableVariableMetadata.length > 0 && (
+                    <div className="lg:w-full lg:basis-full">
+                      <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+                        <p className="font-medium text-gray-700">Descrieri variabile</p>
+                        <ul className="mt-2 space-y-2">
+                          {availableVariableMetadata.map((entry) => (
+                            <li
+                              key={entry.key}
+                              className="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-2"
+                            >
+                              <span className="font-mono text-berkeley">{`{{ ${entry.key} }}`}</span>
+                              <span className="text-gray-600">
+                                {describeVariableEntry(entry)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div
                   ref={codeMirrorContainerRef}

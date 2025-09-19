@@ -71,11 +71,18 @@ export interface MailTemplateAttachment {
   [key: string]: unknown;
 }
 
+export interface MailTemplateVariableDetail {
+  key: string;
+  description?: string | null;
+  [key: string]: unknown;
+}
+
 export interface MailTemplateDetail extends MailTemplateSummary {
   contents: string;
   attachments?: MailTemplateAttachment[];
   example_context?: Record<string, unknown> | null;
   available_variables?: string[] | null;
+  available_variable_details?: MailTemplateVariableDetail[] | null;
 }
 
 export interface MailTemplatesResponse {
