@@ -19,6 +19,9 @@ import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+const normalizeForSearch = (value: string) =>
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 export interface TemplateHelperSelectItem {
   value: string;
   label: string;
@@ -86,7 +89,10 @@ export function TemplateHelperSelect({
     () => items.find((item) => item.value === value),
     [items, value],
   );
-  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const normalizedSearch = useMemo(
+    () => normalizeForSearch(searchQuery.trim()),
+    [searchQuery],
+  );
   const visibleItems = useMemo(() => {
     if (!searchable || normalizedSearch.length === 0) {
       return items;
@@ -104,7 +110,7 @@ export function TemplateHelperSelect({
         item.title,
       ]
         .filter((entry): entry is string => Boolean(entry))
-        .map((entry) => entry.toLowerCase());
+        .map((entry) => normalizeForSearch(entry));
       return haystacks.some((entry) => entry.includes(normalizedSearch));
     });
   }, [items, normalizedSearch, searchable]);
