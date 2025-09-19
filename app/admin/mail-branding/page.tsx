@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import type { Decoration as ViewDecoration, EditorView } from "@codemirror/view";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Code2, FunctionSquare, Loader2, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,6 +123,180 @@ const mapFormSiteToDetails = (form: MailSiteFormState): MailSiteDetails => {
     social_links: form.social_links.map((item) => ({ label: item.label, url: item.url })),
   };
 };
+
+type SnippetMode = "inline" | "block";
+
+type TwigFunctionSnippet = {
+  value: string;
+  label: string;
+  description: string;
+  snippet: string;
+  placeholder?: string;
+  mode?: SnippetMode;
+};
+
+const TWIG_FUNCTION_SNIPPETS: readonly TwigFunctionSnippet[] = [
+  {
+    value: "if",
+    label: "If",
+    description: "Rulează codul doar dacă o condiție este adevărată.",
+    snippet:
+      "{% if condition %}\n  {# conținut când condiția este adevărată #}\n{% endif %}\n",
+    placeholder: "condition",
+    mode: "block",
+  },
+  {
+    value: "if_else",
+    label: "If / Else",
+    description: "Alege între două ramuri în funcție de condiție.",
+    snippet:
+      "{% if condition %}\n  {# conținut când condiția este adevărată #}\n{% else %}\n  {# conținut alternativ #}\n{% endif %}\n",
+    placeholder: "condition",
+    mode: "block",
+  },
+  {
+    value: "for",
+    label: "For",
+    description: "Iterează printr-o colecție de elemente.",
+    snippet: "{% for item in collection %}\n  {{ item }}\n{% endfor %}\n",
+    placeholder: "collection",
+    mode: "block",
+  },
+  {
+    value: "for_else",
+    label: "For cu fallback",
+    description: "Iterează și afișează un mesaj când lista este goală.",
+    snippet:
+      "{% for item in collection %}\n  {{ item }}\n{% else %}\n  {# conținut afișat când colecția este goală #}\n{% endfor %}\n",
+    placeholder: "collection",
+    mode: "block",
+  },
+  {
+    value: "include",
+    label: "Include",
+    description: "Inserează alt template și opțional un context personalizat.",
+    snippet: "{% include 'partials/example.twig' with { key: value } %}\n",
+    placeholder: "'partials/example.twig'",
+    mode: "block",
+  },
+  {
+    value: "extends",
+    label: "Extends",
+    description: "Moștenește un layout de bază pentru template.",
+    snippet: "{% extends 'base.twig' %}\n",
+    placeholder: "'base.twig'",
+    mode: "block",
+  },
+  {
+    value: "block",
+    label: "Block",
+    description: "Definește o secțiune care poate fi suprascrisă.",
+    snippet:
+      "{% block block_name %}\n  {# conținutul blocului #}\n{% endblock %}\n",
+    placeholder: "block_name",
+    mode: "block",
+  },
+  {
+    value: "set",
+    label: "Set",
+    description: "Creează sau actualizează o variabilă în Twig.",
+    snippet: "{% set variable = value %}\n",
+    placeholder: "variable",
+    mode: "block",
+  },
+  {
+    value: "set_block",
+    label: "Set (bloc)",
+    description: "Stochează rezultatul unui bloc de cod într-o variabilă.",
+    snippet:
+      "{% set variable %}\n  {# conținutul care va fi salvat în variabilă #}\n{% endset %}\n",
+    placeholder: "variable",
+    mode: "block",
+  },
+  {
+    value: "macro",
+    label: "Macro",
+    description: "Definește o funcție reutilizabilă în Twig.",
+    snippet:
+      "{% macro macro_name(parameter) %}\n  {# conținutul macro-ului #}\n{% endmacro %}\n",
+    placeholder: "macro_name",
+    mode: "block",
+  },
+  {
+    value: "import",
+    label: "Import",
+    description: "Importă macro-uri dintr-un alt fișier Twig.",
+    snippet: "{% import 'macros.twig' as macros %}\n",
+    placeholder: "'macros.twig'",
+    mode: "block",
+  },
+  {
+    value: "embed",
+    label: "Embed",
+    description: "Include un template și rescrie blocuri interne.",
+    snippet:
+      "{% embed 'partials/card.twig' with { context_key: value } %}\n  {# conținut suplimentar #}\n{% endembed %}\n",
+    placeholder: "'partials/card.twig'",
+    mode: "block",
+  },
+  {
+    value: "with",
+    label: "With",
+    description: "Creează un context local pentru un bloc.",
+    snippet:
+      "{% with { key: value } %}\n  {# conținutul cu context personalizat #}\n{% endwith %}\n",
+    placeholder: "{ key: value }",
+    mode: "block",
+  },
+  {
+    value: "filter",
+    label: "Filter",
+    description: "Aplică un filtru întregului bloc de conținut.",
+    snippet: "{% filter upper %}\n  {{ text }}\n{% endfilter %}\n",
+    placeholder: "upper",
+    mode: "block",
+  },
+  {
+    value: "apply",
+    label: "Apply",
+    description: "Aplică un filtru sau funcție asupra unui bloc și stochează rezultatul.",
+    snippet: "{% apply lower %}\n  {{ text }}\n{% endapply %}\n",
+    placeholder: "lower",
+    mode: "block",
+  },
+  {
+    value: "spaceless",
+    label: "Spaceless",
+    description: "Elimină spațiile dintre tag-urile HTML generate.",
+    snippet:
+      "{% spaceless %}\n  {# conținutul HTML fără spații #}\n{% endspaceless %}\n",
+    mode: "block",
+  },
+  {
+    value: "autoescape",
+    label: "Autoescape",
+    description: "Controlează modul de escapare pentru conținutul intern.",
+    snippet: "{% autoescape 'html' %}\n  {{ variable }}\n{% endautoescape %}\n",
+    placeholder: "'html'",
+    mode: "block",
+  },
+  {
+    value: "verbatim",
+    label: "Verbatim",
+    description: "Afișează textul exact fără a fi interpretat de Twig.",
+    snippet: "{% verbatim %}\n  {{ acesta_nu_este_interpretat }}\n{% endverbatim %}\n",
+    placeholder: "{{ acesta_nu_este_interpretat }}",
+    mode: "block",
+  },
+  {
+    value: "raw",
+    label: "Raw",
+    description: "Marchează o secțiune ca text brut în rezultat.",
+    snippet: "{% raw %}\n  {{ acest_text_va_fi_afisat }}\n{% endraw %}\n",
+    placeholder: "{{ acest_text_va_fi_afisat }}",
+    mode: "block",
+  },
+];
 
 const createDefaultPreviewContext = (
   site?: MailSiteDetails | null,
@@ -1050,6 +1224,7 @@ const MailBrandingPage = () => {
   const [attachmentUploading, setAttachmentUploading] = useState<boolean>(false);
   const [attachmentDeleting, setAttachmentDeleting] = useState<string | null>(null);
   const [variableSelectValue, setVariableSelectValue] = useState<string>("");
+  const [functionSelectValue, setFunctionSelectValue] = useState<string>("");
   const [detectedVariables, setDetectedVariables] = useState<string[]>([]);
 
   const [twigEngine, setTwigEngine] = useState<any>(null);
@@ -1063,6 +1238,7 @@ const MailBrandingPage = () => {
 
   const templateEditorLabelId = useId();
   const templateVariableSelectId = useId();
+  const templateFunctionSelectId = useId();
   const codeMirrorContainerRef = useRef<HTMLDivElement | null>(null);
   const codeMirrorInstanceRef = useRef<EditorView | null>(null);
   const isCodeMirrorSyncingRef = useRef(false);
@@ -1128,6 +1304,7 @@ const MailBrandingPage = () => {
       setTemplateSubject(subject);
       setOriginalTemplateSubject(subject);
       setVariableSelectValue("");
+      setFunctionSelectValue("");
       setDetectedVariables([]);
 
       const basePreview = computeBasePreviewContext();
@@ -1917,6 +2094,54 @@ const MailBrandingPage = () => {
     });
   };
 
+  const insertSnippet = useCallback(
+    (snippet: string, options?: { placeholder?: string; mode?: SnippetMode }) => {
+      const mode: SnippetMode = options?.mode ?? "inline";
+      const placeholder = options?.placeholder && options.placeholder.length > 0
+        ? options.placeholder
+        : undefined;
+      const view = codeMirrorInstanceRef.current;
+
+      if (view) {
+        const { state } = view;
+        const { main } = state.selection;
+        const from = Math.min(main.from, main.to);
+        const to = Math.max(main.from, main.to);
+        const placeholderIndex = placeholder ? snippet.indexOf(placeholder) : -1;
+        const selectionStart =
+          placeholderIndex >= 0 ? from + placeholderIndex : from + snippet.length;
+        const selectionEnd =
+          placeholderIndex >= 0 && placeholder
+            ? selectionStart + placeholder.length
+            : selectionStart;
+
+        view.dispatch({
+          changes: { from, to, insert: snippet },
+          selection: { anchor: selectionStart, head: selectionEnd },
+          scrollIntoView: true,
+        });
+        view.focus();
+        return;
+      }
+
+      const base = templateContentRef.current ?? "";
+      let nextValue: string;
+
+      if (mode === "inline") {
+        const shouldAddSpace = base.length > 0 && !/\s$/.test(base);
+        nextValue = shouldAddSpace ? `${base} ${snippet}` : `${base}${snippet}`;
+      } else {
+        const needsNewline = base.length > 0 && !base.endsWith("\n");
+        nextValue = needsNewline ? `${base}\n${snippet}` : `${base}${snippet}`;
+      }
+
+      templateContentRef.current = nextValue;
+      setTemplateContent(nextValue);
+      setDebouncedContent(nextValue);
+    },
+    [setDebouncedContent, setTemplateContent],
+  );
+
   const handleBrandingSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!brandingForm) return;
@@ -2083,30 +2308,31 @@ const MailBrandingPage = () => {
       return;
     }
 
-    const snippet = `{{ ${selectedValue} }}`;
-    const view = codeMirrorInstanceRef.current;
-
-    if (view) {
-      const { state } = view;
-      const { main } = state.selection;
-      const from = Math.min(main.from, main.to);
-      const to = Math.max(main.from, main.to);
-      view.dispatch({
-        changes: { from, to, insert: snippet },
-        selection: { anchor: from + snippet.length, head: from + snippet.length },
-        scrollIntoView: true,
-      });
-      view.focus();
-    } else {
-      const base = templateContentRef.current ?? templateContent ?? "";
-      const shouldAddSpace = base.length > 0 && !/\s$/.test(base);
-      const nextValue = shouldAddSpace ? `${base} ${snippet}` : `${base}${snippet}`;
-      templateContentRef.current = nextValue;
-      setTemplateContent(nextValue);
-      setDebouncedContent(nextValue);
-    }
+    insertSnippet(`{{ ${selectedValue} }}`, { mode: "inline" });
 
     setVariableSelectValue("");
+  };
+
+  const handleFunctionSelect = (event: ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = event.target.value;
+    setFunctionSelectValue(selectedValue);
+
+    if (!selectedValue) {
+      return;
+    }
+
+    const snippetConfig = TWIG_FUNCTION_SNIPPETS.find(
+      (item) => item.value === selectedValue,
+    );
+
+    if (snippetConfig) {
+      insertSnippet(snippetConfig.snippet, {
+        placeholder: snippetConfig.placeholder,
+        mode: snippetConfig.mode ?? "block",
+      });
+    }
+
+    setFunctionSelectValue("");
   };
 
   const handleAttachmentUpload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -2585,32 +2811,70 @@ const MailBrandingPage = () => {
                 <h3 id={templateEditorLabelId} className="text-lg font-semibold text-berkeley">
                   Conținut Twig
                 </h3>
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="space-y-2 sm:w-72">
-                    <Label htmlFor={templateVariableSelectId}>Variabile disponibile</Label>
-                    <Select
-                      id={templateVariableSelectId}
-                      value={variableSelectValue}
-                      onChange={handleVariableSelect}
-                      disabled={!selectedTemplateKey || availableVariables.length === 0}
-                    >
-                      <option value="" disabled>
-                        {availableVariables.length === 0
-                          ? "Nu există variabile pentru acest template"
-                          : "Inserează o variabilă"}
-                      </option>
-                      {availableVariables.map((variable) => (
-                        <option key={variable} value={variable}>
-                          {variable}
-                        </option>
-                      ))}
-                    </Select>
+                <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <div className="space-y-2 sm:w-72">
+                      <Label htmlFor={templateVariableSelectId}>Variabile disponibile</Label>
+                      <div className="relative">
+                        <Code2
+                          aria-hidden="true"
+                          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                        />
+                        <Select
+                          id={templateVariableSelectId}
+                          value={variableSelectValue}
+                          onChange={handleVariableSelect}
+                          disabled={!selectedTemplateKey || availableVariables.length === 0}
+                          className="pl-10"
+                        >
+                          <option value="" disabled>
+                            {availableVariables.length === 0
+                              ? "Nu există variabile pentru acest template"
+                              : "Inserează o variabilă"}
+                          </option>
+                          {availableVariables.map((variable) => (
+                            <option key={variable} value={variable}>
+                              {variable}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2 sm:w-72">
+                      <Label htmlFor={templateFunctionSelectId}>Fragmente Twig</Label>
+                      <div className="relative">
+                        <FunctionSquare
+                          aria-hidden="true"
+                          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                        />
+                        <Select
+                          id={templateFunctionSelectId}
+                          value={functionSelectValue}
+                          onChange={handleFunctionSelect}
+                          disabled={!selectedTemplateKey}
+                          className="pl-10"
+                        >
+                          <option value="" disabled>
+                            {selectedTemplateKey
+                              ? "Inserează un fragment Twig"
+                              : "Selectează un template pentru a folosi fragmentele"}
+                          </option>
+                          {TWIG_FUNCTION_SNIPPETS.map((snippet) => (
+                            <option
+                              key={snippet.value}
+                              value={snippet.value}
+                              title={snippet.description}
+                            >
+                              {`${snippet.label} — ${snippet.description}`}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
                   </div>
-                  {availableVariables.length > 0 && (
-                    <p className="text-xs text-gray-500 sm:text-right">
-                      Selectează o variabilă pentru a o insera la poziția cursorului din editor.
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-500 lg:max-w-sm lg:text-right">
+                    Selectează o variabilă sau un fragment Twig pentru a-l insera la poziția cursorului din editor.
+                  </p>
                 </div>
                 <div
                   ref={codeMirrorContainerRef}
