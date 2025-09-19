@@ -81,7 +81,7 @@ const SuccessPage = () => {
 
           <div className="mt-8 inline-flex items-center px-6 py-3 bg-jade/10 rounded-full">
             <span className="text-jade font-dm-sans font-semibold">
-              Rezervarea #{reservationData.reservationId}
+              Rezervarea {reservationData.reservationId}
             </span>
           </div>
         </div>
