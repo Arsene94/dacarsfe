@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import type { Decoration as ViewDecoration, EditorView } from "@codemirror/view";
+import Editor from "@monaco-editor/react";
+import type * as MonacoEditorType from "monaco-editor";
 import { Code2, FunctionSquare, Loader2, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,8 @@ import type {
   MailTemplateUpdatePayload,
   MailTemplateSummary,
 } from "@/types/mail";
+
+type Monaco = typeof import("monaco-editor");
 
 interface StatusMessage {
   type: "success" | "error";
@@ -1298,10 +1301,11 @@ const MailBrandingPage = () => {
   const templateEditorLabelId = useId();
   const templateVariableSelectId = useId();
   const templateFunctionSelectId = useId();
-  const codeMirrorContainerRef = useRef<HTMLDivElement | null>(null);
-  const codeMirrorInstanceRef = useRef<EditorView | null>(null);
-  const isCodeMirrorSyncingRef = useRef(false);
+  const monacoEditorRef = useRef<MonacoEditorType.editor.IStandaloneCodeEditor | null>(null);
+  const monacoInstanceRef = useRef<Monaco | null>(null);
+  const monacoConfiguredRef = useRef(false);
   const templateContentRef = useRef(templateContent);
+  const [isClient, setIsClient] = useState(false);
 
   const computeBasePreviewContext = useCallback(() => {
     const siteDetails =
@@ -1408,339 +1412,272 @@ const MailBrandingPage = () => {
   }, [templateContent]);
 
   useEffect(() => {
-    const containerElement = codeMirrorContainerRef.current;
-    if (codeMirrorInstanceRef.current || !containerElement) {
-      return;
-    }
+    setIsClient(true);
+  }, []);
 
-    let cancelled = false;
+  const configureMonaco = useCallback(
+    (monaco: Monaco) => {
+      if (!monaco) {
+        return;
+      }
 
-    const mountEditor = async () => {
-      try {
-        const [
-          stateModule,
-          viewModule,
-          commandsModule,
-          languageModule,
-          autocompleteModule,
-          htmlModule,
-          highlightModule,
-          twigModule,
-        ] = await Promise.all([
-          import("@codemirror/state"),
-          import("@codemirror/view"),
-          import("@codemirror/commands"),
-          import("@codemirror/language"),
-          import("@codemirror/autocomplete"),
-          import("@codemirror/lang-html"),
-          import("@lezer/highlight"),
-          import("@ssddanbrown/codemirror-lang-twig"),
-        ]);
+      if (!monacoConfiguredRef.current) {
+        const registeredLanguages = monaco.languages.getLanguages();
+        const hasTwig = registeredLanguages.some((language) => language.id === "twig");
 
-        if (cancelled) {
-          return;
+        if (!hasTwig) {
+          const twigKeywords = [
+            "apply",
+            "autoescape",
+            "block",
+            "do",
+            "embed",
+            "extends",
+            "filter",
+            "flush",
+            "for",
+            "if",
+            "import",
+            "include",
+            "macro",
+            "sandbox",
+            "set",
+            "spaceless",
+            "trans",
+            "use",
+            "with",
+            "only",
+            "elseif",
+            "else",
+            "endapply",
+            "endautoescape",
+            "endblock",
+            "endembed",
+            "endfilter",
+            "endfor",
+            "endif",
+            "endmacro",
+            "endsandbox",
+            "endset",
+            "endspaceless",
+            "endtrans",
+            "endwith",
+            "in",
+            "is",
+            "not",
+            "and",
+            "or",
+          ];
+
+          monaco.languages.register({ id: "twig" });
+          monaco.languages.setLanguageConfiguration("twig", {
+            comments: {
+              blockComment: ["{#", "#}"],
+            },
+            brackets: [
+              ["{%", "%}"],
+              ["{{", "}}"],
+              ["{#", "#}"],
+              ["<", ">"],
+              ["(", ")"],
+              ["[", "]"],
+              ["{", "}"],
+            ],
+            autoClosingPairs: [
+              { open: "{%", close: "%}" },
+              { open: "{{", close: "}}" },
+              { open: "{#", close: "#}", notIn: ["string"] },
+              { open: "'", close: "'", notIn: ["string"] },
+              { open: '"', close: '"', notIn: ["string"] },
+              { open: "(", close: ")" },
+              { open: "[", close: "]" },
+              { open: "{", close: "}" },
+              { open: "<", close: ">" },
+            ],
+            surroundingPairs: [
+              { open: "'", close: "'" },
+              { open: '"', close: '"' },
+              { open: "(", close: ")" },
+              { open: "[", close: "]" },
+              { open: "{", close: "}" },
+              { open: "<", close: ">" },
+            ],
+            folding: {
+              markers: {
+                start: new RegExp("^\\s*\\{%[-\\s]*(?:if|for|block|embed|filter|macro|apply|trans|spaceless)\\b"),
+                end: new RegExp("^\\s*\\{%[-\\s]*end(?:if|for|block|embed|filter|macro|apply|trans|spaceless)\\b"),
+              },
+            },
+          });
+
+          monaco.languages.setMonarchTokensProvider("twig", {
+            defaultToken: "",
+            tokenPostfix: "",
+            ignoreCase: true,
+            keywords: twigKeywords,
+            tokenizer: {
+              root: [
+                [/{#/, { token: "comment.twig", next: "@commentBlock" }],
+                [/{%/, { token: "keyword.twig", next: "@tagState" }],
+                [/{{/, { token: "variable.twig", next: "@outputState" }],
+                [/<!DOCTYPE/, "metatag.html", "@doctypeState"],
+                [/<!--/, "comment.html", "@htmlComment"],
+                [/<\/?[\w:-]+/, { token: "tag.html", next: "@tag" }],
+                [/[^<{]+/, "text"],
+              ],
+              commentBlock: [
+                [/[^#]+/, "comment.twig"],
+                [/#}/, { token: "comment.twig", next: "@pop" }],
+                [/#/, "comment.twig"],
+              ],
+              tag: [
+                [/\s+/, ""],
+                [/([\w:-]+)(?=\s*=)/, "attribute.name.html"],
+                [/([\w:-]+)/, "attribute.name.html"],
+                [/\s*=\s*/, "delimiter.html", "@attributeValue"],
+                [/(\/?>)/, { token: "delimiter.html", next: "@pop" }],
+              ],
+              attributeValue: [
+                [/"[^"]*"/, "attribute.value.html", "@pop"],
+                [/'[^']*'/, "attribute.value.html", "@pop"],
+                [/[^\s>]+/, "attribute.value.html", "@pop"],
+              ],
+              htmlComment: [
+                [/[^-]+/, "comment.html"],
+                [/-->/, { token: "comment.html", next: "@pop" }],
+                [/[-]/, "comment.html"],
+              ],
+              doctypeState: [
+                [/[^>]+/, "metatag.html"],
+                [/>/, { token: "metatag.html", next: "@pop" }],
+              ],
+              tagState: [
+                [/\s+/, ""],
+                [/%}/, { token: "keyword.twig", next: "@pop" }],
+                [/\|/, "operator.twig"],
+                [/[@$]?[\w:]+/, {
+                  cases: {
+                    "@keywords": "keyword.twig",
+                    "@default": "identifier.twig",
+                  },
+                }],
+                [/\b(?:true|false|null|empty)\b/, "constant.language.twig"],
+                [/\d+(?:\.\d+)?/, "number"],
+                [/'[^']*'/, "string"],
+                [/"[^"]*"/, "string"],
+                [/[:,.]/, "delimiter"],
+                [/[[\]{}()]/, "delimiter"],
+                [/[+\-*/%<>!=&|~]/, "operator.twig"],
+              ],
+              outputState: [
+                [/\s+/, ""],
+                [/}}/, { token: "variable.twig", next: "@pop" }],
+                [/\|/, "operator.twig"],
+                [/[@$]?[\w:]+/, {
+                  cases: {
+                    "@keywords": "keyword.twig",
+                    "@default": "identifier.twig",
+                  },
+                }],
+                [/\b(?:true|false|null|empty)\b/, "constant.language.twig"],
+                [/\d+(?:\.\d+)?/, "number"],
+                [/'[^']*'/, "string"],
+                [/"[^"]*"/, "string"],
+                [/[:,.]/, "delimiter"],
+                [/[[\]{}()]/, "delimiter"],
+                [/[+\-*/%<>!=&|~]/, "operator.twig"],
+              ],
+            },
+          });
         }
 
-        const { EditorState, RangeSetBuilder } = stateModule;
-        const {
-          EditorView: CMEditorView,
-          keymap,
-          lineNumbers,
-          highlightActiveLine,
-          highlightActiveLineGutter,
-          highlightSpecialChars,
-          drawSelection,
-          dropCursor,
-          rectangularSelection,
-          placeholder,
-          Decoration,
-          ViewPlugin,
-        } = viewModule;
-        const { history, historyKeymap, indentWithTab, defaultKeymap } = commandsModule;
-        const {
-          indentOnInput,
-          syntaxHighlighting,
-          defaultHighlightStyle,
-          foldGutter,
-          foldKeymap,
-          indentUnit,
-          bracketMatching,
-          HighlightStyle,
-        } = languageModule;
-        const { closeBrackets, closeBracketsKeymap, completionKeymap } = autocompleteModule;
-        const { autoCloseTags, html } = htmlModule;
-        const { highlightTree, tags } = highlightModule;
-        const { twigLanguage } = twigModule;
-
-        const fallbackElement = containerElement.querySelector<HTMLElement>(
-          "[data-codemirror-fallback]",
-        );
-        fallbackElement?.remove();
-
-        const theme = CMEditorView.theme(
-          {
-            "&": {
-              border: "1px solid #d1d5db",
-              borderRadius: "0.75rem",
-              backgroundColor: "#ffffff",
-              transition: "box-shadow 0.2s ease, border-color 0.2s ease",
-            },
-            "&.cm-editor": {
-              fontFamily:
-                "'Fira Code', 'SFMono-Regular', Menlo, Monaco, 'Courier New', monospace",
-              fontSize: "0.875rem",
-            },
-            "&.cm-focused": {
-              outline: "none",
-              borderColor: "transparent",
-              boxShadow: "0 0 0 2px rgba(56, 178, 117, 0.35)",
-            },
-            ".cm-scroller": {
-              lineHeight: "1.5",
-              padding: "12px 16px",
-              backgroundColor: "transparent",
-              maxHeight: "520px",
-              overflow: "auto",
-            },
-            ".cm-content": {
-              minHeight: "220px",
-              paddingBottom: "8px",
-            },
-            ".cm-gutters": {
-              backgroundColor: "transparent",
-              border: "none",
-            },
-            ".cm-lineNumbers .cm-gutterElement": {
-              color: "#9ca3af",
-            },
-            ".cm-activeLineGutter": {
-              backgroundColor: "transparent",
-              color: "#2563eb",
-              fontWeight: "600",
-            },
-            ".cm-twig-meta": {
-              color: "#475569",
-            },
-            ".cm-twig-keyword": {
-              color: "#2563eb",
-              fontWeight: "600",
-            },
-            ".cm-twig-boolean": {
-              color: "#0f766e",
-              fontWeight: "600",
-            },
-            ".cm-twig-variable": {
-              color: "#9333ea",
-            },
-            ".cm-twig-function": {
-              color: "#7c3aed",
-              fontWeight: "600",
-            },
-            ".cm-twig-string": {
-              color: "#047857",
-            },
-            ".cm-twig-number": {
-              color: "#b45309",
-            },
-            ".cm-twig-operator": {
-              color: "#dc2626",
-            },
-            ".cm-twig-comment": {
-              color: "#94a3b8",
-              fontStyle: "italic",
-            },
-            ".cm-twig-punctuation": {
-              color: "#64748b",
-            },
+        monaco.editor.defineTheme("mail-branding", {
+          base: "vs",
+          inherit: true,
+          rules: [
+            { token: "comment.twig", foreground: "94A3B8", fontStyle: "italic" },
+            { token: "comment.html", foreground: "94A3B8", fontStyle: "italic" },
+            { token: "keyword.twig", foreground: "2563EB", fontStyle: "bold" },
+            { token: "variable.twig", foreground: "9333EA", fontStyle: "bold" },
+            { token: "identifier.twig", foreground: "1A3661" },
+            { token: "constant.language.twig", foreground: "0F766E", fontStyle: "bold" },
+            { token: "operator.twig", foreground: "DC2626" },
+            { token: "number", foreground: "B45309" },
+            { token: "string", foreground: "047857" },
+            { token: "tag.html", foreground: "1D4ED8", fontStyle: "bold" },
+            { token: "attribute.name.html", foreground: "2563EB" },
+            { token: "attribute.value.html", foreground: "047857" },
+            { token: "metatag.html", foreground: "475569" },
+            { token: "delimiter.html", foreground: "64748B" },
+          ],
+          colors: {
+            "editor.background": "#ffffff",
+            "editor.foreground": "#1f2937",
+            "editorLineNumber.foreground": "#9ca3af",
+            "editorLineNumber.activeForeground": "#2563eb",
+            "editor.selectionBackground": "#dbeafe",
+            "editor.selectionHighlightBackground": "#bfdbfe80",
+            "editorCursor.foreground": "#1a3661",
+            "editor.lineHighlightBackground": "#f8fafc",
+            "editorGutter.background": "#ffffff",
+            "editorIndentGuide.background": "#e2e8f0",
+            "editorIndentGuide.activeBackground": "#cbd5f5",
+            "scrollbarSlider.background": "#e5e7eb",
+            "scrollbarSlider.hoverBackground": "#d1d5db",
+            "scrollbarSlider.activeBackground": "#9ca3af",
           },
-          { dark: false },
-        );
-
-        const twigHighlightStyle = HighlightStyle.define([
-          { tag: tags.meta, class: "cm-twig-meta" },
-          { tag: tags.comment, class: "cm-twig-comment" },
-          { tag: tags.keyword, class: "cm-twig-keyword" },
-          { tag: tags.bool, class: "cm-twig-boolean" },
-          { tag: tags.variableName, class: "cm-twig-variable" },
-          { tag: tags.definition(tags.variableName), class: "cm-twig-variable" },
-          { tag: tags.function(tags.variableName), class: "cm-twig-function" },
-          { tag: tags.string, class: "cm-twig-string" },
-          { tag: tags.number, class: "cm-twig-number" },
-          {
-            tag: [tags.operator, tags.compareOperator, tags.arithmeticOperator],
-            class: "cm-twig-operator",
-          },
-          {
-            tag: [tags.brace, tags.paren, tags.punctuation],
-            class: "cm-twig-punctuation",
-          },
-        ]);
-
-        const twigExpressionPattern =
-          /\{\{[\s\S]*?\}\}|\{#[\s\S]*?#\}|\{%[\s\S]*?%\}/g;
-
-        const buildTwigDecorations = (view: any) => {
-          const builder = new RangeSetBuilder<ViewDecoration>();
-          const processedStarts = new Set<number>();
-          let hasDecorations = false;
-
-          for (const range of view.visibleRanges) {
-            const rangeFrom = Math.max(0, range.from - 200);
-            const rangeTo = Math.min(view.state.doc.length, range.to + 200);
-            const slice = view.state.doc.sliceString(rangeFrom, rangeTo);
-            twigExpressionPattern.lastIndex = 0;
-
-            let match: RegExpExecArray | null;
-            // eslint-disable-next-line no-cond-assign
-            while ((match = twigExpressionPattern.exec(slice)) !== null) {
-              const start = rangeFrom + match.index;
-              if (processedStarts.has(start)) {
-                continue;
-              }
-              processedStarts.add(start);
-
-              const segment = match[0];
-              const tree = twigLanguage.parser.parse(segment);
-              highlightTree(tree, twigHighlightStyle, (from, to, classes) => {
-                if (!classes || to <= from) {
-                  return;
-                }
-                hasDecorations = true;
-                builder.add(
-                  start + from,
-                  start + to,
-                  Decoration.mark({ class: classes }),
-                );
-              });
-            }
-          }
-
-          return hasDecorations ? builder.finish() : Decoration.none;
-        };
-
-        const twigHighlightPlugin = ViewPlugin.fromClass(
-          class {
-            decorations = Decoration.none;
-
-            constructor(view: any) {
-              this.decorations = buildTwigDecorations(view);
-            }
-
-            update(update: any) {
-              if (update.docChanged || update.viewportChanged) {
-                this.decorations = buildTwigDecorations(update.view);
-              }
-            }
-          },
-          {
-            decorations: (plugin: any) => plugin.decorations ?? Decoration.none,
-          },
-        );
-
-        const updateListener = CMEditorView.updateListener.of((update) => {
-          if (!update.docChanged || isCodeMirrorSyncingRef.current) {
-            return;
-          }
-          const newValue = update.state.doc.toString();
-          templateContentRef.current = newValue;
-          setTemplateContent((prev) => (prev === newValue ? prev : newValue));
         });
 
-        const extensions = [
-          lineNumbers(),
-          highlightActiveLineGutter(),
-          highlightSpecialChars(),
-          history(),
-          drawSelection(),
-          dropCursor(),
-          rectangularSelection(),
-          indentOnInput(),
-          html({ matchClosingTags: false, autoCloseTags: false }),
-          syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-          bracketMatching(),
-          closeBrackets(),
-          foldGutter(),
-          autoCloseTags,
-          indentUnit.of("  "),
-          EditorState.tabSize.of(2),
-          keymap.of([
-            ...defaultKeymap,
-            ...historyKeymap,
-            ...closeBracketsKeymap,
-            ...foldKeymap,
-            ...completionKeymap,
-            indentWithTab,
-          ]),
-          highlightActiveLine(),
-          CMEditorView.lineWrapping,
-          placeholder("{% block body %}...{% endblock %}"),
-          twigHighlightPlugin,
-          theme,
-          updateListener,
-        ];
-
-        const state = EditorState.create({
-          doc: templateContentRef.current ?? "",
-          extensions,
-        });
-
-        const view = new CMEditorView({
-          state,
-          parent: containerElement,
-        });
-
-        view.dom.classList.add("w-full", "shadow-sm");
-        view.dom.setAttribute("aria-labelledby", templateEditorLabelId);
-        view.dom.setAttribute("role", "textbox");
-        view.dom.setAttribute("aria-multiline", "true");
-
-        codeMirrorInstanceRef.current = view;
-      } catch (error) {
-        console.error("Nu s-a putut încărca editorul CodeMirror:", error);
+        monacoConfiguredRef.current = true;
       }
-    };
+    },
+    [],
+  );
 
-    void mountEditor();
+  const handleEditorWillMount = useCallback(
+    (monaco: Monaco) => {
+      configureMonaco(monaco);
+      monacoInstanceRef.current = monaco;
+    },
+    [configureMonaco],
+  );
 
-    return () => {
-      cancelled = true;
-      const instance = codeMirrorInstanceRef.current;
-      if (instance) {
-        instance.destroy();
-        codeMirrorInstanceRef.current = null;
+  const handleEditorDidMount = useCallback(
+    (editor: MonacoEditorType.editor.IStandaloneCodeEditor, monaco: Monaco) => {
+      monacoInstanceRef.current = monaco;
+      configureMonaco(monaco);
+      monaco.editor.setTheme("mail-branding");
+      monacoEditorRef.current = editor;
+      const model = editor.getModel();
+      if (model) {
+        model.updateOptions({ tabSize: 2, insertSpaces: true });
       }
-      isCodeMirrorSyncingRef.current = false;
-      if (containerElement) {
-        containerElement.innerHTML = "";
+      templateContentRef.current = editor.getValue();
+    },
+    [configureMonaco],
+  );
+
+  const handleEditorChange = useCallback(
+    (value?: string) => {
+      const nextValue = value ?? "";
+      templateContentRef.current = nextValue;
+      setTemplateContent((prev) => (prev === nextValue ? prev : nextValue));
+    },
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      const editor = monacoEditorRef.current;
+      if (editor) {
+        editor.dispose();
+        monacoEditorRef.current = null;
       }
-    };
-  }, [templateEditorLabelId]);
+      monacoInstanceRef.current = null;
+    },
+    [],
+  );
 
-  useEffect(() => {
-    const view = codeMirrorInstanceRef.current;
-    if (!view) {
-      return;
-    }
-
-    const currentValue = view.state.doc.toString();
-    if (currentValue === templateContent) {
-      return;
-    }
-
-    const { scrollTop, scrollLeft } = view.scrollDOM;
-    const { main } = view.state.selection;
-    const anchor = Math.min(main.anchor, templateContent.length);
-    const head = Math.min(main.head, templateContent.length);
-
-    isCodeMirrorSyncingRef.current = true;
-    view.dispatch({
-      changes: { from: 0, to: currentValue.length, insert: templateContent },
-      selection: { anchor, head },
-    });
-    view.scrollDOM.scrollTop = scrollTop;
-    view.scrollDOM.scrollLeft = scrollLeft;
-    isCodeMirrorSyncingRef.current = false;
-  }, [templateContent]);
 
   useEffect(() => {
     let active = true;
@@ -2160,31 +2097,66 @@ const MailBrandingPage = () => {
   const insertSnippet = useCallback(
     (snippet: string, options?: { placeholder?: string; mode?: SnippetMode }) => {
       const mode: SnippetMode = options?.mode ?? "inline";
-      const placeholder = options?.placeholder && options.placeholder.length > 0
-        ? options.placeholder
-        : undefined;
-      const view = codeMirrorInstanceRef.current;
+      const placeholder =
+        options?.placeholder && options.placeholder.length > 0
+          ? options.placeholder
+          : undefined;
+      const editor = monacoEditorRef.current;
+      const monaco = monacoInstanceRef.current;
 
-      if (view) {
-        const { state } = view;
-        const { main } = state.selection;
-        const from = Math.min(main.from, main.to);
-        const to = Math.max(main.from, main.to);
-        const placeholderIndex = placeholder ? snippet.indexOf(placeholder) : -1;
-        const selectionStart =
-          placeholderIndex >= 0 ? from + placeholderIndex : from + snippet.length;
-        const selectionEnd =
-          placeholderIndex >= 0 && placeholder
-            ? selectionStart + placeholder.length
-            : selectionStart;
+      if (editor && monaco) {
+        const model = editor.getModel();
+        if (model) {
+          let selection = editor.getSelection();
+          if (!selection) {
+            const endPosition = model.getPositionAt(model.getValueLength());
+            selection = monaco.Selection.create(
+              endPosition.lineNumber,
+              endPosition.column,
+              endPosition.lineNumber,
+              endPosition.column,
+            );
+          }
 
-        view.dispatch({
-          changes: { from, to, insert: snippet },
-          selection: { anchor: selectionStart, head: selectionEnd },
-          scrollIntoView: true,
-        });
-        view.focus();
-        return;
+          const startOffset = model.getOffsetAt(selection.getStartPosition());
+          const placeholderIndex = placeholder ? snippet.indexOf(placeholder) : -1;
+          const anchorOffset =
+            placeholderIndex >= 0
+              ? startOffset + placeholderIndex
+              : startOffset + snippet.length;
+          const headOffset =
+            placeholderIndex >= 0 && placeholder
+              ? anchorOffset + placeholder.length
+              : anchorOffset;
+
+          editor.pushUndoStop();
+          editor.executeEdits("mail-branding-snippet", [
+            {
+              range: selection,
+              text: snippet,
+              forceMoveMarkers: true,
+            },
+          ]);
+          editor.pushUndoStop();
+
+          const newValue = model.getValue();
+          templateContentRef.current = newValue;
+          setTemplateContent((prev) => (prev === newValue ? prev : newValue));
+
+          const anchorPosition = model.getPositionAt(anchorOffset);
+          const headPosition = model.getPositionAt(headOffset);
+          editor.setSelection(
+            monaco.Selection.create(
+              anchorPosition.lineNumber,
+              anchorPosition.column,
+              headPosition.lineNumber,
+              headPosition.column,
+            ),
+          );
+          editor.revealLineInCenter(anchorPosition.lineNumber);
+          editor.focus();
+          return;
+        }
       }
 
       const base = templateContentRef.current ?? "";
@@ -2487,6 +2459,49 @@ const MailBrandingPage = () => {
   const currentAttachments: MailTemplateAttachment[] = Array.isArray(attachmentsList)
     ? attachmentsList
     : [];
+
+  const editorModelPath = useMemo(() => {
+    if (currentTemplate?.path) {
+      return currentTemplate.path;
+    }
+    if (selectedTemplateKey) {
+      return `${selectedTemplateKey}.twig`;
+    }
+    return "mail-template.twig";
+  }, [currentTemplate, selectedTemplateKey]);
+
+  const editorOptions = useMemo<
+    MonacoEditorType.editor.IStandaloneEditorConstructionOptions
+  >(
+    () => ({
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      fontFamily:
+        "'Fira Code', 'SFMono-Regular', Menlo, Monaco, 'Courier New', monospace",
+      fontSize: 14,
+      lineHeight: 22,
+      wordWrap: "on",
+      wrappingIndent: "same",
+      smoothScrolling: true,
+      automaticLayout: true,
+      renderLineHighlight: "line",
+      lineNumbers: "on",
+      lineNumbersMinChars: 3,
+      glyphMargin: false,
+      contextmenu: true,
+      padding: { top: 16, bottom: 16 },
+      tabSize: 2,
+      insertSpaces: true,
+      quickSuggestions: true,
+      autoClosingBrackets: "languageDefined",
+      autoClosingQuotes: "languageDefined",
+      formatOnPaste: false,
+      formatOnType: false,
+      ariaLabel: "Editor conținut template Twig",
+      readOnly: !selectedTemplateKey || templateLoading,
+    }),
+    [selectedTemplateKey, templateLoading],
+  );
 
   const availableVariableMetadata = useMemo(() => {
     const detail = selectedTemplateKey ? templateDetails[selectedTemplateKey] : null;
@@ -2997,17 +3012,34 @@ const MailBrandingPage = () => {
                     </div>
                   )}
                 </div>
-                <div
-                  ref={codeMirrorContainerRef}
-                  className="mt-4 min-h-[360px]"
-                  data-codemirror-container
-                >
-                  <div
-                    data-codemirror-fallback
-                    className="flex min-h-[360px] items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500"
-                  >
-                    Editorul se încarcă...
-                  </div>
+                <div className="mt-4 min-h-[360px]">
+                  {isClient ? (
+                    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm focus-within:ring-2 focus-within:ring-jade/30 focus-within:ring-offset-2">
+                      <Editor
+                        className="monaco-mail-editor"
+                        value={templateContent}
+                        defaultLanguage="twig"
+                        language="twig"
+                        theme="mail-branding"
+                        path={editorModelPath}
+                        beforeMount={handleEditorWillMount}
+                        onMount={handleEditorDidMount}
+                        onChange={handleEditorChange}
+                        options={editorOptions}
+                        height="520px"
+                        loading={
+                          <div className="flex min-h-[320px] items-center justify-center text-sm text-gray-500">
+                            Editorul se încarcă...
+                          </div>
+                        }
+                        wrapperProps={{ "aria-labelledby": templateEditorLabelId }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
+                      Editorul se încarcă...
+                    </div>
+                  )}
                 </div>
               </div>
 

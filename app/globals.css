@@ -71,3 +71,26 @@
 .select-trigger optgroup option {
     padding-left: 1rem;
 }
+
+.monaco-mail-editor {
+    width: 100%;
+}
+
+.monaco-mail-editor .monaco-editor,
+.monaco-mail-editor .monaco-editor-background,
+.monaco-mail-editor .margin {
+    background-color: transparent !important;
+}
+
+.monaco-mail-editor .monaco-editor .line-numbers {
+    color: rgb(156 163 175 / 1) !important;
+}
+
+.monaco-mail-editor .monaco-editor .view-lines {
+    padding-left: 0.5rem !important;
+    padding-right: 1rem !important;
+}
+
+.monaco-mail-editor .monaco-editor .current-line {
+    background-color: rgba(219, 234, 254, 0.45) !important;
+}
