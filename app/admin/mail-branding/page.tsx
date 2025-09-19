@@ -1075,6 +1075,7 @@ const MailBrandingPage = () => {
           languageModule,
           autocompleteModule,
           htmlModule,
+          highlightModule,
           twigModule,
         ] = await Promise.all([
           import("@codemirror/state"),
@@ -1083,6 +1084,7 @@ const MailBrandingPage = () => {
           import("@codemirror/language"),
           import("@codemirror/autocomplete"),
           import("@codemirror/lang-html"),
+          import("@lezer/highlight"),
           import("@ssddanbrown/codemirror-lang-twig"),
         ]);
 
@@ -1090,7 +1092,7 @@ const MailBrandingPage = () => {
           return;
         }
 
-        const { EditorState } = stateModule;
+        const { EditorState, RangeSetBuilder } = stateModule;
         const {
           EditorView: CMEditorView,
           keymap,
@@ -1102,6 +1104,8 @@ const MailBrandingPage = () => {
           dropCursor,
           rectangularSelection,
           placeholder,
+          Decoration,
+          ViewPlugin,
         } = viewModule;
         const { history, historyKeymap, indentWithTab, defaultKeymap } = commandsModule;
         const {
@@ -1112,10 +1116,12 @@ const MailBrandingPage = () => {
           foldKeymap,
           indentUnit,
           bracketMatching,
+          HighlightStyle,
         } = languageModule;
         const { closeBrackets, closeBracketsKeymap, completionKeymap } = autocompleteModule;
-        const { autoCloseTags } = htmlModule;
-        const { twig } = twigModule;
+        const { autoCloseTags, html } = htmlModule;
+        const { highlightTree, tags } = highlightModule;
+        const { twigLanguage } = twigModule;
 
         const fallbackElement = containerElement.querySelector<HTMLElement>(
           "[data-codemirror-fallback]",
@@ -1144,16 +1150,142 @@ const MailBrandingPage = () => {
               lineHeight: "1.5",
               padding: "12px 16px",
               backgroundColor: "transparent",
+              maxHeight: "520px",
+              overflow: "auto",
             },
             ".cm-content": {
-              minHeight: "360px",
+              minHeight: "220px",
+              paddingBottom: "8px",
             },
             ".cm-gutters": {
               backgroundColor: "transparent",
               border: "none",
             },
+            ".cm-lineNumbers .cm-gutterElement": {
+              color: "#9ca3af",
+            },
+            ".cm-activeLineGutter": {
+              backgroundColor: "transparent",
+              color: "#2563eb",
+              fontWeight: "600",
+            },
+            ".cm-twig-meta": {
+              color: "#475569",
+            },
+            ".cm-twig-keyword": {
+              color: "#2563eb",
+              fontWeight: "600",
+            },
+            ".cm-twig-boolean": {
+              color: "#0f766e",
+              fontWeight: "600",
+            },
+            ".cm-twig-variable": {
+              color: "#9333ea",
+            },
+            ".cm-twig-function": {
+              color: "#7c3aed",
+              fontWeight: "600",
+            },
+            ".cm-twig-string": {
+              color: "#047857",
+            },
+            ".cm-twig-number": {
+              color: "#b45309",
+            },
+            ".cm-twig-operator": {
+              color: "#dc2626",
+            },
+            ".cm-twig-comment": {
+              color: "#94a3b8",
+              fontStyle: "italic",
+            },
+            ".cm-twig-punctuation": {
+              color: "#64748b",
+            },
           },
           { dark: false },
+        );
+
+        const twigHighlightStyle = HighlightStyle.define([
+          { tag: tags.meta, class: "cm-twig-meta" },
+          { tag: tags.comment, class: "cm-twig-comment" },
+          { tag: tags.keyword, class: "cm-twig-keyword" },
+          { tag: tags.bool, class: "cm-twig-boolean" },
+          { tag: tags.variableName, class: "cm-twig-variable" },
+          { tag: tags.definition(tags.variableName), class: "cm-twig-variable" },
+          { tag: tags.function(tags.variableName), class: "cm-twig-function" },
+          { tag: tags.string, class: "cm-twig-string" },
+          { tag: tags.number, class: "cm-twig-number" },
+          {
+            tag: [tags.operator, tags.compareOperator, tags.arithmeticOperator],
+            class: "cm-twig-operator",
+          },
+          {
+            tag: [tags.brace, tags.paren, tags.punctuation],
+            class: "cm-twig-punctuation",
+          },
+        ]);
+
+        const twigExpressionPattern =
+          /\{\{[\s\S]*?\}\}|\{#[\s\S]*?#\}|\{%[\s\S]*?%\}/g;
+
+        const buildTwigDecorations = (view: any) => {
+          const builder = new RangeSetBuilder<Decoration>();
+          const processedStarts = new Set<number>();
+          let hasDecorations = false;
+
+          for (const range of view.visibleRanges) {
+            const rangeFrom = Math.max(0, range.from - 200);
+            const rangeTo = Math.min(view.state.doc.length, range.to + 200);
+            const slice = view.state.doc.sliceString(rangeFrom, rangeTo);
+            twigExpressionPattern.lastIndex = 0;
+
+            let match: RegExpExecArray | null;
+            // eslint-disable-next-line no-cond-assign
+            while ((match = twigExpressionPattern.exec(slice)) !== null) {
+              const start = rangeFrom + match.index;
+              if (processedStarts.has(start)) {
+                continue;
+              }
+              processedStarts.add(start);
+
+              const segment = match[0];
+              const tree = twigLanguage.parser.parse(segment);
+              highlightTree(tree, twigHighlightStyle, (from, to, classes) => {
+                if (!classes || to <= from) {
+                  return;
+                }
+                hasDecorations = true;
+                builder.add(
+                  start + from,
+                  start + to,
+                  Decoration.mark({ class: classes }),
+                );
+              });
+            }
+          }
+
+          return hasDecorations ? builder.finish() : Decoration.none;
+        };
+
+        const twigHighlightPlugin = ViewPlugin.fromClass(
+          class {
+            decorations = Decoration.none;
+
+            constructor(view: any) {
+              this.decorations = buildTwigDecorations(view);
+            }
+
+            update(update: any) {
+              if (update.docChanged || update.viewportChanged) {
+                this.decorations = buildTwigDecorations(update.view);
+              }
+            }
+          },
+          {
+            decorations: (plugin: any) => plugin.decorations ?? Decoration.none,
+          },
         );
 
         const updateListener = CMEditorView.updateListener.of((update) => {
@@ -1174,6 +1306,7 @@ const MailBrandingPage = () => {
           dropCursor(),
           rectangularSelection(),
           indentOnInput(),
+          html({ matchClosingTags: false, autoCloseTags: false }),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
           bracketMatching(),
           closeBrackets({ brackets: ["(", "[", "{", "'", "\"", "<"] }),
@@ -1189,10 +1322,10 @@ const MailBrandingPage = () => {
             ...completionKeymap,
             indentWithTab,
           ]),
-          twig(),
           highlightActiveLine(),
           CMEditorView.lineWrapping,
           placeholder("{% block body %}...{% endblock %}"),
+          twigHighlightPlugin,
           theme,
           updateListener,
         ];
