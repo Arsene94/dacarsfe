@@ -2107,18 +2107,20 @@ const MailBrandingPage = () => {
       if (editor && monaco) {
         const model = editor.getModel();
         if (model) {
-          let selection = editor.getSelection();
-          if (!selection) {
-            const endPosition = model.getPositionAt(model.getValueLength());
-            selection = monaco.Selection.create(
+          const currentSelection = editor.getSelection();
+          const endPosition = model.getPositionAt(model.getValueLength());
+          const effectiveSelection =
+            currentSelection ??
+            new monaco.Selection(
               endPosition.lineNumber,
               endPosition.column,
               endPosition.lineNumber,
               endPosition.column,
             );
-          }
 
-          const startOffset = model.getOffsetAt(selection.getStartPosition());
+          const startOffset = model.getOffsetAt(
+            effectiveSelection.getStartPosition(),
+          );
           const placeholderIndex = placeholder ? snippet.indexOf(placeholder) : -1;
           const anchorOffset =
             placeholderIndex >= 0
@@ -2132,7 +2134,7 @@ const MailBrandingPage = () => {
           editor.pushUndoStop();
           editor.executeEdits("mail-branding-snippet", [
             {
-              range: selection,
+              range: effectiveSelection,
               text: snippet,
               forceMoveMarkers: true,
             },
@@ -2146,7 +2148,7 @@ const MailBrandingPage = () => {
           const anchorPosition = model.getPositionAt(anchorOffset);
           const headPosition = model.getPositionAt(headOffset);
           editor.setSelection(
-            monaco.Selection.create(
+            new monaco.Selection(
               anchorPosition.lineNumber,
               anchorPosition.column,
               headPosition.lineNumber,
