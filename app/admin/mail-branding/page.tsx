@@ -2481,8 +2481,8 @@ const MailBrandingPage = () => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-            <div className="min-w-0 flex-1 space-y-6">
+          <div className="flex flex-col gap-6">
+            <div className="min-w-0 w-full space-y-6">
               <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
                 <h3 id={templateEditorLabelId} className="text-lg font-semibold text-berkeley">
                   Conținut Twig
@@ -2616,7 +2616,7 @@ const MailBrandingPage = () => {
             </div>
 
             <div
-              className="min-w-0 lg:flex-1"
+              className="min-w-0 w-full mx-auto"
               style={{ maxWidth: `${PREVIEW_CARD_MAX_WIDTH}px` }}
             >
               <div className="space-y-3 rounded-2xl border border-gray-200 p-4 sm:p-6">
