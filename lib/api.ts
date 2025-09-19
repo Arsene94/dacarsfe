@@ -6,6 +6,14 @@ import type {
     CategoryPrice,
     CategoryPriceCalendar,
 } from "@/types/admin";
+import type {
+    MailBrandingResponse,
+    MailBrandingUpdatePayload,
+    MailTemplateAttachmentsResponse,
+    MailTemplateDetailResponse,
+    MailTemplateUpdatePayload,
+    MailTemplatesResponse,
+} from "@/types/mail";
 import type { Role } from "@/types/roles";
 import type { WheelOfFortunePrizePayload } from "@/types/wheel";
 
@@ -742,6 +750,56 @@ class ApiClient {
         }
         const query = searchParams.toString();
         return this.request<any>(`/wheel-of-fortune-prizes${query ? `?${query}` : ''}`);
+    }
+
+    async getMailBrandingSettings() {
+        return this.request<MailBrandingResponse>(`/mail-branding-settings`);
+    }
+
+    async updateMailBrandingSettings(payload: MailBrandingUpdatePayload) {
+        return this.request<MailBrandingResponse>(`/mail-branding-settings`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async getMailTemplates() {
+        return this.request<MailTemplatesResponse>(`/mail-templates`);
+    }
+
+    async getMailTemplateDetail(templateKey: string) {
+        const key = encodeURIComponent(templateKey.trim());
+        return this.request<MailTemplateDetailResponse>(`/mail-templates/${key}`);
+    }
+
+    async updateMailTemplate(templateKey: string, payload: MailTemplateUpdatePayload) {
+        const key = encodeURIComponent(templateKey.trim());
+        return this.request<MailTemplateDetailResponse>(`/mail-templates/${key}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async uploadMailTemplateAttachment(templateKey: string, file: File | Blob) {
+        const key = encodeURIComponent(templateKey.trim());
+        const formData = new FormData();
+        const fileName =
+            'name' in file && typeof file.name === 'string' && file.name.length > 0
+                ? file.name
+                : 'attachment';
+        formData.append('file', file, fileName);
+        return this.request<MailTemplateAttachmentsResponse>(`/mail-templates/${key}/attachments`, {
+            method: 'POST',
+            body: formData,
+        });
+    }
+
+    async deleteMailTemplateAttachment(templateKey: string, attachmentUuid: string) {
+        const key = encodeURIComponent(templateKey.trim());
+        const attachment = encodeURIComponent(attachmentUuid.trim());
+        return this.request<MailTemplateAttachmentsResponse>(`/mail-templates/${key}/attachments/${attachment}`, {
+            method: 'DELETE',
+        });
     }
 
     // Authentication helpers
