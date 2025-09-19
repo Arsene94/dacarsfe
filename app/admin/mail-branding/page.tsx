@@ -1585,16 +1585,9 @@ const MailBrandingPage = () => {
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <style>
         :root { color-scheme: light; }
-        html, body { width: 100%; min-height: 100%; margin: 0; padding: 0; background: #f3f4f6; overflow-x: hidden; }
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-        body * { box-sizing: border-box; }
-        .email-preview-wrapper { width: 100%; min-height: 100vh; background: #f3f4f6; padding: 24px 12px; display: flex; justify-content: center; align-items: flex-start; }
-        .email-preview-container { position: relative; margin: 0 auto; width: min(100%, ${MOBILE_PREVIEW_WIDTH}px); max-width: ${MOBILE_PREVIEW_WIDTH}px; transform-origin: top center; }
-        .email-preview-container table { width: 100% !important; max-width: 100% !important; margin-left: auto; margin-right: auto; }
-        .email-preview-container table td, .email-preview-container table th { width: 100% !important; }
-        .email-preview-container p, .email-preview-container li, .email-preview-container span { max-width: 100%; }
+        html { width: 100%; min-height: 100%; }
+        body { margin: 0; padding: 0; width: 100%; min-height: 100%; background: transparent; -webkit-text-size-adjust: 100%; }
         img { max-width: 100%; height: auto; }
-        a { color: inherit; }
       </style>
     `;
 
@@ -1605,7 +1598,7 @@ const MailBrandingPage = () => {
       return trimmed.replace(/<html([^>]*)>/i, `<html$1><head>${headStyles}</head>`);
     }
 
-    return `<!DOCTYPE html><html><head>${headStyles}</head><body><div class="email-preview-wrapper"><div class="email-preview-container">${trimmed}</div></div></body></html>`;
+    return `<!DOCTYPE html><html><head>${headStyles}</head><body>${trimmed}</body></html>`;
   }, [previewHtml]);
 
   const mergedPreviewContext = useMemo(() => {
@@ -1629,46 +1622,23 @@ const MailBrandingPage = () => {
 
       const html = doc.documentElement;
       const body = doc.body;
+
       if (html) {
         html.style.overflowX = "hidden";
-        html.style.backgroundColor = "#f3f4f6";
+        html.style.width = "100%";
       }
+
       if (body) {
+        body.style.margin = "0";
+        body.style.width = "100%";
         body.style.overflowX = "hidden";
-        body.style.backgroundColor = "#f3f4f6";
-      }
-
-      const container = doc.querySelector<HTMLElement>(".email-preview-container");
-      const wrapper = doc.querySelector<HTMLElement>(".email-preview-wrapper");
-
-      if (wrapper) {
-        wrapper.style.display = "flex";
-        wrapper.style.justifyContent = "center";
-        wrapper.style.alignItems = "flex-start";
-        wrapper.style.width = "100%";
-      }
-
-      const frameBounds = iframe.getBoundingClientRect();
-      const frameWidth = frameBounds.width || iframe.clientWidth;
-
-      if (container) {
-        const targetWidth =
-          frameWidth > 0 ? Math.min(frameWidth, MOBILE_PREVIEW_WIDTH) : MOBILE_PREVIEW_WIDTH;
-
-        container.style.margin = "0 auto";
-        container.style.transformOrigin = "top center";
-        container.style.maxWidth = `${MOBILE_PREVIEW_WIDTH}px`;
-        container.style.width = `${targetWidth}px`;
-        container.style.removeProperty("transform");
       }
 
       const measuredHeight =
-        wrapper?.getBoundingClientRect().height ??
-        container?.getBoundingClientRect().height ??
         body?.getBoundingClientRect().height ??
         html?.getBoundingClientRect().height ??
-        html?.scrollHeight ??
         body?.scrollHeight ??
+        html?.scrollHeight ??
         iframe.clientHeight;
 
       if (!measuredHeight || Number.isNaN(measuredHeight)) {
