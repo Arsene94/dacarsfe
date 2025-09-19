@@ -51,6 +51,8 @@ type MailBrandingFormState = {
   colors: MailBrandingColors;
 };
 
+const MOBILE_PREVIEW_WIDTH = 384;
+
 const createEmptyLink = (): MailMenuLink => ({ label: "", url: "" });
 
 const normalizeLinkArray = (links?: MailMenuLink[] | null): MailMenuLink[] => {
@@ -124,6 +126,96 @@ const createDefaultPreviewContext = (
   site?: MailSiteDetails | null,
   colors?: MailBrandingColors | null,
 ): Record<string, unknown> => {
+  const heroBadgeLabel = "Oferta săptămânii";
+  const heroBadgeColor = colors?.jadeLight ?? "#38B275";
+  const heroBadgeTextColor = "#FFFFFF";
+  const heroBadgeBackground = "#E8F8F0";
+  const heroIconChar = "🚗";
+  const heroTitle = "Rezervarea ta este confirmată";
+  const heroSubtitle = "Mulțumim că ai ales DaCars pentru următoarea călătorie.";
+  const heroDescription =
+    "Predarea și preluarea au loc direct în aeroport. Verifică detaliile de mai jos înainte de plecare.";
+  const heroSupportMessage = "Echipa noastră este disponibilă non-stop dacă ai nevoie de ajutor.";
+
+  const heroPrimaryAction = createActionMock(
+    "Vezi rezervarea",
+    site?.url ? `${site.url.replace(/\/?$/, "")}/rezervari` : "https://dacars.ro/rezervari",
+  );
+  const heroSecondaryAction = createActionMock(
+    "Contactează-ne",
+    site?.email ? `mailto:${site.email}` : "mailto:contact@dacars.ro",
+  );
+  const heroPrimaryButton = createActionMock(
+    "Confirmă sosirea",
+    site?.url ? `${site.url.replace(/\/?$/, "")}/check-in` : "https://dacars.ro/check-in",
+  );
+  const heroSecondaryButton = createActionMock(
+    "Modifică rezervarea",
+    site?.url ? `${site.url.replace(/\/?$/, "")}/modifica` : "https://dacars.ro/modifica",
+  );
+
+  const heroFeatures = [
+    createListEntryMock("Predare rapidă", {
+      description: "Preluare în mai puțin de 5 minute direct din aeroport.",
+      icon: "⚡️",
+    }),
+    createListEntryMock("Asistență 24/7", {
+      description: "Suntem disponibili telefonic și pe WhatsApp în orice moment.",
+      icon: "📞",
+    }),
+    createListEntryMock("Fără garanție ascunsă", {
+      description: "Plătești exact cât ai confirmat în rezervare, fără surprize.",
+      icon: "✅",
+    }),
+  ];
+
+  const heroSteps = [
+    createListEntryMock("Completezi formularul", {
+      description: "Îți introduci datele și alegi mașina potrivită.",
+      char: "1",
+    }),
+    createListEntryMock("Confirmi rezervarea", {
+      description: "Primești imediat toate detaliile prin email.",
+      char: "2",
+    }),
+    createListEntryMock("Ne vedem la aeroport", {
+      description: "Predăm mașina și ești gata de drum.",
+      char: "3",
+    }),
+  ];
+
+  const heroStats = [
+    createListEntryMock("12.500+", {
+      title: "Clienți mulțumiți",
+      description: "Au ales DaCars pentru vacanțe fără griji.",
+      icon: "🎉",
+    }),
+    createListEntryMock("98%", {
+      title: "Recomandă DaCars",
+      description: "Feedback excelent pentru echipa noastră.",
+      icon: "👍",
+    }),
+  ];
+
+  const heroContext = {
+    icon_char: heroIconChar,
+    badge_label: heroBadgeLabel,
+    badge_color: heroBadgeColor,
+    badge_text_color: heroBadgeTextColor,
+    badge_background: heroBadgeBackground,
+    title: heroTitle,
+    subtitle: heroSubtitle,
+    description: heroDescription,
+    support_message: heroSupportMessage,
+    primary_action: heroPrimaryAction,
+    secondary_action: heroSecondaryAction,
+    primary_button: heroPrimaryButton,
+    secondary_button: heroSecondaryButton,
+    features: heroFeatures,
+    steps: heroSteps,
+    stats: heroStats,
+  };
+
   const baseContext: Record<string, unknown> = {
     site: site ?? null,
     colors: colors ?? null,
@@ -131,6 +223,8 @@ const createDefaultPreviewContext = (
     customer_email: "ion.popescu@example.com",
     booking_number: "DAC-12345",
     booking_reference: "DAC-12345",
+    reservation_id: "DAC-12345",
+    reservation_badge: "Rezervarea #DAC-12345",
     booking_created_at: "2024-06-15 10:30",
     pickup_date: "2024-07-01",
     pickup_time: "08:30",
@@ -160,72 +254,23 @@ const createDefaultPreviewContext = (
       phone: site?.support_phone ?? "+40 722 123 456",
       email: site?.email ?? "contact@dacars.ro",
     },
-    hero_icon_char: "🚗",
-    hero_badge_label: "Oferta săptămânii",
-    hero_badge_color: colors?.jadeLight ?? "#38B275",
-    hero_badge_text_color: "#FFFFFF",
-    hero_badge_background: "#E8F8F0",
-    hero_title: "Rezervarea ta este confirmată",
-    hero_subtitle: "Mulțumim că ai ales DaCars pentru următoarea călătorie.",
-    hero_description:
-      "Predarea și preluarea au loc direct în aeroport. Verifică detaliile de mai jos înainte de plecare.",
-    hero_support_message: "Echipa noastră este disponibilă non-stop dacă ai nevoie de ajutor.",
-    hero_primary_action: createActionMock(
-      "Vezi rezervarea",
-      site?.url ? `${site.url.replace(/\/?$/, "")}/rezervari` : "https://dacars.ro/rezervari",
-    ),
-    hero_secondary_action: createActionMock(
-      "Contactează-ne",
-      site?.email ? `mailto:${site.email}` : "mailto:contact@dacars.ro",
-    ),
-    hero_primary_button: createActionMock(
-      "Confirmă sosirea",
-      site?.url ? `${site.url.replace(/\/?$/, "")}/check-in` : "https://dacars.ro/check-in",
-    ),
-    hero_secondary_button: createActionMock(
-      "Modifică rezervarea",
-      site?.url ? `${site.url.replace(/\/?$/, "")}/modifica` : "https://dacars.ro/modifica",
-    ),
-    hero_features: enhancePreviewValue([
-      createListEntryMock("Predare rapidă", {
-        description: "Preluare în mai puțin de 5 minute direct din aeroport.",
-        icon: "⚡️",
-      }),
-      createListEntryMock("Asistență 24/7", {
-        description: "Suntem disponibili telefonic și pe WhatsApp în orice moment.",
-        icon: "📞",
-      }),
-      createListEntryMock("Fără garanție ascunsă", {
-        description: "Plătești exact cât ai confirmat în rezervare, fără surprize.",
-        icon: "✅",
-      }),
-    ]),
-    hero_steps: enhancePreviewValue([
-      createListEntryMock("Completezi formularul", {
-        description: "Îți introduci datele și alegi mașina potrivită.",
-        char: "1",
-      }),
-      createListEntryMock("Confirmi rezervarea", {
-        description: "Primești imediat toate detaliile prin email.",
-        char: "2",
-      }),
-      createListEntryMock("Ne vedem la aeroport", {
-        description: "Predăm mașina și ești gata de drum.",
-        char: "3",
-      }),
-    ]),
-    hero_stats: enhancePreviewValue([
-      createListEntryMock("12.500+", {
-        title: "Clienți mulțumiți",
-        description: "Au ales DaCars pentru vacanțe fără griji.",
-        icon: "🎉",
-      }),
-      createListEntryMock("98%", {
-        title: "Recomandă DaCars",
-        description: "Feedback excelent pentru echipa noastră.",
-        icon: "👍",
-      }),
-    ]),
+    hero_icon_char: heroIconChar,
+    hero_badge_label: heroBadgeLabel,
+    hero_badge_color: heroBadgeColor,
+    hero_badge_text_color: heroBadgeTextColor,
+    hero_badge_background: heroBadgeBackground,
+    hero_title: heroTitle,
+    hero_subtitle: heroSubtitle,
+    hero_description: heroDescription,
+    hero_support_message: heroSupportMessage,
+    hero_primary_action: heroPrimaryAction,
+    hero_secondary_action: heroSecondaryAction,
+    hero_primary_button: heroPrimaryButton,
+    hero_secondary_button: heroSecondaryButton,
+    hero_features: heroFeatures,
+    hero_steps: heroSteps,
+    hero_stats: heroStats,
+    hero: heroContext,
   };
 
   return enhancePreviewValue(baseContext) as Record<string, unknown>;
@@ -321,6 +366,8 @@ const EXACT_MOCK_VALUES: Record<string, unknown> = {
   customer_email: "ion.popescu@example.com",
   booking_number: "DAC-12345",
   booking_reference: "DAC-12345",
+  reservation_id: "DAC-12345",
+  reservation_badge: "Rezervarea #DAC-12345",
   pickup_date: "2024-07-01",
   dropoff_date: "2024-07-07",
   pickup_time: "08:30",
@@ -1543,7 +1590,10 @@ const MailBrandingPage = () => {
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
         body * { box-sizing: border-box; }
         .email-preview-wrapper { width: 100%; min-height: 100vh; background: #f3f4f6; padding: 24px 12px; display: flex; justify-content: center; align-items: flex-start; }
-        .email-preview-container { position: relative; margin: 0 auto; max-width: none; width: auto; transform-origin: top center; }
+        .email-preview-container { position: relative; margin: 0 auto; width: min(100%, ${MOBILE_PREVIEW_WIDTH}px); max-width: ${MOBILE_PREVIEW_WIDTH}px; transform-origin: top center; }
+        .email-preview-container table { width: 100% !important; max-width: 100% !important; margin-left: auto; margin-right: auto; }
+        .email-preview-container table td, .email-preview-container table th { width: 100% !important; }
+        .email-preview-container p, .email-preview-container li, .email-preview-container span { max-width: 100%; }
         img { max-width: 100%; height: auto; }
         a { color: inherit; }
       </style>
@@ -1602,31 +1652,15 @@ const MailBrandingPage = () => {
       const frameBounds = iframe.getBoundingClientRect();
       const frameWidth = frameBounds.width || iframe.clientWidth;
 
-      if (container && frameWidth > 0) {
-        const contentWidth = Math.max(
-          container.scrollWidth,
-          body?.scrollWidth ?? 0,
-          html?.scrollWidth ?? 0,
-        );
+      if (container) {
+        const targetWidth =
+          frameWidth > 0 ? Math.min(frameWidth, MOBILE_PREVIEW_WIDTH) : MOBILE_PREVIEW_WIDTH;
 
         container.style.margin = "0 auto";
         container.style.transformOrigin = "top center";
-
-        if (contentWidth > 0) {
-          const scale = Math.min(1, frameWidth / contentWidth);
-          container.style.maxWidth = `${contentWidth}px`;
-          container.style.width = `${contentWidth}px`;
-
-          if (scale < 0.999) {
-            container.style.transform = `scale(${scale})`;
-          } else {
-            container.style.removeProperty("transform");
-          }
-        } else {
-          container.style.removeProperty("transform");
-          container.style.removeProperty("width");
-          container.style.removeProperty("maxWidth");
-        }
+        container.style.maxWidth = `${MOBILE_PREVIEW_WIDTH}px`;
+        container.style.width = `${targetWidth}px`;
+        container.style.removeProperty("transform");
       }
 
       const measuredHeight =
