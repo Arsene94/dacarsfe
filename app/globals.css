@@ -38,3 +38,36 @@
 .rich-text-editor--content .ck.ck-editor__editable:not(.ck-editor__nested-editable) {
     min-height: 160px;
 }
+
+.select-trigger option {
+    font-family: var(--font-dm-sans, var(--font-sans));
+    font-size: 0.9375rem;
+    color: #191919;
+    background-color: #ffffff;
+}
+
+.select-trigger option:checked,
+.select-trigger option:focus,
+.select-trigger option:hover {
+    background-color: rgba(56, 178, 117, 0.16);
+    color: #1a3661;
+}
+
+.select-trigger option:disabled {
+    color: #9ca3af;
+    background-color: #f3f4f6;
+}
+
+.select-trigger optgroup {
+    font-family: var(--font-dm-sans, var(--font-sans));
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #1a3661;
+    background-color: #f5f7fb;
+}
+
+.select-trigger optgroup option {
+    padding-left: 1rem;
+}
