@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import type { Decoration as ViewDecoration, EditorView } from "@codemirror/view";
-import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +51,9 @@ type MailBrandingFormState = {
   colors: MailBrandingColors;
 };
 
-const MOBILE_PREVIEW_WIDTH = 384;
+const MOBILE_PREVIEW_WIDTH = 414;
+const PREVIEW_FRAME_OUTER_WIDTH = MOBILE_PREVIEW_WIDTH + 48;
+const PREVIEW_CARD_MAX_WIDTH = PREVIEW_FRAME_OUTER_WIDTH + 32;
 
 const createEmptyLink = (): MailMenuLink => ({ label: "", url: "" });
 
@@ -1029,8 +1031,6 @@ const MailBrandingPage = () => {
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewContext, setPreviewContext] = useState<Record<string, unknown>>({});
-  const [previewContextText, setPreviewContextText] = useState<string>("");
-  const [previewContextError, setPreviewContextError] = useState<string | null>(null);
   const [debouncedContent, setDebouncedContent] = useState<string>("");
   const [debouncedContext, setDebouncedContext] = useState<Record<string, unknown>>({});
   const previewIframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -1459,7 +1459,6 @@ const MailBrandingPage = () => {
           data?.resolved_colors ?? data?.colors ?? null,
         );
         setPreviewContext(preview);
-        setPreviewContextText(JSON.stringify(preview, null, 2));
         setDebouncedContext(preview);
       })
       .catch((error) => {
@@ -1758,10 +1757,6 @@ const MailBrandingPage = () => {
       return previous;
     });
 
-    if (updatedContext) {
-      setPreviewContextText(JSON.stringify(updatedContext, null, 2));
-      setPreviewContextError(null);
-    }
   }, [
     debouncedContent,
     selectedTemplateKey,
@@ -1919,26 +1914,12 @@ const MailBrandingPage = () => {
           data?.resolved_colors ?? data?.colors ?? null,
         );
 
-        let mergedPreview = updatedPreview;
-        if (previewContextText.trim()) {
-          try {
-            const parsed = JSON.parse(previewContextText);
-            if (parsed && typeof parsed === "object") {
-              mergedPreview = {
-                ...(parsed as Record<string, unknown>),
-                site: updatedPreview.site,
-                colors: updatedPreview.colors,
-              };
-            }
-          } catch {
-            mergedPreview = updatedPreview;
-          }
-        }
-
-        const normalizedPreview = enhancePreviewValue(mergedPreview) as Record<string, unknown>;
+        const normalizedPreview = enhancePreviewValue({
+          ...(previewContext ?? {}),
+          site: updatedPreview.site,
+          colors: updatedPreview.colors,
+        }) as Record<string, unknown>;
         setPreviewContext(normalizedPreview);
-        setPreviewContextText(JSON.stringify(normalizedPreview, null, 2));
-        setPreviewContextError(null);
       })
       .catch((error) => {
         setBrandingStatus({
@@ -2145,36 +2126,6 @@ const MailBrandingPage = () => {
         setAttachmentDeleting(null);
       });
   };
-
-  const handlePreviewContextChange = (value: string) => {
-    setPreviewContextText(value);
-    if (!value.trim()) {
-      setPreviewContext({});
-      setPreviewContextError(null);
-      return;
-    }
-    try {
-      const parsed = JSON.parse(value);
-      if (parsed && typeof parsed === "object") {
-        const enhanced = enhancePreviewValue(parsed) as Record<string, unknown>;
-        setPreviewContext(enhanced);
-        setPreviewContextError(null);
-      }
-    } catch (error) {
-      setPreviewContextError(
-        error instanceof Error
-          ? `JSON invalid: ${error.message}`
-          : "Format JSON invalid.",
-      );
-    }
-  };
-
-  const resetPreviewContext = useCallback(() => {
-    const preview = computeBasePreviewContext();
-    setPreviewContext(preview);
-    setPreviewContextText(JSON.stringify(preview, null, 2));
-    setPreviewContextError(null);
-  }, [computeBasePreviewContext]);
 
   const currentTemplate = selectedTemplateKey
     ? templateDetails[selectedTemplateKey] ?? null
@@ -2480,59 +2431,67 @@ const MailBrandingPage = () => {
             </div>
           )}
 
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="template-select">Template</Label>
-                <Select
-                  id="template-select"
-                  value={selectedTemplateKey}
-                  onChange={(event) => handleTemplateSelect(event.target.value)}
-                  placeholder="Selectează template-ul"
-                  disabled={templates.length === 0}
-                >
-                  <option value="" disabled>
-                    Selectează template-ul
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="template-select">Template</Label>
+              <Select
+                id="template-select"
+                value={selectedTemplateKey}
+                onChange={(event) => handleTemplateSelect(event.target.value)}
+                placeholder="Selectează template-ul"
+                disabled={templates.length === 0}
+              >
+                <option value="" disabled>
+                  Selectează template-ul
+                </option>
+                {templates.map((template) => (
+                  <option key={template.key} value={template.key}>
+                    {template.name}
                   </option>
-                  {templates.map((template) => (
-                    <option key={template.key} value={template.key}>
-                      {template.name}
-                    </option>
-                  ))}
-                </Select>
-                {selectedTemplateKey && (
-                  <p className="text-xs text-gray-500">
-                    Ultima modificare: {formatDateTime(templateDetails[selectedTemplateKey]?.updated_at)}
-                  </p>
-                )}
-              </div>
+                ))}
+              </Select>
+              {selectedTemplateKey && (
+                <p className="text-xs text-gray-500">
+                  Ultima modificare: {formatDateTime(templateDetails[selectedTemplateKey]?.updated_at)}
+                </p>
+              )}
+            </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="template-title">Titlu email</Label>
-                  <Input
-                    id="template-title"
-                    value={templateTitle}
-                    onChange={(event) => setTemplateTitle(event.target.value)}
-                    placeholder="Titlu pentru lista de template-uri"
-                    disabled={!selectedTemplateKey}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="template-subject">Subiect email</Label>
-                  <Input
-                    id="template-subject"
-                    value={templateSubject}
-                    onChange={(event) => setTemplateSubject(event.target.value)}
-                    placeholder="Subiectul emailului"
-                    disabled={!selectedTemplateKey}
-                  />
-                </div>
-              </div>
-
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label id={templateEditorLabelId}>Conținut Twig</Label>
-                <div ref={codeMirrorContainerRef} className="min-h-[360px]" data-codemirror-container>
+                <Label htmlFor="template-title">Titlu email</Label>
+                <Input
+                  id="template-title"
+                  value={templateTitle}
+                  onChange={(event) => setTemplateTitle(event.target.value)}
+                  placeholder="Titlu pentru lista de template-uri"
+                  disabled={!selectedTemplateKey}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="template-subject">Subiect email</Label>
+                <Input
+                  id="template-subject"
+                  value={templateSubject}
+                  onChange={(event) => setTemplateSubject(event.target.value)}
+                  placeholder="Subiectul emailului"
+                  disabled={!selectedTemplateKey}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            <div className="min-w-0 flex-1 space-y-6">
+              <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
+                <h3 id={templateEditorLabelId} className="text-lg font-semibold text-berkeley">
+                  Conținut Twig
+                </h3>
+                <div
+                  ref={codeMirrorContainerRef}
+                  className="mt-4 min-h-[360px]"
+                  data-codemirror-container
+                >
                   <div
                     data-codemirror-fallback
                     className="flex min-h-[360px] items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500"
@@ -2656,36 +2615,10 @@ const MailBrandingPage = () => {
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="space-y-3 rounded-2xl border border-gray-200 p-4 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-berkeley">Context previzualizare</h3>
-                    <p className="text-xs text-gray-500">
-                      Poți personaliza obiectul JSON folosit pentru randare.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2 border-jade text-jade hover:bg-jade/10"
-                    onClick={resetPreviewContext}
-                  >
-                    <RefreshCw className="h-4 w-4" /> Resetează
-                  </Button>
-                </div>
-                <textarea
-                  value={previewContextText}
-                  onChange={(event) => handlePreviewContextChange(event.target.value)}
-                  className="min-h-[200px] w-full rounded-xl border border-gray-300 bg-white px-4 py-3 font-mono text-xs leading-6 text-[#191919] shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-jade"
-                  spellCheck={false}
-                />
-                {previewContextError && (
-                  <p className="text-xs text-red-600">{previewContextError}</p>
-                )}
-              </div>
-
+            <div
+              className="min-w-0 lg:flex-1"
+              style={{ maxWidth: `${PREVIEW_CARD_MAX_WIDTH}px` }}
+            >
               <div className="space-y-3 rounded-2xl border border-gray-200 p-4 sm:p-6">
                 <div>
                   <h3 className="text-lg font-semibold text-berkeley">Previzualizare</h3>
@@ -2705,12 +2638,21 @@ const MailBrandingPage = () => {
                 )}
                 <div className="flex justify-center">
                   {previewDocument ? (
-                    <div className="relative w-full max-w-[24rem]">
-                      <div className="relative mx-auto rounded-[2.75rem] border border-gray-200 bg-gradient-to-b from-white to-gray-100 p-4 shadow-lg">
+                    <div
+                      className="relative w-full"
+                      style={{ maxWidth: `${PREVIEW_FRAME_OUTER_WIDTH}px` }}
+                    >
+                      <div
+                        className="relative mx-auto rounded-[2.75rem] border border-gray-200 bg-gradient-to-b from-white to-gray-100 p-4 shadow-lg"
+                        style={{ width: "100%" }}
+                      >
                         <div className="pointer-events-none absolute inset-x-12 top-4 mx-auto h-6 rounded-full border border-gray-200 bg-white/80 shadow-sm" />
                         <div className="pointer-events-none absolute left-1/2 top-6 h-1.5 w-16 -translate-x-1/2 rounded-full bg-gray-300" />
                         <div className="pointer-events-none absolute left-1/2 top-[3.4rem] h-1 w-8 -translate-x-1/2 rounded-full bg-gray-300/70" />
-                        <div className="relative mt-12 overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-inner">
+                        <div
+                          className="relative mt-12 overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-inner"
+                          style={{ width: "100%", maxWidth: `${MOBILE_PREVIEW_WIDTH}px`, margin: "0 auto" }}
+                        >
                           <iframe
                             ref={previewIframeRef}
                             title="Previzualizare email"
