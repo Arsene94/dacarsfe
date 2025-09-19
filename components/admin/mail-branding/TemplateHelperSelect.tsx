@@ -2,6 +2,7 @@
 
 import {
   type ButtonHTMLAttributes,
+  type ChangeEvent as ReactChangeEvent,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
@@ -38,6 +39,9 @@ export interface TemplateHelperSelectProps
   className?: string;
   buttonClassName?: string;
   emptyMessage?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  noResultsMessage?: string;
 }
 
 const getFirstEnabledIndex = (items: TemplateHelperSelectItem[]) => {
@@ -59,6 +63,9 @@ export function TemplateHelperSelect({
   className,
   buttonClassName,
   emptyMessage = "Nu există opțiuni disponibile",
+  searchable = false,
+  searchPlaceholder = "Caută opțiuni",
+  noResultsMessage = "Nu există rezultate pentru căutarea curentă",
   id,
   onBlur,
   onFocus,
@@ -68,15 +75,43 @@ export function TemplateHelperSelect({
   const listboxId = useId();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const isDisabled = disabled || items.length === 0;
   const selectedItem = useMemo(
     () => items.find((item) => item.value === value),
     [items, value],
   );
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const visibleItems = useMemo(() => {
+    if (!searchable || normalizedSearch.length === 0) {
+      return items;
+    }
+
+    return items.filter((item) => {
+      if (!normalizedSearch) {
+        return true;
+      }
+      const haystacks = [
+        item.label,
+        item.description,
+        item.value,
+        item.buttonLabel,
+        item.title,
+      ]
+        .filter((entry): entry is string => Boolean(entry))
+        .map((entry) => entry.toLowerCase());
+      return haystacks.some((entry) => entry.includes(normalizedSearch));
+    });
+  }, [items, normalizedSearch, searchable]);
+
+  const resetSearch = useCallback(() => {
+    setSearchQuery("");
+  }, []);
 
   const renderedIcon = useMemo(() => {
     if (!icon) {
@@ -94,7 +129,8 @@ export function TemplateHelperSelect({
   const closeList = useCallback(() => {
     setIsOpen(false);
     setActiveIndex(-1);
-  }, []);
+    resetSearch();
+  }, [resetSearch]);
 
   const openList = useCallback(() => {
     if (isDisabled) {
@@ -117,32 +153,33 @@ export function TemplateHelperSelect({
         openList();
         return;
       }
-      if (items.length === 0) {
+      if (visibleItems.length === 0) {
         return;
       }
 
       let nextIndex = activeIndex;
-      for (let step = 0; step < items.length; step += 1) {
-        nextIndex = (nextIndex + direction + items.length) % items.length;
-        if (!items[nextIndex]?.disabled) {
+      for (let step = 0; step < visibleItems.length; step += 1) {
+        nextIndex =
+          (nextIndex + direction + visibleItems.length) % visibleItems.length;
+        if (!visibleItems[nextIndex]?.disabled) {
           setActiveIndex(nextIndex);
           break;
         }
       }
     },
-    [activeIndex, isOpen, items, openList],
+    [activeIndex, isOpen, openList, visibleItems],
   );
 
   const selectIndex = useCallback(
     (index: number) => {
-      const item = items[index];
+      const item = visibleItems[index];
       if (!item || item.disabled) {
         return;
       }
       onChange(item.value);
       closeList();
     },
-    [closeList, items, onChange],
+    [closeList, onChange, visibleItems],
   );
 
   const handleButtonKeyDown = useCallback(
@@ -186,15 +223,20 @@ export function TemplateHelperSelect({
     if (!isOpen) {
       return;
     }
-    const selectedIndex = selectedItem?.disabled
-      ? -1
-      : items.findIndex((item) => item.value === selectedItem?.value);
+    if (visibleItems.length === 0) {
+      setActiveIndex(-1);
+      return;
+    }
+    const selectedIndex =
+      selectedItem && !selectedItem.disabled
+        ? visibleItems.findIndex((item) => item.value === selectedItem.value)
+        : -1;
     if (selectedIndex >= 0) {
       setActiveIndex(selectedIndex);
       return;
     }
-    setActiveIndex(getFirstEnabledIndex(items));
-  }, [isOpen, items, selectedItem]);
+    setActiveIndex(getFirstEnabledIndex(visibleItems));
+  }, [isOpen, selectedItem, visibleItems]);
 
   useEffect(() => {
     if (!isOpen || activeIndex < 0) {
@@ -204,7 +246,7 @@ export function TemplateHelperSelect({
       `[data-index="${activeIndex}"]`,
     );
     option?.scrollIntoView({ block: "nearest" });
-  }, [activeIndex, isOpen]);
+  }, [activeIndex, isOpen, visibleItems]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -267,6 +309,60 @@ export function TemplateHelperSelect({
   const activeDescendant =
     isOpen && activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined;
 
+  const handleSearchChange = useCallback(
+    (event: ReactChangeEvent<HTMLInputElement>) => {
+      setSearchQuery(event.target.value);
+    },
+    [],
+  );
+
+  const handleSearchKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        moveActiveIndex(1);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        moveActiveIndex(-1);
+        return;
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        if (activeIndex >= 0) {
+          selectIndex(activeIndex);
+        } else if (visibleItems.length === 1) {
+          selectIndex(0);
+        }
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeList();
+      }
+    },
+    [activeIndex, closeList, moveActiveIndex, selectIndex, visibleItems.length],
+  );
+
+  useEffect(() => {
+    if (!isOpen || !searchable) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      const input = searchInputRef.current;
+      if (input) {
+        input.focus({ preventScroll: true });
+        if (input.value) {
+          input.select();
+        }
+      }
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [isOpen, searchable]);
+
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       <button
@@ -312,11 +408,27 @@ export function TemplateHelperSelect({
           aria-labelledby={id}
           className="absolute left-0 right-0 z-20 mt-2 rounded-xl border border-gray-200 bg-white shadow-xl"
         >
+          {searchable ? (
+            <div className="border-b border-gray-100 px-3 py-2">
+              <input
+                ref={searchInputRef}
+                type="search"
+                role="searchbox"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onKeyDown={handleSearchKeyDown}
+                placeholder={searchPlaceholder}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#191919] placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-jade"
+              />
+            </div>
+          ) : null}
           <div ref={listRef} className="max-h-60 overflow-y-auto py-2">
             {items.length === 0 ? (
               <p className="px-4 py-3 text-sm text-gray-500">{emptyMessage}</p>
+            ) : visibleItems.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-gray-500">{noResultsMessage}</p>
             ) : (
-              items.map((item, index) => {
+              visibleItems.map((item, index) => {
                 const isItemSelected = item.value === value;
                 const isItemActive = index === activeIndex;
                 return (

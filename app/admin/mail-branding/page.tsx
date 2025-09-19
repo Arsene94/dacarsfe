@@ -2934,6 +2934,9 @@ const MailBrandingPage = () => {
                             : "Inserează o variabilă"
                         }
                         emptyMessage="Nu există variabile pentru acest template"
+                        searchable
+                        searchPlaceholder="Caută variabile"
+                        noResultsMessage="Nu există variabile care să corespundă căutării"
                         items={availableVariableMetadata.map((entry) => ({
                           value: entry.key,
                           label: entry.key,
@@ -2956,6 +2959,9 @@ const MailBrandingPage = () => {
                             ? "Inserează un fragment Twig"
                             : "Selectează un template pentru a folosi fragmentele"
                         }
+                        searchable
+                        searchPlaceholder="Caută fragmente"
+                        noResultsMessage="Nu există fragmente care să corespundă căutării"
                         items={TWIG_FUNCTION_SNIPPETS.map((snippet) => ({
                           value: snippet.value,
                           label: snippet.label,
