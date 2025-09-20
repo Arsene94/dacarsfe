@@ -15,7 +15,7 @@ import {
     type StoredWheelPrizeEntry,
 } from "@/lib/wheelStorage";
 import {ApiCar, Car} from "@/types/car";
-import {ReservationFormData, Service} from "@/types/reservation";
+import {ReservationFormData, Service, type DiscountValidationPayload} from "@/types/reservation";
 import {Button} from "@/components/ui/button";
 
 const STORAGE_BASE = "https://backend.dacars.ro/storage";
@@ -120,11 +120,29 @@ const ReservationPage = () => {
                     : Array.isArray(res)
                         ? res
                         : [];
-                const mapped: Service[] = list.map((s: any) => ({
-                    id: s.id,
-                    name: s.name ?? "",
-                    price: parsePrice(s.price),
-                }));
+                const mapped = list
+                    .map<Service | null>((entry) => {
+                        if (!entry || typeof entry !== "object") return null;
+                        const source = entry as Record<string, unknown>;
+                        const idCandidate = source.id ?? source.service_id ?? source.value;
+                        const numericId =
+                            typeof idCandidate === "number"
+                                ? idCandidate
+                                : typeof idCandidate === "string"
+                                    ? Number(idCandidate)
+                                    : NaN;
+                        if (!Number.isFinite(numericId)) return null;
+                        const name = typeof source.name === "string" ? source.name : "";
+                        const price = parsePrice(
+                            source.price ?? source.amount ?? source.value ?? source.price_per_day,
+                        );
+                        return {
+                            id: numericId,
+                            name,
+                            price,
+                        };
+                    })
+                    .filter((service): service is Service => service !== null);
                 setServices(mapped);
             } catch (error) {
                 console.error(error);
@@ -182,7 +200,7 @@ const ReservationPage = () => {
                 name,
             )
         ) {
-            const { rental_start_date, rental_start_time, rental_end_date, rental_end_time } = updated as any;
+            const { rental_start_date, rental_start_time, rental_end_date, rental_end_time } = updated;
             if (rental_start_date && rental_end_date) {
                 const start = new Date(`${rental_start_date}T${rental_start_time || "00:00"}`);
                 const end = new Date(`${rental_end_date}T${rental_end_time || "00:00"}`);
@@ -449,15 +467,15 @@ const ReservationPage = () => {
 
         setIsValidatingCode(true);
         try {
-            const payload: any = {
+            const payload: DiscountValidationPayload = {
                 code: formData.coupon_code,
                 car_id: carForValidation.id,
-                start_date: booking?.startDate,
-                end_date: booking?.endDate,
-                price: carForValidation.rental_rate,
-                price_casco: carForValidation.rental_rate_casco,
-                total_price: carForValidation.total_deposit,
-                total_price_casco: carForValidation.total_without_deposit,
+                start_date: booking?.startDate ?? null,
+                end_date: booking?.endDate ?? null,
+                price: carForValidation.rental_rate ?? 0,
+                price_casco: carForValidation.rental_rate_casco ?? 0,
+                total_price: carForValidation.total_deposit ?? 0,
+                total_price_casco: carForValidation.total_without_deposit ?? 0,
             };
             const data = await apiClient.validateDiscountCode(payload);
             setOriginalCar(carForValidation);
@@ -479,10 +497,11 @@ const ReservationPage = () => {
                     carId: data.data?.id ?? null,
                     withDeposit: booking?.withDeposit ?? null,
                 };
+                const coupon = data.data?.coupon;
                 const discountData = {
                     code: formData.coupon_code,
-                    discount: (data.data.coupon as any)?.discount_deposit ?? "0",
-                    discountCasco: (data.data.coupon as any)?.discount_casco ?? "0",
+                    discount: coupon?.discount_deposit ?? "0",
+                    discountCasco: coupon?.discount_casco ?? "0",
                 };
                 localStorage.setItem("discount", JSON.stringify(discountData));
                 localStorage.setItem("originalCar", JSON.stringify(carForValidation));

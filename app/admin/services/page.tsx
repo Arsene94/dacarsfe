@@ -52,22 +52,41 @@ const AdditionalServicesPage = () => {
                     : [];
 
             const mapped = rawList
-                .map((item: any): AdminService | null => {
-                    if (!item) return null;
-                    const id = Number(item.id ?? item.service_id ?? item.value);
+                .map((item): AdminService | null => {
+                    if (!item || typeof item !== "object") return null;
+                    const source = item as Record<string, unknown>;
+                    const idCandidate =
+                        source.id ?? source.service_id ?? source.value ?? source.serviceId;
+                    const id = typeof idCandidate === "number"
+                        ? idCandidate
+                        : typeof idCandidate === "string"
+                            ? Number(idCandidate)
+                            : Number.NaN;
                     if (!Number.isFinite(id)) return null;
-                    const serviceName = typeof item.name === "string" ? item.name : "";
+
+                    const serviceName =
+                        typeof source.name === "string"
+                            ? source.name
+                            : typeof source.title === "string"
+                                ? source.title
+                                : "";
+
                     const priceValue = parsePrice(
-                        item.price ?? item.amount ?? item.value ?? item.price_per_day
+                        source.price ??
+                            source.amount ??
+                            source.value ??
+                            source.price_per_day ??
+                            source.pricePerDay
                     );
+
                     return {
                         id,
                         name: serviceName,
                         price: priceValue,
                     };
                 })
-                .filter((item: any): item is AdminService => item !== null)
-                .sort((a: any, b: any) => a.name.localeCompare(b.name, "ro"));
+                .filter((item): item is AdminService => item !== null)
+                .sort((a, b) => a.name.localeCompare(b.name, "ro"));
 
             setServices(mapped);
         } catch (error) {

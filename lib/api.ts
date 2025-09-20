@@ -1,11 +1,32 @@
+import { extractItem } from "@/lib/apiResponse";
 import { mapCarSearchFilters } from "@/lib/mapFilters";
 import { toQuery } from "@/lib/qs";
-import type { AuthResponse, User } from "@/types/auth";
 import type { WidgetActivityResponse } from "@/types/activity";
+import type { ActivityLog, ActivityLogListParams } from "@/types/activity-log";
+import { ensureUser } from "@/types/auth";
+import type { AuthResponse, User } from "@/types/auth";
 import type {
+    AdminBookingResource,
+    BookingContractResponse,
     CategoryPrice,
     CategoryPriceCalendar,
+    CustomerPhoneSearchResult,
+    DynamicPrice,
 } from "@/types/admin";
+import type {
+    ApiItemResult,
+    ApiListResult,
+    ApiMessageResponse,
+    ApiDeleteResponse,
+    LookupRecord,
+    UnknownRecord,
+} from "@/types/api";
+import type {
+    ApiCar,
+    CarCategory,
+    CarFilterParams,
+    CarSearchUiPayload,
+} from "@/types/car";
 import type {
     MailBrandingResponse,
     MailBrandingUpdatePayload,
@@ -14,12 +35,32 @@ import type {
     MailTemplateUpdatePayload,
     MailTemplatesResponse,
 } from "@/types/mail";
+import type {
+    AvailabilityCheckPayload,
+    AvailabilityCheckResponse,
+    DiscountValidationPayload,
+    DiscountValidationResponse,
+    QuotePricePayload,
+    QuotePriceResponse,
+    ReservationPayload,
+    Service,
+} from "@/types/reservation";
 import type { Role } from "@/types/roles";
-import type { WheelOfFortunePrizePayload } from "@/types/wheel";
+import type {
+    WheelOfFortunePeriod,
+    WheelOfFortunePrizePayload,
+    WheelOfFortunePrizeWinner,
+    WheelPrize,
+} from "@/types/wheel";
 
 type CategoryPriceCalendarPayload = Omit<
     CategoryPriceCalendar,
     "id" | "created_at" | "updated_at"
+>;
+
+type DynamicPricePayload = Pick<
+    DynamicPrice,
+    "start_from" | "end_to" | "enabled" | "percentages"
 >;
 
 type UserPayload = {
@@ -49,9 +90,9 @@ const FORBIDDEN_MESSAGE = "Forbidden";
 
 type ApiError = Error & { status?: number };
 
-const sanitizePayload = <T extends Record<string, any>>(payload: T) => {
-    const cleaned: Record<string, any> = {};
-    Object.entries(payload).forEach(([key, value]) => {
+const sanitizePayload = <T extends Record<string, unknown>>(payload: T): Partial<T> => {
+    const cleaned: Partial<T> = {};
+    (Object.entries(payload) as [keyof T, T[keyof T]][]).forEach(([key, value]) => {
         if (typeof value !== "undefined") {
             cleaned[key] = value;
         }
@@ -148,17 +189,22 @@ class ApiClient {
 
             if (!response.ok) {
                 let errorMessage = `HTTP error! status: ${response.status}`;
-                let errorData: any = null;
+                let errorData: unknown = null;
 
                 try {
                     const errorContentType = response.headers.get('content-type');
                     if (errorContentType?.includes('application/json')) {
                         errorData = await response.json();
-                        if (typeof errorData?.message === 'string') {
-                            const normalizedMessage = errorData.message.trim();
+                        if (
+                            typeof errorData === 'object' &&
+                            errorData !== null &&
+                            'message' in errorData &&
+                            typeof (errorData as { message: unknown }).message === 'string'
+                        ) {
+                            const normalizedMessage = (errorData as { message: string }).message.trim();
                             if (normalizedMessage.length > 0) {
                                 errorMessage = normalizedMessage;
-                                errorData.message = normalizedMessage;
+                                (errorData as { message: string }).message = normalizedMessage;
                             }
                         }
                     } else {
@@ -170,7 +216,8 @@ class ApiClient {
 
                 if (
                     response.status === 403 &&
-                    (errorData?.message === FORBIDDEN_MESSAGE || errorMessage === FORBIDDEN_MESSAGE)
+                    ((typeof errorData === 'object' && errorData !== null && 'message' in errorData && (errorData as { message?: unknown }).message === FORBIDDEN_MESSAGE) ||
+                        errorMessage === FORBIDDEN_MESSAGE)
                 ) {
                     this.notifyForbidden(errorMessage);
                 }
@@ -195,13 +242,13 @@ class ApiClient {
     }
 
     async getCars(params: {
-        limit?: number,
-        page?: number,
-        perPage?: number,
-        search?: string,
-        start_date?: string,
-        end_date?: string
-    } = {}) {
+        limit?: number;
+        page?: number;
+        perPage?: number;
+        search?: string;
+        start_date?: string;
+        end_date?: string;
+    } = {}): Promise<ApiListResult<ApiCar>> {
         const searchParams = new URLSearchParams();
         Object.entries(params).forEach(([key, value]) => {
             if (value !== undefined && value !== null) {
@@ -209,14 +256,16 @@ class ApiClient {
             }
         });
         const query = searchParams.toString();
-        return this.request<any>(`/cars${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<ApiCar>>(
+            `/cars${query ? `?${query}` : ''}`,
+        );
     }
 
     async getHomePageCars(params: {
-        limit?: number,
-        page?: number,
-        perPage?: number
-    }) {
+        limit?: number;
+        page?: number;
+        perPage?: number;
+    }): Promise<ApiListResult<ApiCar>> {
         const searchParams = new URLSearchParams();
         Object.entries(params || {}).forEach(([key, value]) => {
             if (value !== undefined && value !== null) {
@@ -224,95 +273,105 @@ class ApiClient {
             }
         });
 
-        return this.request<any>(`/cars?${searchParams.toString()}`);
+        return this.request<ApiListResult<ApiCar>>(
+            `/cars?${searchParams.toString()}`,
+        );
 
     }
 
-    async getCarsByDateCriteria(uiPayload: any){
-        const mapped = mapCarSearchFilters(uiPayload);
-        const query  = toQuery(mapped);
-        return this.request<any>(`/cars?${query}`);
+    async getCarsByDateCriteria(uiPayload: CarSearchUiPayload): Promise<ApiListResult<ApiCar>> {
+        const mapped: CarFilterParams = mapCarSearchFilters(uiPayload);
+        const query = toQuery(mapped);
+        return this.request<ApiListResult<ApiCar>>(`/cars?${query}`);
     }
 
-    async createCar(payload: Record<string, any> | FormData) {
+    async createCar(payload: Record<string, unknown> | FormData): Promise<ApiItemResult<UnknownRecord>> {
         if (typeof FormData !== 'undefined' && payload instanceof FormData) {
-            return this.request<any>(`/cars`, {
+            return this.request<ApiItemResult<UnknownRecord>>(`/cars`, {
                 method: 'POST',
                 body: payload,
             });
         }
 
-        const cleanPayload = JSON.parse(JSON.stringify(payload));
-        return this.request<any>(`/cars`, {
+        const cleanPayload = JSON.parse(JSON.stringify(payload)) as Record<string, unknown>;
+        return this.request<ApiItemResult<UnknownRecord>>(`/cars`, {
             method: 'POST',
             body: JSON.stringify(cleanPayload),
         });
     }
 
-    async updateCar(id: number, payload: Record<string, any> | FormData) {
+    async updateCar(id: number, payload: Record<string, unknown> | FormData): Promise<ApiItemResult<UnknownRecord>> {
         if (typeof FormData !== 'undefined' && payload instanceof FormData) {
-            return this.request<any>(`/cars/${id}`, {
+            return this.request<ApiItemResult<UnknownRecord>>(`/cars/${id}`, {
                 method: 'PUT',
                 body: payload,
             });
         }
 
-        const cleanPayload = JSON.parse(JSON.stringify(payload));
-        return this.request<any>(`/cars/${id}`, {
+        const cleanPayload = JSON.parse(JSON.stringify(payload)) as Record<string, unknown>;
+        return this.request<ApiItemResult<UnknownRecord>>(`/cars/${id}`, {
             method: 'PUT',
             body: JSON.stringify(cleanPayload),
         });
     }
 
-    async getCarMakes(params: { search?: string; limit?: number } = {}) {
+    async getCarMakes(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
         if (params.limit) searchParams.append('limit', params.limit.toString());
         const query = searchParams.toString();
-        return this.request<any>(`/car-makes${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<LookupRecord>>(
+            `/car-makes${query ? `?${query}` : ''}`,
+        );
     }
 
-    async getCarMake(id: number | string) {
-        return this.request<any>(`/car-makes/${id}`);
+    async getCarMake(id: number | string): Promise<ApiItemResult<LookupRecord>> {
+        return this.request<ApiItemResult<LookupRecord>>(`/car-makes/${id}`);
     }
 
-    async getCarTypes(params: { search?: string; limit?: number } = {}) {
+    async getCarTypes(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
         if (params.limit) searchParams.append('limit', params.limit.toString());
         const query = searchParams.toString();
-        return this.request<any>(`/car-types${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<LookupRecord>>(
+            `/car-types${query ? `?${query}` : ''}`,
+        );
     }
 
-    async getCarType(id: number | string) {
-        return this.request<any>(`/car-types/${id}`);
+    async getCarType(id: number | string): Promise<ApiItemResult<LookupRecord>> {
+        return this.request<ApiItemResult<LookupRecord>>(`/car-types/${id}`);
     }
 
-    async getCarTransmissions(params: { search?: string; limit?: number } = {}) {
+    async getCarTransmissions(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
         if (params.limit) searchParams.append('limit', params.limit.toString());
         const query = searchParams.toString();
-        return this.request<any>(`/car-transmissions${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<LookupRecord>>(
+            `/car-transmissions${query ? `?${query}` : ''}`,
+        );
     }
 
-    async getCarTransmission(id: number | string) {
-        return this.request<any>(`/car-transmissions/${id}`);
+    async getCarTransmission(id: number | string): Promise<ApiItemResult<LookupRecord>> {
+        return this.request<ApiItemResult<LookupRecord>>(`/car-transmissions/${id}`);
     }
 
-    async getCarFuels(params: { search?: string; limit?: number } = {}) {
+    async getCarFuels(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
         if (params.limit) searchParams.append('limit', params.limit.toString());
         const query = searchParams.toString();
-        return this.request<any>(`/car-fuels${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<LookupRecord>>(
+            `/car-fuels${query ? `?${query}` : ''}`,
+        );
     }
 
-    async getCarFuel(id: number | string) {
-        return this.request<any>(`/car-fuels/${id}`);
+    async getCarFuel(id: number | string): Promise<ApiItemResult<LookupRecord>> {
+        return this.request<ApiItemResult<LookupRecord>>(`/car-fuels/${id}`);
     }
 
-    async getCarCategories(params: { search?: string; limit?: number } = {}) {
+    async getCarCategories(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<CarCategory>> {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
         if (params.limit || params.limit === 0) {
@@ -321,23 +380,27 @@ class ApiClient {
             searchParams.append('limit', '100');
         }
         const query = searchParams.toString();
-        return this.request<any>(`/car-categories${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<CarCategory>>(
+            `/car-categories${query ? `?${query}` : ''}`,
+        );
     }
 
-    async getCarCategory(id: number | string) {
-        return this.request<any>(`/car-categories/${id}`);
+    async getCarCategory(id: number | string): Promise<ApiItemResult<CarCategory>> {
+        return this.request<ApiItemResult<CarCategory>>(`/car-categories/${id}`);
     }
 
-    async getCarColors(params: { search?: string; limit?: number } = {}) {
+    async getCarColors(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
         if (params.limit) searchParams.append('limit', params.limit.toString());
         const query = searchParams.toString();
-        return this.request<any>(`/car-colors${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<LookupRecord>>(
+            `/car-colors${query ? `?${query}` : ''}`,
+        );
     }
 
-    async getCarColor(id: number | string) {
-        return this.request<any>(`/car-colors/${id}`);
+    async getCarColor(id: number | string): Promise<ApiItemResult<LookupRecord>> {
+        return this.request<ApiItemResult<LookupRecord>>(`/car-colors/${id}`);
     }
 
     async getUsers(
@@ -350,7 +413,7 @@ class ApiClient {
             includeRoles?: boolean;
             sort?: string;
         } = {},
-    ) {
+    ): Promise<ApiListResult<User>> {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
         if (params.page) searchParams.append('page', params.page.toString());
@@ -376,53 +439,98 @@ class ApiClient {
             searchParams.append('sort', params.sort);
         }
         const query = searchParams.toString();
-        return this.request<any>(`/users${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<User>>(
+            `/users${query ? `?${query}` : ''}`,
+        );
     }
 
     async getUser(
         id: number | string,
         params: { includeRoles?: boolean } = {},
-    ) {
+    ): Promise<ApiItemResult<User>> {
         const searchParams = new URLSearchParams();
         if (params.includeRoles) {
             searchParams.append('include', 'roles');
         }
         const query = searchParams.toString();
-        return this.request<any>(`/users/${id}${query ? `?${query}` : ''}`);
+        return this.request<ApiItemResult<User>>(
+            `/users/${id}${query ? `?${query}` : ''}`,
+        );
     }
 
-    async createUser(payload: UserPayload) {
+    async createUser(payload: UserPayload): Promise<ApiItemResult<User>> {
         const body = sanitizePayload(payload);
-        return this.request<any>(`/users`, {
+        return this.request<ApiItemResult<User>>(`/users`, {
             method: 'POST',
             body: JSON.stringify(body),
         });
     }
 
-    async updateUser(id: number | string, payload: UserPayload) {
+    async updateUser(id: number | string, payload: UserPayload): Promise<ApiItemResult<User>> {
         const body = sanitizePayload(payload);
-        return this.request<any>(`/users/${id}`, {
+        return this.request<ApiItemResult<User>>(`/users/${id}`, {
             method: 'PUT',
             body: JSON.stringify(body),
         });
     }
 
-    async makeUserSuper(id: number | string) {
-        return this.request<any>(`/users/${id}/super`, {
+    async makeUserSuper(id: number | string): Promise<ApiMessageResponse> {
+        return this.request<ApiMessageResponse>(`/users/${id}/super`, {
             method: 'POST',
         });
     }
 
-    async removeUserSuper(id: number | string) {
-        return this.request<any>(`/users/${id}/super`, {
+    async removeUserSuper(id: number | string): Promise<ApiMessageResponse> {
+        return this.request<ApiMessageResponse>(`/users/${id}/super`, {
             method: 'DELETE',
         });
     }
 
-    async deleteUser(id: number | string) {
-        return this.request<any>(`/users/${id}`, {
+    async deleteUser(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/users/${id}`, {
             method: 'DELETE',
         });
+    }
+
+    async getActivityLogs(
+        params: ActivityLogListParams = {},
+    ): Promise<ApiListResult<ActivityLog>> {
+        const searchParams = new URLSearchParams();
+        if (typeof params.page === 'number' && Number.isFinite(params.page) && params.page > 0) {
+            searchParams.append('page', params.page.toString());
+        }
+        if (
+            typeof params.perPage === 'number' &&
+            Number.isFinite(params.perPage) &&
+            params.perPage > 0
+        ) {
+            searchParams.append('per_page', params.perPage.toString());
+        }
+        if (params.search && params.search.trim().length > 0) {
+            searchParams.append('search', params.search.trim());
+        }
+        if (params.userId !== null && typeof params.userId !== 'undefined' && params.userId !== '') {
+            searchParams.append('user_id', String(params.userId));
+        }
+        if (params.action && params.action.trim().length > 0) {
+            searchParams.append('action', params.action.trim());
+        }
+        if (params.from && params.from.trim().length > 0) {
+            searchParams.append('from', params.from.trim());
+        }
+        if (params.to && params.to.trim().length > 0) {
+            searchParams.append('to', params.to.trim());
+        }
+        if (params.sort === 'oldest') {
+            searchParams.append('sort', 'oldest');
+        } else if (params.sort === 'latest') {
+            searchParams.append('sort', 'latest');
+        }
+
+        const query = searchParams.toString();
+        return this.request<ApiListResult<ActivityLog>>(
+            `/activity-logs${query ? `?${query}` : ''}`,
+        );
     }
 
     async getRoles(
@@ -431,7 +539,7 @@ class ApiClient {
             perPage?: number;
             includePermissions?: boolean;
         } = {},
-    ) {
+    ): Promise<ApiListResult<Role>> {
         const searchParams = new URLSearchParams();
         if (params.page) searchParams.append('page', params.page.toString());
         if (params.perPage) searchParams.append('per_page', params.perPage.toString());
@@ -439,7 +547,7 @@ class ApiClient {
             searchParams.append('include', 'permissions');
         }
         const query = searchParams.toString();
-        return this.request<{ data: Role[]; meta?: any; links?: any }>(
+        return this.request<ApiListResult<Role>>(
             `/roles${query ? `?${query}` : ''}`,
         );
     }
@@ -447,84 +555,90 @@ class ApiClient {
     async getRole(
         id: number | string,
         params: { includePermissions?: boolean } = {},
-    ) {
+    ): Promise<ApiItemResult<Role>> {
         const searchParams = new URLSearchParams();
         if (params.includePermissions) {
             searchParams.append('include', 'permissions');
         }
         const query = searchParams.toString();
-        return this.request<Role>(`/roles/${id}${query ? `?${query}` : ''}`);
+        return this.request<ApiItemResult<Role>>(
+            `/roles/${id}${query ? `?${query}` : ''}`,
+        );
     }
 
-    async createRole(payload: RolePayload) {
+    async createRole(payload: RolePayload): Promise<ApiItemResult<Role>> {
         const body = sanitizePayload(payload);
-        return this.request<Role>(`/roles`, {
+        return this.request<ApiItemResult<Role>>(`/roles`, {
             method: 'POST',
             body: JSON.stringify(body),
         });
     }
 
-    async updateRole(id: number | string, payload: RolePayload) {
+    async updateRole(id: number | string, payload: RolePayload): Promise<ApiItemResult<Role>> {
         const body = sanitizePayload(payload);
-        return this.request<Role>(`/roles/${id}`, {
+        return this.request<ApiItemResult<Role>>(`/roles/${id}`, {
             method: 'PUT',
             body: JSON.stringify(body),
         });
     }
 
-    async deleteRole(id: number | string) {
-        return this.request<{ message: string }>(`/roles/${id}`, {
+    async deleteRole(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/roles/${id}`, {
             method: 'DELETE',
         });
     }
 
-    async getCarForBooking(uiPayload: any) {
+    async getCarForBooking(
+        uiPayload: CarSearchUiPayload & { car_id: number | string },
+    ): Promise<ApiItemResult<ApiCar> | ApiListResult<ApiCar>> {
         const mapped = mapCarSearchFilters(uiPayload);
-        const query  = toQuery(mapped);
-        return this.request<any>(`/cars/${uiPayload.car_id}/info-for-booking?${query}`);
+        const query = toQuery(mapped);
+        return this.request<ApiItemResult<ApiCar> | ApiListResult<ApiCar>>(
+            `/cars/${uiPayload.car_id}/info-for-booking?${query}`,
+        );
     }
 
-    async getServices() {
-        return this.request<any>(`/services`);
+    async getServices(): Promise<ApiListResult<Service>> {
+        return this.request<ApiListResult<Service>>(`/services`);
     }
 
-    async createService(payload: { name: string; price: number }) {
-        return this.request<any>(`/services`, {
+    async createService(payload: { name: string; price: number }): Promise<ApiItemResult<Service>> {
+        return this.request<ApiItemResult<Service>>(`/services`, {
             method: 'POST',
             body: JSON.stringify(payload),
         });
     }
 
-    async updateService(id: number, payload: { name: string; price: number }) {
-        return this.request<any>(`/services/${id}`, {
+    async updateService(id: number, payload: { name: string; price: number }): Promise<ApiItemResult<Service>> {
+        return this.request<ApiItemResult<Service>>(`/services/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
         });
     }
 
-    async validateDiscountCode(params: { code: string, car_id: number, start_date: any, end_date: any, price: any, price_casco: any, total_price: any, total_price_casco: any }) {
-        return this.request<any>(`/coupons/validate`, {
+    async validateDiscountCode(params: DiscountValidationPayload): Promise<DiscountValidationResponse> {
+        return this.request<DiscountValidationResponse>(`/coupons/validate`, {
             method: 'POST',
             body: JSON.stringify(params),
         })
     }
 
-    async checkCarAvailability(params: { car_id: number, start_date: string, end_date: string }) {
-        return this.request<any>(`/bookings/availability/check`, {
+    async checkCarAvailability(params: AvailabilityCheckPayload): Promise<AvailabilityCheckResponse> {
+        return this.request<AvailabilityCheckResponse>(`/bookings/availability/check`, {
             method: 'POST',
             body: JSON.stringify(params),
         });
     }
 
-    async createBooking(payload: any) {
-        return this.request<any>(`/bookings`, {
+    async createBooking(payload: ReservationPayload | Record<string, unknown>): Promise<ApiItemResult<UnknownRecord>> {
+        return this.request<ApiItemResult<UnknownRecord>>(`/bookings`, {
             method: 'POST',
             body: JSON.stringify(payload),
         });
     }
 
-    async updateBooking(id: any, payload: any) {
-        return this.request<any>(`/bookings/${id}`, {
+    async updateBooking(id: number | string, payload: Record<string, unknown>): Promise<ApiItemResult<UnknownRecord>> {
+        return this.request<ApiItemResult<UnknownRecord>>(`/bookings/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
             headers: {
@@ -536,8 +650,8 @@ class ApiClient {
         });
     }
 
-    async generateContract(payload: any, id?: any) {
-        return this.request<any>(`/bookings/contract/${id}`, {
+    async generateContract(payload: Record<string, unknown>, id?: number | string): Promise<ApiItemResult<BookingContractResponse> | Blob> {
+        return this.request<ApiItemResult<BookingContractResponse> | Blob>(`/bookings/contract/${id}`, {
             method: 'POST',
             body: JSON.stringify(payload),
             headers: {
@@ -549,8 +663,8 @@ class ApiClient {
         });
     }
 
-    async storeAndGenerateContract(payload: any) {
-        return this.request<any>(`/bookings/store-contract`, {
+    async storeAndGenerateContract(payload: Record<string, unknown>): Promise<ApiItemResult<BookingContractResponse> | Blob> {
+        return this.request<ApiItemResult<BookingContractResponse> | Blob>(`/bookings/store-contract`, {
             method: 'POST',
             body: JSON.stringify(payload),
             headers: {
@@ -562,8 +676,11 @@ class ApiClient {
         });
     }
 
-    async updateBookingDate(id: any, params: { arrivalDate: string | undefined, arrivalTime: string | undefined, returnDate: string | undefined, returnTime: string | undefined }) {
-        return this.request<any>(`/bookings/${id}/update-date`, {
+    async updateBookingDate(
+        id: number | string,
+        params: { arrivalDate: string | undefined; arrivalTime: string | undefined; returnDate: string | undefined; returnTime: string | undefined },
+    ): Promise<ApiItemResult<UnknownRecord>> {
+        return this.request<ApiItemResult<UnknownRecord>>(`/bookings/${id}/update-date`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -574,8 +691,8 @@ class ApiClient {
             body: JSON.stringify(params),
         })
     }
-    async getBookingInfo(id: any) {
-        return this.request<any>(`/bookings/${id}`)
+    async getBookingInfo(id: number | string): Promise<ApiItemResult<AdminBookingResource>> {
+        return this.request<ApiItemResult<AdminBookingResource>>(`/bookings/${id}`)
     }
 
     async getBookings(params: {
@@ -585,7 +702,7 @@ class ApiClient {
         status?: string;
         start_date?: string;
         end_date?: string;
-    } = {}) {
+    } = {}): Promise<ApiListResult<AdminBookingResource>> {
         const searchParams = new URLSearchParams();
         if (params.page) searchParams.append('page', params.page.toString());
         if (params.perPage) searchParams.append('per_page', params.perPage.toString());
@@ -594,26 +711,30 @@ class ApiClient {
         if (params.start_date) searchParams.append('start_date', params.start_date);
         if (params.end_date) searchParams.append('end_date', params.end_date);
         const query = searchParams.toString();
-        return this.request<any>(`/bookings${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<AdminBookingResource>>(
+            `/bookings${query ? `?${query}` : ''}`,
+        );
     }
 
-    async quotePrice(payload: any) {
-        return this.request<any>(`/bookings/quote`, {
+    async quotePrice(payload: QuotePricePayload): Promise<QuotePriceResponse> {
+        return this.request<QuotePriceResponse>(`/bookings/quote`, {
             method: 'POST',
             body: JSON.stringify(payload),
         })
     }
 
-    async getCustomers(params: { search?: string; limit?: number } = {}) {
+    async getCustomers(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<UnknownRecord>> {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
         if (params.limit) searchParams.append('limit', params.limit.toString());
         const query = searchParams.toString();
-        return this.request<any>(`/customers${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<UnknownRecord>>(
+            `/customers${query ? `?${query}` : ''}`,
+        );
     }
 
-    async searchCustomersByPhone(phone: string) {
-        return this.request<any>(`/customers/get/byphone`, {
+    async searchCustomersByPhone(phone: string): Promise<ApiListResult<CustomerPhoneSearchResult>> {
+        return this.request<ApiListResult<CustomerPhoneSearchResult>>(`/customers/get/byphone`, {
             method: 'POST',
             body: JSON.stringify({ phone }),
         });
@@ -625,7 +746,7 @@ class ApiClient {
         limit?: number;
         active?: number | boolean;
         is_active?: number | boolean;
-    } = {}) {
+    } = {}): Promise<ApiListResult<WheelOfFortunePeriod>> {
         const searchParams = new URLSearchParams();
         if (params.page) searchParams.append('page', params.page.toString());
         if (params.per_page) searchParams.append('per_page', params.per_page.toString());
@@ -643,7 +764,9 @@ class ApiClient {
             appendBooleanParam('is_active', params.is_active);
         }
         const query = searchParams.toString();
-        return this.request<any>(`/wheel-of-fortune-periods${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<WheelOfFortunePeriod>>(
+            `/wheel-of-fortune-periods${query ? `?${query}` : ''}`,
+        );
     }
 
     async createWheelOfFortunePeriod(payload: {
@@ -653,7 +776,7 @@ class ApiClient {
         active?: boolean;
         is_active?: boolean;
         description?: string | null;
-    }) {
+    }): Promise<ApiItemResult<WheelOfFortunePeriod>> {
         const body = sanitizePayload({
             ...payload,
             ...(typeof payload.active === 'boolean'
@@ -663,7 +786,7 @@ class ApiClient {
                 ? { is_active: payload.is_active }
                 : {}),
         });
-        return this.request<any>(`/wheel-of-fortune-periods`, {
+        return this.request<ApiItemResult<WheelOfFortunePeriod>>(`/wheel-of-fortune-periods`, {
             method: 'POST',
             body: JSON.stringify(body),
         });
@@ -679,7 +802,7 @@ class ApiClient {
             is_active?: boolean;
             description?: string | null;
         },
-    ) {
+    ): Promise<ApiItemResult<WheelOfFortunePeriod>> {
         const body = sanitizePayload({
             ...payload,
             ...(typeof payload.active === 'boolean'
@@ -689,14 +812,14 @@ class ApiClient {
                 ? { is_active: payload.is_active }
                 : {}),
         });
-        return this.request<any>(`/wheel-of-fortune-periods/${id}`, {
+        return this.request<ApiItemResult<WheelOfFortunePeriod>>(`/wheel-of-fortune-periods/${id}`, {
             method: 'PUT',
             body: JSON.stringify(body),
         });
     }
 
-    async deleteWheelOfFortunePeriod(id: number) {
-        return this.request<any>(`/wheel-of-fortune-periods/${id}`, {
+    async deleteWheelOfFortunePeriod(id: number): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/wheel-of-fortune-periods/${id}`, {
             method: 'DELETE',
         });
     }
@@ -707,7 +830,7 @@ class ApiClient {
         per_page?: number;
         limit?: number;
         is_active?: boolean;
-    } = {}) {
+    } = {}): Promise<ApiListResult<WheelPrize>> {
         const searchParams = new URLSearchParams();
         if (params.page) searchParams.append('page', params.page.toString());
         if (params.per_page) searchParams.append('per_page', params.per_page.toString());
@@ -720,7 +843,9 @@ class ApiClient {
             searchParams.append('is_active', value);
         }
         const query = searchParams.toString();
-        return this.request<any>(`/wheel-of-fortunes${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<WheelPrize>>(
+            `/wheel-of-fortunes${query ? `?${query}` : ''}`,
+        );
     }
 
     async createWheelOfFortune(payload: {
@@ -731,9 +856,9 @@ class ApiClient {
         color: string;
         probability: number;
         type: string;
-    }) {
+    }): Promise<ApiItemResult<WheelPrize>> {
         const body = sanitizePayload(payload);
-        return this.request<any>(`/wheel-of-fortunes`, {
+        return this.request<ApiItemResult<WheelPrize>>(`/wheel-of-fortunes`, {
             method: 'POST',
             body: JSON.stringify(body),
         });
@@ -750,23 +875,23 @@ class ApiClient {
             probability?: number;
             type?: string;
         },
-    ) {
+    ): Promise<ApiItemResult<WheelPrize>> {
         const body = sanitizePayload(payload);
-        return this.request<any>(`/wheel-of-fortunes/${id}`, {
+        return this.request<ApiItemResult<WheelPrize>>(`/wheel-of-fortunes/${id}`, {
             method: 'PUT',
             body: JSON.stringify(body),
         });
     }
 
-    async deleteWheelOfFortune(id: number) {
-        return this.request<any>(`/wheel-of-fortunes/${id}`, {
+    async deleteWheelOfFortune(id: number): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/wheel-of-fortunes/${id}`, {
             method: 'DELETE',
         });
     }
 
-    async createWheelOfFortunePrize(payload: WheelOfFortunePrizePayload) {
+    async createWheelOfFortunePrize(payload: WheelOfFortunePrizePayload): Promise<ApiItemResult<UnknownRecord>> {
         const body = sanitizePayload(payload);
-        return this.request<any>(`/wheel-of-fortune-prizes`, {
+        return this.request<ApiItemResult<UnknownRecord>>(`/wheel-of-fortune-prizes`, {
             method: 'POST',
             body: JSON.stringify(body),
         });
@@ -778,7 +903,7 @@ class ApiClient {
         limit?: number;
         wheel_of_fortune_id?: number;
         period_id?: number;
-    } = {}) {
+    } = {}): Promise<ApiListResult<WheelOfFortunePrizeWinner>> {
         const searchParams = new URLSearchParams();
         if (params.page) searchParams.append('page', params.page.toString());
         if (params.per_page) searchParams.append('per_page', params.per_page.toString());
@@ -790,7 +915,9 @@ class ApiClient {
             searchParams.append('period_id', params.period_id.toString());
         }
         const query = searchParams.toString();
-        return this.request<any>(`/wheel-of-fortune-prizes${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<WheelOfFortunePrizeWinner>>(
+            `/wheel-of-fortune-prizes${query ? `?${query}` : ''}`,
+        );
     }
 
     async getMailBrandingSettings() {
@@ -853,11 +980,17 @@ class ApiClient {
         if (response?.token) {
             this.setToken(response.token);
         }
-        return response;
+        const user = ensureUser(response?.user);
+        return {
+            ...response,
+            user,
+        };
     }
 
     async me(): Promise<User> {
-        return this.request<User>(`/auth/me`);
+        const response = await this.request<ApiItemResult<User>>(`/auth/me`);
+        const user = extractItem<User>(response);
+        return ensureUser(user);
     }
 
     async logout(): Promise<void> {
@@ -877,48 +1010,48 @@ class ApiClient {
         });
     }
 
-    async fetchAdminBookingsToday(params: { by?: string; statuses?: string } = {}) {
+    async fetchAdminBookingsToday(params: { by?: string; statuses?: string } = {}): Promise<UnknownRecord> {
         const searchParams = new URLSearchParams();
         if (params.by) searchParams.append('by', params.by);
         if (params.statuses) searchParams.append('statuses', params.statuses);
         const query = searchParams.toString();
-        return this.request<any>(`/admin/metrics/bookings-today${query ? `?${query}` : ''}`);
+        return this.request<UnknownRecord>(`/admin/metrics/bookings-today${query ? `?${query}` : ''}`);
     }
 
-    async fetchAdminCarsTotal(params: { status?: string } = {}) {
+    async fetchAdminCarsTotal(params: { status?: string } = {}): Promise<UnknownRecord> {
         const searchParams = new URLSearchParams();
         if (params.status) searchParams.append('status', params.status);
         const query = searchParams.toString();
-        return this.request<any>(`/admin/metrics/cars-total${query ? `?${query}` : ''}`);
+        return this.request<UnknownRecord>(`/admin/metrics/cars-total${query ? `?${query}` : ''}`);
     }
 
-    async fetchAdminBookingsTotal(params: { statuses?: string } = {}) {
+    async fetchAdminBookingsTotal(params: { statuses?: string } = {}): Promise<UnknownRecord> {
         const searchParams = new URLSearchParams();
         if (params.statuses) searchParams.append('statuses', params.statuses);
         const query = searchParams.toString();
-        return this.request<any>(`/admin/metrics/bookings-total${query ? `?${query}` : ''}`);
+        return this.request<UnknownRecord>(`/admin/metrics/bookings-total${query ? `?${query}` : ''}`);
     }
 
-    async getCategories() {
-        return this.request<any>(`/car-categories`);
+    async getCategories(): Promise<ApiListResult<CarCategory>> {
+        return this.request<ApiListResult<CarCategory>>(`/car-categories`);
     }
 
-    async createCategory(payload: { name: string; description?: string }) {
-        return this.request<any>(`/car-categories`, {
+    async createCategory(payload: { name: string; description?: string }): Promise<ApiItemResult<CarCategory>> {
+        return this.request<ApiItemResult<CarCategory>>(`/car-categories`, {
             method: 'POST',
             body: JSON.stringify(payload),
         });
     }
 
-    async updateCategory(id: number, payload: { name: string; description?: string }) {
-        return this.request<any>(`/car-categories/${id}`, {
+    async updateCategory(id: number, payload: { name: string; description?: string }): Promise<ApiItemResult<CarCategory>> {
+        return this.request<ApiItemResult<CarCategory>>(`/car-categories/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
         });
     }
 
-    async deleteCategory(id: number) {
-        return this.request<any>(`/car-categories/${id}`, {
+    async deleteCategory(id: number): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/car-categories/${id}`, {
             method: 'DELETE',
         });
     }
@@ -927,16 +1060,24 @@ class ApiClient {
         prices: CategoryPrice[];
         priceCalendar: CategoryPriceCalendar | null;
     }> {
-        const res = await this.request<any>(
+        const res = await this.request<ApiListResult<UnknownRecord>>(
             `/prices?category_id=${categoryId}&per_page=100`
         );
 
-        const rawData = Array.isArray(res?.data) ? res.data : res;
-        const items: any[] = Array.isArray(rawData) ? rawData : [];
+        const rawData = Array.isArray((res as { data?: UnknownRecord[] }).data)
+            ? (res as { data?: UnknownRecord[] }).data
+            : Array.isArray(res)
+                ? res
+                : [];
+        const items: UnknownRecord[] = Array.isArray(rawData) ? rawData : [];
 
-        const calendarSource = items.find(
-            (item) => item && item.price_calendar
-        )?.price_calendar;
+        const calendarCandidate = items.find((item) => {
+            const value = item?.price_calendar;
+            return value && typeof value === 'object';
+        })?.price_calendar;
+        const calendarSource = (calendarCandidate && typeof calendarCandidate === 'object')
+            ? (calendarCandidate as UnknownRecord)
+            : null;
 
         const parsePercentage = (value: unknown) => {
             const numeric = Number(value);
@@ -945,8 +1086,8 @@ class ApiClient {
 
         const priceCalendar: CategoryPriceCalendar | null = calendarSource
             ? {
-                  id: calendarSource.id,
-                  category_id: calendarSource.category_id,
+                  id: Number(calendarSource.id),
+                  category_id: Number(calendarSource.category_id),
                   jan: parsePercentage(calendarSource.jan),
                   feb: parsePercentage(calendarSource.feb),
                   mar: parsePercentage(calendarSource.mar),
@@ -959,8 +1100,8 @@ class ApiClient {
                   oct: parsePercentage(calendarSource.oct),
                   nov: parsePercentage(calendarSource.nov),
                   dec: parsePercentage(calendarSource.dec),
-                  created_at: calendarSource.created_at,
-                  updated_at: calendarSource.updated_at,
+                  created_at: typeof calendarSource.created_at === 'string' ? calendarSource.created_at : undefined,
+                  updated_at: typeof calendarSource.updated_at === 'string' ? calendarSource.updated_at : undefined,
               }
             : null;
 
@@ -968,20 +1109,21 @@ class ApiClient {
             .map((item) => {
                 const { price_calendar: _calendar, category: _category, ...rest } =
                     item ?? {};
-                const days = Number(rest.days);
-                const daysEnd = Number(rest.days_end);
+                const record = rest as UnknownRecord;
+                const days = Number(record.days);
+                const daysEnd = Number(record.days_end);
 
                 if (!Number.isFinite(days) || !Number.isFinite(daysEnd)) {
                     return null;
                 }
 
                 const priceValue =
-                    typeof rest.price === "number"
-                        ? rest.price.toString()
-                        : rest.price ?? "";
+                    typeof record.price === "number"
+                        ? record.price.toString()
+                        : record.price ?? "";
 
                 return {
-                    ...rest,
+                    ...record,
                     days,
                     days_end: daysEnd,
                     price: priceValue,
@@ -993,28 +1135,28 @@ class ApiClient {
         return { prices, priceCalendar };
     }
 
-    async createCategoryPrice(payload: { category_id: number; days: number; days_end: number; price: number }) {
-        return this.request<any>(`/prices`, {
+    async createCategoryPrice(payload: { category_id: number; days: number; days_end: number; price: number }): Promise<ApiItemResult<CategoryPrice>> {
+        return this.request<ApiItemResult<CategoryPrice>>(`/prices`, {
             method: 'POST',
             body: JSON.stringify(payload),
         });
     }
 
-    async updateCategoryPrice(id: number, payload: { category_id: number; days: number; days_end: number; price: number }) {
-        return this.request<any>(`/prices/${id}`, {
+    async updateCategoryPrice(id: number, payload: { category_id: number; days: number; days_end: number; price: number }): Promise<ApiItemResult<CategoryPrice>> {
+        return this.request<ApiItemResult<CategoryPrice>>(`/prices/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
         });
     }
 
-    async deleteCategoryPrice(id: number) {
-        return this.request<any>(`/prices/${id}`, {
+    async deleteCategoryPrice(id: number): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/prices/${id}`, {
             method: 'DELETE',
         });
     }
 
-    async createCategoryPriceCalendar(payload: CategoryPriceCalendarPayload) {
-        return this.request<any>(`/price-calendars`, {
+    async createCategoryPriceCalendar(payload: CategoryPriceCalendarPayload): Promise<ApiItemResult<CategoryPriceCalendar>> {
+        return this.request<ApiItemResult<CategoryPriceCalendar>>(`/price-calendars`, {
             method: 'POST',
             body: JSON.stringify(payload),
         });
@@ -1023,40 +1165,40 @@ class ApiClient {
     async updateCategoryPriceCalendar(
         id: number,
         payload: CategoryPriceCalendarPayload,
-    ) {
-        return this.request<any>(`/price-calendars/${id}`, {
+    ): Promise<ApiItemResult<CategoryPriceCalendar>> {
+        return this.request<ApiItemResult<CategoryPriceCalendar>>(`/price-calendars/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
         });
     }
 
-    async getDynamicPrices() {
-        return this.request<any>(`/dynamic-prices`);
+    async getDynamicPrices(): Promise<ApiListResult<DynamicPrice>> {
+        return this.request<ApiListResult<DynamicPrice>>(`/dynamic-prices`);
     }
 
-    async createDynamicPrice(payload: any) {
-        return this.request<any>(`/dynamic-prices`, {
+    async createDynamicPrice(payload: DynamicPricePayload): Promise<ApiItemResult<DynamicPrice>> {
+        return this.request<ApiItemResult<DynamicPrice>>(`/dynamic-prices`, {
             method: 'POST',
             body: JSON.stringify(payload),
         });
     }
 
-    async updateDynamicPrice(id: number, payload: any) {
-        return this.request<any>(`/dynamic-prices/${id}`, {
+    async updateDynamicPrice(id: number, payload: DynamicPricePayload): Promise<ApiItemResult<DynamicPrice>> {
+        return this.request<ApiItemResult<DynamicPrice>>(`/dynamic-prices/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
         });
     }
 
-    async toggleDynamicPrice(id: number, enabled: boolean) {
-        return this.request<any>(`/dynamic-prices/${id}`, {
+    async toggleDynamicPrice(id: number, enabled: boolean): Promise<ApiItemResult<DynamicPrice>> {
+        return this.request<ApiItemResult<DynamicPrice>>(`/dynamic-prices/${id}`, {
             method: 'PATCH',
             body: JSON.stringify({ enabled }),
         });
     }
 
-    async deleteDynamicPrice(id: number) {
-        return this.request<any>(`/dynamic-prices/${id}`, {
+    async deleteDynamicPrice(id: number): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/dynamic-prices/${id}`, {
             method: 'DELETE',
         });
     }

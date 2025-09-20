@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import type { User } from "@/types/auth";
 import {
   BarChart3,
   Calendar,
@@ -21,26 +23,394 @@ import {
   X,
   ConciergeBell,
   Mail,
+  ScrollText,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const menuItems = [
-  { name: "Dashboard", href: "/admin", icon: BarChart3 },
-  { name: "Rezervări", href: "/admin/bookings", icon: Calendar },
-  { name: "Calendar", href: "/admin/calendar", icon: CalendarDays },
-  { name: "Mașini", href: "/admin/cars", icon: Car },
-  { name: "Categorii", href: "/admin/categories", icon: FolderTree },
-  { name: "Dynamic Price", href: "/admin/dynamic-prices", icon: Percent },
-  { name: "Servicii", href: "/admin/services", icon: ConciergeBell },
-  { name: "Mail Branding", href: "/admin/mail-branding", icon: Mail },
-  { name: "Utilizatori", href: "/admin/users", icon: Users },
-  { name: "Roluri", href: "/admin/roles", icon: Shield },
-  { name: "Wheel of Fortune", href: "/admin/wheel-of-fortune", icon: Sparkles },
+type AdminSidebarSubItem = {
+  name: string;
+  href: string;
+  requiredPermissions?: readonly string[];
+};
+
+type AdminSidebarItem = {
+  name: string;
+  icon: LucideIcon;
+  href?: string;
+  subItems?: readonly AdminSidebarSubItem[];
+  requiredPermissions?: readonly string[];
+};
+
+const ACTION_TOKENS = new Set([
+  "view",
+  "index",
+  "list",
+  "read",
+  "show",
+  "access",
+  "manage",
+  "create",
+  "store",
+  "update",
+  "edit",
+  "delete",
+  "destroy",
+  "remove",
+  "restore",
+  "approve",
+  "assign",
+  "export",
+  "import",
+  "sync",
+  "generate",
+  "download",
+  "validate",
+  "apply",
+  "cancel",
+  "confirm",
+  "send",
+  "publish",
+  "unpublish",
+  "upload",
+  "schedule",
+  "resend",
+  "reset",
+  "toggle",
+  "activate",
+  "deactivate",
+  "close",
+  "open",
+  "complete",
+  "finish",
+  "start",
+  "duplicate",
+  "clone",
+  "search",
+  "invite",
+  "set",
+  "grant",
+  "revoke",
+  "attach",
+  "detach",
+  "link",
+  "unlink",
+  "add",
+]);
+
+const splitTokens = (value: string): string[] =>
+  value
+    .split(/[.:/_-]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+const getResourceTokens = (value: string): string[] => {
+  const tokens = splitTokens(value);
+  if (tokens.length === 0) {
+    return tokens;
+  }
+
+  const first = tokens[0];
+  if (first === "admin" || first === "panel") {
+    tokens.shift();
+  }
+
+  if (tokens.length > 1) {
+    const last = tokens[tokens.length - 1];
+    if (ACTION_TOKENS.has(last)) {
+      tokens.pop();
+    }
+  }
+
+  return tokens;
+};
+
+const resourceTokensMatch = (left: string[], right: string[]): boolean => {
+  if (left.length === 0 || right.length === 0) {
+    return false;
+  }
+
+  const [shorter, longer] =
+    left.length <= right.length ? [left, right] : [right, left];
+
+  return shorter.every((token, index) => longer[index] === token);
+};
+
+const normalizePermission = (value: string): string => value.trim().toLowerCase();
+
+const permissionMatches = (permission: string, candidate: string): boolean => {
+  const normalizedPermission = normalizePermission(permission);
+  const normalizedCandidate = normalizePermission(candidate);
+
+  if (!normalizedPermission || !normalizedCandidate) {
+    return false;
+  }
+
+  if (
+    normalizedPermission === "*" ||
+    normalizedPermission === "admin" ||
+    normalizedPermission === "admin.*"
+  ) {
+    return true;
+  }
+
+  if (normalizedPermission === normalizedCandidate) {
+    return true;
+  }
+
+  if (normalizedPermission.endsWith(".*")) {
+    const prefix = normalizedPermission.slice(0, -2);
+    if (
+      normalizedCandidate === prefix ||
+      normalizedCandidate.startsWith(`${prefix}.`)
+    ) {
+      return true;
+    }
+  }
+
+  if (normalizedCandidate.endsWith(".*")) {
+    const prefix = normalizedCandidate.slice(0, -2);
+    if (
+      normalizedPermission === prefix ||
+      normalizedPermission.startsWith(`${prefix}.`)
+    ) {
+      return true;
+    }
+  }
+
+  const permissionTokens = getResourceTokens(normalizedPermission);
+  const candidateTokens = getResourceTokens(normalizedCandidate);
+
+  return resourceTokensMatch(permissionTokens, candidateTokens);
+};
+
+const hasAccess = (
+  user: User | null,
+  requiredPermissions?: readonly string[],
+): boolean => {
+  if (!requiredPermissions || requiredPermissions.length === 0) {
+    return Boolean(user);
+  }
+
+  if (!user) {
+    return false;
+  }
+
+  if (user.super_user || user.manage_supers) {
+    return true;
+  }
+
+  const userPermissions = Array.isArray(user.permissions)
+    ? user.permissions
+        .map((permission) =>
+          typeof permission === "string" ? normalizePermission(permission) : "",
+        )
+        .filter((permission) => permission.length > 0)
+    : [];
+
+  if (userPermissions.length === 0) {
+    return false;
+  }
+
+  return requiredPermissions.some((candidate) =>
+    userPermissions.some((permission) => permissionMatches(permission, candidate)),
+  );
+};
+
+const resourceVariants = (value: string): string[] => {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) {
+    return [];
+  }
+
+  const variants = new Set<string>();
+  const normalized = trimmed.replace(/\s+/g, "-");
+  const forms = [
+    normalized,
+    normalized.replace(/-/g, "_"),
+    normalized.replace(/_/g, "-"),
+    normalized.replace(/[-_]/g, ""),
+  ];
+
+  forms.forEach((form) => {
+    if (!form) {
+      return;
+    }
+    variants.add(form);
+    variants.add(`admin.${form}`);
+  });
+
+  return Array.from(variants);
+};
+
+const buildPermissionList = (
+  slug: string,
+  extras: readonly string[] = [],
+): readonly string[] => {
+  const seeds = new Set<string>();
+  const register = (value: string) => {
+    resourceVariants(value).forEach((variant) => seeds.add(variant));
+  };
+
+  register(slug);
+  extras.forEach((extra) => register(extra));
+
+  const permissions = new Set<string>();
+
+  seeds.forEach((seed) => {
+    permissions.add(seed);
+    permissions.add(`${seed}.view`);
+    permissions.add(`${seed}.index`);
+    permissions.add(`${seed}.list`);
+    permissions.add(`${seed}.read`);
+    permissions.add(`${seed}.show`);
+    permissions.add(`${seed}.access`);
+    permissions.add(`${seed}.manage`);
+    permissions.add(`${seed}.*`);
+  });
+
+  return Array.from(permissions);
+};
+
+const filterMenuItems = (
+  items: readonly AdminSidebarItem[],
+  user: User | null,
+): AdminSidebarItem[] =>
+  items
+    .map((item) => {
+      if (item.subItems && item.subItems.length > 0) {
+        const allowedSubItems = item.subItems.filter((subItem) =>
+          hasAccess(user, subItem.requiredPermissions ?? item.requiredPermissions),
+        );
+
+        if (allowedSubItems.length === 0) {
+          if (item.href && hasAccess(user, item.requiredPermissions)) {
+            const { subItems: _subItems, ...rest } = item;
+            return {
+              ...rest,
+            } satisfies AdminSidebarItem;
+          }
+
+          return null;
+        }
+
+        return {
+          ...item,
+          subItems: allowedSubItems,
+        } satisfies AdminSidebarItem;
+      }
+
+      return hasAccess(user, item.requiredPermissions) ? item : null;
+    })
+    .filter((item): item is AdminSidebarItem => item !== null);
+
+const menuItems: readonly AdminSidebarItem[] = [
+  {
+    name: "Dashboard",
+    href: "/admin",
+    icon: BarChart3,
+    requiredPermissions: buildPermissionList("dashboard", ["overview", "statistics"]),
+  },
+  {
+    name: "Rezervări",
+    href: "/admin/bookings",
+    icon: Calendar,
+    requiredPermissions: buildPermissionList("bookings", ["booking"]),
+  },
+  {
+    name: "Calendar",
+    href: "/admin/calendar",
+    icon: CalendarDays,
+    requiredPermissions: buildPermissionList("bookings-calendar", [
+      "bookings",
+      "booking",
+      "calendar",
+    ]),
+  },
+  {
+    name: "Mașini",
+    href: "/admin/cars",
+    icon: Car,
+    requiredPermissions: buildPermissionList("cars", ["car", "vehicles", "fleet"]),
+  },
+  {
+    name: "Categorii",
+    href: "/admin/categories",
+    icon: FolderTree,
+    requiredPermissions: buildPermissionList("categories", [
+      "category",
+      "car-categories",
+    ]),
+  },
+  {
+    name: "Dynamic Price",
+    href: "/admin/dynamic-prices",
+    icon: Percent,
+    requiredPermissions: buildPermissionList("dynamic-prices", [
+      "dynamic-price",
+      "dynamic_prices",
+      "prices",
+    ]),
+  },
+  {
+    name: "Servicii",
+    href: "/admin/services",
+    icon: ConciergeBell,
+    requiredPermissions: buildPermissionList("services", ["service", "extras"]),
+  },
+  {
+    name: "Mail Branding",
+    href: "/admin/mail-branding",
+    icon: Mail,
+    requiredPermissions: buildPermissionList("mail-branding", ["mailbranding", "mail"]),
+  },
+  {
+    name: "Utilizatori",
+    href: "/admin/users",
+    icon: Users,
+    requiredPermissions: buildPermissionList("users", ["user", "staff"]),
+  },
+  {
+    name: "Roluri",
+    href: "/admin/roles",
+    icon: Shield,
+    requiredPermissions: buildPermissionList("roles", ["role", "permissions"]),
+  },
+  {
+    name: "Loguri activitate",
+    href: "/admin/activity-logs",
+    icon: ScrollText,
+    requiredPermissions: buildPermissionList("activity-logs", [
+      "activity_logs",
+      "activity",
+      "logs",
+      "log",
+    ]),
+  },
+  {
+    name: "Wheel of Fortune",
+    href: "/admin/wheel-of-fortune",
+    icon: Sparkles,
+    requiredPermissions: buildPermissionList("wheel-of-fortune", [
+      "wheel",
+      "fortune",
+      "wheeloffortune",
+    ]),
+  },
   {
     name: "Mockup",
     icon: Folder,
+    requiredPermissions: buildPermissionList("mockup"),
     subItems: [
-      { name: "Sub Meniu 1", href: "/admin/mockup/sub1" },
-      { name: "Sub Meniu 2", href: "/admin/mockup/sub2" },
+      {
+        name: "Sub Meniu 1",
+        href: "/admin/mockup/sub1",
+        requiredPermissions: buildPermissionList("mockup"),
+      },
+      {
+        name: "Sub Meniu 2",
+        href: "/admin/mockup/sub2",
+        requiredPermissions: buildPermissionList("mockup"),
+      },
     ],
   },
 ];
@@ -50,6 +420,11 @@ export default function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const { user } = useAuth();
+  const accessibleMenuItems = useMemo(
+    () => filterMenuItems(menuItems, user ?? null),
+    [user],
+  );
 
   useEffect(() => {
     const handleResize = () => {
@@ -61,6 +436,29 @@ export default function AdminSidebar() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    setOpenMenus((previous) => {
+      const allowedNames = new Set(
+        accessibleMenuItems
+          .filter((item) => item.subItems && item.subItems.length > 0)
+          .map((item) => item.name),
+      );
+
+      const nextEntries = Object.entries(previous).filter(([name]) =>
+        allowedNames.has(name),
+      );
+
+      if (nextEntries.length === Object.keys(previous).length) {
+        return previous;
+      }
+
+      return nextEntries.reduce<Record<string, boolean>>((accumulator, [name, value]) => {
+        accumulator[name] = value;
+        return accumulator;
+      }, {});
+    });
+  }, [accessibleMenuItems]);
 
   const toggleMenu = (name: string) => {
     setOpenMenus((prev) => ({ ...prev, [name]: !prev[name] }));
@@ -90,35 +488,35 @@ export default function AdminSidebar() {
             : "w-64"
         }`}
       >
-      <div className="h-16 flex items-center justify-between px-4">
-        {!collapsed && (
-          <span className="text-lg font-semibold text-berkeley">Admin</span>
-        )}
-        <button
-          onClick={() => {
-            if (isMobile) setCollapsed(true);
-            else setCollapsed(!collapsed);
-          }}
-          className="p-2 rounded-md hover:bg-gray-100"
-          aria-label={
-            isMobile
-              ? "Închide meniul"
-              : collapsed
-              ? "Extinde meniul"
-              : "Restrânge meniul"
-          }
-        >
-          {isMobile ? (
-            <X className="h-5 w-5 text-gray-700" />
-          ) : collapsed ? (
-            <ChevronRight className="h-5 w-5 text-gray-700" />
-          ) : (
-            <ChevronLeft className="h-5 w-5 text-gray-700" />
+        <div className="h-16 flex items-center justify-between px-4">
+          {!collapsed && (
+            <span className="text-lg font-semibold text-berkeley">Admin</span>
           )}
-        </button>
-      </div>
-      <nav className="flex-1 px-2 space-y-1">
-        {menuItems.map((item) => {
+          <button
+            onClick={() => {
+              if (isMobile) setCollapsed(true);
+              else setCollapsed(!collapsed);
+            }}
+            className="p-2 rounded-md hover:bg-gray-100"
+            aria-label={
+              isMobile
+                ? "Închide meniul"
+                : collapsed
+                ? "Extinde meniul"
+                : "Restrânge meniul"
+            }
+          >
+            {isMobile ? (
+              <X className="h-5 w-5 text-gray-700" />
+            ) : collapsed ? (
+              <ChevronRight className="h-5 w-5 text-gray-700" />
+            ) : (
+              <ChevronLeft className="h-5 w-5 text-gray-700" />
+            )}
+          </button>
+        </div>
+        <nav className="flex-1 px-2 space-y-1">
+        {accessibleMenuItems.map((item) => {
           const Icon = item.icon;
           const active = item.href
             ? pathname === item.href
@@ -193,8 +591,8 @@ export default function AdminSidebar() {
             </Link>
           );
         })}
-      </nav>
-    </aside>
+        </nav>
+      </aside>
     </>
   );
 }

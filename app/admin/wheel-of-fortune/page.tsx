@@ -230,16 +230,20 @@ const formatDateRange = (start?: string | null, end?: string | null) => {
     return "Nespecificată";
 };
 
-const extractDataArray = (response: any): any[] => {
-    if (!response) return [];
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null;
+
+const extractDataArray = (response: unknown): unknown[] => {
     if (Array.isArray(response)) return response;
-    if (Array.isArray(response?.data)) return response.data;
-    if (Array.isArray(response?.items)) return response.items;
+    if (!isRecord(response)) return [];
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.items)) return response.items;
+    if (Array.isArray(response.results)) return response.results;
     return [];
 };
 
-const mapPeriod = (item: any): WheelOfFortunePeriod | null => {
-    if (!item) return null;
+const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
+    if (!isRecord(item)) return null;
     const id = Number(item.id ?? item.period_id ?? item.value);
     if (!Number.isFinite(id)) return null;
 
@@ -280,8 +284,8 @@ const isPeriodActive = (period?: WheelOfFortunePeriod | null) => {
     return false;
 };
 
-const mapPrize = (item: any): WheelOfFortuneSlice | null => {
-    if (!item) return null;
+const mapPrize = (item: unknown): WheelOfFortuneSlice | null => {
+    if (!isRecord(item)) return null;
     const id = Number(item.id ?? item.wheel_of_fortune_id ?? item.value);
     if (!Number.isFinite(id)) return null;
 
@@ -322,8 +326,8 @@ const mapPrize = (item: any): WheelOfFortuneSlice | null => {
     };
 };
 
-const mapWinner = (item: any): WheelOfFortunePrizeWinner | null => {
-    if (!item) return null;
+const mapWinner = (item: unknown): WheelOfFortunePrizeWinner | null => {
+    if (!isRecord(item)) return null;
     const id = Number(item.id ?? item.prize_id ?? item.value);
     if (!Number.isFinite(id)) return null;
 

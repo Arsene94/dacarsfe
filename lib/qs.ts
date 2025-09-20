@@ -1,5 +1,5 @@
 // qs.ts
-export function toQuery(params: Record<string, any>): string {
+export function toQuery(params: Record<string, unknown>): string {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
         if (v === undefined || v === null) return;

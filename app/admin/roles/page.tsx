@@ -16,6 +16,7 @@ import { Popup } from "@/components/ui/popup";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import apiClient from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
 import type { Column } from "@/types/ui";
 import type { Role, RolePermission } from "@/types/roles";
 
@@ -221,11 +222,7 @@ const RolesAdminPage = () => {
           includePermissions: true,
         });
 
-        const rawList = Array.isArray((response as any)?.data)
-          ? (response as any).data
-          : Array.isArray(response)
-          ? response
-          : [];
+        const rawList = extractList<Role>(response);
 
         const mapped = rawList
           .map((item: unknown) => mapRoleResource(item))

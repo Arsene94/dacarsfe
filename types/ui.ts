@@ -7,6 +7,7 @@ export interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'secondary' | 'outline' | 'danger' | 'blue' | 'yellow';
   size?: 'sm' | 'md' | 'lg';
+  'aria-label'?: string;
 }
 
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
@@ -14,17 +15,19 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
   onValueChange?: (value: string) => void;
 }
 
-export interface Column<T> {
+export type ColumnValue = string | number | boolean | Date | null | undefined;
+
+export interface Column<T, V extends ColumnValue = ColumnValue> {
   id: string;
   header: React.ReactNode;
-  accessor: (row: T) => any;
+  accessor: (row: T) => V;
   cell?: (row: T) => React.ReactNode;
   sortable?: boolean;
 }
 
-export interface SortState<T> {
+export interface SortState<T, V extends ColumnValue = ColumnValue> {
   id: string;
-  accessor: (row: T) => any;
+  accessor: (row: T) => V;
   direction: 'asc' | 'desc';
 }
 

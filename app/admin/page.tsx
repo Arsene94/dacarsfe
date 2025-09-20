@@ -23,13 +23,74 @@ import BookingForm from "@/components/admin/BookingForm";
 import BookingContractForm from "@/components/admin/BookingContractForm";
 import { Label } from "@/components/ui/label";
 import type { Column } from "@/types/ui";
-import { AdminReservation } from "@/types/admin";
+import {
+    AdminBookingFormValues,
+    AdminReservation,
+    type AdminBookingResource,
+} from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import {getStatusText} from "@/lib/utils";
+import { extractItem } from "@/lib/apiResponse";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://backend.dacars.ro/storage';
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null;
+
+const toNumericId = (value: unknown): number | null => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return value;
+    }
+    if (typeof value === "string") {
+        const parsed = Number(value.trim());
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+};
+
+const toSafeString = (value: unknown, fallback = ""): string => {
+    if (typeof value === "string") {
+        return value;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+        return String(value);
+    }
+    return fallback;
+};
+
+const mapServiceSummaries = (
+    services: unknown,
+): Array<{ id: number; name: string }> => {
+    if (!Array.isArray(services)) return [];
+    return services
+        .map((service) => {
+            if (!isRecord(service)) return null;
+            const id =
+                toNumericId(service.id) ??
+                toNumericId((service as { service_id?: unknown }).service_id);
+            if (id == null) return null;
+            const name = toSafeString(service.name ?? (service as { title?: unknown }).title).trim();
+            return { id, name: name.length > 0 ? name : `Serviciu #${id}` };
+        })
+        .filter((entry): entry is { id: number; name: string } => entry !== null);
+};
+
+const resolveServiceIds = (booking: AdminBookingResource): number[] => {
+    const directIds = Array.isArray(booking.service_ids)
+        ? booking.service_ids
+        : [];
+    const numericDirect = directIds
+        .map((value) => toNumericId(value))
+        .filter((value): value is number => value != null);
+
+    if (numericDirect.length > 0) {
+        return numericDirect;
+    }
+
+    return mapServiceSummaries(booking.services).map((service) => service.id);
+};
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -165,9 +226,13 @@ const AdminDashboard = () => {
         returnTime: string;
     } | null>(null);
     const [editPopupOpen, setEditPopupOpen] = useState(false);
-    const [bookingInfo, setBookingInfo] = useState<any>(null);
+    const [bookingInfo, setBookingInfo] = useState<AdminBookingFormValues | null>(
+        null,
+    );
     const [contractOpen, setContractOpen] = useState(false);
-    const [contractReservation, setContractReservation] = useState<any | null>(null);
+    const [contractReservation, setContractReservation] = useState<
+        AdminReservation | null
+    >(null);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
     const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);
     const [bookingsTotalCount, setBookingsTotalCount] = useState<number>(0);
@@ -352,8 +417,12 @@ const AdminDashboard = () => {
     const handleEditBooking = async () => {
         if (!activityDetails) return;
         try {
-            const res = await apiClient.getBookingInfo(activityDetails.id);
-            const info = res.data;
+            const response = await apiClient.getBookingInfo(activityDetails.id);
+            const info = extractItem(response);
+            if (!info) {
+                throw new Error("Rezervarea nu a putut fi încărcată.");
+            }
+            const carInfo = info.car ?? null;
             const formatted = {
                 ...info,
                 rental_start_date: toLocalDateTimeInput(info.rental_start_date),
@@ -361,11 +430,7 @@ const AdminDashboard = () => {
                 coupon_amount: info.coupon_amount ?? 0,
                 coupon_type: info.coupon_type ?? null,
                 total_services: info.total_services ?? 0,
-                service_ids: Array.isArray(info.service_ids)
-                    ? info.service_ids
-                    : Array.isArray(info.services)
-                        ? info.services.map((s: any) => s.id)
-                        : [],
+                service_ids: resolveServiceIds(info),
                 sub_total: info.sub_total ?? 0,
                 coupon_code: info.coupon_code ?? "",
                 customer_name: info.customer_name ?? "",
@@ -375,11 +440,16 @@ const AdminDashboard = () => {
                 customer_id: info.customer_id ?? "",
                 car_id: info.car_id ?? 0,
                 car_name: info.car_name ?? "",
-                car_image: info.car_image ?? info.image_preview ?? "",
-                car_license_plate: info.car.license_plate ?? info.license_plate ?? "",
-                car_transmission: info.car.transmission.name ?? info.transmission_name ?? "",
-                car_fuel: info.car.fuel.name ?? info.fuel_name ?? "",
-                car_deposit: info.car.deposit,
+                car_image: info.car_image ?? info.image_preview ?? carInfo?.image ?? "",
+                car_license_plate:
+                    carInfo?.license_plate ??
+                    (typeof info.license_plate === "string" ? info.license_plate : "") ??
+                    carInfo?.plate ??
+                    "",
+                car_transmission:
+                    carInfo?.transmission?.name ?? info.transmission_name ?? "",
+                car_fuel: carInfo?.fuel?.name ?? info.fuel_name ?? "",
+                car_deposit: carInfo?.deposit ?? info.car_deposit ?? null,
                 booking_number: info.booking_number ?? "",
                 note: info.note ?? "",
                 days: info.days ?? 0,
@@ -611,10 +681,7 @@ const AdminDashboard = () => {
                                                                             price_per_day: r.price_per_day,
                                                                             sub_total: r.sub_total,
                                                                             total: r.total,
-                                                                            services: (r.services ?? []).map((s: any) => ({
-                                                                                id: Number(s.id),
-                                                                                name: String(s.name),
-                                                                            })),
+                                                                            services: mapServiceSummaries(r.services),
                                                                             total_services: r.total_services,
                                                                             coupon_amount: r.coupon_amount,
                                                                             coupon_type: r.coupon_type,

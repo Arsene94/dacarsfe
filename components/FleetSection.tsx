@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { Button } from '@/components/ui/button';
+import { extractList } from '@/lib/apiResponse';
 import { ApiCar, CarCategory, FleetCar } from '@/types/car';
 
 const STORAGE_BASE =
@@ -43,11 +44,7 @@ const FleetSection = () => {
 
         (async () => {
             const response = await apiClient.getHomePageCars({ limit: 4 });
-            console.log(response);
-            const items: unknown = Array.isArray(response)
-                ? response
-                : (response as any)?.data;
-            const list = Array.isArray(items) ? (items as ApiCar[]) : [];
+            const list = extractList<ApiCar>(response);
 
             const mapped: FleetCar[] = list.map((c) => ({
                 id: c.id,

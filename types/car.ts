@@ -1,8 +1,8 @@
 export type CarCategory = {
     id: number;
     name: string;
-    order?: number
-}
+    order?: number;
+};
 
 export type ApiCar = {
   id: number;
@@ -15,15 +15,26 @@ export type ApiCar = {
   images?: Record<string, string>;
   avg_review?: number;
   number_of_seats: number;
+  license_plate?: string | null;
+  licensePlate?: string | null;
+  plate?: string | null;
   fuel?: { id?: number; name?: string | null } | null;
   type?: { id?: number; name?: string | null; image?: string | null } | null;
   transmission?: { id?: number; name?: string | null } | null;
+  transmission_name?: string | null;
+  transmissionName?: string | null;
+  fuel_name?: string | null;
+  fuelName?: string | null;
   categories?: CarCategory[];
   content?: string | null;
   days?: number;
   deposit?: number;
   total_deposit?: number | string;
   total_without_deposit?: number | string;
+  available?: boolean;
+  price?: number | string;
+  pivot?: Record<string, unknown> | null;
+  [key: string]: unknown;
 };
 
 export type Car = {
@@ -65,3 +76,46 @@ export type FleetCar = {
   categories: { id: number; name: string };
   rating?: number;
 };
+
+export interface CarSearchUiPayload {
+  start_date?: string;
+  startDate?: string;
+  end_date?: string;
+  endDate?: string;
+  page?: number;
+  per_page?: number;
+  perPage?: number;
+  limit?: number;
+  sort_by?: string;
+  sortBy?: string;
+  make_id?: number;
+  vehicle_type?: number | string;
+  vehicle_type_id?: number;
+  car_type?: number | string;
+  transmission?: number | string;
+  fuel?: number | string;
+  fuel_type?: number | string;
+  seats?: number | string;
+  number_of_seats?: number | string;
+  year?: number | string;
+  search?: string;
+  include?: string;
+  [key: string]: unknown;
+}
+
+export interface CarFilterParams {
+  start_date?: string;
+  end_date?: string;
+  page?: number;
+  per_page?: number;
+  limit?: number;
+  sort_by?: string;
+  make_id?: number;
+  vehicle_type_id?: number;
+  transmission_id?: number;
+  fuel_type_id?: number;
+  number_of_seats?: number;
+  year?: number;
+  name_like?: string;
+  include?: string;
+}

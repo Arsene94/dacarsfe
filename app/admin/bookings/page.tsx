@@ -21,7 +21,12 @@ import {
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
-import { AdminReservation } from "@/types/admin";
+import { extractItem, extractList } from "@/lib/apiResponse";
+import type {
+  AdminBookingFormValues,
+  AdminBookingResource,
+  AdminReservation,
+} from "@/types/admin";
 import type { ReservationWheelPrizeSummary } from "@/types/reservation";
 import { Input } from "@/components/ui/input";
 import DateRangePicker from "@/components/ui/date-range-picker";
@@ -73,28 +78,68 @@ const parseOptionalNumber = (value: unknown): number | null => {
   return null;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const formatTimeLabel = (iso?: string | null): string | undefined => {
+  if (!iso) return undefined;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
+};
+
 const normalizeWheelPrizeSummary = (
-  raw: any,
+  raw: unknown,
 ): ReservationWheelPrizeSummary | null => {
-  if (!raw) return null;
+  if (!isRecord(raw)) return null;
   const wheelId =
-    parseOptionalNumber(raw.wheel_of_fortune_id ?? raw.wheelId ?? raw.period_id) ??
-    null;
+    parseOptionalNumber(
+      raw.wheel_of_fortune_id ??
+        (raw as { wheelId?: unknown }).wheelId ??
+        raw.period_id,
+    ) ?? null;
   const prizeId =
-    parseOptionalNumber(raw.prize_id ?? raw.id ?? raw.prizeId ?? raw.slice_id) ?? null;
+    parseOptionalNumber(
+      raw.prize_id ?? raw.id ?? (raw as { prizeId?: unknown }).prizeId ?? raw.slice_id,
+    ) ?? null;
   const amount = parseOptionalNumber(raw.amount ?? raw.value ?? raw.discount_value);
   const discountValue =
     parseOptionalNumber(raw.discount_value ?? raw.discount ?? raw.value) ?? 0;
+  const wheelInfo = isRecord(raw.wheel_of_fortune) ? raw.wheel_of_fortune : null;
+  const title =
+    (typeof raw.title === "string" && raw.title.trim().length > 0
+      ? raw.title
+      : typeof raw.name === "string" && raw.name.trim().length > 0
+        ? raw.name
+        : null) ?? "Premiu DaCars";
+  const prizeType =
+    (typeof raw.type === "string" && raw.type) ??
+    (typeof raw.prize_type === "string" && raw.prize_type) ??
+    (wheelInfo && typeof wheelInfo.type === "string" ? wheelInfo.type : undefined) ??
+    "other";
 
   return {
     wheel_of_fortune_id: wheelId,
     prize_id: prizeId,
-    title: raw.title ?? raw.name ?? "Premiu DaCars",
-    type: raw.type ?? raw.prize_type ?? raw.wheel_of_fortune?.type ?? "other",
+    title,
+    type: prizeType,
     amount,
-    description: raw.description ?? null,
-    amount_label: raw.amount_label ?? raw.amountLabel ?? null,
-    expires_at: raw.expires_at ?? raw.expiresAt ?? null,
+    description:
+      typeof raw.description === "string" && raw.description.length > 0
+        ? raw.description
+        : null,
+    amount_label:
+      typeof raw.amount_label === "string"
+        ? raw.amount_label
+        : typeof (raw as { amountLabel?: unknown }).amountLabel === "string"
+          ? (raw as { amountLabel: string }).amountLabel
+          : null,
+    expires_at:
+      typeof raw.expires_at === "string"
+        ? raw.expires_at
+        : typeof (raw as { expiresAt?: unknown }).expiresAt === "string"
+          ? (raw as { expiresAt: string }).expiresAt
+          : null,
     discount_value: discountValue,
   };
 };
@@ -183,7 +228,9 @@ const ReservationsPage = () => {
   const [contractReservation, setContractReservation] =
     useState<AdminReservation | null>(null);
   const [editPopupOpen, setEditPopupOpen] = useState(false);
-  const [bookingInfo, setBookingInfo] = useState<any>(null);
+  const [bookingInfo, setBookingInfo] = useState<AdminBookingFormValues | null>(
+    null,
+  );
 
   const formatEuro = (value: number | string | null | undefined) => {
     if (typeof value === "string") {
@@ -245,59 +292,112 @@ const ReservationsPage = () => {
       if (statusFilter !== "all") params.status = statusFilter;
       if (startDateFilter) params.start_date = startDateFilter;
       if (endDateFilter) params.end_date = endDateFilter;
-      const res = await apiClient.getBookings(params);
-      const mapped: AdminReservation[] = res.data.map((b: any) => {
-        const wheelPrize = normalizeWheelPrizeSummary(b.wheel_prize);
+      const response = await apiClient.getBookings(params);
+      const bookings = extractList<AdminBookingResource>(response);
+      const mapped = bookings.map<AdminReservation>((booking) => {
+        const wheelPrize = normalizeWheelPrizeSummary(booking.wheel_prize);
         const wheelPrizeDiscount =
-          b.wheel_prize_discount ?? wheelPrize?.discount_value ?? null;
+          booking.wheel_prize_discount ?? wheelPrize?.discount_value ?? null;
         const normalizedDiscount =
           typeof wheelPrizeDiscount === "number"
             ? wheelPrizeDiscount
             : parseOptionalNumber(wheelPrizeDiscount);
         const totalBeforeWheelPrize = parseOptionalNumber(
-          b.total_before_wheel_prize,
+          booking.total_before_wheel_prize,
         );
+        const identifier =
+          booking.booking_number ??
+          booking.bookingNumber ??
+          booking.id ??
+          null;
+        const id =
+          typeof identifier === "string"
+            ? identifier
+            : identifier != null
+            ? String(identifier)
+            : "";
+        const customerName =
+          booking.customer_name ?? booking.customer?.name ?? "";
+        const phone = booking.customer_phone ?? booking.customer?.phone ?? "";
+        const email = booking.customer_email ?? booking.customer?.email ?? undefined;
+        const carId = parseOptionalNumber(booking.car_id) ?? 0;
+        const carName = booking.car_name ?? booking.car?.name ?? "";
+        const carLicensePlate =
+          booking.car?.license_plate ??
+          booking.car?.licensePlate ??
+          booking.car_license_plate ??
+          undefined;
+        const startDate = booking.rental_start_date ?? "";
+        const endDate = booking.rental_end_date ?? "";
+        const pickupTime = formatTimeLabel(booking.rental_start_date);
+        const dropoffTime = formatTimeLabel(booking.rental_end_date);
+        const days = parseOptionalNumber(booking.days);
+        const couponAmount = parseOptionalNumber(booking.coupon_amount) ?? 0;
+        const subTotal =
+          parseOptionalNumber(booking.sub_total ?? booking.subTotal) ?? 0;
+        const taxAmount = parseOptionalNumber(booking.tax_amount) ?? 0;
+        const location = booking.location ?? undefined;
+        const status = mapStatus(booking.status ?? "pending");
+        const total =
+          parseOptionalNumber(booking.total ?? booking.total_price) ?? 0;
+        const discountCode = booking.coupon_code ?? undefined;
+        const createdAt = booking.created_at ?? undefined;
+        const pricePerDay =
+          parseOptionalNumber(
+            booking.price_per_day ?? booking.original_price_per_day,
+          ) ?? 0;
+        const servicesPrice = parseOptionalNumber(booking.total_services) ?? 0;
+        const discount =
+          parseOptionalNumber(booking.discount ?? booking.coupon_amount) ??
+          couponAmount;
 
         return {
-          id: b.booking_number || b.id?.toString(),
-          customerName: b.customer_name,
-          email: b.customer_email,
-          phone: b.customer_phone,
-          carId: b.car_id,
-          carName: b.car_name,
-          carLicensePlate: b.car.license_plate ?? "",
-          startDate: b.rental_start_date,
-          endDate: b.rental_end_date,
-          plan: b.with_deposit ? 1 : 0,
-          pickupTime: new Date(b.rental_start_date).toLocaleTimeString("ro-RO", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          dropoffTime: new Date(b.rental_end_date).toLocaleTimeString("ro-RO", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          days: b.days,
-          couponAmount: b.coupon_amount,
-          subTotal: b.sub_total,
-          taxAmount: b.tax_amount,
-          location: b.location || "",
-          status: mapStatus(b.status),
-          total: b.total,
-          discountCode: b.coupon_code || undefined,
-          createdAt: b.created_at,
-          pricePerDay: b.price_per_day,
-          servicesPrice: b.total_services,
-          discount: b.coupon_amount,
-          totalBeforeWheelPrize: totalBeforeWheelPrize,
+          id,
+          customerName,
+          email,
+          phone,
+          carId,
+          carName,
+          carLicensePlate,
+          startDate,
+          endDate,
+          plan: normalizeBoolean(booking.with_deposit, true) ? 1 : 0,
+          pickupTime,
+          dropoffTime,
+          days: days ?? undefined,
+          couponAmount,
+          subTotal,
+          taxAmount,
+          location: location ?? "",
+          status,
+          total,
+          discountCode,
+          createdAt,
+          pricePerDay,
+          servicesPrice,
+          discount,
+          totalBeforeWheelPrize,
           wheelPrizeDiscount: normalizedDiscount ?? null,
           wheelPrize,
         };
       });
-      const meta = res?.meta || {};
-      const total = meta?.total ?? res?.total ?? mapped.length;
+      const listMeta = !Array.isArray(response)
+        ? response.meta ?? response.pagination ?? null
+        : null;
+      const total =
+        listMeta?.total ??
+        listMeta?.count ??
+        (!Array.isArray(response)
+          ? response.total ?? response.count ?? bookings.length
+          : bookings.length);
       setReservations(mapped);
-      setLastPage(meta?.last_page ?? res?.last_page ?? 1);
+      const resolvedLastPage =
+        listMeta?.last_page ??
+        listMeta?.lastPage ??
+        (!Array.isArray(response)
+          ? response.last_page ?? response.lastPage ?? 1
+          : 1);
+      setLastPage(resolvedLastPage > 0 ? resolvedLastPage : 1);
       setTotalReservations(total);
     } catch (e) {
       console.error(e);
@@ -316,19 +416,22 @@ const ReservationsPage = () => {
   const handleEditReservation = useCallback(
     async (reservationId: string) => {
       try {
-        const res = await apiClient.getBookingInfo(reservationId);
-        const raw = (res as any)?.data ?? res;
-        const info = raw?.data ?? raw ?? {};
+        const response = await apiClient.getBookingInfo(reservationId);
+        const info = extractItem(response);
+        if (!info) {
+          throw new Error("Nu am putut găsi rezervarea solicitată.");
+        }
 
-        const serviceIds = Array.isArray(info?.service_ids)
+        const rawServiceIds = Array.isArray(info.service_ids)
           ? info.service_ids
-          : Array.isArray(info?.services)
-          ? info.services.map((s: any) => s.id)
-          : [];
-        const normalizedServiceIds = serviceIds.map((id: any) => {
-          const parsed = parseOptionalNumber(id);
-          return parsed != null ? parsed : id;
-        });
+          : Array.isArray(info.services)
+            ? info.services.map((service) =>
+                service?.id ?? (service?.pivot ? (service.pivot as { service_id?: unknown }).service_id : null),
+              )
+            : [];
+        const normalizedServiceIds = rawServiceIds
+          .map((value) => parseOptionalNumber(value))
+          .filter((value): value is number => value != null);
 
         const pricePerDay =
           parseOptionalNumber(info?.price_per_day ?? info?.pricePerDay) ?? 0;
@@ -343,35 +446,42 @@ const ReservationsPage = () => {
             info?.base_price_casco ?? info?.rental_rate_casco ?? basePrice,
           ) ?? basePrice;
         const totalServices =
-          parseOptionalNumber(info?.total_services) ??
-          (Array.isArray(info?.services)
-            ? info.services.reduce((sum: number, svc: any) => {
-                const price = parseOptionalNumber(svc?.price ?? svc?.pivot?.price);
-                return sum + (price ?? 0);
+          parseOptionalNumber(info.total_services) ??
+          (Array.isArray(info.services)
+            ? info.services.reduce((sum, svc) => {
+                const directPrice = parseOptionalNumber(svc?.price);
+                const pivotPrice = svc?.pivot
+                  ? parseOptionalNumber((svc.pivot as { price?: unknown }).price)
+                  : null;
+                return sum + (directPrice ?? pivotPrice ?? 0);
               }, 0)
             : 0);
         const totalBeforeWheelPrize =
           parseOptionalNumber(
-            info?.total_before_wheel_prize ?? info?.totalBeforeWheelPrize,
+            info.total_before_wheel_prize ??
+              (info as { totalBeforeWheelPrize?: unknown }).totalBeforeWheelPrize,
           ) ?? null;
+        const wheelPrize = normalizeWheelPrizeSummary(info.wheel_prize);
         const wheelPrizeDiscount =
-          parseOptionalNumber(
-            info?.wheel_prize_discount ?? info?.wheel_prize?.discount_value,
-          ) ?? 0;
+          parseOptionalNumber(info.wheel_prize_discount) ??
+          (wheelPrize?.discount_value ?? null);
         const advancePayment =
-          parseOptionalNumber(info?.advance_payment ?? info?.advancePayment) ?? 0;
+          parseOptionalNumber(info.advance_payment ?? (info as { advancePayment?: unknown }).advancePayment) ?? 0;
         const couponAmount =
-          parseOptionalNumber(info?.coupon_amount ?? info?.discount) ??
-          info?.coupon_amount ??
+          parseOptionalNumber(info.coupon_amount ?? info.discount) ??
+          info.coupon_amount ??
           0;
         const subTotal =
-          parseOptionalNumber(info?.sub_total ?? info?.subTotal) ?? info?.sub_total ?? 0;
+          parseOptionalNumber(info.sub_total ?? (info as { subTotal?: unknown }).subTotal) ??
+          info.sub_total ??
+          0;
         const total =
-          parseOptionalNumber(info?.total) ?? info?.total ??
-          parseOptionalNumber(info?.total_price) ?? info?.total_price ?? 0;
+          parseOptionalNumber(info.total) ?? info.total ??
+          parseOptionalNumber(info.total_price) ?? info.total_price ??
+          0;
         const taxAmount =
-          parseOptionalNumber(info?.tax_amount ?? info?.taxAmount) ??
-          info?.tax_amount ??
+          parseOptionalNumber(info.tax_amount ?? (info as { taxAmount?: unknown }).taxAmount) ??
+          info.tax_amount ??
           0;
 
         const formatted = {
@@ -423,8 +533,8 @@ const ReservationsPage = () => {
           with_deposit: normalizeBoolean(info?.with_deposit, true),
           status: info?.status ?? "",
           total_before_wheel_prize: totalBeforeWheelPrize,
-          wheel_prize_discount: wheelPrizeDiscount,
-          wheel_prize: info?.wheel_prize ?? null,
+          wheel_prize_discount: wheelPrizeDiscount ?? 0,
+          wheel_prize: wheelPrize ?? null,
           advance_payment: advancePayment,
           note: info?.note ?? info?.notes ?? "",
           currency_id: info?.currency_id ?? info?.currencyId ?? "",

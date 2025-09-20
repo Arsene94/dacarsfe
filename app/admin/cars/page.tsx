@@ -131,6 +131,15 @@ const collectSpecs = (raw: unknown): string[] => collectStringValues(raw);
 const normalizeImages = (raw: unknown): string[] =>
   collectStringValues(raw).filter((item) => /[./]/.test(item));
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const toTrimmedString = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
 const generateImageId = (() => {
   let counter = 0;
   return (prefix: string) => {
@@ -251,25 +260,21 @@ const toBoolean = (value: unknown): boolean | undefined => {
 
 type LookupOption = { id: number; name: string };
 
-const extractLookupOptions = (response: any): LookupOption[] => {
+const extractLookupOptions = (response: unknown): LookupOption[] => {
   const list = extractCarsList(response);
   const options: LookupOption[] = [];
 
   list.forEach((item) => {
-    if (!item || typeof item !== "object") return;
+    if (!isRecord(item)) return;
 
-    const id = toInteger((item as any).id);
-    const name =
-      typeof (item as any).name === "string"
-        ? (item as any).name
-        : typeof (item as any).title === "string"
-        ? (item as any).title
-        : typeof (item as any).label === "string"
-        ? (item as any).label
-        : "";
+    const id = toInteger(item.id ?? (item as { value?: unknown }).value);
+    const candidates = [item.name, item.title, item.label];
+    const nameCandidate = candidates.find(
+      (value): value is string => typeof value === "string" && value.trim().length > 0,
+    );
 
-    if (id != null && name.trim().length > 0) {
-      options.push({ id, name: name.trim() });
+    if (id != null && nameCandidate) {
+      options.push({ id, name: nameCandidate.trim() });
     }
   });
 
@@ -285,39 +290,27 @@ type PartnerOption = {
   username?: string | null;
 };
 
-const mapRawUserToPartnerOption = (raw: any): PartnerOption | null => {
-  if (!raw || typeof raw !== "object") return null;
+const mapRawUserToPartnerOption = (raw: unknown): PartnerOption | null => {
+  if (!isRecord(raw)) return null;
 
-  const id = toInteger((raw as any).id);
+  const id = toInteger(raw.id ?? (raw as { user_id?: unknown }).user_id);
   if (id == null) return null;
 
   const firstName =
-    typeof (raw as any).first_name === "string"
-      ? (raw as any).first_name.trim()
-      : "";
+    typeof raw.first_name === "string" ? raw.first_name.trim() : "";
   const lastName =
-    typeof (raw as any).last_name === "string"
-      ? (raw as any).last_name.trim()
-      : "";
+    typeof raw.last_name === "string" ? raw.last_name.trim() : "";
   const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
 
   const nameCandidate = [
-    typeof (raw as any).name === "string" ? (raw as any).name : undefined,
+    typeof raw.name === "string" ? raw.name : undefined,
     fullName.length > 0 ? fullName : undefined,
-    typeof (raw as any).username === "string"
-      ? (raw as any).username
-      : undefined,
-    typeof (raw as any).email === "string" ? (raw as any).email : undefined,
+    typeof raw.username === "string" ? raw.username : undefined,
+    typeof raw.email === "string" ? raw.email : undefined,
   ].find((value) => typeof value === "string" && value.trim().length > 0);
 
-  const email =
-    typeof (raw as any).email === "string"
-      ? (raw as any).email.trim()
-      : null;
-  const username =
-    typeof (raw as any).username === "string"
-      ? (raw as any).username.trim()
-      : null;
+  const email = typeof raw.email === "string" ? raw.email.trim() : null;
+  const username = typeof raw.username === "string" ? raw.username.trim() : null;
 
   return {
     id,
@@ -327,7 +320,7 @@ const mapRawUserToPartnerOption = (raw: any): PartnerOption | null => {
   };
 };
 
-const extractPartnerOptions = (response: any): PartnerOption[] => {
+const extractPartnerOptions = (response: unknown): PartnerOption[] => {
   const list = extractCarsList(response);
   const options: PartnerOption[] = [];
 
@@ -350,150 +343,184 @@ const normalizeStatus = (status: unknown): AdminCar["status"] => {
   return "available";
 };
 
-const extractCarsList = (response: any): any[] => {
-  if (!response) return [];
-  if (Array.isArray(response?.data)) return response.data;
+const extractCarsList = (response: unknown): unknown[] => {
   if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.items)) return response.items;
-  if (Array.isArray(response?.results)) return response.results;
+  if (!isRecord(response)) return [];
+
+  if (Array.isArray(response.data)) return response.data;
+  if (Array.isArray(response.items)) return response.items;
+  if (Array.isArray(response.results)) return response.results;
+
   return [];
 };
 
-const extractTotal = (response: any): number | undefined => {
-  const meta = response?.meta ?? response?.pagination ?? {};
-  const total =
-    meta?.total ??
-    meta?.count ??
-    response?.total ??
-    response?.count ??
-    response?.data?.length;
-  return typeof total === "number" ? total : undefined;
+const extractTotal = (response: unknown): number | undefined => {
+  if (!isRecord(response)) return undefined;
+
+  const metaSource =
+    (isRecord(response.meta) ? response.meta : undefined) ??
+    (isRecord(response.pagination) ? response.pagination : undefined);
+
+  const candidates = [
+    metaSource?.total,
+    metaSource?.count,
+    response.total,
+    response.count,
+    Array.isArray(response.data) ? response.data.length : undefined,
+  ];
+
+  const numericCandidate = candidates.find((value) => typeof value === "number");
+  return typeof numericCandidate === "number" ? numericCandidate : undefined;
 };
 
-const extractLastPage = (response: any, fallback: number): number => {
-  const meta = response?.meta ?? response?.pagination ?? {};
-  const lastPage =
-    meta?.last_page ??
-    meta?.lastPage ??
-    response?.last_page ??
-    response?.lastPage ??
-    fallback;
-  return typeof lastPage === "number" && Number.isFinite(lastPage)
-    ? lastPage
-    : fallback;
+const extractLastPage = (response: unknown, fallback: number): number => {
+  if (!isRecord(response)) return fallback;
+
+  const metaSource =
+    (isRecord(response.meta) ? response.meta : undefined) ??
+    (isRecord(response.pagination) ? response.pagination : undefined);
+
+  const candidates = [
+    metaSource?.last_page,
+    metaSource?.lastPage,
+    response.last_page,
+    response.lastPage,
+  ];
+
+  const numericCandidate = candidates.find(
+    (value): value is number => typeof value === "number" && Number.isFinite(value),
+  );
+
+  return numericCandidate ?? fallback;
 };
 
-const mapApiCarToAdminCar = (raw: any): AdminCar => {
-  const makeInfo = raw?.make ?? raw?.car_make ?? raw?.brand ?? null;
+const mapApiCarToAdminCar = (raw: unknown): AdminCar => {
+  if (!isRecord(raw)) {
+    throw new Error("Invalid car payload received from API.");
+  }
+
+  const makeSource = raw.make ?? raw.car_make ?? raw.brand ?? null;
+  const makeRecord = isRecord(makeSource) ? makeSource : null;
   const makeName =
-    typeof makeInfo === "string"
-      ? makeInfo
-      : makeInfo?.name ?? raw?.make_name ?? raw?.brand_name ?? "";
+    toTrimmedString(makeSource) ??
+    toTrimmedString(makeRecord?.name) ??
+    toTrimmedString(raw.make_name) ??
+    toTrimmedString(raw.brand_name) ??
+    "";
   const makeId =
-    (typeof makeInfo === "object" && makeInfo
-      ? toInteger((makeInfo as any).id)
-      : undefined) ?? toInteger(raw?.make_id);
+    (makeRecord ? toInteger(makeRecord.id) : undefined) ?? toInteger(raw.make_id);
 
-  const typeInfo = raw?.type ?? raw?.vehicle_type ?? raw?.car_type ?? null;
+  const typeSource = raw.type ?? raw.vehicle_type ?? raw.car_type ?? null;
+  const typeRecord = isRecord(typeSource) ? typeSource : null;
   const typeName =
-    typeof typeInfo === "string"
-      ? typeInfo
-      : typeInfo?.name ?? raw?.type_name ?? raw?.vehicle_type_name ?? "";
+    toTrimmedString(typeSource) ??
+    toTrimmedString(typeRecord?.name) ??
+    toTrimmedString(raw.type_name) ??
+    toTrimmedString(raw.vehicle_type_name) ??
+    "";
   const typeId =
-    typeof typeInfo === "object" && typeInfo
-      ? toInteger((typeInfo as any).id) ?? null
-      : toInteger(raw?.type_id ?? raw?.vehicle_type_id) ?? null;
+    (typeRecord ? toInteger(typeRecord.id) : undefined) ??
+    toInteger(raw.type_id ?? (raw as { vehicle_type_id?: unknown }).vehicle_type_id) ??
+    null;
 
-  const transmissionInfo = raw?.transmission ?? raw?.car_transmission ?? null;
+  const transmissionSource = raw.transmission ?? raw.car_transmission ?? null;
+  const transmissionRecord = isRecord(transmissionSource) ? transmissionSource : null;
   const transmissionName =
-    typeof transmissionInfo === "string"
-      ? transmissionInfo
-      : transmissionInfo?.name ?? raw?.transmission_name ?? "";
+    toTrimmedString(transmissionSource) ??
+    toTrimmedString(transmissionRecord?.name) ??
+    toTrimmedString(raw.transmission_name) ??
+    "";
   const transmissionId =
-    typeof transmissionInfo === "object" && transmissionInfo
-      ? toInteger((transmissionInfo as any).id) ?? null
-      : toInteger(raw?.transmission_id) ?? null;
+    (transmissionRecord ? toInteger(transmissionRecord.id) : undefined) ??
+    toInteger(raw.transmission_id) ??
+    null;
 
-  const fuelInfo = raw?.fuel ?? raw?.car_fuel ?? null;
+  const fuelSource = raw.fuel ?? raw.car_fuel ?? null;
+  const fuelRecord = isRecord(fuelSource) ? fuelSource : null;
   const fuelName =
-    typeof fuelInfo === "string"
-      ? fuelInfo
-      : fuelInfo?.name ?? raw?.fuel_name ?? "";
+    toTrimmedString(fuelSource) ??
+    toTrimmedString(fuelRecord?.name) ??
+    toTrimmedString(raw.fuel_name) ??
+    "";
   const fuelId =
-    typeof fuelInfo === "object" && fuelInfo
-      ? toInteger((fuelInfo as any).id) ?? null
-      : toInteger(raw?.fuel_id) ?? null;
+    (fuelRecord ? toInteger(fuelRecord.id) : undefined) ?? toInteger(raw.fuel_id) ?? null;
 
   const seatsValue =
     toInteger(
-      raw?.number_of_seats ??
-        raw?.passengers ??
-        raw?.seats ??
-        raw?.capacity ??
-        raw?.capacity_passengers,
+      raw.number_of_seats ??
+        raw.passengers ??
+        raw.seats ??
+        raw.capacity ??
+        (raw as { capacity_passengers?: unknown }).capacity_passengers,
     ) ?? undefined;
   const passengers = seatsValue ?? 0;
-  const doorsValue = toInteger(raw?.number_of_doors ?? raw?.doors) ?? undefined;
+  const doorsValue = toInteger(raw.number_of_doors ?? raw.doors) ?? undefined;
   const doors = doorsValue ?? 4;
-  const luggage = toInteger(raw?.luggage ?? raw?.boot_space) ?? 2;
+  const luggage = toInteger(raw.luggage ?? raw.boot_space) ?? 2;
 
-  const rawContent =
-    typeof raw?.content === "string" ? raw.content : "";
-  const rawDescription =
-    typeof raw?.description === "string" ? raw.description : "";
-
+  const rawContent = typeof raw.content === "string" ? raw.content : "";
+  const rawDescription = typeof raw.description === "string" ? raw.description : "";
   const descriptionSource =
     rawContent.trim().length > 0 ? rawContent : rawDescription;
 
   const mileage =
-    toInteger(raw?.mileage ?? raw?.kilometers ?? raw?.odometer ?? raw?.km) ??
-    undefined;
+    toInteger(raw.mileage ?? raw.kilometers ?? raw.odometer ?? raw.km) ?? undefined;
 
-  const lastService =
-    raw?.last_service_date ?? raw?.last_service ?? raw?.service?.last_date;
-  const nextService =
-    raw?.next_service_date ?? raw?.next_service ?? raw?.service?.next_date;
+  const serviceInfo = isRecord(raw.service) ? raw.service : null;
+  const lastServiceCandidate =
+    raw.last_service_date ?? raw.last_service ?? serviceInfo?.last_date;
+  const nextServiceCandidate =
+    raw.next_service_date ?? raw.next_service ?? serviceInfo?.next_date;
 
-  const rawImages =
-    raw?.images ?? raw?.gallery ?? raw?.car_images ?? raw?.media ?? undefined;
+  const rawImages = raw.images ?? raw.gallery ?? raw.car_images ?? raw.media ?? undefined;
   const imageList = normalizeImages(rawImages);
-  const firstImageCandidate =
-    raw?.image_preview ??
-    raw?.image ??
-    raw?.thumbnail ??
-    raw?.cover_image ??
-    raw?.cover ??
+  const primaryImageCandidate =
+    raw.image_preview ??
+    raw.image ??
+    raw.thumbnail ??
+    raw.cover_image ??
+    raw.cover ??
     (imageList.length > 0 ? imageList[0] : getFirstImage(rawImages));
+  const primaryImage = typeof primaryImageCandidate === "string" ? primaryImageCandidate : null;
 
-  const depositValue = toDecimal(raw?.deposit ?? raw?.security_deposit);
-  const weightValue = toDecimal(raw?.weight);
-  const weightFrontValue = toDecimal(raw?.weight_front ?? raw?.front_weight);
-  const partnerIdValue = toInteger(raw?.partner_id);
+  const depositValue = toDecimal(raw.deposit ?? raw.security_deposit);
+  const weightValue = toDecimal(raw.weight);
+  const weightFrontValue = toDecimal(raw.weight_front ?? raw.front_weight);
+  const partnerIdValue = toInteger(raw.partner_id);
   const partnerPercentageValue = toDecimal(
-    raw?.partner_percentage ?? raw?.partner_share ?? raw?.partner_rate,
+    raw.partner_percentage ?? raw.partner_share ?? raw.partner_rate,
   );
   const isPartnerValue =
-    toBoolean(raw?.is_partner ?? raw?.partner ?? raw?.has_partner) ?? false;
+    toBoolean(raw.is_partner ?? raw.partner ?? raw.has_partner) ?? false;
   const vinValue =
-    typeof raw?.vin === "string"
+    typeof raw.vin === "string"
       ? raw.vin
-      : typeof raw?.vehicle_identification_number === "string"
-      ? raw.vehicle_identification_number
-      : "";
+      : typeof (raw as { vehicle_identification_number?: unknown })
+          .vehicle_identification_number === "string"
+        ? (raw as { vehicle_identification_number: string })
+            .vehicle_identification_number
+        : "";
+
+  const id =
+    toInteger(raw.id ?? (raw as { car_id?: unknown }).car_id) ??
+    (() => {
+      throw new Error("Invalid car payload: missing identifier.");
+    })();
+
+  const name = toTrimmedString(raw.name) ?? "";
 
   return {
-    id: Number(raw?.id) || raw?.id,
-    name: raw?.name ?? "",
+    id,
+    name,
     type: typeName ? typeName : "Nespecificat",
     typeId,
     vehicleTypeId: typeId ?? null,
     vehicleTypeName: typeName,
-    image: toImageUrl(firstImageCandidate),
+    image: toImageUrl(primaryImage),
     images: imageList,
     makeId: makeId ?? null,
     makeName,
-    price:
-      parsePrice(raw?.rental_rate ?? raw?.price ?? raw?.daily_rate ?? raw?.rate),
+    price: parsePrice(raw.rental_rate ?? raw.price ?? raw.daily_rate ?? raw.rate),
     features: {
       passengers,
       transmission: transmissionName || "—",
@@ -507,16 +534,20 @@ const mapApiCarToAdminCar = (raw: any): AdminCar => {
     transmissionName,
     fuelTypeId: fuelId,
     fuelTypeName: fuelName,
-    status: normalizeStatus(raw?.status ?? raw?.availability ?? raw?.state),
-    rating: toNumber(raw?.avg_review),
+    status: normalizeStatus(raw.status ?? raw.availability ?? raw.state),
+    rating: toNumber(raw.avg_review),
     description: descriptionSource,
     content: rawContent,
-    specs: collectSpecs(raw?.specs ?? raw?.options ?? raw?.features),
-    licensePlate: raw?.license_plate ?? raw?.licensePlate ?? raw?.plate ?? "",
-    year: toInteger(raw?.year ?? raw?.manufactured_year ?? raw?.production_year),
+    specs: collectSpecs(raw.specs ?? raw.options ?? raw.features),
+    licensePlate:
+      toTrimmedString(raw.license_plate) ??
+      toTrimmedString((raw as { licensePlate?: unknown }).licensePlate) ??
+      toTrimmedString(raw.plate) ??
+      "",
+    year: toInteger(raw.year ?? raw.manufactured_year ?? raw.production_year),
     mileage,
-    lastService: typeof lastService === "string" ? lastService : undefined,
-    nextService: typeof nextService === "string" ? nextService : undefined,
+    lastService: typeof lastServiceCandidate === "string" ? lastServiceCandidate : undefined,
+    nextService: typeof nextServiceCandidate === "string" ? nextServiceCandidate : undefined,
     numberOfSeats: seatsValue ?? null,
     numberOfDoors: doorsValue ?? null,
     vin: vinValue,
@@ -632,7 +663,7 @@ const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
 };
 
 const buildCarPayload = (form: CarFormState) => {
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = {
     name: form.name.trim(),
     license_plate: form.license_plate.trim(),
     status: form.status,
@@ -1029,15 +1060,29 @@ const CarsPage = () => {
           apiClient.fetchAdminCarsTotal({ status: "maintenance" }),
           apiClient.fetchAdminCarsTotal({ status: "out_of_service" }),
         ]);
-      const toCount = (data: any) =>
-        Number(
-          data?.count ??
-            data?.total ??
-            data?.data ??
-            data?.value ??
-            data?.cars ??
-            0,
-        ) || 0;
+      const toCount = (data: unknown): number => {
+        if (typeof data === "number" && Number.isFinite(data)) {
+          return data;
+        }
+
+        if (isRecord(data)) {
+          const candidates: Array<unknown> = [
+            data.count,
+            data.total,
+            Array.isArray(data.data) ? data.data.length : data.data,
+            data.value,
+            Array.isArray(data.cars) ? data.cars.length : data.cars,
+          ];
+
+          for (const candidate of candidates) {
+            if (typeof candidate === "number" && Number.isFinite(candidate)) {
+              return candidate;
+            }
+          }
+        }
+
+        return 0;
+      };
       setMetrics({
         total: toCount(totalRes),
         available: toCount(availableRes),
@@ -1066,7 +1111,7 @@ const CarsPage = () => {
       }
 
       try {
-        const params: Record<string, any> = {
+        const params: Record<string, string | number | undefined> = {
           page: pageToLoad,
           perPage: PER_PAGE,
         };
@@ -1182,24 +1227,19 @@ const CarsPage = () => {
     setCarForm(mapAdminCarToFormState(car));
     if (car.partnerId != null) {
       const fallback = `Utilizator #${car.partnerId}`;
+      const carRecord = car as Record<string, unknown>;
       const partnerName =
-        typeof (car as any).partnerName === "string"
-          ? (car as any).partnerName
-          : typeof (car as any).partner_name === "string"
-          ? (car as any).partner_name
-          : fallback;
+        toTrimmedString(carRecord.partnerName) ??
+        toTrimmedString(carRecord.partner_name) ??
+        fallback;
       const partnerEmail =
-        typeof (car as any).partnerEmail === "string"
-          ? (car as any).partnerEmail
-          : typeof (car as any).partner_email === "string"
-          ? (car as any).partner_email
-          : null;
+        toTrimmedString(carRecord.partnerEmail) ??
+        toTrimmedString(carRecord.partner_email) ??
+        null;
       const partnerUsername =
-        typeof (car as any).partnerUsername === "string"
-          ? (car as any).partnerUsername
-          : typeof (car as any).partner_username === "string"
-          ? (car as any).partner_username
-          : null;
+        toTrimmedString(carRecord.partnerUsername) ??
+        toTrimmedString(carRecord.partner_username) ??
+        null;
 
       setSelectedPartner({
         id: car.partnerId,
