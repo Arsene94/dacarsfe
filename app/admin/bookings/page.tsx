@@ -21,7 +21,8 @@ import {
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
-import { AdminReservation } from "@/types/admin";
+import { extractList } from "@/lib/apiResponse";
+import type { AdminBookingResource, AdminReservation } from "@/types/admin";
 import type { ReservationWheelPrizeSummary } from "@/types/reservation";
 import { Input } from "@/components/ui/input";
 import DateRangePicker from "@/components/ui/date-range-picker";
@@ -71,6 +72,13 @@ const parseOptionalNumber = (value: unknown): number | null => {
     return Number.isFinite(normalized) ? normalized : null;
   }
   return null;
+};
+
+const formatTimeLabel = (iso?: string | null): string | undefined => {
+  if (!iso) return undefined;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
 };
 
 const normalizeWheelPrizeSummary = (
@@ -245,59 +253,112 @@ const ReservationsPage = () => {
       if (statusFilter !== "all") params.status = statusFilter;
       if (startDateFilter) params.start_date = startDateFilter;
       if (endDateFilter) params.end_date = endDateFilter;
-      const res = await apiClient.getBookings(params);
-      const mapped: AdminReservation[] = res.data.map((b: any) => {
-        const wheelPrize = normalizeWheelPrizeSummary(b.wheel_prize);
+      const response = await apiClient.getBookings(params);
+      const bookings = extractList<AdminBookingResource>(response);
+      const mapped = bookings.map<AdminReservation>((booking) => {
+        const wheelPrize = normalizeWheelPrizeSummary(booking.wheel_prize);
         const wheelPrizeDiscount =
-          b.wheel_prize_discount ?? wheelPrize?.discount_value ?? null;
+          booking.wheel_prize_discount ?? wheelPrize?.discount_value ?? null;
         const normalizedDiscount =
           typeof wheelPrizeDiscount === "number"
             ? wheelPrizeDiscount
             : parseOptionalNumber(wheelPrizeDiscount);
         const totalBeforeWheelPrize = parseOptionalNumber(
-          b.total_before_wheel_prize,
+          booking.total_before_wheel_prize,
         );
+        const identifier =
+          booking.booking_number ??
+          booking.bookingNumber ??
+          booking.id ??
+          null;
+        const id =
+          typeof identifier === "string"
+            ? identifier
+            : identifier != null
+            ? String(identifier)
+            : "";
+        const customerName =
+          booking.customer_name ?? booking.customer?.name ?? "";
+        const phone = booking.customer_phone ?? booking.customer?.phone ?? "";
+        const email = booking.customer_email ?? booking.customer?.email ?? undefined;
+        const carId = parseOptionalNumber(booking.car_id) ?? 0;
+        const carName = booking.car_name ?? booking.car?.name ?? "";
+        const carLicensePlate =
+          booking.car?.license_plate ??
+          booking.car?.licensePlate ??
+          booking.car_license_plate ??
+          undefined;
+        const startDate = booking.rental_start_date ?? "";
+        const endDate = booking.rental_end_date ?? "";
+        const pickupTime = formatTimeLabel(booking.rental_start_date);
+        const dropoffTime = formatTimeLabel(booking.rental_end_date);
+        const days = parseOptionalNumber(booking.days);
+        const couponAmount = parseOptionalNumber(booking.coupon_amount) ?? 0;
+        const subTotal =
+          parseOptionalNumber(booking.sub_total ?? booking.subTotal) ?? 0;
+        const taxAmount = parseOptionalNumber(booking.tax_amount) ?? 0;
+        const location = booking.location ?? undefined;
+        const status = mapStatus(booking.status ?? "pending");
+        const total =
+          parseOptionalNumber(booking.total ?? booking.total_price) ?? 0;
+        const discountCode = booking.coupon_code ?? undefined;
+        const createdAt = booking.created_at ?? undefined;
+        const pricePerDay =
+          parseOptionalNumber(
+            booking.price_per_day ?? booking.original_price_per_day,
+          ) ?? 0;
+        const servicesPrice = parseOptionalNumber(booking.total_services) ?? 0;
+        const discount =
+          parseOptionalNumber(booking.discount ?? booking.coupon_amount) ??
+          couponAmount;
 
         return {
-          id: b.booking_number || b.id?.toString(),
-          customerName: b.customer_name,
-          email: b.customer_email,
-          phone: b.customer_phone,
-          carId: b.car_id,
-          carName: b.car_name,
-          carLicensePlate: b.car.license_plate ?? "",
-          startDate: b.rental_start_date,
-          endDate: b.rental_end_date,
-          plan: b.with_deposit ? 1 : 0,
-          pickupTime: new Date(b.rental_start_date).toLocaleTimeString("ro-RO", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          dropoffTime: new Date(b.rental_end_date).toLocaleTimeString("ro-RO", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          days: b.days,
-          couponAmount: b.coupon_amount,
-          subTotal: b.sub_total,
-          taxAmount: b.tax_amount,
-          location: b.location || "",
-          status: mapStatus(b.status),
-          total: b.total,
-          discountCode: b.coupon_code || undefined,
-          createdAt: b.created_at,
-          pricePerDay: b.price_per_day,
-          servicesPrice: b.total_services,
-          discount: b.coupon_amount,
-          totalBeforeWheelPrize: totalBeforeWheelPrize,
+          id,
+          customerName,
+          email,
+          phone,
+          carId,
+          carName,
+          carLicensePlate,
+          startDate,
+          endDate,
+          plan: normalizeBoolean(booking.with_deposit, true) ? 1 : 0,
+          pickupTime,
+          dropoffTime,
+          days: days ?? undefined,
+          couponAmount,
+          subTotal,
+          taxAmount,
+          location: location ?? "",
+          status,
+          total,
+          discountCode,
+          createdAt,
+          pricePerDay,
+          servicesPrice,
+          discount,
+          totalBeforeWheelPrize,
           wheelPrizeDiscount: normalizedDiscount ?? null,
           wheelPrize,
         };
       });
-      const meta = res?.meta || {};
-      const total = meta?.total ?? res?.total ?? mapped.length;
+      const listMeta = !Array.isArray(response)
+        ? response.meta ?? response.pagination ?? null
+        : null;
+      const total =
+        listMeta?.total ??
+        listMeta?.count ??
+        (!Array.isArray(response)
+          ? response.total ?? response.count ?? bookings.length
+          : bookings.length);
       setReservations(mapped);
-      setLastPage(meta?.last_page ?? res?.last_page ?? 1);
+      const resolvedLastPage =
+        listMeta?.last_page ??
+        listMeta?.lastPage ??
+        (!Array.isArray(response)
+          ? response.last_page ?? response.lastPage ?? 1
+          : 1);
+      setLastPage(resolvedLastPage > 0 ? resolvedLastPage : 1);
       setTotalReservations(total);
     } catch (e) {
       console.error(e);
