@@ -1,41 +1,94 @@
-export type CarCategory = {
-    id: number;
-    name: string;
-    order?: number;
-};
-
-export type ApiCar = {
+export interface CarLookup {
   id: number;
-  name?: string;
-  rental_rate?: number | string;
-  rental_rate_casco?: number | string;
-  price_text?: string;
+  name: string;
+  status?: string | null;
+  logo?: string | null;
+  image?: string | null;
+  icon?: string | null;
+  [key: string]: unknown;
+}
+
+export interface CarCategory extends CarLookup {
+  order?: number | null;
+  is_featured?: boolean | number | null;
+  is_default?: boolean | number | null;
+}
+
+export interface CarCouponSummary {
+  code?: string | null;
+  discount_deposit?: number | string | null;
+  discount_casco?: number | string | null;
+  [key: string]: unknown;
+}
+
+export type CarImageCollection =
+  | string[]
+  | Record<string, string>
+  | null
+  | undefined;
+
+export interface ApiCar {
+  id: number;
+  name?: string | null;
+  description?: string | null;
+  content?: string | null;
+  images?: CarImageCollection;
   image_preview?: string | null;
+  image?: string | null;
   thumbnail?: string | null;
-  images?: Record<string, string>;
-  avg_review?: number;
-  number_of_seats: number;
+  cover_image?: string | null;
+  price_text?: string | null;
   license_plate?: string | null;
   licensePlate?: string | null;
   plate?: string | null;
-  fuel?: { id?: number; name?: string | null } | null;
-  type?: { id?: number; name?: string | null; image?: string | null } | null;
-  transmission?: { id?: number; name?: string | null } | null;
+  make_id?: number | string | null;
+  status?: string | null;
+  year?: number | string | null;
+  mileage?: number | string | null;
+  vehicle_type_id?: number | string | null;
+  transmission_id?: number | string | null;
+  fuel_type_id?: number | string | null;
+  number_of_seats?: number | string | null;
+  number_of_doors?: number | string | null;
+  vin?: string | null;
+  deposit?: number | string | null;
+  weight?: number | string | null;
+  weight_front?: number | string | null;
+  available?: boolean;
+  base_price?: number | string | null;
+  price_per_day?: number | string | null;
+  rental_rate?: number | string | null;
+  rental_rate_casco?: number | string | null;
+  days?: number | string | null;
+  total_deposit?: number | string | null;
+  total_without_deposit?: number | string | null;
+  total_services?: number | string | null;
+  avg_review?: number | string | null;
+  is_partner?: boolean | number | string | null;
+  partner_id?: number | string | null;
+  partner_percentage?: number | string | null;
+  itp_expires_at?: string | null;
+  rovinieta_expires_at?: string | null;
+  insurance_expires_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  make?: CarLookup | null;
+  type?: CarLookup | null;
+  transmission?: CarLookup | string | null;
   transmission_name?: string | null;
   transmissionName?: string | null;
+  fuel?: CarLookup | string | null;
   fuel_name?: string | null;
   fuelName?: string | null;
-  categories?: CarCategory[];
-  content?: string | null;
-  days?: number;
-  deposit?: number;
-  total_deposit?: number | string;
-  total_without_deposit?: number | string;
-  available?: boolean;
-  price?: number | string;
+  categories?: CarCategory[] | null;
+  category?: CarCategory | null;
+  coupon?: CarCouponSummary | null;
+  services?: Array<{ id?: number | string; name?: string | null; price?: number | string | null }> | null;
+  rental_start_date?: string | null;
+  rental_end_date?: string | null;
   pivot?: Record<string, unknown> | null;
   [key: string]: unknown;
-};
+}
 
 export type Car = {
   id: number;
@@ -50,6 +103,7 @@ export type Car = {
   deposit: number;
   total_deposit: number | string;
   total_without_deposit: number | string;
+  available?: boolean;
   features: {
     passengers: number;
     transmission: string;
@@ -76,6 +130,13 @@ export type FleetCar = {
   categories: { id: number; name: string };
   rating?: number;
 };
+
+export interface CarAvailabilityResponse {
+  data: ApiCar;
+  available?: boolean;
+  message?: string | null;
+  [key: string]: unknown;
+}
 
 export interface CarSearchUiPayload {
   start_date?: string;

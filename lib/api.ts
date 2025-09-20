@@ -30,6 +30,7 @@ import type {
 } from "@/types/api";
 import type {
     ApiCar,
+    CarAvailabilityResponse,
     CarCategory,
     CarFilterParams,
     CarSearchUiPayload,
@@ -86,6 +87,14 @@ import type {
     CustomerVerifyPayload,
 } from "@/types/customer";
 import type { Tax, TaxListParams, TaxPayload, TaxTranslation } from "@/types/tax";
+import type {
+    AdminBookingsTodayMetrics,
+    AdminBookingsTodayParams,
+    AdminBookingsTotalMetrics,
+    AdminBookingsTotalParams,
+    AdminCarsTotalMetrics,
+    AdminCarsTotalParams,
+} from "@/types/metrics";
 import type {
     WheelOfFortunePeriod,
     WheelOfFortunePrizePayload,
@@ -921,12 +930,13 @@ class ApiClient {
     }
 
     async getCarForBooking(
-        uiPayload: CarSearchUiPayload & { car_id: number | string },
-    ): Promise<ApiItemResult<ApiCar> | ApiListResult<ApiCar>> {
-        const mapped = mapCarSearchFilters(uiPayload);
+        params: CarSearchUiPayload & { car_id: number | string },
+    ): Promise<CarAvailabilityResponse> {
+        const mapped = mapCarSearchFilters(params);
         const query = toQuery(mapped);
-        return this.request<ApiItemResult<ApiCar> | ApiListResult<ApiCar>>(
-            `/cars/${uiPayload.car_id}/info-for-booking?${query}`,
+        const suffix = query ? `?${query}` : "";
+        return this.request<CarAvailabilityResponse>(
+            `/cars/${params.car_id}/info-for-booking${suffix}`,
         );
     }
 
@@ -1846,26 +1856,59 @@ class ApiClient {
         });
     }
 
-    async fetchAdminBookingsToday(params: { by?: string; statuses?: string } = {}): Promise<UnknownRecord> {
+    async fetchAdminBookingsToday(
+        params: AdminBookingsTodayParams = {},
+    ): Promise<AdminBookingsTodayMetrics> {
         const searchParams = new URLSearchParams();
-        if (params.by) searchParams.append('by', params.by);
-        if (params.statuses) searchParams.append('statuses', params.statuses);
+        if (params.by) {
+            searchParams.append('by', params.by);
+        }
+        if (params.statuses) {
+            const statusesValue = Array.isArray(params.statuses)
+                ? params.statuses.join(',')
+                : params.statuses;
+            if (typeof statusesValue === 'string' && statusesValue.trim().length > 0) {
+                searchParams.append('statuses', statusesValue.trim());
+            }
+        }
         const query = searchParams.toString();
-        return this.request<UnknownRecord>(`/admin/metrics/bookings-today${query ? `?${query}` : ''}`);
+        return this.request<AdminBookingsTodayMetrics>(
+            `/admin/metrics/bookings-today${query ? `?${query}` : ''}`,
+        );
     }
 
-    async fetchAdminCarsTotal(params: { status?: string } = {}): Promise<UnknownRecord> {
+    async fetchAdminCarsTotal(
+        params: AdminCarsTotalParams = {},
+    ): Promise<AdminCarsTotalMetrics> {
         const searchParams = new URLSearchParams();
-        if (params.status) searchParams.append('status', params.status);
+        if (params.status) {
+            const normalized = params.status.trim();
+            if (normalized.length > 0) {
+                searchParams.append('status', normalized);
+            }
+        }
         const query = searchParams.toString();
-        return this.request<UnknownRecord>(`/admin/metrics/cars-total${query ? `?${query}` : ''}`);
+        return this.request<AdminCarsTotalMetrics>(
+            `/admin/metrics/cars-total${query ? `?${query}` : ''}`,
+        );
     }
 
-    async fetchAdminBookingsTotal(params: { statuses?: string } = {}): Promise<UnknownRecord> {
+    async fetchAdminBookingsTotal(
+        params: AdminBookingsTotalParams = {},
+    ): Promise<AdminBookingsTotalMetrics> {
         const searchParams = new URLSearchParams();
-        if (params.statuses) searchParams.append('statuses', params.statuses);
+        if (params.statuses) {
+            const statusesValue = Array.isArray(params.statuses)
+                ? params.statuses.join(',')
+                : params.statuses;
+            if (typeof statusesValue === 'string' && statusesValue.trim().length > 0) {
+                searchParams.append('statuses', statusesValue.trim());
+            }
+        }
         const query = searchParams.toString();
-        return this.request<UnknownRecord>(`/admin/metrics/bookings-total${query ? `?${query}` : ''}`);
+        return this.request<AdminBookingsTotalMetrics>(
+            `/admin/metrics/bookings-total${query ? `?${query}` : ''}`,
+        );
     }
 
     async getCategories(): Promise<ApiListResult<CarCategory>> {

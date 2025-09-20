@@ -6,7 +6,7 @@ import type {
   BookingContractResponse,
   CustomerPhoneSearchResult,
 } from "@/types/admin";
-import type { ApiCar } from "@/types/car";
+import type { ApiCar, CarAvailabilityResponse } from "@/types/car";
 
 const toTrimmedString = (value: unknown): string =>
   typeof value === "string" ? value.trim() : "";
@@ -75,10 +75,30 @@ export const mapCustomerSearchResults = (
 };
 
 export const extractFirstCar = (
-  response: ApiItemResult<ApiCar> | ApiListResult<ApiCar> | ApiCar[],
+  response:
+    | CarAvailabilityResponse
+    | ApiItemResult<ApiCar>
+    | ApiListResult<ApiCar>
+    | ApiCar[]
+    | null
+    | undefined,
 ): ApiCar | null => {
+  if (!response) {
+    return null;
+  }
+
   if (Array.isArray(response)) {
     return response[0] ?? null;
+  }
+
+  if (typeof response === "object" && response !== null && "data" in response) {
+    const payload = (response as CarAvailabilityResponse).data;
+    if (Array.isArray(payload)) {
+      return payload[0] ?? null;
+    }
+    if (payload && typeof payload === "object") {
+      return payload as ApiCar;
+    }
   }
 
   const item = extractItem(response as ApiItemResult<ApiCar>);

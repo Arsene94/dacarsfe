@@ -33,7 +33,6 @@ import type { ActivityReservation } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import {getStatusText} from "@/lib/utils";
 import { extractItem } from "@/lib/apiResponse";
-import type { UnknownRecord } from "@/types/api";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://backend.dacars.ro/storage';
@@ -62,28 +61,14 @@ const toSafeString = (value: unknown, fallback = ""): string => {
     return fallback;
 };
 
-const toFiniteNumber = (value: unknown): number | null => {
+const parseMetricCount = (value: unknown, fallback = 0): number => {
     if (typeof value === "number" && Number.isFinite(value)) {
         return value;
     }
     if (typeof value === "string") {
-        const parsed = Number(value);
-        return Number.isFinite(parsed) ? parsed : null;
-    }
-    return null;
-};
-
-const pickMetricValue = (
-    record: UnknownRecord,
-    keys: string[],
-    fallback = 0,
-): number => {
-    for (const key of keys) {
-        if (key in record) {
-            const candidate = toFiniteNumber(record[key]);
-            if (candidate != null) {
-                return candidate;
-            }
+        const parsed = Number(value.trim());
+        if (Number.isFinite(parsed)) {
+            return parsed;
         }
     }
     return fallback;
@@ -390,13 +375,25 @@ const AdminDashboard = () => {
                     apiClient.fetchAdminBookingsTotal({ statuses: 'all' }),
                 ]);
                 setBookingsTodayCount(
-                    pickMetricValue(bookingsToday, ['count', 'total', 'value']),
+                    parseMetricCount(
+                        bookingsToday?.count ??
+                            (bookingsToday as { total?: unknown })?.total ??
+                            (bookingsToday as { value?: unknown })?.value,
+                    ),
                 );
                 setAvailableCarsCount(
-                    pickMetricValue(carsTotal, ['count', 'total', 'available']),
+                    parseMetricCount(
+                        carsTotal?.count ??
+                            (carsTotal as { total?: unknown })?.total ??
+                            (carsTotal as { available?: unknown })?.available,
+                    ),
                 );
                 setBookingsTotalCount(
-                    pickMetricValue(bookingsTotal, ['count', 'total', 'value']),
+                    parseMetricCount(
+                        bookingsTotal?.count ??
+                            (bookingsTotal as { total?: unknown })?.total ??
+                            (bookingsTotal as { value?: unknown })?.value,
+                    ),
                 );
             } catch (error) {
                 console.error('Error loading metrics:', error);

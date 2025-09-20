@@ -40,37 +40,71 @@ const parsePrice = (raw: unknown): number => {
     try { return parsePrice(String(raw)); } catch { return 0; }
 };
 
-const mapApiCar = (c: ApiCar): Car => ({
-    id: c.id,
-    name: c.name ?? "Autovehicul",
-    type: (c.type?.name ?? "—").trim(),
-    typeId: c.type?.id ?? null,
-    image: toImageUrl(
-        c.image_preview ||
-        (c.images ? Object.values(c.images).find((value) => typeof value === 'string') ?? null : null),
-    ),
-    price: parsePrice(
-        Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco))
-    ),
-    rental_rate: String(Number(c.rental_rate ?? 0)),
-    rental_rate_casco: String(Number(c.rental_rate_casco ?? 0)),
-    days: Number(c.days ?? 0),
-    deposit: Number(c.deposit ?? 0),
-    total_deposit: String(Number(c.total_deposit ?? 0)),
-    total_without_deposit: String(Number(c.total_without_deposit ?? 0)),
-    features: {
-        passengers: Number(c.number_of_seats) || 0,
-        transmission: c.transmission?.name ?? "—",
-        transmissionId: c.transmission?.id ?? null,
-        fuel: c.fuel?.name ?? "—",
-        fuelId: c.fuel?.id ?? null,
-        doors: 4,
-        luggage: 2,
-    },
-    rating: Number(c.avg_review ?? 0) || 0,
-    description: c.content ?? "",
-    specs: [],
-});
+const mapApiCar = (c: ApiCar): Car => {
+    const imageCandidates: Array<unknown> = [
+        c.image_preview,
+        c.image,
+        c.thumbnail,
+        c.cover_image,
+    ];
+    if (Array.isArray(c.images)) {
+        imageCandidates.push(
+            c.images.find((value) => typeof value === "string" && value.trim().length > 0) ?? null,
+        );
+    } else if (c.images && typeof c.images === "object") {
+        imageCandidates.push(
+            Object.values(c.images).find(
+                (value) => typeof value === "string" && value.trim().length > 0,
+            ) ?? null,
+        );
+    }
+
+    const primaryImage = imageCandidates.find(
+        (value): value is string => typeof value === "string" && value.trim().length > 0,
+    );
+
+    return {
+        id: c.id,
+        name: c.name ?? "Autovehicul",
+        type: (c.type?.name ?? "—").trim(),
+        typeId: c.type?.id ?? null,
+        image: toImageUrl(primaryImage ?? null),
+        price: parsePrice(
+            Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco)),
+        ),
+        rental_rate: String(Number(c.rental_rate ?? 0)),
+        rental_rate_casco: String(Number(c.rental_rate_casco ?? 0)),
+        days: Number(c.days ?? 0),
+        deposit: Number(c.deposit ?? 0),
+        total_deposit: String(Number(c.total_deposit ?? 0)),
+        total_without_deposit: String(Number(c.total_without_deposit ?? 0)),
+        available: typeof c.available === "boolean" ? c.available : undefined,
+        features: {
+            passengers: Number(c.number_of_seats) || 0,
+            transmission:
+                typeof c.transmission === "string"
+                    ? c.transmission
+                    : c.transmission?.name ?? "—",
+            transmissionId:
+                typeof c.transmission === "object" && c.transmission !== null
+                    ? c.transmission.id ?? null
+                    : null,
+            fuel:
+                typeof c.fuel === "string"
+                    ? c.fuel
+                    : c.fuel?.name ?? "—",
+            fuelId:
+                typeof c.fuel === "object" && c.fuel !== null
+                    ? c.fuel.id ?? null
+                    : null,
+            doors: 4,
+            luggage: 2,
+        },
+        rating: Number(c.avg_review ?? 0) || 0,
+        description: c.content ?? "",
+        specs: [],
+    };
+};
 
 const FleetPage = () => {
     const searchParams = useSearchParams();

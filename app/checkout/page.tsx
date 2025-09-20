@@ -7,7 +7,8 @@ import {Label} from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import {useBooking} from "@/context/BookingContext";
 import { apiClient } from "@/lib/api";
-import { extractItem, extractList } from "@/lib/apiResponse";
+import { extractList } from "@/lib/apiResponse";
+import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount, formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
 import {
     getStoredWheelPrize,
@@ -17,7 +18,6 @@ import {
 } from "@/lib/wheelStorage";
 import {ApiCar, Car} from "@/types/car";
 import {ReservationFormData, Service, type DiscountValidationPayload} from "@/types/reservation";
-import type { ApiItemResult, ApiListResult } from "@/types/api";
 import {Button} from "@/components/ui/button";
 
 const STORAGE_BASE = "https://backend.dacars.ro/storage";
@@ -106,11 +106,29 @@ const resolveFirstString = (...values: Array<unknown>): string | null => {
 
 const mapApiCarToCar = (apiCar: ApiCar): Car => {
     const extras = apiCar as Record<string, unknown>;
-    const imageCandidate =
-        apiCar.image_preview ??
-        apiCar.thumbnail ??
-        Object.values(apiCar.images ?? {})[0] ??
-        (typeof apiCar.type?.image === "string" ? apiCar.type.image : null);
+    const imageCandidates: Array<unknown> = [
+        apiCar.image_preview,
+        apiCar.image,
+        apiCar.thumbnail,
+        apiCar.cover_image,
+    ];
+    if (Array.isArray(apiCar.images)) {
+        imageCandidates.push(
+            apiCar.images.find((value) => typeof value === "string" && value.trim().length > 0) ?? null,
+        );
+    } else if (apiCar.images && typeof apiCar.images === "object") {
+        imageCandidates.push(
+            Object.values(apiCar.images).find(
+                (value) => typeof value === "string" && value.trim().length > 0,
+            ) ?? null,
+        );
+    }
+    if (typeof apiCar.type?.image === "string") {
+        imageCandidates.push(apiCar.type.image);
+    }
+    const imageCandidate = imageCandidates.find(
+        (value): value is string => typeof value === "string" && value.trim().length > 0,
+    );
 
     const typeName = resolveFirstString(apiCar.type?.name) ?? "—";
     const typeId = coerceId(apiCar.type?.id);
@@ -180,6 +198,12 @@ const mapApiCarToCar = (apiCar: ApiCar): Car => {
             typeof totalWithoutDepositRaw === "string"
                 ? totalWithoutDepositRaw
                 : 0,
+        available:
+            typeof apiCar.available === "boolean"
+                ? apiCar.available
+                : typeof extras["available"] === "boolean"
+                    ? (extras["available"] as boolean)
+                    : undefined,
         features: {
             passengers,
             transmission: transmissionName,
@@ -410,23 +434,28 @@ const ReservationPage = () => {
                 selectedCar: booking.selectedCar,
             });
             try {
-                const res = await apiClient.getCarForBooking({
+                const info = await apiClient.getCarForBooking({
                     car_id: booking.selectedCar.id,
                     start_date: start,
                     end_date: end,
                 });
                 if (ignore) return;
-                const primary = extractItem<ApiCar>(res as ApiItemResult<ApiCar>);
-                const fallbackList = extractList<ApiCar>(res as ApiListResult<ApiCar>);
-                const apiCar = primary ?? fallbackList[0] ?? null;
+                const apiCar = extractFirstCar(info);
                 if (!apiCar) return;
                 const mapped = mapApiCarToCar(apiCar);
+                const resolvedCar: Car = {
+                    ...mapped,
+                    available:
+                        typeof info.available === "boolean"
+                            ? info.available
+                            : mapped.available,
+                };
 
                 setBooking({
                     ...booking,
                     startDate: start,
                     endDate: end,
-                    selectedCar: mapped,
+                    selectedCar: resolvedCar,
                 });
             } catch (error) {
                 console.error(error);
