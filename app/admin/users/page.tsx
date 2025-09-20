@@ -210,18 +210,37 @@ const toSortableDateValue = (value: string | null | undefined): number => {
   return Number.isFinite(timestamp) ? timestamp : 0;
 };
 
-const mapUserResource = (raw: any): User | null => {
-  if (!raw) return null;
-  const id = Number(raw.id ?? raw.user_id);
-  if (!Number.isFinite(id)) return null;
-  const avatarCandidate = Number(raw.avatar);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const toNumericId = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+};
+
+const mapUserResource = (raw: unknown): User | null => {
+  if (!isRecord(raw)) return null;
+  const id =
+    toNumericId(raw.id) ??
+    toNumericId((raw as { user_id?: unknown; userId?: unknown }).user_id) ??
+    toNumericId((raw as { userId?: unknown }).userId);
+  if (id == null) return null;
+  const avatarCandidate = toNumericId(raw.avatar);
   return {
     id,
     first_name: parseString(raw.first_name),
     last_name: parseString(raw.last_name),
     email: parseString(raw.email),
     username: parseString(raw.username),
-    avatar: Number.isFinite(avatarCandidate) ? avatarCandidate : null,
+    avatar: avatarCandidate,
     super_user: parseBoolean(raw.super_user),
     manage_supers: parseBoolean(raw.manage_supers),
     roles: parseStringArray(raw.roles),
@@ -232,14 +251,18 @@ const mapUserResource = (raw: any): User | null => {
   };
 };
 
-const extractUsers = (response: any): any[] => {
-  if (!response) return [];
+const extractUsers = (response: unknown): unknown[] => {
   if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.users)) return response.users;
-  if (Array.isArray(response?.items)) return response.items;
-  if (Array.isArray(response?.results)) return response.results;
-  return [];
+  if (!isRecord(response)) return [];
+
+  const collected: unknown[] = [];
+  if (Array.isArray(response.data)) collected.push(...response.data);
+  const users = (response as { users?: unknown }).users;
+  if (Array.isArray(users)) collected.push(...users);
+  if (Array.isArray(response.items)) collected.push(...response.items);
+  if (Array.isArray(response.results)) collected.push(...response.results);
+
+  return collected;
 };
 
 const parseRolesInput = (value: string): string[] =>

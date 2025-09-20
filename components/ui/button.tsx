@@ -22,7 +22,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const variantClasses = variants[variant] ?? variants.default;
     const sizeClasses = sizes[size] ?? sizes.md;
 
-    const { ['aria-label']: ariaLabel, ...rest } = props as any;
+    const { ['aria-label']: ariaLabel, ...rest } = props;
 
     return (
       <button

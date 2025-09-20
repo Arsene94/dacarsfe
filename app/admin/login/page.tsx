@@ -21,8 +21,19 @@ const LoginPage = () => {
     try {
       await login(form.login, form.password);
       router.replace("/admin");
-    } catch (err: any) {
-      setError(err.message || "Autentificare eșuată");
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message) {
+        setError(error.message);
+      } else if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        typeof (error as { message?: unknown }).message === "string"
+      ) {
+        setError((error as { message: string }).message);
+      } else {
+        setError("Autentificare eșuată");
+      }
     } finally {
       setLoading(false);
     }

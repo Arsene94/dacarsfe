@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import apiClient from "@/lib/api";
+import { extractItem } from "@/lib/apiResponse";
 import {
     buildWheelPrizeDefaultDescription,
     describeWheelPrizeAmount,
@@ -34,11 +35,15 @@ import type {
     WheelOfFortuneProps,
 } from "@/types/wheel";
 
-const extractArray = (response: any): any[] => {
-    if (!response) return [];
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null;
+
+const extractArray = (response: unknown): unknown[] => {
     if (Array.isArray(response)) return response;
-    if (Array.isArray(response?.data)) return response.data;
-    if (Array.isArray(response?.items)) return response.items;
+    if (!isRecord(response)) return [];
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.items)) return response.items;
+    if (Array.isArray(response.results)) return response.results;
     return [];
 };
 
@@ -56,8 +61,8 @@ const normalizeActiveFlag = (value: unknown): boolean | undefined => {
     return undefined;
 };
 
-const mapPeriod = (item: any): WheelOfFortunePeriod | null => {
-    if (!item) return null;
+const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
+    if (!isRecord(item)) return null;
     const id = Number(item.id ?? item.period_id ?? item.value);
     if (!Number.isFinite(id)) return null;
 
@@ -123,8 +128,8 @@ const formatDateLabel = (value: string | null | undefined): string | null => {
     }
 };
 
-const mapPrize = (item: any): WheelPrize | null => {
-    if (!item) return null;
+const mapPrize = (item: unknown): WheelPrize | null => {
+    if (!isRecord(item)) return null;
     const id = Number(item.id ?? item.wheel_of_fortune_id ?? item.value);
     if (!Number.isFinite(id)) return null;
 
@@ -412,7 +417,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         setSaveState("saving");
         setSaveError(null);
         try {
-            const response: any = await apiClient.createWheelOfFortunePrize({
+            const response = await apiClient.createWheelOfFortunePrize({
                 wheel_of_fortune_id: prize.id,
                 name: normalizedParticipant.name,
                 phone: normalizedParticipant.phone,
@@ -420,16 +425,18 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
             });
             if (!mountedRef.current) return;
 
-            const responsePrize = response?.wheel_of_fortune ? mapPrize(response.wheel_of_fortune) : null;
+            const payload = extractItem(response);
+            const record = isRecord(payload) ? payload : isRecord(response) ? response : null;
+            const responsePrize = record?.wheel_of_fortune ? mapPrize(record.wheel_of_fortune) : null;
             const stored = storeWheelPrize({
                 prize: responsePrize ?? prize,
                 winner: normalizedParticipant,
-                prizeId: toOptionalNumber(response?.id),
+                prizeId: toOptionalNumber(record?.id),
                 wheel_of_fortune_id:
-                    toOptionalNumber(response?.wheel_of_fortune_id)
+                    toOptionalNumber(record?.wheel_of_fortune_id)
                     ?? (responsePrize ?? prize).id,
-                savedAt: typeof response?.created_at === "string" ? response.created_at : null,
-                expiresAt: typeof response?.expires_at === "string" ? response.expires_at : null,
+                savedAt: typeof record?.created_at === "string" ? record.created_at : null,
+                expiresAt: typeof record?.expires_at === "string" ? record.expires_at : null,
             });
             setStoredPrizeRecord(stored);
             setSaveState("success");
