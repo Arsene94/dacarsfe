@@ -4,6 +4,11 @@ export interface RolePermission {
   group: string | null;
 }
 
+export interface RolePermissionGroup {
+  group: string;
+  permissions: RolePermission[];
+}
+
 export interface Role {
   id: number;
   slug: string;
