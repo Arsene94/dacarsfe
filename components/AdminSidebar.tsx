@@ -24,6 +24,8 @@ import {
   ConciergeBell,
   Mail,
   ScrollText,
+  Receipt,
+  Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -356,6 +358,25 @@ const menuItems: readonly AdminSidebarItem[] = [
     href: "/admin/services",
     icon: ConciergeBell,
     requiredPermissions: buildPermissionList("services", ["service", "extras"]),
+  },
+  {
+    name: "Cheltuieli flotă",
+    href: "/admin/expenses",
+    icon: Receipt,
+    requiredPermissions: buildPermissionList("expenses", [
+      "expense",
+      "fleet-expenses",
+    ]),
+  },
+  {
+    name: "Service mașini",
+    href: "/admin/service-reports",
+    icon: Wrench,
+    requiredPermissions: buildPermissionList("service-reports", [
+      "service_report",
+      "service_reports",
+      "maintenance",
+    ]),
   },
   {
     name: "Mail Branding",

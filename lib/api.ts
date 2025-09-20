@@ -54,6 +54,7 @@ import type {
     CouponQuickValidationParams,
     CouponQuickValidationResponse,
 } from "@/types/coupon";
+import type { Expense, ExpenseListParams, ExpensePayload } from "@/types/expense";
 import type {
     MailBrandingResponse,
     MailBrandingUpdatePayload,
@@ -86,6 +87,11 @@ import type {
     CustomerResetPasswordPayload,
     CustomerVerifyPayload,
 } from "@/types/customer";
+import type {
+    ServiceReport,
+    ServiceReportListParams,
+    ServiceReportPayload,
+} from "@/types/service-report";
 import type { Tax, TaxListParams, TaxPayload, TaxTranslation } from "@/types/tax";
 import type {
     AdminBookingsTodayMetrics,
@@ -147,6 +153,31 @@ const sanitizePayload = <T extends object>(payload: T): Partial<T> => {
         }
     });
     return cleaned;
+};
+
+const resolveIncludeParam = (include?: string | readonly string[]): string | null => {
+    if (!include) {
+        return null;
+    }
+
+    if (Array.isArray(include)) {
+        const normalized = include
+            .map((item) => (typeof item === "string" ? item.trim() : ""))
+            .filter((value) => value.length > 0);
+
+        if (normalized.length === 0) {
+            return null;
+        }
+
+        return Array.from(new Set(normalized)).join(",");
+    }
+
+    if (typeof include === "string") {
+        const trimmed = include.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+
+    return null;
 };
 
 class ApiClient {
@@ -1020,6 +1051,166 @@ class ApiClient {
     async deleteServiceTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
         const language = encodeURIComponent(lang.trim());
         return this.request<ApiDeleteResponse>(`/services/${id}/translations/${language}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getExpenses(params: ExpenseListParams = {}): Promise<ApiListResult<Expense>> {
+        const searchParams = new URLSearchParams();
+        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
+            searchParams.append('page', params.page.toString());
+        }
+        const perPageCandidate =
+            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
+                ? params.perPage
+                : typeof params.per_page === 'number' && Number.isFinite(params.per_page)
+                    ? params.per_page
+                    : undefined;
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
+            searchParams.append('limit', params.limit.toString());
+        }
+        if (typeof params.type === 'string' && params.type.trim().length > 0) {
+            searchParams.append('type', params.type.trim());
+        }
+        const carId = params.car_id;
+        if (typeof carId === 'number' && Number.isFinite(carId)) {
+            searchParams.append('car_id', carId.toString());
+        } else if (typeof carId === 'string' && carId.trim().length > 0) {
+            searchParams.append('car_id', carId.trim());
+        }
+        const recurring = params.is_recurring;
+        if (typeof recurring === 'boolean') {
+            searchParams.append('is_recurring', recurring ? '1' : '0');
+        } else if (typeof recurring === 'number' && Number.isFinite(recurring)) {
+            searchParams.append('is_recurring', recurring.toString());
+        } else if (typeof recurring === 'string' && recurring.trim().length > 0) {
+            searchParams.append('is_recurring', recurring.trim());
+        }
+        const includeValue = resolveIncludeParam(params.include);
+        if (includeValue) {
+            searchParams.append('include', includeValue);
+        }
+        const query = searchParams.toString();
+        return this.request<ApiListResult<Expense>>(`/expenses${query ? `?${query}` : ''}`);
+    }
+
+    async getExpense(
+        id: number | string,
+        params: { include?: string | readonly string[] } = {},
+    ): Promise<ApiItemResult<Expense>> {
+        const searchParams = new URLSearchParams();
+        const includeValue = resolveIncludeParam(params.include);
+        if (includeValue) {
+            searchParams.append('include', includeValue);
+        }
+        const query = searchParams.toString();
+        return this.request<ApiItemResult<Expense>>(`/expenses/${id}${query ? `?${query}` : ''}`);
+    }
+
+    async createExpense(payload: ExpensePayload): Promise<ApiItemResult<Expense>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<Expense>>(`/expenses`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateExpense(
+        id: number | string,
+        payload: ExpensePayload,
+    ): Promise<ApiItemResult<Expense>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<Expense>>(`/expenses/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteExpense(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/expenses/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getServiceReports(
+        params: ServiceReportListParams = {},
+    ): Promise<ApiListResult<ServiceReport>> {
+        const searchParams = new URLSearchParams();
+        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
+            searchParams.append('page', params.page.toString());
+        }
+        const perPageCandidate =
+            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
+                ? params.perPage
+                : typeof params.per_page === 'number' && Number.isFinite(params.per_page)
+                    ? params.per_page
+                    : undefined;
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
+            searchParams.append('limit', params.limit.toString());
+        }
+        const carId = params.car_id;
+        if (typeof carId === 'number' && Number.isFinite(carId)) {
+            searchParams.append('car_id', carId.toString());
+        } else if (typeof carId === 'string' && carId.trim().length > 0) {
+            searchParams.append('car_id', carId.trim());
+        }
+        if (typeof params.mechanic_name === 'string' && params.mechanic_name.trim().length > 0) {
+            searchParams.append('mechanic_name', params.mechanic_name.trim());
+        }
+        const includeValue = resolveIncludeParam(params.include);
+        if (includeValue) {
+            searchParams.append('include', includeValue);
+        }
+        const query = searchParams.toString();
+        return this.request<ApiListResult<ServiceReport>>(
+            `/service-reports${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async getServiceReport(
+        id: number | string,
+        params: { include?: string | readonly string[] } = {},
+    ): Promise<ApiItemResult<ServiceReport>> {
+        const searchParams = new URLSearchParams();
+        const includeValue = resolveIncludeParam(params.include);
+        if (includeValue) {
+            searchParams.append('include', includeValue);
+        }
+        const query = searchParams.toString();
+        return this.request<ApiItemResult<ServiceReport>>(
+            `/service-reports/${id}${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async createServiceReport(
+        payload: ServiceReportPayload,
+    ): Promise<ApiItemResult<ServiceReport>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<ServiceReport>>(`/service-reports`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateServiceReport(
+        id: number | string,
+        payload: ServiceReportPayload,
+    ): Promise<ApiItemResult<ServiceReport>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<ServiceReport>>(`/service-reports/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteServiceReport(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/service-reports/${id}`, {
             method: 'DELETE',
         });
     }
