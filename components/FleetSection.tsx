@@ -27,12 +27,61 @@ const toImageUrl = (p?: string | null): string => {
     return `${base}/${path}`;
 };
 
-const parsePrice = (priceText?: string): number | undefined => {
+const parsePrice = (priceText?: string | null): number | undefined => {
     if (!priceText) return undefined;
     const m = priceText.match(/([\d.,]+)/);
     if (!m) return undefined;
     const n = parseFloat(m[1].replace(/\./g, "").replace(",", "."));
     return Number.isFinite(n) ? n : undefined;
+};
+
+const resolvePrimaryImage = (car: ApiCar): string | null => {
+    const candidates: Array<unknown> = [
+        car.image_preview,
+        car.image,
+        car.thumbnail,
+        car.cover_image,
+    ];
+    if (Array.isArray(car.images)) {
+        candidates.push(
+            car.images.find((value) => typeof value === "string" && value.trim().length > 0) ?? null,
+        );
+    } else if (car.images && typeof car.images === "object") {
+        candidates.push(
+            Object.values(car.images).find(
+                (value) => typeof value === "string" && value.trim().length > 0,
+            ) ?? null,
+        );
+    }
+    if (car.type && typeof car.type === "object" && car.type !== null) {
+        candidates.push(car.type.image ?? null);
+    }
+    const primary = candidates.find(
+        (value): value is string => typeof value === "string" && value.trim().length > 0,
+    );
+    return primary ?? null;
+};
+
+const toSafeNumber = (value: unknown): number | undefined => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : undefined;
+};
+
+const resolveRelationName = (relation: unknown, fallback: string): string => {
+    if (typeof relation === "string") {
+        const trimmed = relation.trim();
+        return trimmed.length > 0 ? trimmed : fallback;
+    }
+    if (relation && typeof relation === "object" && "name" in relation) {
+        const candidate = (relation as { name?: unknown }).name;
+        if (typeof candidate === "string") {
+            const trimmed = candidate.trim();
+            if (trimmed.length > 0) {
+                return trimmed;
+            }
+        }
+    }
+    return fallback;
 };
 
 const FleetSection = () => {
@@ -50,16 +99,19 @@ const FleetSection = () => {
                 id: c.id,
                 name: c.name ?? "Autovehicul",
                 type: (c.type?.name ?? "—").trim(),
-                icon: toImageUrl(c.image_preview || c.thumbnail || c.type?.image || null),
-                number_of_seats: c.number_of_seats,
+                icon: toImageUrl(resolvePrimaryImage(c)),
+                number_of_seats: toSafeNumber(c.number_of_seats) ?? 0,
                 price:
                     c.rental_rate != null
                         ? Number(c.rental_rate)
                         : parsePrice(c.price_text),
-                transmission: { name: c.transmission?.name ?? "—" },
-                fuel: { name: c.fuel?.name ?? "—" },
+                transmission: { name: resolveRelationName(c.transmission, "—") },
+                fuel: { name: resolveRelationName(c.fuel, "—") },
                 categories: {
-                    id: c.categories?.[0]?.id ?? 0,
+                    id:
+                        typeof c.categories?.[0]?.id === "number"
+                            ? c.categories[0].id
+                            : Number(c.categories?.[0]?.id ?? 0),
                     name: c.categories?.[0]?.name ?? "—",
                 },
                 rating: typeof c.avg_review === "number" ? c.avg_review : undefined,

@@ -7,8 +7,7 @@ import BookingForm from '@/components/admin/BookingForm';
 import apiClient from '@/lib/api';
 import { extractItem, extractList } from '@/lib/apiResponse';
 import type { ApiCar } from '@/types/car';
-import type { AdminBookingResource } from '@/types/admin';
-import type { ReservationWheelPrizeSummary } from '@/types/reservation';
+import { createEmptyBookingForm, type AdminBookingResource, type AdminBookingFormValues } from '@/types/admin';
 
 interface Car {
     id: string;
@@ -65,6 +64,77 @@ const resolveServiceIds = (booking: AdminBookingResource): number[] => {
         .filter((value): value is number => value != null);
 };
 
+const parseOptionalNumber = (value: unknown): number | null => {
+    if (value == null || value === '') return null;
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === 'string') {
+        const normalized = Number(value.replace(/[^0-9.,-]/g, '').replace(',', '.'));
+        return Number.isFinite(normalized) ? normalized : null;
+    }
+    return null;
+};
+
+const pickNonEmptyString = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const pickLookupName = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    if (value && typeof value === 'object' && 'name' in value) {
+        return pickNonEmptyString((value as { name?: unknown }).name);
+    }
+
+    return undefined;
+};
+
+const toSafeString = (value: unknown, fallback = ''): string => {
+    return pickNonEmptyString(value) ?? fallback;
+};
+
+const toBoolean = (value: unknown, defaultValue = false): boolean => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return Number.isFinite(value) ? value !== 0 : defaultValue;
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (['1', 'true', 'da', 'yes'].includes(normalized)) return true;
+        if (['0', 'false', 'nu', 'no'].includes(normalized)) return false;
+    }
+    return defaultValue;
+};
+
+const toOptionalId = (value: unknown): number | string | null => {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+        const numeric = Number(trimmed);
+        return Number.isFinite(numeric) ? numeric : trimmed;
+    }
+    return null;
+};
+
+const toNumberOrString = (value: unknown): number | string | null => {
+    const numeric = parseOptionalNumber(value);
+    if (numeric != null) {
+        return numeric;
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+    return null;
+};
+
 interface Selection {
     type: 'car' | 'date' | 'reservation' | 'cell';
     carId?: string;
@@ -79,38 +149,12 @@ const ROW_VPAD = 8;
 const BAR_VINSET = 4;
 const BOOKINGS_SCROLL_THRESHOLD = 0.8;
 
-const EMPTY_BOOKING = {
-    rental_start_date: '',
-    rental_end_date: '',
-    with_deposit: true,
-    service_ids: [] as number[],
-    total_services: 0,
-    coupon_type: '',
-    coupon_amount: '',
-    coupon_code: '',
-    customer_name: '',
-    customer_phone: '',
-    customer_email: '',
-    car_id: null as number | null,
-    car_name: '',
-    car_image: '',
-    car_license_plate: '',
-    car_transmission: '',
-    car_fuel: '',
-    sub_total: 0,
-    total: 0,
-    price_per_day: 0,
-    total_before_wheel_prize: null as number | null,
-    wheel_prize_discount: 0,
-    wheel_prize: null as ReservationWheelPrizeSummary | null,
-};
-
 const CarRentalCalendar: React.FC = () => {
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
     const [viewMode, setViewMode] = useState<'month' | 'quarter' | 'year'>('year');
     const [selectedItems, setSelectedItems] = useState<Selection[]>([]);
 
-    const [bookingInfo, setBookingInfo] = useState<AdminBookingResource | null>(null);
+    const [bookingInfo, setBookingInfo] = useState<AdminBookingFormValues | null>(null);
     const [editPopupOpen, setEditPopupOpen] = useState(false);
 
     const [cars, setCars] = useState<Car[]>([]);
@@ -147,7 +191,13 @@ const CarRentalCalendar: React.FC = () => {
             const mapped = list
                 .map<Car | null>((car) => {
                     if (!car) return null;
-                    const id = car.id != null ? String(car.id) : car.slug ?? null;
+                    const rawSlug = (car as { slug?: unknown }).slug;
+                    const id =
+                        car.id != null
+                            ? String(car.id)
+                            : typeof rawSlug === 'string' && rawSlug.trim().length > 0
+                                ? rawSlug
+                                : null;
                     if (!id) return null;
                     const transmission =
                         typeof car.transmission === 'string'
@@ -567,46 +617,152 @@ const CarRentalCalendar: React.FC = () => {
             if (!info) {
                 throw new Error('Rezervarea nu a putut fi încărcată.');
             }
-            const formatted = {
-                ...info,
-                id: info.id ?? reservationId,
-                rental_start_date: toLocalDateTimeInput(info.rental_start_date),
-                rental_end_date: toLocalDateTimeInput(info.rental_end_date),
-                coupon_amount: info.coupon_amount ?? 0,
-                coupon_type: info.coupon_type ?? null,
-                total_services: info.total_services ?? 0,
-                service_ids: resolveServiceIds(info),
-                sub_total: info.sub_total ?? 0,
-                coupon_code: info.coupon_code ?? '',
-                customer_name: info.customer_name ?? '',
-                customer_email: info.customer_email ?? '',
-                customer_phone: info.customer_phone ?? '',
-                customer_age: info.customer_age ?? '',
-                customer_id: info.customer_id ?? '',
-                car_id: info.car_id ?? 0,
-                car_name: info.car_name ?? '',
-                car_image: info.car_image ?? info.image_preview ?? '',
-                car_license_plate: info.car?.license_plate ?? info.license_plate ?? '',
-                car_transmission: info.car?.transmission?.name ?? info.transmission_name ?? '',
-                car_fuel: info.car?.fuel?.name ?? info.fuel_name ?? '',
-                car_deposit: info.car?.deposit,
-                booking_number: info.booking_number ?? '',
-                note: info.note ?? '',
-                days: info.days ?? 0,
-                price_per_day: info.price_per_day ?? 0,
-                original_price_per_day: info.price_per_day ?? 0,
-                keep_old_price: info.keep_old_price ?? true,
-                send_email: info.send_email ?? false,
-                with_deposit: info.with_deposit ?? false,
-                tax_amount: info.tax_amount ?? 0,
-                currency_id: info.currency_id ?? '',
-                status: info.status ?? '',
-                total: info.total ?? 0,
-                advance_payment: info.advance_payment ?? 0,
-                total_before_wheel_prize: info.total_before_wheel_prize ?? null,
-                wheel_prize_discount:
-                    info.wheel_prize_discount ?? info.wheel_prize?.discount_value ?? 0,
-                wheel_prize: info.wheel_prize ?? null,
+            const carInfo = info.car ?? null;
+            const baseForm = createEmptyBookingForm();
+            const couponAmount = parseOptionalNumber(info.coupon_amount) ?? baseForm.coupon_amount;
+            const totalServices = parseOptionalNumber(info.total_services) ?? baseForm.total_services;
+            const subTotal =
+                parseOptionalNumber(info.sub_total ?? (info as { subTotal?: unknown }).subTotal) ??
+                baseForm.sub_total;
+            const serviceIds = resolveServiceIds(info);
+            const carId = toNumericId(info.car_id ?? carInfo?.id) ?? baseForm.car_id;
+            const rentalStart = toLocalDateTimeInput(info.rental_start_date) || baseForm.rental_start_date;
+            const rentalEnd = toLocalDateTimeInput(info.rental_end_date) || baseForm.rental_end_date;
+            const pricePerDayCandidate =
+                parseOptionalNumber(info.price_per_day) ?? parseOptionalNumber(info.original_price_per_day);
+            const pricePerDay = pricePerDayCandidate ?? baseForm.price_per_day;
+            const originalPricePerDay =
+                parseOptionalNumber(info.original_price_per_day) ?? pricePerDayCandidate ?? baseForm.original_price_per_day;
+            const basePrice = parseOptionalNumber(info.base_price) ?? pricePerDay;
+            const basePriceCasco = parseOptionalNumber(info.base_price_casco) ?? pricePerDay;
+            const total =
+                parseOptionalNumber(info.total ?? info.total_price) ?? baseForm.total;
+            const taxAmount = parseOptionalNumber(info.tax_amount) ?? (baseForm.tax_amount ?? 0);
+            const advancePayment = parseOptionalNumber(info.advance_payment) ?? baseForm.advance_payment;
+            const totalBeforeWheelPrize =
+                parseOptionalNumber(
+                    info.total_before_wheel_prize ??
+                        (info as { totalBeforeWheelPrize?: unknown }).totalBeforeWheelPrize,
+                ) ?? baseForm.total_before_wheel_prize;
+            const wheelPrizeDiscount =
+                parseOptionalNumber(info.wheel_prize_discount ?? info.wheel_prize?.discount_value) ??
+                baseForm.wheel_prize_discount;
+            const bookingId = toOptionalId(info.id ?? reservationId) ?? baseForm.id;
+            const bookingNumber =
+                toOptionalId(
+                    info.booking_number ??
+                        info.bookingNumber ??
+                        info.id ??
+                        reservationId,
+                ) ?? baseForm.booking_number;
+            const currencyRaw =
+                (info as { currency_id?: unknown }).currency_id ??
+                (info as { currencyId?: unknown }).currencyId;
+            const currencyId = toOptionalId(currencyRaw) ?? baseForm.currency_id;
+            const customerId = toNumberOrString(info.customer_id ?? info.customer?.id) ?? baseForm.customer_id;
+            const customerAge = toNumberOrString(info.customer_age ?? info.customer?.age) ?? baseForm.customer_age;
+            const customerName =
+                pickNonEmptyString(info.customer_name) ??
+                pickNonEmptyString(info.customer?.name) ??
+                baseForm.customer_name;
+            const customerPhone =
+                pickNonEmptyString(info.customer_phone) ??
+                pickNonEmptyString(info.customer?.phone) ??
+                baseForm.customer_phone;
+            const customerEmail =
+                pickNonEmptyString(info.customer_email) ??
+                pickNonEmptyString(info.customer?.email) ??
+                baseForm.customer_email;
+            const carName =
+                pickNonEmptyString(info.car_name) ??
+                pickNonEmptyString(carInfo?.name) ??
+                baseForm.car_name;
+            const carImage =
+                pickNonEmptyString(info.car_image) ??
+                pickNonEmptyString(info.image_preview) ??
+                pickNonEmptyString(carInfo?.image_preview) ??
+                pickNonEmptyString(carInfo?.image) ??
+                baseForm.car_image;
+            const carLicensePlate =
+                pickNonEmptyString(info.car_license_plate) ??
+                pickNonEmptyString((info as { license_plate?: unknown }).license_plate) ??
+                pickNonEmptyString(carInfo?.license_plate) ??
+                baseForm.car_license_plate;
+            const carTransmission =
+                pickNonEmptyString(info.car_transmission) ??
+                pickNonEmptyString((info as { transmission_name?: unknown }).transmission_name) ??
+                pickLookupName(carInfo?.transmission) ??
+                baseForm.car_transmission;
+            const carFuel =
+                pickNonEmptyString(info.car_fuel) ??
+                pickNonEmptyString((info as { fuel_name?: unknown }).fuel_name) ??
+                pickLookupName(carInfo?.fuel) ??
+                baseForm.car_fuel;
+            const carDeposit =
+                parseOptionalNumber(info.car_deposit ?? carInfo?.deposit) ?? baseForm.car_deposit;
+            const couponType =
+                pickNonEmptyString(info.coupon_type) ??
+                pickNonEmptyString((info as { discount_type?: unknown }).discount_type) ??
+                baseForm.coupon_type;
+            const couponCode = toSafeString(info.coupon_code, baseForm.coupon_code);
+            const days = parseOptionalNumber(info.days) ?? baseForm.days;
+            const status = toSafeString(info.status, baseForm.status);
+            const note =
+                pickNonEmptyString(info.note) ??
+                pickNonEmptyString((info as { notes?: unknown }).notes) ??
+                baseForm.note;
+            const locationValue =
+                pickNonEmptyString((info as { location?: unknown }).location) ?? baseForm.location ?? '';
+            const discountApplied =
+                parseOptionalNumber((info as { discount?: unknown }).discount) ??
+                baseForm.discount_applied ??
+                null;
+            const services = Array.isArray(info.services) ? info.services : baseForm.services;
+            const wheelPrize = info.wheel_prize ?? baseForm.wheel_prize;
+            const formatted: AdminBookingFormValues = {
+                ...baseForm,
+                id: bookingId,
+                booking_number: bookingNumber,
+                rental_start_date: rentalStart,
+                rental_end_date: rentalEnd,
+                with_deposit: toBoolean(info.with_deposit, baseForm.with_deposit),
+                service_ids: serviceIds,
+                services,
+                total_services: totalServices,
+                coupon_type: couponType,
+                coupon_amount: couponAmount,
+                coupon_code: couponCode,
+                customer_name: customerName,
+                customer_phone: customerPhone,
+                customer_email: customerEmail,
+                customer_id: customerId,
+                customer_age: customerAge,
+                car_id: carId,
+                car_name: carName,
+                car_image: carImage,
+                car_license_plate: carLicensePlate,
+                car_transmission: carTransmission,
+                car_fuel: carFuel,
+                car_deposit: carDeposit,
+                sub_total: subTotal,
+                total,
+                price_per_day: pricePerDay,
+                original_price_per_day: originalPricePerDay,
+                base_price: basePrice,
+                base_price_casco: basePriceCasco,
+                days,
+                keep_old_price: toBoolean(info.keep_old_price, baseForm.keep_old_price),
+                send_email: toBoolean(info.send_email, baseForm.send_email),
+                advance_payment: advancePayment,
+                status,
+                note,
+                currency_id: currencyId,
+                total_before_wheel_prize: totalBeforeWheelPrize,
+                wheel_prize_discount: wheelPrizeDiscount,
+                wheel_prize: wheelPrize,
+                discount_applied: discountApplied,
+                location: locationValue,
+                tax_amount: taxAmount,
             };
             setBookingInfo(formatted);
             setEditPopupOpen(true);
@@ -652,16 +808,18 @@ const CarRentalCalendar: React.FC = () => {
         const end = dateSelections[dateSelections.length - 1];
         const selectedCarId = selectedItems.find((it) => it.type === 'car')?.carId;
         const car = cars.find((c) => c.id === selectedCarId);
+        const baseForm = createEmptyBookingForm();
+        const normalizedCarId = selectedCarId ? toNumericId(selectedCarId) : null;
         setBookingInfo({
-            ...EMPTY_BOOKING,
-            rental_start_date: start ? formatDateInput(start) : '',
-            rental_end_date: end ? formatDateInput(end) : '',
-            car_id: selectedCarId ? Number(selectedCarId) : null,
-            car_name: car?.model ?? '',
-            car_image: car?.image ?? '',
-            car_license_plate: car?.license ?? '',
-            car_transmission: car?.transmission ?? '',
-            car_fuel: car?.fuel ?? '',
+            ...baseForm,
+            rental_start_date: start ? formatDateInput(start) : baseForm.rental_start_date,
+            rental_end_date: end ? formatDateInput(end) : baseForm.rental_end_date,
+            car_id: normalizedCarId ?? baseForm.car_id,
+            car_name: car?.model ?? baseForm.car_name,
+            car_image: car?.image ?? baseForm.car_image,
+            car_license_plate: car?.license ?? baseForm.car_license_plate,
+            car_transmission: car?.transmission ?? baseForm.car_transmission,
+            car_fuel: car?.fuel ?? baseForm.car_fuel,
         });
         setEditPopupOpen(true);
     };

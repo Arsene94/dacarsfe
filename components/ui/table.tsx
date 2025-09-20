@@ -29,6 +29,16 @@ const toSortableValue = (value: ColumnValue): number | string => {
   return String(value);
 };
 
+const renderColumnValue = (value: ColumnValue): React.ReactNode => {
+  if (value instanceof Date) {
+    return value.toLocaleString();
+  }
+  if (value == null) {
+    return '';
+  }
+  return value;
+};
+
 export function DataTable<T>({
   data,
   columns,
@@ -158,7 +168,7 @@ export function DataTable<T>({
                 )}
                 {columns.map((col) => (
                   <td key={col.id} className="py-3 px-4">
-                    {col.cell ? col.cell(row) : col.accessor(row)}
+                    {col.cell ? col.cell(row) : renderColumnValue(col.accessor(row))}
                   </td>
                 ))}
               </tr>

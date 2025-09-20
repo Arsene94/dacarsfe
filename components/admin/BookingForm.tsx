@@ -38,6 +38,48 @@ const parsePrice = (raw: unknown): number => {
     return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const toDisplayString = (value: unknown, fallback = ""): string => {
+    if (typeof value === "string") {
+        return value;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+        return String(value);
+    }
+    return fallback;
+};
+
+const resolveAdminCarName = (
+    car: AdminBookingCarOption | null | undefined,
+    fallback: string,
+): string => {
+    if (car && typeof car.name === "string") {
+        const trimmed = car.name.trim();
+        if (trimmed.length > 0) {
+            return trimmed;
+        }
+    }
+    return fallback;
+};
+
+type CarRelation = AdminBookingCarOption["transmission"];
+
+const resolveRelationLabel = (relation: CarRelation, fallback = ""): string => {
+    if (typeof relation === "string") {
+        const trimmed = relation.trim();
+        return trimmed.length > 0 ? trimmed : fallback;
+    }
+
+    if (relation && typeof relation === "object" && "name" in relation) {
+        const name = (relation as { name?: unknown }).name;
+        if (typeof name === "string") {
+            const trimmed = name.trim();
+            return trimmed.length > 0 ? trimmed : fallback;
+        }
+    }
+
+    return fallback;
+};
+
 const toOptionalNumber = (value: unknown): number | null => {
     if (value == null || value === "") return null;
     if (typeof value === "number") {
@@ -116,6 +158,25 @@ const BookingForm: React.FC<BookingFormProps> = ({
         }
     }, []);
 
+    const hasBookingInfo = Boolean(bookingInfo);
+    const rentalStart = bookingInfo?.rental_start_date ?? "";
+    const rentalEnd = bookingInfo?.rental_end_date ?? "";
+    const bookingCarId = bookingInfo?.car_id ?? null;
+    const bookingCarLicense = bookingInfo?.car_license_plate ?? "";
+    const bookingCarTransmission = bookingInfo?.car_transmission ?? "";
+    const bookingCarFuel = bookingInfo?.car_fuel ?? "";
+    const selectedCarOption = bookingInfo?.car_id
+        ? normalizeAdminCarOption({
+              id: bookingInfo.car_id,
+              name: bookingInfo.car_name,
+              image_preview: bookingInfo.car_image,
+              number_of_seats: 0,
+              license_plate: bookingInfo.car_license_plate,
+              transmission: { name: bookingInfo.car_transmission },
+              fuel: { name: bookingInfo.car_fuel },
+          } as ApiCar)
+        : null;
+
     useEffect(() => {
         if (!bookingInfo) {
             return;
@@ -127,12 +188,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     car_id: bookingInfo.car_id ?? 0,
                     rental_start_date: bookingInfo.rental_start_date,
                     rental_end_date: bookingInfo.rental_end_date,
-                    base_price: bookingInfo.base_price,
-                    base_price_casco: bookingInfo.base_price_casco,
+                    base_price: bookingInfo.base_price ?? undefined,
+                    base_price_casco: bookingInfo.base_price_casco ?? undefined,
                     original_price_per_day: bookingInfo.original_price_per_day ?? undefined,
                     coupon_type: bookingInfo.coupon_type,
-                    coupon_amount: bookingInfo.coupon_amount,
-                    coupon_code: bookingInfo.coupon_code,
+                    coupon_amount: bookingInfo.coupon_amount ?? undefined,
+                    coupon_code: bookingInfo.coupon_code ?? undefined,
                     service_ids: bookingInfo.service_ids ?? [],
                     with_deposit: bookingInfo.with_deposit,
                 });
@@ -198,13 +259,23 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     useEffect(() => {
         if (!carSearchActive) return;
+        if (!hasBookingInfo) return;
 
-        if (bookingInfo.rental_start_date.trim().length < 0 || bookingInfo.rental_end_date.trim().length < 0) return;
+        if (rentalStart.trim().length === 0 || rentalEnd.trim().length === 0) {
+            return;
+        }
         const handler = setTimeout(() => {
             fetchCars(carSearch);
         }, 300);
         return () => clearTimeout(handler);
-    }, [carSearch, fetchCars, carSearchActive, bookingInfo.rental_start_date, bookingInfo.rental_end_date]);
+    }, [
+        carSearch,
+        fetchCars,
+        carSearchActive,
+        hasBookingInfo,
+        rentalStart,
+        rentalEnd,
+    ]);
 
     useEffect(() => {
         if (!customerSearchActive) return;
@@ -248,43 +319,50 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }, []);
 
     useEffect(() => {
-        if (!open || !bookingInfo.car_id) return;
-        if (
-            bookingInfo.car_license_plate &&
-            bookingInfo.car_transmission &&
-            bookingInfo.car_fuel
-        )
-            return;
+        if (!open || !bookingCarId) return;
+        if (bookingCarLicense && bookingCarTransmission && bookingCarFuel) return;
+        if (rentalStart.trim().length === 0 || rentalEnd.trim().length === 0) return;
         let ignore = false;
         const load = async () => {
             try {
                 const res = await apiClient.getCarForBooking({
-                    car_id: bookingInfo.car_id ?? 0,
-                    start_date: bookingInfo.rental_start_date,
-                    end_date: bookingInfo.rental_end_date,
+                    car_id: bookingCarId ?? 0,
+                    start_date: rentalStart,
+                    end_date: rentalEnd,
                 });
                 const car = extractFirstCar(res);
                 if (!car || ignore) return;
                 const normalized = normalizeAdminCarOption(car);
-                const price = parsePrice(
-                    normalized.rental_rate ?? bookingInfo.price_per_day,
-                );
-                updateBookingInfo((prev) =>
-                    recalcTotals({
+                updateBookingInfo((prev) => {
+                    const imageCandidates: Array<unknown> = [
+                        normalized.image_preview,
+                        (normalized as Partial<ApiCar>).image,
+                        prev.car_image,
+                    ];
+                    const nextImage =
+                        imageCandidates.find(
+                            (value): value is string =>
+                                typeof value === "string" && value.trim().length > 0,
+                        ) ?? "";
+
+                    return recalcTotals({
                         ...prev,
-                        car_name: normalized.name ?? prev.car_name,
-                        car_image:
-                            normalized.image_preview ||
-                            (normalized as Partial<ApiCar>).image ||
-                            prev.car_image,
-                        car_license_plate: normalized.license_plate ?? prev.car_license_plate,
-                        car_transmission: normalized.transmission?.name ?? prev.car_transmission,
-                        car_fuel: normalized.fuel?.name ?? prev.car_fuel,
-                        price_per_day: price,
+                        car_name: resolveAdminCarName(normalized, prev.car_name),
+                        car_image: nextImage,
+                        car_license_plate: toDisplayString(
+                            normalized.license_plate,
+                            prev.car_license_plate,
+                        ),
+                        car_transmission:
+                            resolveRelationLabel(normalized.transmission, prev.car_transmission),
+                        car_fuel: resolveRelationLabel(normalized.fuel, prev.car_fuel),
+                        price_per_day: parsePrice(
+                            normalized.rental_rate ?? prev.price_per_day,
+                        ),
                         base_price: parsePrice(normalized.rental_rate),
                         base_price_casco: parsePrice(normalized.rental_rate_casco),
-                    }),
-                );
+                    });
+                });
             } catch (err) {
                 console.error("Error loading car:", err);
             }
@@ -295,15 +373,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
         };
     }, [
         open,
-        bookingInfo?.car_id,
-        bookingInfo?.car_license_plate,
-        bookingInfo?.car_transmission,
-        bookingInfo?.car_fuel,
-        bookingInfo?.car_image,
-        bookingInfo?.car_name,
-        bookingInfo?.price_per_day,
-        bookingInfo?.rental_start_date,
-        bookingInfo?.rental_end_date,
+        bookingCarId,
+        bookingCarLicense,
+        bookingCarTransmission,
+        bookingCarFuel,
+        rentalStart,
+        rentalEnd,
         recalcTotals,
         updateBookingInfo,
     ]);
@@ -314,14 +389,31 @@ const BookingForm: React.FC<BookingFormProps> = ({
         }
         const price = car.rental_rate ? Number(car.rental_rate) : bookingInfo.price_per_day;
         const normalized = normalizeAdminCarOption(car);
+        const imageCandidates: Array<unknown> = [
+            normalized.image_preview,
+            (normalized as Partial<ApiCar>).image,
+            bookingInfo.car_image,
+        ];
+        const nextImage =
+            imageCandidates.find(
+                (value): value is string =>
+                    typeof value === "string" && value.trim().length > 0,
+            ) ?? "";
+
         const updated = recalcTotals({
             ...bookingInfo,
             car_id: Number(car.id),
-            car_name: normalized.name ?? bookingInfo.car_name,
-            car_image: normalized.image_preview || (normalized as Partial<ApiCar>).image || "",
-            car_license_plate: normalized.license_plate ?? "",
-            car_transmission: normalized.transmission?.name ?? "",
-            car_fuel: normalized.fuel?.name ?? "",
+            car_name: resolveAdminCarName(normalized, bookingInfo.car_name),
+            car_image: nextImage,
+            car_license_plate: toDisplayString(
+                normalized.license_plate,
+                bookingInfo.car_license_plate,
+            ),
+            car_transmission: resolveRelationLabel(
+                normalized.transmission,
+                bookingInfo.car_transmission,
+            ),
+            car_fuel: resolveRelationLabel(normalized.fuel, bookingInfo.car_fuel),
             price_per_day: price,
             base_price: parsePrice(normalized.rental_rate),
             base_price_casco: parsePrice(normalized.rental_rate_casco),
@@ -454,8 +546,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
         : "—";
 
     const handleUpdateBooking = async () => {
+        if (!bookingInfo || bookingInfo.id == null) {
+            console.error("Booking information missing identifier; cannot update reservation.");
+            return;
+        }
         try {
-            await apiClient.updateBooking(bookingInfo.id, bookingInfo);
+            const payload = { ...bookingInfo } as Record<string, unknown>;
+            await apiClient.updateBooking(bookingInfo.id, payload);
             onClose();
             onUpdated?.();
         } catch (error) {
@@ -505,110 +602,109 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
                     <div className="col-span-2">
                         <Label htmlFor="car-select">Mașină</Label>
-                        <SearchSelect
+                        <SearchSelect<AdminBookingCarOption>
                             id="car-select"
-                            value={
-                                bookingInfo.car_id
-                                    ? {
-                                          id: bookingInfo.car_id,
-                                          name: bookingInfo.car_name,
-                                          image_preview: bookingInfo.car_image,
-                                          license_plate: bookingInfo.car_license_plate,
-                                          transmission: { name: bookingInfo.car_transmission },
-                                          fuel: { name: bookingInfo.car_fuel },
-                                      }
-                                    : null
-                            }
+                            value={selectedCarOption}
                             search={carSearch}
                             items={carResults}
                             onSearch={setCarSearch}
                             onSelect={handleSelectCar}
                             onOpen={handleCarSearchOpen}
                             placeholder="Selectează mașina"
-                            renderItem={(car) => (
-                                <>
-                                    <Image
-                                        src={
-                                            car.image_preview || car.image
-                                                ?
-                                                      STORAGE_BASE +
-                                                      "/" +
-                                                      (car.image_preview || car.image)
-                                                : "/images/placeholder-car.svg"
-                                        }
-                                        alt={car.name}
-                                        width={64}
-                                        height={40}
-                                        className="w-16 h-10 object-cover rounded"
-                                    />
-                                    <div className="flex justify-between items-end w-full">
-                                        <div>
-                                            <div className="font-dm-sans font-semibold">{car.name}</div>
-                                            <div className="text-xs">
-                                                {car.license_plate} • {typeof car.transmission === "string"
-                                                    ? car.transmission
-                                                    : car.transmission?.name} • {typeof car.fuel === "string"
-                                                    ? car.fuel
-                                                    : car.fuel?.name}
+                            renderItem={(car) => {
+                                const carName = resolveAdminCarName(car, "Autovehicul");
+                                const transmissionLabel = resolveRelationLabel(car.transmission);
+                                const fuelLabel = resolveRelationLabel(car.fuel);
+                                const imagePath = car.image_preview || car.image;
+
+                                return (
+                                    <>
+                                        <Image
+                                            src={
+                                                imagePath
+                                                    ?
+                                                          STORAGE_BASE +
+                                                          "/" +
+                                                          imagePath
+                                                    : "/images/placeholder-car.svg"
+                                            }
+                                            alt={carName}
+                                            width={64}
+                                            height={40}
+                                            className="w-16 h-10 object-cover rounded"
+                                        />
+                                        <div className="flex justify-between items-end w-full">
+                                            <div>
+                                                <div className="font-dm-sans font-semibold">{carName}</div>
+                                                <div className="text-xs">
+                                                    {toDisplayString(car.license_plate)} • {transmissionLabel} • {fuelLabel}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs">
+                                                    Preț cu garanție: {toDisplayString(car.rental_rate)}€ x {toDisplayString(car.days)} zile = {toDisplayString(car.total_deposit)}€
+                                                </div>
+                                                <div className="text-xs">
+                                                    Preț fără garanție: {toDisplayString(car.rental_rate_casco)}€ x {toDisplayString(car.days)} zile = {toDisplayString(car.total_without_deposit)}€
+                                                </div>
                                             </div>
                                         </div>
-                                        <div>
-                                            <div className="text-xs">Preț cu garanție: {car.rental_rate}€ x {car.days} zile = {car.total_deposit}€</div>
-                                            <div className="text-xs">Preț fără garanție: {car.rental_rate_casco}€ x {car.days} zile = {car.total_without_deposit}€</div>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
+                                    </>
+                                );
+                            }}
                             itemClassName={(car) =>
                                 car.available
                                     ? "bg-green-100 text-green-700 hover:bg-green-200"
                                     : "bg-red-100 text-red-700 hover:bg-red-200"
                             }
-                            renderValue={(car) => (
-                                <div className="flex items-center gap-3">
-                                    <Image
-                                        src={
-                                            car.image_preview || car.image
-                                                ?
-                                                      STORAGE_BASE +
-                                                      "/" +
-                                                      (car.image_preview || car.image)
-                                                : "/images/placeholder-car.svg"
-                                        }
-                                        alt={car.name}
-                                        width={64}
-                                        height={40}
-                                        className="w-16 h-10 object-cover rounded"
-                                    />
-                                    <div className="text-left">
-                                        <div className="font-dm-sans font-semibold text-gray-700">{car.name}</div>
-                                        <div className="text-xs text-gray-600">
-                                            {car.license_plate} • {typeof car.transmission === "string"
-                                                ? car.transmission
-                                                : car.transmission?.name} • {typeof car.fuel === "string"
-                                                ? car.fuel
-                                                : car.fuel?.name}
+                            renderValue={(car) => {
+                                const carName = resolveAdminCarName(car, "Autovehicul");
+                                const transmissionLabel = resolveRelationLabel(car.transmission);
+                                const fuelLabel = resolveRelationLabel(car.fuel);
+                                const imagePath = car.image_preview || car.image;
+
+                                return (
+                                    <div className="flex items-center gap-3">
+                                        <Image
+                                            src={
+                                                imagePath
+                                                    ?
+                                                          STORAGE_BASE +
+                                                          "/" +
+                                                          imagePath
+                                                    : "/images/placeholder-car.svg"
+                                            }
+                                            alt={carName}
+                                            width={64}
+                                            height={40}
+                                            className="w-16 h-10 object-cover rounded"
+                                        />
+                                        <div className="text-left">
+                                            <div className="font-dm-sans font-semibold text-gray-700">{carName}</div>
+                                            <div className="text-xs text-gray-600">
+                                                {toDisplayString(car.license_plate)} • {transmissionLabel} • {fuelLabel}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                );
+                            }}
                         />
                     </div>
 
-                      <div>
-                          <Label htmlFor="car-deposit">Garantie</Label>
-                          <Input
-                              id="car-deposit"
-                              type="text"
-                              value={bookingInfo.car_deposit || 0}
-                              onChange={(e) =>
-                                  setBookingInfo({
-                                      ...bookingInfo,
-                                      car_deposit: e.target.value,
-                                  })
-                              }
-                          />
-                      </div>
+                    <div>
+                        <Label htmlFor="car-deposit">Garantie</Label>
+                        <Input
+                            id="car-deposit"
+                            type="number"
+                            value={bookingInfo.car_deposit ?? ""}
+                            onChange={(e) =>
+                                setBookingInfo({
+                                    ...bookingInfo,
+                                    car_deposit: toOptionalNumber(e.target.value),
+                                })
+                            }
+                        />
+                    </div>
 
                       <div>
                           <Label htmlFor="customer-name">Nume client</Label>
@@ -963,7 +1059,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <span>Preț per zi:</span>
                                     <span>{baseRate}€ x {days} zile</span>
                                 </div>
-                                {quote.total_services > 0 && (
+                                {typeof quote.total_services === "number" && quote.total_services > 0 && (
                                     <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                         <span>Total Servicii:</span> <span>{quote.total_services}€</span>
                                     </div>

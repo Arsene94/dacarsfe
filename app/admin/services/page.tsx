@@ -7,6 +7,7 @@ import { DataTable } from "@/components/ui/table";
 import { Popup } from "@/components/ui/popup";
 import { Input } from "@/components/ui/input";
 import apiClient from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
 import type { Column } from "@/types/ui";
 import type { AdminService } from "@/types/admin";
 
@@ -45,11 +46,7 @@ const AdditionalServicesPage = () => {
     const fetchServices = useCallback(async () => {
         try {
             const response = await apiClient.getServices();
-            const rawList = Array.isArray(response?.data)
-                ? response.data
-                : Array.isArray(response)
-                    ? response
-                    : [];
+            const rawList = extractList(response);
 
             const mapped = rawList
                 .map((item): AdminService | null => {
@@ -79,11 +76,32 @@ const AdditionalServicesPage = () => {
                             source.pricePerDay
                     );
 
-                    return {
+                    const normalized: AdminService = {
+                        ...source,
                         id,
                         name: serviceName,
                         price: priceValue,
+                        description:
+                            typeof source.description === "string"
+                                ? source.description
+                                : null,
+                        content:
+                            typeof source.content === "string" ? source.content : null,
+                        status:
+                            typeof source.status === "string"
+                                ? (source.status as AdminService["status"])
+                                : null,
+                        image:
+                            typeof source.image === "string" ? source.image : null,
+                        logo:
+                            typeof source.logo === "string" ? source.logo : null,
+                        created_at:
+                            typeof source.created_at === "string" ? source.created_at : null,
+                        updated_at:
+                            typeof source.updated_at === "string" ? source.updated_at : null,
                     };
+
+                    return normalized;
                 })
                 .filter((item): item is AdminService => item !== null)
                 .sort((a, b) => a.name.localeCompare(b.name, "ro"));

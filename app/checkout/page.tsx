@@ -7,6 +7,8 @@ import {Label} from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import {useBooking} from "@/context/BookingContext";
 import { apiClient } from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
+import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount, formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
 import {
     getStoredWheelPrize,
@@ -53,6 +55,192 @@ const formatPrice = (value: number): string => {
     if (!Number.isFinite(value)) return "0";
     const normalized = Math.round(value * 100) / 100;
     return priceFormatter.format(normalized);
+};
+
+const parseMaybeNumber = (value: unknown): number | null => {
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (trimmed.length === 0) return null;
+        const normalized = Number(trimmed.replace(/,/g, "."));
+        if (Number.isFinite(normalized)) {
+            return normalized;
+        }
+        const parsed = parsePrice(trimmed);
+        if (!Number.isFinite(parsed)) {
+            return null;
+        }
+        if (parsed === 0 && !/[\d]/.test(trimmed)) {
+            return null;
+        }
+        return parsed;
+    }
+    return null;
+};
+
+const coerceNumber = (value: unknown, fallback = 0): number => {
+    const parsed = parseMaybeNumber(value);
+    return parsed !== null ? parsed : fallback;
+};
+
+const coerceId = (value: unknown): number | null => {
+    const parsed = parseMaybeNumber(value);
+    if (parsed === null) return null;
+    const rounded = Math.trunc(parsed);
+    return Number.isFinite(rounded) ? rounded : null;
+};
+
+const resolveFirstString = (...values: Array<unknown>): string | null => {
+    for (const value of values) {
+        if (typeof value === "string") {
+            const trimmed = value.trim();
+            if (trimmed.length > 0) {
+                return trimmed;
+            }
+        }
+    }
+    return null;
+};
+
+const resolveLookupName = (value: unknown): string | null => {
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+
+    if (value && typeof value === "object" && "name" in value) {
+        const name = (value as { name?: unknown }).name;
+        if (typeof name === "string") {
+            const trimmed = name.trim();
+            return trimmed.length > 0 ? trimmed : null;
+        }
+    }
+
+    return null;
+};
+
+const resolveLookupId = (value: unknown): number | null => {
+    if (value && typeof value === "object" && "id" in value) {
+        return coerceId((value as { id?: unknown }).id);
+    }
+
+    return coerceId(value);
+};
+
+const mapApiCarToCar = (apiCar: ApiCar): Car => {
+    const extras = apiCar as Record<string, unknown>;
+    const imageCandidates: Array<unknown> = [
+        apiCar.image_preview,
+        apiCar.image,
+        apiCar.thumbnail,
+        apiCar.cover_image,
+    ];
+    if (Array.isArray(apiCar.images)) {
+        imageCandidates.push(
+            apiCar.images.find((value) => typeof value === "string" && value.trim().length > 0) ?? null,
+        );
+    } else if (apiCar.images && typeof apiCar.images === "object") {
+        imageCandidates.push(
+            Object.values(apiCar.images).find(
+                (value) => typeof value === "string" && value.trim().length > 0,
+            ) ?? null,
+        );
+    }
+    if (typeof apiCar.type?.image === "string") {
+        imageCandidates.push(apiCar.type.image);
+    }
+    const imageCandidate = imageCandidates.find(
+        (value): value is string => typeof value === "string" && value.trim().length > 0,
+    );
+
+    const typeName = resolveFirstString(apiCar.type?.name) ?? "—";
+    const typeId = coerceId(apiCar.type?.id);
+
+    const rentalRateValue = parseMaybeNumber(apiCar.rental_rate);
+    const rentalRateCascoValue = parseMaybeNumber(apiCar.rental_rate_casco);
+    const fallbackPrice = parseMaybeNumber(apiCar.price);
+    const normalizedPrice = Math.round(
+        rentalRateValue ?? rentalRateCascoValue ?? fallbackPrice ?? 0,
+    );
+
+    const rentalRateLabel =
+        rentalRateValue !== null ? String(Math.round(rentalRateValue)) : "";
+    const rentalRateCascoLabel =
+        rentalRateCascoValue !== null
+            ? String(Math.round(rentalRateCascoValue))
+            : "";
+
+    const passengers = Math.max(0, Math.round(coerceNumber(apiCar.number_of_seats)));
+    const transmissionName =
+        resolveFirstString(
+            resolveLookupName(apiCar.transmission),
+            extras["transmission_name"],
+            extras["transmissionName"],
+        ) ?? "—";
+    const transmissionId =
+        resolveLookupId(apiCar.transmission) ?? coerceId(extras["transmission_id"]);
+
+    const fuelName =
+        resolveFirstString(
+            resolveLookupName(apiCar.fuel),
+            extras["fuel_name"],
+            extras["fuelName"],
+        ) ?? "—";
+    const fuelId = resolveLookupId(apiCar.fuel) ?? coerceId(extras["fuel_id"]);
+
+    const totalDepositRaw =
+        apiCar.total_deposit ?? (extras["totalDeposit"] as unknown);
+    const totalWithoutDepositRaw =
+        apiCar.total_without_deposit ??
+        (extras["totalWithoutDeposit"] as unknown);
+
+    const ratingSource =
+        apiCar.avg_review ?? (extras["avg_review"] as unknown ?? extras["avgReview"]);
+
+    return {
+        id: apiCar.id,
+        name:
+            typeof apiCar.name === "string" && apiCar.name.trim().length > 0
+                ? apiCar.name
+                : "Autovehicul",
+        type: typeName,
+        typeId,
+        image: toImageUrl((imageCandidate as string | null | undefined) ?? null),
+        price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
+        rental_rate: rentalRateLabel,
+        rental_rate_casco: rentalRateCascoLabel,
+        days: Math.max(0, Math.round(coerceNumber(apiCar.days))),
+        deposit: coerceNumber(apiCar.deposit),
+        total_deposit:
+            typeof totalDepositRaw === "number" || typeof totalDepositRaw === "string"
+                ? totalDepositRaw
+                : 0,
+        total_without_deposit:
+            typeof totalWithoutDepositRaw === "number" ||
+            typeof totalWithoutDepositRaw === "string"
+                ? totalWithoutDepositRaw
+                : 0,
+        available:
+            typeof apiCar.available === "boolean"
+                ? apiCar.available
+                : typeof extras["available"] === "boolean"
+                    ? (extras["available"] as boolean)
+                    : undefined,
+        features: {
+            passengers,
+            transmission: transmissionName,
+            transmissionId,
+            fuel: fuelName,
+            fuelId,
+            doors: 4,
+            luggage: 2,
+        },
+        rating: coerceNumber(ratingSource),
+        description: typeof apiCar.content === "string" ? apiCar.content : "",
+        specs: Array.isArray(extras["specs"]) ? (extras["specs"] as string[]) : [],
+    };
 };
 
 const ReservationPage = () => {
@@ -115,12 +303,7 @@ const ReservationPage = () => {
         const fetchServices = async () => {
             try {
                 const res = await apiClient.getServices();
-                const list = Array.isArray(res?.data)
-                    ? res.data
-                    : Array.isArray(res)
-                        ? res
-                        : [];
-                const mapped = list
+                const mapped = extractList(res)
                     .map<Service | null>((entry) => {
                         if (!entry || typeof entry !== "object") return null;
                         const source = entry as Record<string, unknown>;
@@ -275,55 +458,28 @@ const ReservationPage = () => {
                 selectedCar: booking.selectedCar,
             });
             try {
-                const res = await apiClient.getCarForBooking({
+                const info = await apiClient.getCarForBooking({
                     car_id: booking.selectedCar.id,
                     start_date: start,
                     end_date: end,
                 });
                 if (ignore) return;
-                const apiCar: ApiCar = Array.isArray(res?.data)
-                    ? res.data[0]
-                    : (res?.data ?? (Array.isArray(res) ? res[0] : res));
+                const apiCar = extractFirstCar(info);
                 if (!apiCar) return;
-                const mapped: Car = {
-                    id: apiCar.id,
-                    name: apiCar.name ?? "Autovehicul",
-                    type: (apiCar.type?.name ?? "—").trim(),
-                    typeId: apiCar.type?.id ?? null,
-                    image: toImageUrl(
-                        apiCar.image_preview || Object.values(apiCar.images ?? {})[0] || null,
-                    ),
-                    price: parsePrice(
-                        Math.round(Number(apiCar.rental_rate)) ??
-                        Math.round(Number(apiCar.rental_rate_casco)),
-                    ),
-                    rental_rate: String(Math.round(Number(apiCar.rental_rate)) ?? ""),
-                    rental_rate_casco: String(
-                        Math.round(Number(apiCar.rental_rate_casco)) ?? "",
-                    ),
-                    days: Number(apiCar.days),
-                    deposit: Number(apiCar.deposit),
-                    total_deposit: String(apiCar.total_deposit),
-                    total_without_deposit: String(apiCar.total_without_deposit),
-                    features: {
-                        passengers: Number(apiCar.number_of_seats) || 0,
-                        transmission: apiCar.transmission?.name ?? "—",
-                        transmissionId: apiCar.transmission?.id ?? null,
-                        fuel: apiCar.fuel?.name ?? "—",
-                        fuelId: apiCar.fuel?.id ?? null,
-                        doors: 4,
-                        luggage: 2,
-                    },
-                    rating: Number(apiCar.avg_review ?? 0) || 0,
-                    description: apiCar.content ?? "",
-                    specs: [],
+                const mapped = mapApiCarToCar(apiCar);
+                const resolvedCar: Car = {
+                    ...mapped,
+                    available:
+                        typeof info.available === "boolean"
+                            ? info.available
+                            : mapped.available,
                 };
 
                 setBooking({
                     ...booking,
                     startDate: start,
                     endDate: end,
-                    selectedCar: mapped,
+                    selectedCar: resolvedCar,
                 });
             } catch (error) {
                 console.error(error);
@@ -487,14 +643,17 @@ const ReservationPage = () => {
                     discountCasco: "0",
                 });
             } else {
+                const discountCar = data.data
+                    ? mapApiCarToCar(data.data)
+                    : carForValidation;
                 setBooking({
                     startDate: booking?.startDate,
                     endDate: booking?.endDate,
                     withDeposit: booking?.withDeposit,
-                    selectedCar: data.data,
+                    selectedCar: discountCar,
                 });
                 lastValidatedRef.current = {
-                    carId: data.data?.id ?? null,
+                    carId: discountCar.id,
                     withDeposit: booking?.withDeposit ?? null,
                 };
                 const coupon = data.data?.coupon;

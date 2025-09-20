@@ -27,6 +27,7 @@ import {
     AdminBookingFormValues,
     AdminReservation,
     type AdminBookingResource,
+    createEmptyBookingForm,
 } from "@/types/admin";
 import type { ActivityReservation } from "@/types/activity";
 import { apiClient } from "@/lib/api";
@@ -60,6 +61,66 @@ const toSafeString = (value: unknown, fallback = ""): string => {
     return fallback;
 };
 
+const parseMetricCount = (value: unknown, fallback = 0): number => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return value;
+    }
+    if (typeof value === "string") {
+        const parsed = Number(value.trim());
+        if (Number.isFinite(parsed)) {
+            return parsed;
+        }
+    }
+    return fallback;
+};
+
+const parseOptionalNumber = (value: unknown): number | null => {
+    if (value == null || value === "") return null;
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "string") {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+};
+
+const normalizeBoolean = (value: unknown, defaultValue = false): boolean => {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (["1", "true", "da", "yes"].includes(normalized)) return true;
+        if (["0", "false", "nu", "no"].includes(normalized)) return false;
+    }
+    return defaultValue;
+};
+
+const pickLookupName = (value: unknown): string | undefined => {
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    if (isRecord(value)) {
+        const name = toSafeString(value.name ?? (value as { label?: unknown }).label);
+        const trimmed = name.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    return undefined;
+};
+
+const toLocalDateTimeInput = (iso?: string | null): string => {
+    if (!iso) return "";
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return "";
+    const tzOffset = date.getTimezoneOffset();
+    const local = new Date(date.getTime() - tzOffset * 60000);
+    return local.toISOString().slice(0, 16);
+};
+
 const mapServiceSummaries = (
     services: unknown,
 ): Array<{ id: number; name: string }> => {
@@ -91,6 +152,58 @@ const resolveServiceIds = (booking: AdminBookingResource): number[] => {
 
     return mapServiceSummaries(booking.services).map((service) => service.id);
 };
+
+const mapActivityStatus = (status: string): AdminReservation["status"] => {
+    switch (status?.toLowerCase()) {
+        case "no_answer":
+            return "no_answer";
+        case "waiting_advance_payment":
+            return "waiting_advance_payment";
+        case "reserved":
+            return "reserved";
+        case "cancelled":
+            return "cancelled";
+        case "completed":
+            return "completed";
+        case "pending":
+        default:
+            return "pending";
+    }
+};
+
+const mapActivityReservationToAdmin = (
+    reservation: ActivityReservation,
+): AdminReservation => ({
+    id: reservation.booking_number || String(reservation.id),
+    bookingNumber: reservation.booking_number,
+    customerName: reservation.customer_name ?? "",
+    phone: reservation.customer_phone ?? "",
+    carId: reservation.car_id,
+    carName: reservation.car?.name ?? "",
+    carLicensePlate: reservation.car?.license_plate,
+    startDate: reservation.rental_start_date ?? "",
+    endDate: reservation.rental_end_date ?? "",
+    plan: reservation.with_deposit ? 1 : 0,
+    status: mapActivityStatus(reservation.status ?? ""),
+    total: reservation.total ?? 0,
+    pricePerDay: reservation.price_per_day ?? undefined,
+    servicesPrice: reservation.total_services ?? undefined,
+    discount: reservation.coupon_amount ?? undefined,
+    totalBeforeWheelPrize: null,
+    wheelPrizeDiscount: null,
+    wheelPrize: null,
+    email: undefined,
+    days: reservation.days ?? undefined,
+    pickupTime: reservation.start_hour_group ?? undefined,
+    dropoffTime: reservation.end_hour_group ?? undefined,
+    location: undefined,
+    discountCode: reservation.coupon_type ?? undefined,
+    notes: reservation.note ?? undefined,
+    createdAt: undefined,
+    couponAmount: reservation.coupon_amount ?? 0,
+    subTotal: reservation.sub_total ?? 0,
+    taxAmount: 0,
+});
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -189,14 +302,6 @@ const reservationColumns: Column<AdminReservation>[] = [
     },
 ];
 
-const toLocalDateTimeInput = (iso?: string | null) => {
-    if (!iso) return "";
-    const date = new Date(iso);
-    const tzOffset = date.getTimezoneOffset();
-    const local = new Date(date.getTime() - tzOffset * 60000);
-    return local.toISOString().slice(0, 16);
-};
-
 const AdminDashboard = () => {
     const router = useRouter();
     const [reservations, setReservations] = useState<AdminReservation[]>([]);
@@ -284,9 +389,27 @@ const AdminDashboard = () => {
                     apiClient.fetchAdminCarsTotal({ status: 'available' }),
                     apiClient.fetchAdminBookingsTotal({ statuses: 'all' }),
                 ]);
-                setBookingsTodayCount(bookingsToday.count);
-                setAvailableCarsCount(carsTotal.count);
-                setBookingsTotalCount(bookingsTotal.count);
+                setBookingsTodayCount(
+                    parseMetricCount(
+                        bookingsToday?.count ??
+                            (bookingsToday as { total?: unknown })?.total ??
+                            (bookingsToday as { value?: unknown })?.value,
+                    ),
+                );
+                setAvailableCarsCount(
+                    parseMetricCount(
+                        carsTotal?.count ??
+                            (carsTotal as { total?: unknown })?.total ??
+                            (carsTotal as { available?: unknown })?.available,
+                    ),
+                );
+                setBookingsTotalCount(
+                    parseMetricCount(
+                        bookingsTotal?.count ??
+                            (bookingsTotal as { total?: unknown })?.total ??
+                            (bookingsTotal as { value?: unknown })?.value,
+                    ),
+                );
             } catch (error) {
                 console.error('Error loading metrics:', error);
             }
@@ -396,15 +519,19 @@ const AdminDashboard = () => {
     }
 
     const updateDateTime = async () => {
+        if (!activityDetails) {
+            return;
+        }
+
         try {
             const payload = {
-                arrivalDate: activityDetails?.arrivalDate,
-                arrivalTime: activityDetails?.arrivalTime,
-                returnDate: activityDetails?.returnDate,
-                returnTime: activityDetails?.returnTime,
-            }
+                arrivalDate: activityDetails.arrivalDate,
+                arrivalTime: activityDetails.arrivalTime,
+                returnDate: activityDetails.returnDate,
+                returnTime: activityDetails.returnTime,
+            };
 
-            await apiClient.updateBookingDate(activityDetails?.id, payload);
+            await apiClient.updateBookingDate(activityDetails.id, payload);
 
         } catch (err) {
             console.log(err);
@@ -423,46 +550,127 @@ const AdminDashboard = () => {
                 throw new Error("Rezervarea nu a putut fi încărcată.");
             }
             const carInfo = info.car ?? null;
-            const formatted = {
+            const baseForm = createEmptyBookingForm();
+            const couponAmount = parseOptionalNumber(info.coupon_amount) ?? 0;
+            const totalServices =
+                parseOptionalNumber(info.total_services) ?? 0;
+            const subTotal = parseOptionalNumber(info.sub_total) ?? 0;
+            const serviceIds = resolveServiceIds(info);
+            const carId = parseOptionalNumber(info.car_id) ?? null;
+            const carImage = toSafeString(
+                info.car_image ??
+                    info.image_preview ??
+                    carInfo?.image_preview ??
+                    carInfo?.image,
+                "",
+            );
+            const carLicensePlate = toSafeString(
+                carInfo?.license_plate ?? info.license_plate ?? carInfo?.plate,
+                "",
+            );
+            const carTransmission = toSafeString(
+                pickLookupName(carInfo?.transmission) ?? info.transmission_name,
+                "",
+            );
+            const carFuel = toSafeString(
+                pickLookupName(carInfo?.fuel) ?? info.fuel_name,
+                "",
+            );
+            const carDeposit =
+                parseOptionalNumber(info.car_deposit ?? carInfo?.deposit) ?? null;
+            const pricePerDay =
+                parseOptionalNumber(info.price_per_day) ??
+                parseOptionalNumber(info.original_price_per_day) ??
+                0;
+            const originalPricePerDay =
+                parseOptionalNumber(info.original_price_per_day) ?? pricePerDay;
+            const total = parseOptionalNumber(info.total) ?? 0;
+            const taxAmount = parseOptionalNumber(info.tax_amount) ?? 0;
+            const advancePayment =
+                parseOptionalNumber(info.advance_payment) ?? 0;
+            const totalBeforeWheelPrize =
+                parseOptionalNumber(
+                    info.total_before_wheel_prize ??
+                        (info as { totalBeforeWheelPrize?: unknown })
+                            .totalBeforeWheelPrize,
+                ) ?? null;
+            const wheelPrizeDiscount =
+                parseOptionalNumber(info.wheel_prize_discount) ?? 0;
+            const couponType =
+                typeof info.coupon_type === "string"
+                    ? info.coupon_type
+                    : typeof (info as { discount_type?: unknown }).discount_type ===
+                      "string"
+                        ? String((info as { discount_type?: unknown }).discount_type)
+                        : "";
+            const rawCurrencyId =
+                (info as { currency_id?: unknown }).currency_id ??
+                (info as { currencyId?: unknown }).currencyId;
+            const currencyId =
+                typeof rawCurrencyId === "number" && Number.isFinite(rawCurrencyId)
+                    ? rawCurrencyId
+                    : typeof rawCurrencyId === "string"
+                        ? rawCurrencyId
+                        : baseForm.currency_id;
+            const locationValue = toSafeString(
+                (info as { location?: unknown }).location,
+                baseForm.location ?? "",
+            );
+            const formatted: AdminBookingFormValues = {
+                ...baseForm,
                 ...info,
+                id: info.id ?? activityDetails.id ?? null,
+                booking_number:
+                    info.booking_number ?? info.id ?? activityDetails.id ?? null,
                 rental_start_date: toLocalDateTimeInput(info.rental_start_date),
                 rental_end_date: toLocalDateTimeInput(info.rental_end_date),
-                coupon_amount: info.coupon_amount ?? 0,
-                coupon_type: info.coupon_type ?? null,
-                total_services: info.total_services ?? 0,
-                service_ids: resolveServiceIds(info),
-                sub_total: info.sub_total ?? 0,
-                coupon_code: info.coupon_code ?? "",
-                customer_name: info.customer_name ?? "",
-                customer_email: info.customer_email ?? "",
-                customer_phone: info.customer_phone ?? "",
-                customer_age: info.customer_age ?? "",
-                customer_id: info.customer_id ?? "",
-                car_id: info.car_id ?? 0,
-                car_name: info.car_name ?? "",
-                car_image: info.car_image ?? info.image_preview ?? carInfo?.image ?? "",
-                car_license_plate:
-                    carInfo?.license_plate ??
-                    (typeof info.license_plate === "string" ? info.license_plate : "") ??
-                    carInfo?.plate ??
+                coupon_amount: couponAmount,
+                coupon_type: couponType,
+                coupon_code: toSafeString(info.coupon_code, ""),
+                customer_name: toSafeString(
+                    info.customer_name ?? info.customer?.name,
                     "",
-                car_transmission:
-                    carInfo?.transmission?.name ?? info.transmission_name ?? "",
-                car_fuel: carInfo?.fuel?.name ?? info.fuel_name ?? "",
-                car_deposit: carInfo?.deposit ?? info.car_deposit ?? null,
-                booking_number: info.booking_number ?? "",
-                note: info.note ?? "",
-                days: info.days ?? 0,
-                price_per_day: info.price_per_day ?? 0,
-                original_price_per_day: info.price_per_day ?? 0,
-                keep_old_price: info.keep_old_price ?? true,
-                send_email: info.send_email ?? false,
-                with_deposit: info.with_deposit ?? false,
-                tax_amount: info.tax_amount ?? 0,
-                currency_id: info.currency_id ?? "",
-                status: info.status ?? "",
-                total: info.total ?? 0,
-                advance_payment: info.advance_payment ?? 0
+                ),
+                customer_email: toSafeString(
+                    info.customer_email ?? info.customer?.email,
+                    "",
+                ),
+                customer_phone: toSafeString(
+                    info.customer_phone ?? info.customer?.phone,
+                    "",
+                ),
+                customer_age: info.customer_age ?? info.customer?.age ?? null,
+                customer_id: info.customer_id ?? info.customer?.id ?? null,
+                car_id: carId,
+                car_name: toSafeString(info.car_name ?? carInfo?.name, ""),
+                car_image: carImage,
+                car_license_plate: carLicensePlate,
+                car_transmission: carTransmission,
+                car_fuel: carFuel,
+                car_deposit: carDeposit,
+                service_ids: serviceIds,
+                services: Array.isArray(info.services) ? info.services : [],
+                total_services: totalServices,
+                sub_total: subTotal,
+                total,
+                tax_amount: taxAmount,
+                price_per_day: pricePerDay,
+                original_price_per_day: originalPricePerDay,
+                base_price: parseOptionalNumber(info.base_price) ?? pricePerDay,
+                base_price_casco:
+                    parseOptionalNumber(info.base_price_casco) ?? pricePerDay,
+                days: parseOptionalNumber(info.days) ?? 0,
+                keep_old_price: normalizeBoolean(info.keep_old_price, true),
+                send_email: normalizeBoolean(info.send_email, false),
+                with_deposit: normalizeBoolean(info.with_deposit, false),
+                status: toSafeString(info.status, ""),
+                total_before_wheel_prize: totalBeforeWheelPrize,
+                wheel_prize_discount: wheelPrizeDiscount,
+                wheel_prize: (info.wheel_prize ?? null) as AdminBookingFormValues["wheel_prize"],
+                advance_payment: advancePayment,
+                note: toSafeString(info.note, ""),
+                currency_id: currencyId,
+                location: locationValue,
             };
             setBookingInfo(formatted);
             setPopupOpen(false);
@@ -700,7 +908,9 @@ const AdminDashboard = () => {
 
                                                                 {isDeparture && (<button
                                                                     onClick={() => {
-                                                                        setContractReservation(r);
+                                                                        setContractReservation(
+                                                                            mapActivityReservationToAdmin(r),
+                                                                        );
                                                                         setContractOpen(true);
                                                                     }}
                                                                     className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"

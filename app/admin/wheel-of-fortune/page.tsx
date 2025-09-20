@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Popup } from "@/components/ui/popup";
 import { Select } from "@/components/ui/select";
 import apiClient from "@/lib/api";
+import { extractItem } from "@/lib/apiResponse";
+import type { ApiItemResult } from "@/types/api";
 import type { Column } from "@/types/ui";
 import {
     WHEEL_OF_FORTUNE_TYPES,
@@ -289,7 +291,8 @@ const mapPrize = (item: unknown): WheelOfFortuneSlice | null => {
     const id = Number(item.id ?? item.wheel_of_fortune_id ?? item.value);
     if (!Number.isFinite(id)) return null;
 
-    const periodIdRaw = item.period_id ?? item.period?.id;
+    const period = isRecord(item.period) ? (item.period as Record<string, unknown>) : null;
+    const periodIdRaw = item.period_id ?? (period ? period.id : undefined);
     const periodId = Number(periodIdRaw);
 
     const titleSource = item.title ?? item.name;
@@ -563,7 +566,9 @@ export default function WheelOfFortuneAdminPage() {
                 response = await apiClient.createWheelOfFortunePeriod(payload);
             }
 
-            const saved = mapPeriod(response?.data ?? response ?? null);
+            const saved = mapPeriod(
+                extractItem(response as ApiItemResult<WheelOfFortunePeriod>),
+            );
             closePeriodModal();
             await fetchPeriods(saved?.id ?? undefined);
         } catch (error) {

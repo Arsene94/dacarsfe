@@ -14,13 +14,6 @@ import {
   normalizeAdminCarOption,
   resolveContractUrl,
 } from "@/lib/adminBookingHelpers";
-import { Worker as PdfWorker, Viewer } from "@react-pdf-viewer/core";
-import "@react-pdf-viewer/core/lib/styles/index.css";
-import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
-
-// Import styles
-import "@react-pdf-viewer/core/lib/styles/index.css";
-import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import type {
   AdminBookingCarOption,
   AdminBookingCustomerSummary,
@@ -87,6 +80,36 @@ const toSafeString = (value: unknown): string => {
   return "";
 };
 
+const resolveAdminCarName = (car?: AdminBookingCarOption | null): string => {
+  if (car && typeof car.name === "string") {
+    const trimmed = car.name.trim();
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+
+  return "Autovehicul";
+};
+
+type CarRelation = AdminBookingCarOption["transmission"];
+
+const resolveCarRelationName = (relation: CarRelation): string => {
+  if (typeof relation === "string") {
+    const trimmed = relation.trim();
+    return trimmed.length > 0 ? trimmed : "";
+  }
+
+  if (relation && typeof relation === "object" && "name" in relation) {
+    const name = (relation as { name?: unknown }).name;
+    if (typeof name === "string") {
+      const trimmed = name.trim();
+      return trimmed.length > 0 ? trimmed : "";
+    }
+  }
+
+  return "";
+};
+
 const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose, reservation }) => {
   const [form, setForm] = useState<BookingContractFormState>(EMPTY_FORM);
   const [carSearch, setCarSearch] = useState("");
@@ -97,7 +120,6 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const [customerSearchActive, setCustomerSearchActive] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const revokeRef = useRef<(() => void) | undefined>();
-  const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
   useEffect(() => {
     const bookingNumber = reservation?.id ?? reservation?.bookingNumber ?? "";
@@ -319,19 +341,36 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   };
 
   const handleDownload = () => {
-      if (pdfUrl) {
-          const link = document.createElement('a');
-          link.href = pdfUrl;
-          link.download = 'contract.pdf';
-          link.click();
-      }
+    if (!pdfUrl) {
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = pdfUrl;
+    link.download = "contract.pdf";
+    link.rel = "noopener";
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handlePrint = () => {
-      if (pdfUrl) {
-          const printWindow = window.open(pdfUrl);
-          printWindow?.print();
-      }
+    if (!pdfUrl) {
+      return;
+    }
+
+    const printWindow = window.open(pdfUrl, "_blank", "noopener,noreferrer");
+    if (!printWindow) {
+      return;
+    }
+
+    const handleLoad = () => {
+      printWindow.print();
+      printWindow.removeEventListener("load", handleLoad);
+    };
+
+    printWindow.addEventListener("load", handleLoad);
   };
 
   useEffect(() => {
@@ -451,69 +490,79 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
               onSelect={handleSelectCar}
               onOpen={() => setCarSearchActive(true)}
               placeholder="Selectează mașina"
-              renderItem={(car) => (
-                <>
-                  <Image
-                    src={
-                      car.image_preview || car.image
-                        ? STORAGE_BASE + "/" + (car.image_preview || car.image)
-                        : "/images/placeholder-car.svg"
-                    }
-                    alt={car.name}
-                    width={64}
-                    height={40}
-                    className="w-16 h-10 object-cover rounded"
-                  />
-                  <div className="flex justify-between items-end w-full">
-                    <div>
-                      <div className="font-dm-sans font-semibold">{car.name}</div>
-                      <div className="text-xs">
-                        {car.license_plate} • {car.transmission?.name ?? ""} • {car.fuel?.name ?? ""}
+              renderItem={(car) => {
+                const carName = resolveAdminCarName(car);
+                const transmissionLabel = resolveCarRelationName(car.transmission);
+                const fuelLabel = resolveCarRelationName(car.fuel);
+                const imagePath = car.image_preview || car.image;
+
+                return (
+                  <>
+                    <Image
+                      src={
+                        imagePath
+                          ? STORAGE_BASE + "/" + imagePath
+                          : "/images/placeholder-car.svg"
+                      }
+                      alt={carName}
+                      width={64}
+                      height={40}
+                      className="w-16 h-10 object-cover rounded"
+                    />
+                    <div className="flex justify-between items-end w-full">
+                      <div>
+                        <div className="font-dm-sans font-semibold">{carName}</div>
+                        <div className="text-xs">
+                          {car.license_plate} • {transmissionLabel} • {fuelLabel}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs">
+                          Preț cu garanție: {toSafeString(car.rental_rate)}€ x {toSafeString(car.days)} zile ={" "}
+                          {toSafeString(car.total_deposit)}€
+                        </div>
+                        <div className="text-xs">
+                          Preț fără garanție: {toSafeString(car.rental_rate_casco)}€ x {toSafeString(car.days)} zile ={" "}
+                          {toSafeString(car.total_without_deposit)}€
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-xs">
-                        Preț cu garanție: {car.rental_rate}€ x {car.days} zile =
-                        {" "}
-                        {car.total_deposit}€
-                      </div>
-                      <div className="text-xs">
-                        Preț fără garanție: {car.rental_rate_casco}€ x {car.days} zile =
-                        {" "}
-                        {car.total_without_deposit}€
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
+                  </>
+                );
+              }}
               itemClassName={(car) =>
                 car.available
                   ? "bg-green-100 text-green-700 hover:bg-green-200"
                   : "bg-red-100 text-red-700 hover:bg-red-200"
               }
-              renderValue={(car) => (
-                <div className="flex items-center gap-3">
-                  <Image
-                    src={
-                      car.image_preview || car.image
-                        ? STORAGE_BASE + "/" + (car.image_preview || car.image)
-                        : "/images/placeholder-car.svg"
-                    }
-                    alt={car.name}
-                    width={64}
-                    height={40}
-                    className="w-16 h-10 object-cover rounded"
-                  />
-                  <div className="text-left">
-                    <div className="font-dm-sans font-semibold text-gray-700">
-                      {car.name}
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      {car.license_plate} • {car.transmission?.name ?? ""} • {car.fuel?.name ?? ""}
+              renderValue={(car) => {
+                const carName = resolveAdminCarName(car);
+                const transmissionLabel = resolveCarRelationName(car.transmission);
+                const fuelLabel = resolveCarRelationName(car.fuel);
+                const imagePath = car.image_preview || car.image;
+
+                return (
+                  <div className="flex items-center gap-3">
+                    <Image
+                      src={
+                        imagePath
+                          ? STORAGE_BASE + "/" + imagePath
+                          : "/images/placeholder-car.svg"
+                      }
+                      alt={carName}
+                      width={64}
+                      height={40}
+                      className="w-16 h-10 object-cover rounded"
+                    />
+                    <div className="text-left">
+                      <div className="font-dm-sans font-semibold text-gray-700">{carName}</div>
+                      <div className="text-xs text-gray-600">
+                        {car.license_plate} • {transmissionLabel} • {fuelLabel}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              }}
             />
           </div>
           <div>
@@ -583,19 +632,22 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
         </div>
       )}
       {pdfUrl && (
-        <div className="mt-4">
-          {/*<div className="flex gap-2 mb-2">*/}
-          {/*  <Button variant="outline" onClick={handleDownload}>Descarcă</Button>*/}
-          {/*  <Button variant="outline" onClick={handlePrint}>Printează</Button>*/}
-          {/*</div>*/}
-          <div className="h-[800px]">
-            <PdfWorker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-              <Viewer fileUrl={pdfUrl}
-                      plugins={[
-                          // Register plugins
-                          defaultLayoutPluginInstance,
-                      ]}/>
-            </PdfWorker>
+        <div className="mt-4 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={handleDownload}>
+              Descarcă
+            </Button>
+            <Button variant="outline" onClick={handlePrint}>
+              Printează
+            </Button>
+          </div>
+          <div className="h-[800px] overflow-hidden rounded border border-gray-200">
+            <iframe
+              src={pdfUrl}
+              title="Contract PDF"
+              className="h-full w-full"
+              allow="fullscreen"
+            />
           </div>
         </div>
       )}

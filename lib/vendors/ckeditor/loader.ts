@@ -2,7 +2,26 @@ const CLASSIC_SCRIPT_ID = "ckeditor-classic-build";
 const CLASSIC_SCRIPT_SRC = "https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js";
 
 export type ClassicEditorInstance = {
-  destroy(): Promise<void>;
+  setData: (data: string) => void;
+  getData: () => string;
+  destroy: () => Promise<void>;
+  model: {
+    document: {
+      on: (event: string, callback: (evt: unknown) => void) => void;
+      off: (event: string, callback: (evt: unknown) => void) => void;
+    };
+  };
+  editing: {
+    view: {
+      document: {
+        on: (event: string, callback: (evt: unknown) => void) => void;
+        off: (event: string, callback: (evt: unknown) => void) => void;
+      };
+    };
+  };
+  enableReadOnlyMode?: (sourceId: string) => void;
+  disableReadOnlyMode?: (sourceId: string) => void;
+  isReadOnly?: boolean;
   [key: string]: unknown;
 };
 

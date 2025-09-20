@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
 import { useBooking } from "@/context/BookingContext";
 import { ApiCar, Car, CarCategory } from "@/types/car";
 
@@ -20,6 +21,11 @@ const toImageUrl = (p?: string | null): string => {
     const base = STORAGE_BASE.replace(/\/$/, "");
     const path = String(p).replace(/^\//, "");
     return `${base}/${path}`;
+};
+
+const toFiniteInteger = (value: unknown, fallback: number): number => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
 };
 
 const parsePrice = (raw: unknown): number => {
@@ -34,37 +40,71 @@ const parsePrice = (raw: unknown): number => {
     try { return parsePrice(String(raw)); } catch { return 0; }
 };
 
-const mapApiCar = (c: ApiCar): Car => ({
-    id: c.id,
-    name: c.name ?? "Autovehicul",
-    type: (c.type?.name ?? "—").trim(),
-    typeId: c.type?.id ?? null,
-    image: toImageUrl(
-        c.image_preview ||
-        (c.images ? Object.values(c.images).find((value) => typeof value === 'string') ?? null : null),
-    ),
-    price: parsePrice(
-        Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco))
-    ),
-    rental_rate: String(Number(c.rental_rate ?? 0)),
-    rental_rate_casco: String(Number(c.rental_rate_casco ?? 0)),
-    days: Number(c.days ?? 0),
-    deposit: Number(c.deposit ?? 0),
-    total_deposit: String(Number(c.total_deposit ?? 0)),
-    total_without_deposit: String(Number(c.total_without_deposit ?? 0)),
-    features: {
-        passengers: Number(c.number_of_seats) || 0,
-        transmission: c.transmission?.name ?? "—",
-        transmissionId: c.transmission?.id ?? null,
-        fuel: c.fuel?.name ?? "—",
-        fuelId: c.fuel?.id ?? null,
-        doors: 4,
-        luggage: 2,
-    },
-    rating: Number(c.avg_review ?? 0) || 0,
-    description: c.content ?? "",
-    specs: [],
-});
+const mapApiCar = (c: ApiCar): Car => {
+    const imageCandidates: Array<unknown> = [
+        c.image_preview,
+        c.image,
+        c.thumbnail,
+        c.cover_image,
+    ];
+    if (Array.isArray(c.images)) {
+        imageCandidates.push(
+            c.images.find((value) => typeof value === "string" && value.trim().length > 0) ?? null,
+        );
+    } else if (c.images && typeof c.images === "object") {
+        imageCandidates.push(
+            Object.values(c.images).find(
+                (value) => typeof value === "string" && value.trim().length > 0,
+            ) ?? null,
+        );
+    }
+
+    const primaryImage = imageCandidates.find(
+        (value): value is string => typeof value === "string" && value.trim().length > 0,
+    );
+
+    return {
+        id: c.id,
+        name: c.name ?? "Autovehicul",
+        type: (c.type?.name ?? "—").trim(),
+        typeId: c.type?.id ?? null,
+        image: toImageUrl(primaryImage ?? null),
+        price: parsePrice(
+            Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco)),
+        ),
+        rental_rate: String(Number(c.rental_rate ?? 0)),
+        rental_rate_casco: String(Number(c.rental_rate_casco ?? 0)),
+        days: Number(c.days ?? 0),
+        deposit: Number(c.deposit ?? 0),
+        total_deposit: String(Number(c.total_deposit ?? 0)),
+        total_without_deposit: String(Number(c.total_without_deposit ?? 0)),
+        available: typeof c.available === "boolean" ? c.available : undefined,
+        features: {
+            passengers: Number(c.number_of_seats) || 0,
+            transmission:
+                typeof c.transmission === "string"
+                    ? c.transmission
+                    : c.transmission?.name ?? "—",
+            transmissionId:
+                typeof c.transmission === "object" && c.transmission !== null
+                    ? c.transmission.id ?? null
+                    : null,
+            fuel:
+                typeof c.fuel === "string"
+                    ? c.fuel
+                    : c.fuel?.name ?? "—",
+            fuelId:
+                typeof c.fuel === "object" && c.fuel !== null
+                    ? c.fuel.id ?? null
+                    : null,
+            doors: 4,
+            luggage: 2,
+        },
+        rating: Number(c.avg_review ?? 0) || 0,
+        description: c.content ?? "",
+        specs: [],
+    };
+};
 
 const FleetPage = () => {
     const searchParams = useSearchParams();
@@ -153,23 +193,36 @@ const FleetPage = () => {
 
         try {
             const resp = await apiClient.getCarsByDateCriteria(payload);
-            // suport două forme: {data, meta:{...}} sau [] simplu
-            const list: ApiCar[] = Array.isArray(resp?.data) ? resp.data :
-                Array.isArray(resp)       ? resp :
-                    Array.isArray(resp?.items)? resp.items : [];
+            const list = extractList(resp);
 
             const mapped = list.map(mapApiCar);
 
-            // meta paginate (Laravel)
-            const meta = resp?.meta || {};
-            const total = meta?.total ?? resp?.total ?? mapped.length;
-            const lastPage = meta?.last_page ?? resp?.last_page ?? 1;
+            const respRecord =
+                !Array.isArray(resp) && typeof resp === "object"
+                    ? (resp as Record<string, unknown>)
+                    : null;
+            const meta = respRecord?.meta || respRecord?.pagination || {};
+            const total =
+                (meta as { total?: unknown })?.total ??
+                (meta as { count?: unknown })?.count ??
+                (respRecord as { total?: unknown })?.total ??
+                (respRecord as { count?: unknown })?.count ??
+                mapped.length;
+            const lastPage =
+                (meta as { last_page?: unknown })?.last_page ??
+                (meta as { lastPage?: unknown })?.lastPage ??
+                (respRecord as { last_page?: unknown })?.last_page ??
+                (respRecord as { lastPage?: unknown })?.lastPage ??
+                1;
+
+            const totalNumber = toFiniteInteger(total, mapped.length);
+            const lastPageNumber = Math.max(1, toFiniteInteger(lastPage, 1));
 
             setCars(prev => (currentPage === 1 ? mapped : [...prev, ...mapped]));
-            setTotalCars(total);
-            setTotalPages(lastPage);
+            setTotalCars(totalNumber);
+            setTotalPages(lastPageNumber);
 
-            const hasMore = currentPage < Number(lastPage);
+            const hasMore = currentPage < lastPageNumber;
             hasMoreRef.current = hasMore;
         } catch (e) {
             console.error(e);
@@ -200,10 +253,37 @@ const FleetPage = () => {
         (async () => {
             try {
                 const res = await apiClient.getCarCategories();
-                const obj: Record<string, string> = (res?.data ?? res) as Record<string, string>;
-                const cat: CarCategory[] = Object.entries(obj)
-                    .map(([id, name]) => ({ id: Number(id), name: String(name) }))
-                    .sort((a, b) => a.id - b.id);
+                const list = extractList(res);
+                let cat: CarCategory[] = [];
+
+                if (list.length > 0) {
+                    cat = list
+                        .map((entry) => {
+                            const source = entry as Record<string, unknown>;
+                            const idCandidate = source.id ?? source.value;
+                            const id = Number(idCandidate);
+                            if (!Number.isFinite(id)) {
+                                return null;
+                            }
+                            const nameSource =
+                                (typeof source.name === "string" && source.name) ||
+                                (typeof source.title === "string" && source.title) ||
+                                null;
+                            return {
+                                id,
+                                name: nameSource ? String(nameSource) : `Categorie #${id}`,
+                            };
+                        })
+                        .filter((entry): entry is CarCategory => entry != null)
+                        .sort((a, b) => a.id - b.id);
+                } else if (!Array.isArray(res) && typeof res === "object") {
+                    const record = res as Record<string, unknown>;
+                    cat = Object.entries(record)
+                        .map(([id, name]) => ({ id: Number(id), name: String(name) }))
+                        .filter((entry) => Number.isFinite(entry.id) && entry.name.trim().length > 0)
+                        .sort((a, b) => a.id - b.id);
+                }
+
                 setCategories(cat);
             } catch (e) {
                 console.error(e);
