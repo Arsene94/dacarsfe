@@ -1,5 +1,6 @@
 // Serviciu pentru comunicarea cu API-ul Laravel pentru roata norocului
 
+import type { DiscountValidationResponse, ReservationPayload } from '@/types/reservation';
 import { Prize, SpinResult } from '@/types/wheel';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -81,7 +82,10 @@ export const validateDiscountCode = async (code: string): Promise<boolean> => {
 };
 
 // Aplică un cod de reducere la rezervare
-export const applyDiscountCode = async (code: string, reservationData: any) => {
+export const applyDiscountCode = async (
+  code: string,
+  reservationData: ReservationPayload | Record<string, unknown>,
+): Promise<DiscountValidationResponse> => {
   try {
     const response = await fetch(`${API_BASE_URL}/wheel/apply-discount`, {
       method: 'POST',
@@ -99,7 +103,7 @@ export const applyDiscountCode = async (code: string, reservationData: any) => {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: DiscountValidationResponse = await response.json();
     return data;
   } catch (error) {
     console.error('Error applying discount code:', error);
