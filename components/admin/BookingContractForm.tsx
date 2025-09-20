@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { Popup } from "@/components/ui/popup";
 import { Input } from "@/components/ui/input";
@@ -8,23 +7,36 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { SearchSelect } from "@/components/ui/search-select";
 import apiClient from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
+import {
+  extractFirstCar,
+  mapCustomerSearchResults,
+  normalizeAdminCarOption,
+  resolveContractUrl,
+} from "@/lib/adminBookingHelpers";
 import { Worker as PdfWorker, Viewer } from "@react-pdf-viewer/core";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 
 // Import styles
-import '@react-pdf-viewer/core/lib/styles/index.css';
-import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+import "@react-pdf-viewer/core/lib/styles/index.css";
+import "@react-pdf-viewer/default-layout/lib/styles/index.css";
+import type {
+  AdminBookingCarOption,
+  AdminBookingCustomerSummary,
+  AdminReservation,
+  BookingContractFormState,
+} from "@/types/admin";
 
 
 
 interface BookingContractFormProps {
   open: boolean;
   onClose: () => void;
-  reservation?: any;
+  reservation?: AdminReservation | null;
 }
 
-const EMPTY_FORM = {
+const EMPTY_FORM: BookingContractFormState = {
   cnp: "",
   license: "",
   bookingNumber: "",
@@ -33,7 +45,7 @@ const EMPTY_FORM = {
   email: "",
   start: "",
   end: "",
-  car: null as any,
+  car: null,
   deposit: "",
   pricePerDay: "",
   advance: "",
@@ -44,31 +56,119 @@ const EMPTY_FORM = {
 const STORAGE_BASE =
   process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
 
+const toLocalDateTimeInput = (value?: string | null): string => {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const tzOffset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - tzOffset * 60000);
+  return localDate.toISOString().slice(0, 16);
+};
+
+const toSafeString = (value: unknown): string => {
+  if (value == null) {
+    return "";
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? String(value) : "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return "";
+};
+
 const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose, reservation }) => {
-  const [form, setForm] = useState<any>(EMPTY_FORM);
+  const [form, setForm] = useState<BookingContractFormState>(EMPTY_FORM);
   const [carSearch, setCarSearch] = useState("");
-  const [carResults, setCarResults] = useState<any[]>([]);
+  const [carResults, setCarResults] = useState<AdminBookingCarOption[]>([]);
   const [carSearchActive, setCarSearchActive] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
-  const [customerResults, setCustomerResults] = useState<any[]>([]);
+  const [customerResults, setCustomerResults] = useState<AdminBookingCustomerSummary[]>([]);
   const [customerSearchActive, setCustomerSearchActive] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-    const defaultLayoutPluginInstance = defaultLayoutPlugin();
+  const revokeRef = useRef<(() => void) | undefined>();
+  const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
   useEffect(() => {
-    setForm(
-      reservation
-        ? { ...EMPTY_FORM, bookingNumber: reservation.id }
-        : EMPTY_FORM
-    );
+    const bookingNumber = reservation?.id ?? reservation?.bookingNumber ?? "";
+    const nextForm: BookingContractFormState = {
+      ...EMPTY_FORM,
+      bookingNumber: bookingNumber ? String(bookingNumber) : "",
+    };
+
+    if (reservation) {
+      nextForm.name = reservation.customerName ?? "";
+      nextForm.phone = reservation.phone ?? "";
+      nextForm.email = reservation.email ?? "";
+      nextForm.start = toLocalDateTimeInput(reservation.startDate);
+      nextForm.end = toLocalDateTimeInput(reservation.endDate);
+      nextForm.pricePerDay = toSafeString(reservation.pricePerDay);
+      nextForm.services = toSafeString(reservation.servicesPrice);
+      if (typeof reservation.plan === "number") {
+        nextForm.withDeposit = reservation.plan !== 2;
+      }
+    }
+
+    setForm(nextForm);
     setCarSearch("");
     setCarResults([]);
     setCarSearchActive(false);
     setCustomerSearch("");
     setCustomerResults([]);
     setCustomerSearchActive(false);
+    revokeRef.current?.();
+    revokeRef.current = undefined;
     setPdfUrl(null);
   }, [reservation, open]);
+
+  useEffect(() => {
+    if (!open || !reservation?.carId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadCar = async () => {
+      try {
+        const response = await apiClient.getCarForBooking({
+          car_id: reservation.carId,
+          start_date: reservation.startDate,
+          end_date: reservation.endDate,
+        });
+        const car = extractFirstCar(response);
+        if (!car || cancelled) {
+          return;
+        }
+
+        const normalized = normalizeAdminCarOption(car);
+        setForm((prev) => ({
+          ...prev,
+          car: { ...normalized },
+          pricePerDay:
+            prev.pricePerDay || toSafeString(normalized.rental_rate ?? reservation.pricePerDay),
+          deposit: prev.deposit || toSafeString(normalized.total_deposit ?? normalized.deposit),
+        }));
+      } catch (error) {
+        console.error("Error loading car for contract:", error);
+      }
+    };
+
+    void loadCar();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, reservation?.carId, reservation?.startDate, reservation?.endDate, reservation?.pricePerDay]);
 
   const fetchCars = useCallback(
     async (query: string) => {
@@ -79,24 +179,8 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
           end_date: form.end,
           limit: 100,
         });
-        const list = Array.isArray(resp?.data)
-          ? resp.data
-          : Array.isArray(resp)
-          ? resp
-          : Array.isArray(resp?.items)
-          ? resp.items
-          : [];
-        const normalized = list.map((c: any) => ({
-          ...c,
-          license_plate: c.license_plate || c.licensePlate || c.plate || "",
-          transmission: c.transmission?.name
-            ? c.transmission
-            : { name: c.transmission_name || c.transmission || "" },
-          fuel: c.fuel?.name
-            ? c.fuel
-            : { name: c.fuel_name || c.fuel || "" },
-        }));
-        setCarResults(normalized);
+        const list = extractList(resp).map(normalizeAdminCarOption);
+        setCarResults(list);
       } catch (error) {
         console.error("Error searching cars:", error);
       }
@@ -107,16 +191,8 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const fetchCustomers = useCallback(async (query: string) => {
     try {
       const resp = await apiClient.searchCustomersByPhone(query);
-      const list = Array.isArray(resp)
-        ? resp.flatMap((row: any) =>
-            (row.phones || []).map((phone: string) => ({
-              id: row.id,
-              name: row.latest?.name || row.names?.[0] || "",
-              email: row.email,
-              phone,
-            }))
-          )
-        : [];
+      const records = Array.isArray(resp) ? resp : extractList(resp);
+      const list = mapCustomerSearchResults(records);
       setCustomerResults(list);
     } catch (error) {
       console.error("Error searching customers:", error);
@@ -139,13 +215,17 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     return () => clearTimeout(handler);
   }, [customerSearch, fetchCustomers, customerSearchActive]);
 
-  const handleSelectCar = (car: any) => {
-    // clone to avoid retaining read-only properties from fetch response
-    setForm((prev: any) => ({ ...prev, car: { ...car } }));
+  const handleSelectCar = (car: AdminBookingCarOption) => {
+    setForm((prev) => ({
+      ...prev,
+      car: { ...car },
+      pricePerDay: prev.pricePerDay || toSafeString(car.rental_rate),
+      deposit: prev.deposit || toSafeString(car.total_deposit ?? car.deposit),
+    }));
   };
 
-  const handleSelectCustomer = (customer: any) => {
-    setForm((prev: any) => ({
+  const handleSelectCustomer = (customer: AdminBookingCustomerSummary) => {
+    setForm((prev) => ({
       ...prev,
       name: customer.name || "",
       phone: customer.phone || "",
@@ -155,14 +235,32 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     setCustomerResults([]);
   };
 
-  const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setForm((prev: any) => ({ ...prev, [field]: value }));
-  };
+  const handleChange = <Field extends keyof BookingContractFormState>(field: Field) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setForm((prev) => ({ ...prev, [field]: value }));
+    };
 
   const handleCustomerSearchOpen = useCallback(() => {
     setCustomerSearchActive(true);
   }, []);
+
+  const applyContractResponse = useCallback(
+    (response: Parameters<typeof resolveContractUrl>[0]) => {
+      const resolved = resolveContractUrl(response);
+      revokeRef.current?.();
+      revokeRef.current = resolved.revoke;
+      if (resolved.url) {
+        const finalUrl = resolved.url.startsWith("blob:")
+          ? resolved.url
+          : `/api/proxy?url=${encodeURIComponent(resolved.url)}`;
+        setPdfUrl(finalUrl);
+      } else {
+        setPdfUrl(null);
+      }
+    },
+    [],
+  );
 
   const generateContract = async () => {
     try {
@@ -183,40 +281,42 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
         services: form.services,
         withDeposit: form.withDeposit,
       };
-      const cleanPayload = JSON.parse(JSON.stringify(payload));
-      const res = form.name.trim() > 0 && form.email.trim() > 0 ? await apiClient.generateContract(cleanPayload) : await apiClient.generateContract(cleanPayload, form.bookingNumber);
-      setPdfUrl(`/api/proxy?url=${res.url}`);
+      const cleanPayload = JSON.parse(JSON.stringify(payload)) as typeof payload;
+      const response =
+        form.name.trim().length > 0 && form.email.trim().length > 0
+          ? await apiClient.generateContract(cleanPayload)
+          : await apiClient.generateContract(cleanPayload, form.bookingNumber);
+      applyContractResponse(response);
     } catch (error) {
       console.error(error);
     }
   };
 
   const storeAndGenerateContract = async () => {
-      try {
-          // build payload explicitly to avoid carrying over read-only properties
-          const payload = {
-              cnp: form.cnp,
-              license: form.license,
-              bookingNumber: form.bookingNumber,
-              customer_name: form.name,
-              customer_phone: form.phone,
-              customer_email: form.email,
-              rental_start_date: form.start,
-              rental_end_date: form.end,
-              car_id: form.car?.id,
-              deposit: form.deposit,
-              price_per_day: form.pricePerDay,
-              advance_payment: form.advance,
-              services: form.services,
-              withDeposit: form.withDeposit,
-          };
-          const cleanPayload = JSON.parse(JSON.stringify(payload));
-          const res = await apiClient.storeAndGenerateContract(cleanPayload);
-          setPdfUrl(`/api/proxy?url=${res.contract_url}`);
-      } catch (error) {
-          console.error('Eroare:', error);
-      }
-  }
+    try {
+      const payload = {
+        cnp: form.cnp,
+        license: form.license,
+        bookingNumber: form.bookingNumber,
+        customer_name: form.name,
+        customer_phone: form.phone,
+        customer_email: form.email,
+        rental_start_date: form.start,
+        rental_end_date: form.end,
+        car_id: form.car?.id,
+        deposit: form.deposit,
+        price_per_day: form.pricePerDay,
+        advance_payment: form.advance,
+        services: form.services,
+        withDeposit: form.withDeposit,
+      };
+      const cleanPayload = JSON.parse(JSON.stringify(payload)) as typeof payload;
+      const response = await apiClient.storeAndGenerateContract(cleanPayload);
+      applyContractResponse(response);
+    } catch (error) {
+      console.error("Eroare:", error);
+    }
+  };
 
   const handleDownload = () => {
       if (pdfUrl) {
@@ -236,9 +336,10 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
 
   useEffect(() => {
     return () => {
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+      revokeRef.current?.();
+      revokeRef.current = undefined;
     };
-  }, [pdfUrl]);
+  }, []);
 
   return (
     <Popup
@@ -285,30 +386,36 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
           </div>
           <div>
             <Label htmlFor="phone">Număr telefon</Label>
-            <SearchSelect
+            <SearchSelect<AdminBookingCustomerSummary>
               id="phone"
               value={
                 form.phone
-                  ? { name: form.name, phone: form.phone, email: form.email }
+                  ? {
+                      id: undefined,
+                      name: form.name,
+                      phone: form.phone,
+                      email: form.email,
+                    }
                   : null
               }
               search={customerSearch}
               items={customerResults}
               onSearch={(v) => {
+                const previousSearch = customerSearch;
                 setCustomerSearch(v);
-                if (!customerSearch && v === "") return;
-                setForm((prev: any) => ({ ...prev, phone: v }));
+                if (!previousSearch && v === "") return;
+                setForm((prev) => ({ ...prev, phone: v }));
               }}
               onSelect={handleSelectCustomer}
               onOpen={handleCustomerSearchOpen}
               placeholder="Selectează clientul"
-              renderItem={(user: any) => (
+              renderItem={(user) => (
                 <div>
                   <div className="font-dm-sans font-semibold">{user.name}</div>
                   <div className="text-xs">{user.phone} • {user.email}</div>
                 </div>
               )}
-              renderValue={(user: any) => <span>{user.phone}</span>}
+              renderValue={(user) => <span>{user.phone}</span>}
             />
           </div>
           <div>
@@ -335,7 +442,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
           </div>
           <div className="col-span-2">
             <Label htmlFor="car-select">Mașină</Label>
-            <SearchSelect
+            <SearchSelect<AdminBookingCarOption>
               id="car-select"
               value={form.car}
               search={carSearch}
@@ -344,7 +451,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
               onSelect={handleSelectCar}
               onOpen={() => setCarSearchActive(true)}
               placeholder="Selectează mașina"
-              renderItem={(car: any) => (
+              renderItem={(car) => (
                 <>
                   <Image
                     src={
@@ -361,11 +468,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
                     <div>
                       <div className="font-dm-sans font-semibold">{car.name}</div>
                       <div className="text-xs">
-                        {car.license_plate} • {typeof car.transmission === "string"
-                          ? car.transmission
-                          : car.transmission?.name} • {typeof car.fuel === "string"
-                          ? car.fuel
-                          : car.fuel?.name}
+                        {car.license_plate} • {car.transmission?.name ?? ""} • {car.fuel?.name ?? ""}
                       </div>
                     </div>
                     <div>
@@ -383,12 +486,12 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
                   </div>
                 </>
               )}
-              itemClassName={(car: any) =>
+              itemClassName={(car) =>
                 car.available
                   ? "bg-green-100 text-green-700 hover:bg-green-200"
                   : "bg-red-100 text-red-700 hover:bg-red-200"
               }
-              renderValue={(car: any) => (
+              renderValue={(car) => (
                 <div className="flex items-center gap-3">
                   <Image
                     src={
@@ -406,11 +509,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
                       {car.name}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {car.license_plate} • {typeof car.transmission === "string"
-                        ? car.transmission
-                        : car.transmission?.name} • {typeof car.fuel === "string"
-                        ? car.fuel
-                        : car.fuel?.name}
+                      {car.license_plate} • {car.transmission?.name ?? ""} • {car.fuel?.name ?? ""}
                     </div>
                   </div>
                 </div>
@@ -447,7 +546,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
                   type="radio"
                   name="withDeposit"
                   checked={form.withDeposit}
-                  onChange={() => setForm((prev: any) => ({ ...prev, withDeposit: true }))}
+                  onChange={() => setForm((prev) => ({ ...prev, withDeposit: true }))}
                   className="mt-1 h-4 w-4 text-jade focus:ring-jade border-gray-300"
                 />
                 <div>
@@ -465,7 +564,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
                   type="radio"
                   name="withDeposit"
                   checked={!form.withDeposit}
-                  onChange={() => setForm((prev: any) => ({ ...prev, withDeposit: false }))}
+                  onChange={() => setForm((prev) => ({ ...prev, withDeposit: false }))}
                   className="mt-1 h-4 w-4 text-jade focus:ring-jade border-gray-300"
                 />
                 <div>

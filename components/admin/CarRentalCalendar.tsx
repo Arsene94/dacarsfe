@@ -5,6 +5,10 @@ import { ChevronLeft, ChevronRight, Car as CarIcon, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BookingForm from '@/components/admin/BookingForm';
 import apiClient from '@/lib/api';
+import { extractItem, extractList } from '@/lib/apiResponse';
+import type { ApiCar } from '@/types/car';
+import type { AdminBookingResource } from '@/types/admin';
+import type { ReservationWheelPrizeSummary } from '@/types/reservation';
 
 interface Car {
     id: string;
@@ -30,6 +34,36 @@ interface Reservation {
     status: 'confirmed' | 'pending' | 'completed';
     totalDays: number;
 }
+
+const toNumericId = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+    if (typeof value === 'string') {
+        const parsed = Number(value.trim());
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+};
+
+const resolveServiceIds = (booking: AdminBookingResource): number[] => {
+    const directIds = Array.isArray(booking.service_ids) ? booking.service_ids : [];
+    const normalized = directIds
+        .map((value) => toNumericId(value))
+        .filter((value): value is number => value != null);
+
+    if (normalized.length > 0) {
+        return normalized;
+    }
+
+    if (!Array.isArray(booking.services)) {
+        return [];
+    }
+
+    return booking.services
+        .map((service) => toNumericId(service?.id ?? (service as { service_id?: unknown })?.service_id))
+        .filter((value): value is number => value != null);
+};
 
 interface Selection {
     type: 'car' | 'date' | 'reservation' | 'cell';
@@ -68,7 +102,7 @@ const EMPTY_BOOKING = {
     price_per_day: 0,
     total_before_wheel_prize: null as number | null,
     wheel_prize_discount: 0,
-    wheel_prize: null as any,
+    wheel_prize: null as ReservationWheelPrizeSummary | null,
 };
 
 const CarRentalCalendar: React.FC = () => {
@@ -76,7 +110,7 @@ const CarRentalCalendar: React.FC = () => {
     const [viewMode, setViewMode] = useState<'month' | 'quarter' | 'year'>('year');
     const [selectedItems, setSelectedItems] = useState<Selection[]>([]);
 
-    const [bookingInfo, setBookingInfo] = useState<any>(null);
+    const [bookingInfo, setBookingInfo] = useState<AdminBookingResource | null>(null);
     const [editPopupOpen, setEditPopupOpen] = useState(false);
 
     const [cars, setCars] = useState<Car[]>([]);
@@ -109,23 +143,39 @@ const CarRentalCalendar: React.FC = () => {
         loadingCarsRef.current = true;
         try {
             const res = await apiClient.getCars({ page, perPage: 50 });
-            const mapped: Car[] = (res.data || []).map((c: any) => ({
-                id: c.id?.toString() ?? '',
-                model: c.name ?? '',
-                license: c.license_plate ?? '',
-                image: c.image_preview || c.image || '',
-                transmission:
-                    typeof c.transmission === 'string'
-                        ? c.transmission
-                        : c.transmission?.name || c.transmission_name || '',
-                fuel:
-                    typeof c.fuel === 'string'
-                        ? c.fuel
-                        : c.fuel?.name || c.fuel_name || '',
-                year: c.year ? Number(c.year) : undefined,
-                type: c.type?.name ?? '',
-                color: c.color ?? '',
-            }));
+            const list = extractList<ApiCar>(res);
+            const mapped = list
+                .map<Car | null>((car) => {
+                    if (!car) return null;
+                    const id = car.id != null ? String(car.id) : car.slug ?? null;
+                    if (!id) return null;
+                    const transmission =
+                        typeof car.transmission === 'string'
+                            ? car.transmission
+                            : car.transmission?.name ?? (car as { transmission_name?: string }).transmission_name ?? '';
+                    const fuel =
+                        typeof car.fuel === 'string'
+                            ? car.fuel
+                            : car.fuel?.name ?? (car as { fuel_name?: string }).fuel_name ?? '';
+                    const firstImage =
+                        (Array.isArray(car.images_array) && car.images_array.find((value) => typeof value === 'string')) ||
+                        car.image_preview ||
+                        car.image ||
+                        null;
+
+                    return {
+                        id,
+                        model: car.name ?? '',
+                        license: typeof car.license_plate === 'string' ? car.license_plate : '',
+                        image: typeof firstImage === 'string' ? firstImage : '',
+                        transmission,
+                        fuel,
+                        year: car.year ? Number(car.year) : undefined,
+                        type: typeof car.type === 'string' ? car.type : car.type?.name ?? '',
+                        color: typeof car.color === 'string' ? car.color : '',
+                    };
+                })
+                .filter((car): car is Car => car !== null);
             setCars((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
             if (mapped.length < 50) {
                 setHasMoreCars(false);
@@ -160,18 +210,48 @@ const CarRentalCalendar: React.FC = () => {
                 end_date: `${currentYear}-12-31`,
             };
             const res = await apiClient.getBookings(params);
-            const mapped: Reservation[] = (res.data || []).map((b: any) => ({
-                id: b.id?.toString() ?? '',
-                bookingNumber: b.booking_number ?? '',
-                carId: b.car_id ? b.car_id.toString() : '',
-                startDate: new Date(b.rental_start_date),
-                endDate: new Date(b.rental_end_date),
-                customerName: b.customer_name,
-                customerPhone: b.customer_phone,
-                customerEmail: b.customer_email,
-                status: b.status === 'reserved' ? 'confirmed' : b.status === 'completed' ? 'completed' : 'pending',
-                totalDays: b.days ?? 0,
-            }));
+            const list = extractList<AdminBookingResource>(res);
+            const mapped = list
+                .map<Reservation | null>((booking) => {
+                    if (!booking) return null;
+                    const id =
+                        booking.id != null
+                            ? String(booking.id)
+                            : booking.booking_number != null
+                                ? String(booking.booking_number)
+                                : null;
+                    if (!id) return null;
+                    const startDate = booking.rental_start_date ? new Date(booking.rental_start_date) : null;
+                    const endDate = booking.rental_end_date ? new Date(booking.rental_end_date) : null;
+                    if (!startDate || Number.isNaN(startDate.getTime()) || !endDate || Number.isNaN(endDate.getTime())) {
+                        return null;
+                    }
+
+                    const status = booking.status === 'reserved'
+                        ? 'confirmed'
+                        : booking.status === 'completed'
+                            ? 'completed'
+                            : 'pending';
+
+                    return {
+                        id,
+                        bookingNumber:
+                            booking.booking_number != null
+                                ? String(booking.booking_number)
+                                : booking.bookingNumber != null
+                                    ? String(booking.bookingNumber)
+                                    : undefined,
+                        carId: booking.car_id != null ? String(booking.car_id) : '',
+                        startDate,
+                        endDate,
+                        customerName: booking.customer_name ?? '',
+                        customerPhone: booking.customer_phone ?? '',
+                        customerEmail: booking.customer_email ?? '',
+                        status,
+                        totalDays: Number(booking.days ?? 0),
+                    };
+                })
+                .filter((reservation): reservation is Reservation => reservation !== null);
             setReservations((prev) =>
                 direction === 'next' ? (page === 1 ? mapped : [...prev, ...mapped]) : [...mapped, ...prev]
             );
@@ -483,7 +563,10 @@ const CarRentalCalendar: React.FC = () => {
         setSelectedItems([{ type: 'reservation', reservationId } as Selection]);
         try {
             const res = await apiClient.getBookingInfo(reservationId);
-            const info = res.data;
+            const info = extractItem(res);
+            if (!info) {
+                throw new Error('Rezervarea nu a putut fi încărcată.');
+            }
             const formatted = {
                 ...info,
                 id: info.id ?? reservationId,
@@ -492,11 +575,7 @@ const CarRentalCalendar: React.FC = () => {
                 coupon_amount: info.coupon_amount ?? 0,
                 coupon_type: info.coupon_type ?? null,
                 total_services: info.total_services ?? 0,
-                service_ids: Array.isArray(info.service_ids)
-                    ? info.service_ids
-                    : Array.isArray(info.services)
-                        ? info.services.map((s: any) => s.id)
-                        : [],
+                service_ids: resolveServiceIds(info),
                 sub_total: info.sub_total ?? 0,
                 coupon_code: info.coupon_code ?? '',
                 customer_name: info.customer_name ?? '',

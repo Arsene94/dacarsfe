@@ -1,10 +1,27 @@
 const CLASSIC_SCRIPT_ID = "ckeditor-classic-build";
 const CLASSIC_SCRIPT_SRC = "https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js";
 
-let classicEditorPromise: Promise<any> | null = null;
+export type ClassicEditorInstance = {
+  destroy(): Promise<void>;
+  [key: string]: unknown;
+};
 
-const resolveClassicEditor = (resolve: (value: any) => void, reject: (reason?: unknown) => void) => {
-  const globalEditor = (typeof window !== "undefined" && (window as any).ClassicEditor) || null;
+export type ClassicEditorConstructor = {
+  create: (element: HTMLElement, config?: Record<string, unknown>) => Promise<ClassicEditorInstance>;
+  builtinPlugins?: unknown[];
+  defaultConfig?: Record<string, unknown>;
+};
+
+let classicEditorPromise: Promise<ClassicEditorConstructor> | null = null;
+
+const resolveClassicEditor = (
+  resolve: (value: ClassicEditorConstructor) => void,
+  reject: (reason?: unknown) => void,
+) => {
+  const globalEditor =
+    typeof window !== "undefined"
+      ? ((window as { ClassicEditor?: ClassicEditorConstructor }).ClassicEditor ?? null)
+      : null;
   if (globalEditor) {
     resolve(globalEditor);
     return true;
@@ -18,7 +35,7 @@ const resolveClassicEditor = (resolve: (value: any) => void, reject: (reason?: u
   return false;
 };
 
-export const loadClassicEditor = (): Promise<any> => {
+export const loadClassicEditor = (): Promise<ClassicEditorConstructor> => {
   if (classicEditorPromise) {
     return classicEditorPromise;
   }

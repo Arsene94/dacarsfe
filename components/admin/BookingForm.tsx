@@ -9,15 +9,29 @@ import { Button } from "@/components/ui/button";
 import { Popup } from "@/components/ui/popup";
 import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
+import {
+    extractFirstCar,
+    mapCustomerSearchResults,
+    normalizeAdminCarOption,
+} from "@/lib/adminBookingHelpers";
 import {
     describeWheelPrizeSummaryAmount,
     formatWheelPrizeExpiry,
 } from "@/lib/wheelFormatting";
+import type {
+    AdminBookingCarOption,
+    AdminBookingCustomerSummary,
+    AdminBookingFormValues,
+    AdminBookingLinkedService,
+} from "@/types/admin";
+import type { ApiCar } from "@/types/car";
+import type { QuotePriceResponse, Service } from "@/types/reservation";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
 
-const parsePrice = (raw: any): number => {
+const parsePrice = (raw: unknown): number => {
     if (raw == null) return 0;
     if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
     const parsed = parseFloat(String(raw).replace(/[^\d.,]/g, "").replace(",", "."));
@@ -39,8 +53,8 @@ const toOptionalNumber = (value: unknown): number | null => {
 interface BookingFormProps {
     open: boolean;
     onClose: () => void;
-    bookingInfo: any;
-    setBookingInfo: (info: any) => void;
+    bookingInfo: AdminBookingFormValues | null;
+    setBookingInfo: React.Dispatch<React.SetStateAction<AdminBookingFormValues | null>>;
     onUpdated?: () => void;
 }
 
@@ -52,48 +66,38 @@ const BookingForm: React.FC<BookingFormProps> = ({
     onUpdated,
 }) => {
     const [carSearch, setCarSearch] = useState("");
-    const [carResults, setCarResults] = useState<any[]>([]);
+    const [carResults, setCarResults] = useState<AdminBookingCarOption[]>([]);
     const [carSearchActive, setCarSearchActive] = useState(false);
-    const [services, setServices] = useState<any[]>([]);
+    const [services, setServices] = useState<Service[]>([]);
     const [selectedServices, setSelectedServices] = useState<number[]>([]);
 
     const [customerSearch, setCustomerSearch] = useState("");
-    const [customerResults, setCustomerResults] = useState<any[]>([]);
+    const [customerResults, setCustomerResults] = useState<AdminBookingCustomerSummary[]>([]);
     const [customerSearchActive, setCustomerSearchActive] = useState(false);
-    const [quote, setQuote] = useState<any | null>(null);
+    const [quote, setQuote] = useState<QuotePriceResponse | null>(null);
     const originalTotals = useRef<{ subtotal: number; total: number }>({
         subtotal: 0,
         total: 0,
     });
+
+    const updateBookingInfo = useCallback(
+        (updater: (prev: AdminBookingFormValues) => AdminBookingFormValues) => {
+            setBookingInfo((prev) => (prev ? updater(prev) : prev));
+        },
+        [setBookingInfo],
+    );
 
     const fetchCars = useCallback(
         async (query: string) => {
             try {
                 const resp = await apiClient.getCars({
                     search: query,
-                    start_date: bookingInfo?.rental_start_date,
-                    end_date: bookingInfo?.rental_end_date,
+                    start_date: bookingInfo?.rental_start_date ?? undefined,
+                    end_date: bookingInfo?.rental_end_date ?? undefined,
                     limit: 100,
                 });
-                const list = Array.isArray(resp?.data)
-                    ? resp.data
-                    : Array.isArray(resp)
-                        ? resp
-                        : Array.isArray(resp?.items)
-                            ? resp.items
-                            : [];
-                const normalized = list.map((c: any) => ({
-                    ...c,
-                    license_plate:
-                        c.license_plate || c.licensePlate || c.plate || "",
-                    transmission: c.transmission?.name
-                        ? c.transmission
-                        : { name: c.transmission_name || c.transmission || "" },
-                    fuel: c.fuel?.name
-                        ? c.fuel
-                        : { name: c.fuel_name || c.fuel || "" },
-                }));
-                setCarResults(normalized);
+                const list = extractList(resp).map(normalizeAdminCarOption);
+                setCarResults(list);
             } catch (error) {
                 console.error("Error searching cars:", error);
             }
@@ -104,17 +108,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const fetchCustomers = useCallback(async (query: string) => {
         try {
             const resp = await apiClient.searchCustomersByPhone(query);
-            const list = Array.isArray(resp)
-                ? resp.flatMap((row: any) =>
-                      (row.phones || []).map((phone: string) => {
-                          return {
-                              name: row.latest?.name || row.names?.[0] || "",
-                              email: row.email,
-                              phone,
-                          };
-                      })
-                  )
-                : [];
+            const records = Array.isArray(resp) ? resp : extractList(resp);
+            const list = mapCustomerSearchResults(records);
             setCustomerResults(list);
         } catch (error) {
             console.error("Error searching customers:", error);
@@ -122,15 +117,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }, []);
 
     useEffect(() => {
+        if (!bookingInfo) {
+            return;
+        }
+
         const quotePrice = async () => {
             try {
                 const data = await apiClient.quotePrice({
-                    car_id: bookingInfo.car_id,
+                    car_id: bookingInfo.car_id ?? 0,
                     rental_start_date: bookingInfo.rental_start_date,
                     rental_end_date: bookingInfo.rental_end_date,
                     base_price: bookingInfo.base_price,
                     base_price_casco: bookingInfo.base_price_casco,
-                    original_price_per_day: bookingInfo.original_price_per_day,
+                    original_price_per_day: bookingInfo.original_price_per_day ?? undefined,
                     coupon_type: bookingInfo.coupon_type,
                     coupon_amount: bookingInfo.coupon_amount,
                     coupon_code: bookingInfo.coupon_code,
@@ -138,7 +137,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     with_deposit: bookingInfo.with_deposit,
                 });
                 setQuote(data);
-                setBookingInfo((prev: any) => ({
+                updateBookingInfo((prev) => ({
                     ...prev,
                     days: data.days,
                     price_per_day: data.price_per_day,
@@ -146,10 +145,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     base_price_casco: data.rental_rate_casco,
                     sub_total: prev.with_deposit
                         ? data.sub_total
-                        : data.sub_total_casco,
-                    total: prev.with_deposit ? data.total : data.total_casco,
-                    discount_applied: data.discount,
-                    total_services: data.total_services,
+                        : data.sub_total_casco ?? data.sub_total,
+                    total: prev.with_deposit
+                        ? data.total
+                        : data.total_casco ?? data.total,
+                    discount_applied: data.discount ?? null,
+                    total_services: data.total_services ?? prev.total_services,
                 }));
             } catch (error) {
                 console.error("Error quoting price:", error);
@@ -157,22 +158,22 @@ const BookingForm: React.FC<BookingFormProps> = ({
         };
 
         if (
-            bookingInfo?.car_id &&
-            bookingInfo?.rental_start_date &&
-            bookingInfo?.rental_end_date
+            bookingInfo.car_id &&
+            bookingInfo.rental_start_date &&
+            bookingInfo.rental_end_date
         ) {
             quotePrice();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
-        bookingInfo.car_id,
-        bookingInfo.rental_start_date,
-        bookingInfo.rental_end_date,
-        bookingInfo.coupon_type,
-        bookingInfo.coupon_amount,
-        bookingInfo.coupon_code,
-        bookingInfo.service_ids,
-        bookingInfo.with_deposit,
+        bookingInfo?.car_id,
+        bookingInfo?.rental_start_date,
+        bookingInfo?.rental_end_date,
+        bookingInfo?.coupon_type,
+        bookingInfo?.coupon_amount,
+        bookingInfo?.coupon_code,
+        bookingInfo?.service_ids,
+        bookingInfo?.with_deposit,
     ]);
 
 
@@ -180,15 +181,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
         const fetchServices = async () => {
             try {
                 const res = await apiClient.getServices();
-                const list = Array.isArray(res?.data)
-                    ? res.data
-                    : Array.isArray(res)
-                        ? res
-                        : [];
-                const mapped = list.map((s: any) => ({
-                    id: s.id,
-                    name: s.name ?? "",
-                    price: parsePrice(s.price),
+                const list = Array.isArray(res) ? res : extractList(res);
+                const mapped: Service[] = list.map((service) => ({
+                    id: service.id,
+                    name: service.name ?? "",
+                    price: parsePrice(service.price),
                 }));
                 setServices(mapped);
             } catch (error) {
@@ -223,28 +220,31 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     // Populate customer details only when a suggestion is selected
 
-    const recalcTotals = useCallback((info: any) => {
+    const recalcTotals = useCallback((info: AdminBookingFormValues): AdminBookingFormValues => {
         const type =
             info.coupon_type === "per_total"
                 ? "from_total"
                 : info.coupon_type || "fixed_per_day";
 
-        const updated: any = {
-            ...info,
-            coupon_type: type,
-        };
+        let basePrice: number | null = info.base_price ?? null;
+        let basePriceCasco: number | null = info.base_price_casco ?? null;
 
-        if (type === "fixed_per_day" && info.coupon_amount != null) {
+        if (type === "fixed_per_day") {
             const amount = parsePrice(info.coupon_amount);
-            updated.base_price = amount;
-            updated.base_price_casco = amount;
+            basePrice = amount;
+            basePriceCasco = amount;
         } else if (info.original_price_per_day != null) {
             const original = parsePrice(info.original_price_per_day);
-            updated.base_price = original;
-            updated.base_price_casco = original;
+            basePrice = original;
+            basePriceCasco = original;
         }
 
-        return updated;
+        return {
+            ...info,
+            coupon_type: type,
+            base_price: basePrice ?? 0,
+            base_price_casco: basePriceCasco ?? 0,
+        };
     }, []);
 
     useEffect(() => {
@@ -259,47 +259,31 @@ const BookingForm: React.FC<BookingFormProps> = ({
         const load = async () => {
             try {
                 const res = await apiClient.getCarForBooking({
-                    car_id: bookingInfo.car_id,
+                    car_id: bookingInfo.car_id ?? 0,
                     start_date: bookingInfo.rental_start_date,
                     end_date: bookingInfo.rental_end_date,
                 });
-                const car = Array.isArray(res?.data)
-                    ? res.data[0]
-                    : Array.isArray(res)
-                        ? res[0]
-                        : res;
+                const car = extractFirstCar(res);
                 if (!car || ignore) return;
+                const normalized = normalizeAdminCarOption(car);
                 const price = parsePrice(
-                    car.rental_rate ?? bookingInfo.price_per_day,
+                    normalized.rental_rate ?? bookingInfo.price_per_day,
                 );
-                const updated = {
-                    car_name: car.name ?? bookingInfo.car_name,
-                    car_image:
-                        car.image_preview ||
-                        car.image ||
-                        bookingInfo.car_image ||
-                        "",
-                    car_license_plate:
-                        car.license_plate ||
-                        car.licensePlate ||
-                        car.plate ||
-                        "",
-                    car_transmission:
-                        typeof car.transmission === "string"
-                            ? car.transmission
-                            : car.transmission?.name ||
-                              car.transmission_name ||
-                              "",
-                    car_fuel:
-                        typeof car.fuel === "string"
-                            ? car.fuel
-                            : car.fuel?.name || car.fuel_name || "",
-                    price_per_day: price,
-                    base_price: parsePrice(car.rental_rate),
-                    base_price_casco: parsePrice(car.rental_rate_casco),
-                };
-                setBookingInfo((prev: any) =>
-                    recalcTotals({ ...prev, ...updated }),
+                updateBookingInfo((prev) =>
+                    recalcTotals({
+                        ...prev,
+                        car_name: normalized.name ?? prev.car_name,
+                        car_image:
+                            normalized.image_preview ||
+                            (normalized as Partial<ApiCar>).image ||
+                            prev.car_image,
+                        car_license_plate: normalized.license_plate ?? prev.car_license_plate,
+                        car_transmission: normalized.transmission?.name ?? prev.car_transmission,
+                        car_fuel: normalized.fuel?.name ?? prev.car_fuel,
+                        price_per_day: price,
+                        base_price: parsePrice(normalized.rental_rate),
+                        base_price_casco: parsePrice(normalized.rental_rate_casco),
+                    }),
                 );
             } catch (err) {
                 console.error("Error loading car:", err);
@@ -311,46 +295,46 @@ const BookingForm: React.FC<BookingFormProps> = ({
         };
     }, [
         open,
-        bookingInfo.car_id,
-        bookingInfo.car_license_plate,
-        bookingInfo.car_transmission,
-        bookingInfo.car_fuel,
-        bookingInfo.car_image,
-        bookingInfo.car_name,
-        bookingInfo.price_per_day,
-        bookingInfo.rental_start_date,
-        bookingInfo.rental_end_date,
+        bookingInfo?.car_id,
+        bookingInfo?.car_license_plate,
+        bookingInfo?.car_transmission,
+        bookingInfo?.car_fuel,
+        bookingInfo?.car_image,
+        bookingInfo?.car_name,
+        bookingInfo?.price_per_day,
+        bookingInfo?.rental_start_date,
+        bookingInfo?.rental_end_date,
         recalcTotals,
-        setBookingInfo,
+        updateBookingInfo,
     ]);
 
-    const handleSelectCar = (car: any) => {
-        const price = car?.rental_rate
-            ? Number(car.rental_rate)
-            : bookingInfo.price_per_day || 0;
+    const handleSelectCar = (car: AdminBookingCarOption) => {
+        if (!bookingInfo) {
+            return;
+        }
+        const price = car.rental_rate ? Number(car.rental_rate) : bookingInfo.price_per_day;
+        const normalized = normalizeAdminCarOption(car);
         const updated = recalcTotals({
             ...bookingInfo,
-            car_id: car.id,
-            car_name: car.name,
-            car_image: car.image_preview || car.image || "",
-            car_license_plate:
-                car.license_plate || car.licensePlate || car.plate || "",
-            car_transmission:
-                typeof car.transmission === "string"
-                    ? car.transmission
-                    : car.transmission?.name || "",
-            car_fuel:
-                typeof car.fuel === "string" ? car.fuel : car.fuel?.name || "",
+            car_id: Number(car.id),
+            car_name: normalized.name ?? bookingInfo.car_name,
+            car_image: normalized.image_preview || (normalized as Partial<ApiCar>).image || "",
+            car_license_plate: normalized.license_plate ?? "",
+            car_transmission: normalized.transmission?.name ?? "",
+            car_fuel: normalized.fuel?.name ?? "",
             price_per_day: price,
-            base_price: parsePrice(car.rental_rate),
-            base_price_casco: parsePrice(car.rental_rate_casco),
+            base_price: parsePrice(normalized.rental_rate),
+            base_price_casco: parsePrice(normalized.rental_rate_casco),
         });
         setBookingInfo(updated);
         setCarSearch("");
         setCarResults([]);
     };
 
-    const handleSelectCustomer = (customer: any) => {
+    const handleSelectCustomer = (customer: AdminBookingCustomerSummary) => {
+        if (!bookingInfo) {
+            return;
+        }
         setBookingInfo({
             ...bookingInfo,
             customer_phone: customer.phone || "",
@@ -378,44 +362,51 @@ const BookingForm: React.FC<BookingFormProps> = ({
     };
 
     useEffect(() => {
+        if (!bookingInfo) return;
         const total = selectedServices.reduce((sum, id) => {
-            const svc = services.find((s: any) => s.id === id);
-            return sum + (svc?.price || 0);
+            const svc = services.find((service) => service.id === id);
+            return sum + (svc?.price ?? 0);
         }, 0);
-        setBookingInfo((prev: any) =>
+        updateBookingInfo((prev) =>
             recalcTotals({
                 ...prev,
                 service_ids: selectedServices,
                 total_services: total,
             }),
         );
-    }, [selectedServices, services, recalcTotals, setBookingInfo]);
+    }, [bookingInfo, selectedServices, services, recalcTotals, updateBookingInfo]);
 
     useEffect(() => {
-        if (!open) return;
-        const ids = Array.isArray(bookingInfo?.service_ids)
+        if (!open || !bookingInfo) return;
+        const ids = Array.isArray(bookingInfo.service_ids)
             ? bookingInfo.service_ids
-            : Array.isArray(bookingInfo?.services)
-                ? bookingInfo.services.map((s: any) => s.id)
+            : Array.isArray(bookingInfo.services)
+                ? bookingInfo.services
+                      .map((service: AdminBookingLinkedService) => {
+                          if (typeof service.id === "number") return service.id;
+                          const parsed = toOptionalNumber(service.id);
+                          return parsed ?? undefined;
+                      })
+                      .filter((value): value is number => typeof value === "number")
                 : [];
         setSelectedServices((prev) =>
-            ids.length === prev.length && ids.every((id: any) => prev.includes(id))
+            ids.length === prev.length && ids.every((id) => prev.includes(id))
                 ? prev
                 : ids,
         );
-    }, [open, bookingInfo?.service_ids, bookingInfo?.services]);
+    }, [open, bookingInfo, bookingInfo?.service_ids, bookingInfo?.services]);
 
     useEffect(() => {
-        if (!open) return;
+        if (!open || !bookingInfo) return;
         originalTotals.current = {
             subtotal: (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0),
             total:
                 bookingInfo.total ||
                 (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0),
         };
-        setBookingInfo((prev: any) => recalcTotals(prev));
+        updateBookingInfo((prev) => recalcTotals(prev));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, recalcTotals, setBookingInfo]);
+    }, [open, bookingInfo, recalcTotals, updateBookingInfo]);
 
     if (!bookingInfo) return null;
 
@@ -668,10 +659,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             onSearch={(v) => {
                                 setCustomerSearch(v);
                                 if (!customerSearch && v === "") return;
-                                setBookingInfo((prev: any) => ({
+                                updateBookingInfo((prev) => ({
                                     ...prev,
                                     customer_phone: v,
-                                    customer_id: undefined,
+                                    customer_id: null,
                                 }));
                             }}
                             onSelect={handleSelectCustomer}
@@ -694,7 +685,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             id="coupon-type"
                             value={bookingInfo.coupon_type || ""}
                             onValueChange={(value) =>
-                                setBookingInfo((prev: any) =>
+                                updateBookingInfo((prev) =>
                                     recalcTotals({
                                         ...prev,
                                         coupon_type: value,
@@ -721,23 +712,27 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             type={bookingInfo.coupon_type === "code" ? "text" : "number"}
                             value={
                                 bookingInfo.coupon_type === "code"
-                                    ? bookingInfo.coupon_code || ""
-                                    : bookingInfo.coupon_amount || ""
+                                    ? bookingInfo.coupon_code ?? ""
+                                    : bookingInfo.coupon_amount ?? 0
                             }
                             onChange={(e) => {
-                                const val =
-                                    bookingInfo.coupon_type === "code"
-                                        ? e.target.value
-                                        : Number(e.target.value);
-                                setBookingInfo((prev: any) =>
-                                    recalcTotals({
+                                const rawValue = e.target.value;
+                                updateBookingInfo((prev) => {
+                                    const nextType = prev.coupon_type || "fixed_per_day";
+                                    if (nextType === "code") {
+                                        return recalcTotals({
+                                            ...prev,
+                                            coupon_type: nextType,
+                                            coupon_code: rawValue,
+                                        });
+                                    }
+                                    const numericValue = Number(rawValue);
+                                    return recalcTotals({
                                         ...prev,
-                                        coupon_type: prev.coupon_type || "fixed_per_day",
-                                        ...((prev.coupon_type || "fixed_per_day") === "code"
-                                            ? { coupon_code: val }
-                                            : { coupon_amount: val }),
-                                    }),
-                                );
+                                        coupon_type: nextType,
+                                        coupon_amount: Number.isFinite(numericValue) ? numericValue : 0,
+                                    });
+                                });
                             }}
                         />
                     </div>
@@ -748,7 +743,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             type="number"
                             value={bookingInfo.advance_payment || 0}
                             onChange={(e) =>
-                                setBookingInfo((prev: any) =>
+                                updateBookingInfo((prev) =>
                                     recalcTotals({
                                         ...prev,
                                         advance_payment: Number(e.target.value) || 0,
@@ -797,7 +792,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     name="withDeposit"
                                     checked={!!bookingInfo.with_deposit}
                                     onChange={() =>
-                                        setBookingInfo((prev: any) =>
+                                        updateBookingInfo((prev) =>
                                             recalcTotals({
                                                 ...prev,
                                                 with_deposit: true,
@@ -833,7 +828,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     name="withDeposit"
                                     checked={!bookingInfo.with_deposit}
                                     onChange={() =>
-                                        setBookingInfo((prev: any) =>
+                                        updateBookingInfo((prev) =>
                                             recalcTotals({
                                                 ...prev,
                                                 with_deposit: false,

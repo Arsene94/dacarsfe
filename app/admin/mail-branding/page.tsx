@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import type { TwigModule, TwigTemplate } from "twig";
 import Editor from "@monaco-editor/react";
 import type * as MonacoEditorType from "monaco-editor";
 import { Code2, FunctionSquare, Loader2, Plus, Trash2 } from "lucide-react";
@@ -69,6 +70,11 @@ const normalizeLinkArray = (links?: MailMenuLink[] | null): MailMenuLink[] => {
     url: item?.url ?? "",
   }));
 };
+
+const isTwigModule = (value: unknown): value is TwigModule =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as { twig?: unknown }).twig === "function";
 
 const toSiteFormState = (site?: MailSiteDetails | null): MailSiteFormState => ({
   title: site?.title ?? "",
@@ -1289,7 +1295,7 @@ const MailBrandingPage = () => {
   const [functionSelectValue, setFunctionSelectValue] = useState<string>("");
   const [detectedVariables, setDetectedVariables] = useState<string[]>([]);
 
-  const [twigEngine, setTwigEngine] = useState<any>(null);
+  const [twigEngine, setTwigEngine] = useState<TwigModule | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewContext, setPreviewContext] = useState<Record<string, unknown>>({});
@@ -1393,11 +1399,19 @@ const MailBrandingPage = () => {
     import("twig")
       .then((module) => {
         if (cancelled) return;
-        const engine = (module as any)?.default ?? module;
-        if (engine && typeof engine.cache === "function") {
-          engine.cache(false);
+        const candidate =
+          (typeof module === "object" && module && "default" in module
+            ? (module as { default: unknown }).default
+            : undefined) ?? module;
+
+        if (isTwigModule(candidate)) {
+          if (typeof candidate.cache === "function") {
+            candidate.cache(false);
+          }
+          setTwigEngine(candidate);
+        } else {
+          console.error("Modulul Twig încărcat nu are forma așteptată.");
         }
-        setTwigEngine(engine);
       })
       .catch((error) => {
         console.error("Nu s-a putut încărca biblioteca Twig:", error);
@@ -1990,7 +2004,7 @@ const MailBrandingPage = () => {
     }
 
     const currentTemplate = selectedTemplateKey ? templateDetails[selectedTemplateKey] : null;
-    let compiledTemplate: any = null;
+    let compiledTemplate: TwigTemplate | null = null;
     if (currentTemplate?.path) {
       try {
         compiledTemplate = twigEngine.twig({

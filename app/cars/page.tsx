@@ -39,7 +39,10 @@ const mapApiCar = (c: ApiCar): Car => ({
     name: c.name ?? "Autovehicul",
     type: (c.type?.name ?? "—").trim(),
     typeId: c.type?.id ?? null,
-    image: toImageUrl(c.image_preview || (c.images ? (Object.values(c.images)[0] as any) : null)),
+    image: toImageUrl(
+        c.image_preview ||
+        (c.images ? Object.values(c.images).find((value) => typeof value === 'string') ?? null : null),
+    ),
     price: parsePrice(
         Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco))
     ),
@@ -132,7 +135,7 @@ const FleetPage = () => {
         setLoading(p => (currentPage === 1 ? true : p));
 
         // construim payload doar cu valori „reale”
-        const payload: Record<string, any> = {
+        const payload: Record<string, string | number | undefined> = {
             start_date: startDate || undefined,
             end_date: endDate || undefined,
             car_type: carTypeParam || undefined,

@@ -39,8 +39,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (login: string, password: string) => {
     const res: AuthResponse = await apiClient.login({ login, password });
-    setUser(res.user);
     setToken(res.token);
+    setUser(res.user);
+    try {
+      const profile = await apiClient.me();
+      setUser(profile);
+    } catch (error) {
+      console.error("Failed to refresh authenticated user", error);
+    }
   };
 
   const logout = async () => {

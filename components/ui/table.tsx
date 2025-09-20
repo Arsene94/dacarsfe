@@ -3,9 +3,33 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Column, SortState, DataTableProps } from '@/types/ui';
+import {
+  Column,
+  SortState,
+  DataTableProps,
+  ColumnValue,
+} from '@/types/ui';
 
-export function DataTable<T extends Record<string, any>>({
+const toSortableValue = (value: ColumnValue): number | string => {
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+  if (typeof value === 'boolean') {
+    return value ? 1 : 0;
+  }
+  if (typeof value === 'string') {
+    return value.toLowerCase();
+  }
+  if (value == null) {
+    return '';
+  }
+  return String(value);
+};
+
+export function DataTable<T>({
   data,
   columns,
   pageSize,
@@ -21,8 +45,10 @@ export function DataTable<T extends Record<string, any>>({
     return [...data].sort((a, b) => {
       const va = accessor(a);
       const vb = accessor(b);
-      if (va < vb) return direction === 'asc' ? -1 : 1;
-      if (va > vb) return direction === 'asc' ? 1 : -1;
+      const sortableA = toSortableValue(va);
+      const sortableB = toSortableValue(vb);
+      if (sortableA < sortableB) return direction === 'asc' ? -1 : 1;
+      if (sortableA > sortableB) return direction === 'asc' ? 1 : -1;
       return 0;
     });
   }, [data, sort]);

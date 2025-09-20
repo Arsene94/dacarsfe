@@ -1,23 +1,17 @@
-import { loadClassicEditor } from "./loader";
+import { loadClassicEditor, type ClassicEditorConstructor, type ClassicEditorInstance } from "./loader";
 
 type EditorConfig = Record<string, unknown> | undefined;
-
-type ClassicEditorConstructor = {
-  create: (element: HTMLElement, config?: EditorConfig) => Promise<any>;
-  builtinPlugins?: unknown[];
-  defaultConfig?: Record<string, unknown>;
-};
 
 const getGlobalClassicEditor = (): ClassicEditorConstructor | null => {
   if (typeof window === "undefined") {
     return null;
   }
 
-  return ((window as any).ClassicEditor ?? null) as ClassicEditorConstructor | null;
+  return ((window as { ClassicEditor?: ClassicEditorConstructor }).ClassicEditor ?? null);
 };
 
 class ClassicEditor {
-  static async create(element: HTMLElement, config?: EditorConfig): Promise<any> {
+  static async create(element: HTMLElement, config?: EditorConfig): Promise<ClassicEditorInstance> {
     const Editor = await loadClassicEditor();
     return Editor.create(element, config);
   }

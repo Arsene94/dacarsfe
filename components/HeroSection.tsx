@@ -21,6 +21,9 @@ import { Label } from "@/components/ui/label";
 import {useBooking} from "@/context/BookingContext";
 import { CarCategory } from "@/types/car";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 const HeroSection = () => {
   const [formData, setFormData] = useState({
     start_date: "",
@@ -89,22 +92,34 @@ const HeroSection = () => {
         const res = await apiClient.getCarCategories()
         const raw = res?.data ?? res
 
-        const cat: CarCategory[] = Array.isArray(raw)
-            // cazul tău curent: array de obiecte
-            ? raw
-                .filter((it: any) => it && typeof it === 'object' && 'id' in it && 'name' in it)
-                // (opțional) doar cele publicate:
-                .filter((it: any) => !('status' in it) || it.status === 'published')
-                .map((it: any) => ({
-                    id: Number(it.id),
-                    name: String(it.name),
-                    order: typeof it.order === 'number' ? it.order : undefined,
-                }))
-            // fallback: obiect tip Record<id, name>
-            : Object.entries(raw as Record<string, string>).map(([id, name]) => ({
-                id: Number(id),
-                name: String(name),
-            }))
+        const normalized: Array<{ id: number; name: string; order?: number; status?: string | null }> = [];
+
+        if (Array.isArray(raw)) {
+            raw.forEach((entry) => {
+                if (!isRecord(entry)) return;
+                const id = Number(entry.id ?? entry.value);
+                if (!Number.isFinite(id)) return;
+                const nameSource = entry.name ?? entry.title ?? entry.label;
+                if (typeof nameSource !== "string" || nameSource.trim().length === 0) return;
+                normalized.push({
+                    id,
+                    name: nameSource.trim(),
+                    order: typeof entry.order === "number" ? entry.order : undefined,
+                    status: typeof entry.status === "string" ? entry.status : null,
+                });
+            });
+        } else if (isRecord(raw)) {
+            Object.entries(raw).forEach(([id, name]) => {
+                const numericId = Number(id);
+                if (!Number.isFinite(numericId)) return;
+                const title = typeof name === "string" ? name : String(name);
+                normalized.push({ id: numericId, name: title });
+            });
+        }
+
+        const cat: CarCategory[] = normalized
+            .filter((item) => !item.status || item.status === 'published')
+            .map(({ id, name, order }) => ({ id, name, order }));
 
         cat.sort((a, b) => {
             const ao = a.order ?? Number.POSITIVE_INFINITY
