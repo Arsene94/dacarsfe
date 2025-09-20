@@ -459,7 +459,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
                         ? STORAGE_BASE + "/" + (car.image_preview || car.image)
                         : "/images/placeholder-car.svg"
                     }
-                    alt={car.name}
+                    alt={car.name ?? "Autovehicul"}
                     width={64}
                     height={40}
                     className="w-16 h-10 object-cover rounded"
@@ -499,7 +499,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
                         ? STORAGE_BASE + "/" + (car.image_preview || car.image)
                         : "/images/placeholder-car.svg"
                     }
-                    alt={car.name}
+                    alt={car.name ?? "Autovehicul"}
                     width={64}
                     height={40}
                     className="w-16 h-10 object-cover rounded"

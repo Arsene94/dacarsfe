@@ -1227,7 +1227,7 @@ const CarsPage = () => {
     setCarForm(mapAdminCarToFormState(car));
     if (car.partnerId != null) {
       const fallback = `Utilizator #${car.partnerId}`;
-      const carRecord = car as Record<string, unknown>;
+      const carRecord = car as unknown as Record<string, unknown>;
       const partnerName =
         toTrimmedString(carRecord.partnerName) ??
         toTrimmedString(carRecord.partner_name) ??

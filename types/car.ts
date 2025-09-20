@@ -122,7 +122,7 @@ export interface CarSyncColorsPayload {
   color_id?: number | string;
 }
 
-export interface CarFilterParams {
+export interface CarFilterParams extends Record<string, unknown> {
   start_date?: string;
   end_date?: string;
   page?: number;

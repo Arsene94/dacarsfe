@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Edit, Trash2, Plus } from "lucide-react";
 import apiClient from "@/lib/api";
+import { extractItem, extractList } from "@/lib/apiResponse";
+import type { ApiItemResult } from "@/types/api";
 import {
   AdminCategory,
   CategoryPrice,
@@ -91,7 +93,7 @@ export default function CategoriesPage() {
     const fetchCategories = async () => {
       try {
         const res = await apiClient.getCategories();
-        setCategories(res?.data ?? res);
+        setCategories(extractList(res));
       } catch (error) {
         console.error("Failed to load categories", error);
       }
@@ -175,14 +177,18 @@ export default function CategoriesPage() {
     try {
       if (editing) {
         const res = await apiClient.updateCategory(editing.id, form);
-        const updated = res?.data ?? res;
+        const updated =
+          extractItem(res as ApiItemResult<AdminCategory>) ?? editing;
         setCategories((prev) =>
           prev.map((c) => (c.id === editing.id ? updated : c))
         );
         await savePrices(editing.id);
       } else {
         const res = await apiClient.createCategory(form);
-        const rawCreated = res?.data ?? res;
+        const rawCreated = extractItem(res as ApiItemResult<AdminCategory>);
+        if (!rawCreated) {
+          throw new Error("Categoria creată nu a fost returnată de API.");
+        }
         const newId =
           typeof rawCreated?.id === "number"
             ? rawCreated.id
@@ -193,7 +199,7 @@ export default function CategoriesPage() {
         }
 
         const created: AdminCategory = {
-          ...(rawCreated as AdminCategory),
+          ...rawCreated,
           id: Number(newId),
         };
 
@@ -243,7 +249,9 @@ export default function CategoriesPage() {
         priceCalendarId,
         calendarPayload
       );
-      const updated = res?.data ?? res;
+      const updated = extractItem(
+        res as ApiItemResult<CategoryPriceCalendar>,
+      );
       if (updated && typeof updated.id === "number") {
         setPriceCalendarId(updated.id);
       }
@@ -251,7 +259,9 @@ export default function CategoriesPage() {
     }
 
     const res = await apiClient.createCategoryPriceCalendar(calendarPayload);
-    const created = res?.data ?? res;
+    const created = extractItem(
+      res as ApiItemResult<CategoryPriceCalendar>,
+    );
     if (created && typeof created.id === "number") {
       setPriceCalendarId(created.id);
     }

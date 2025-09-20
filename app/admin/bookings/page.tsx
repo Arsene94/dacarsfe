@@ -27,6 +27,7 @@ import type {
   AdminBookingResource,
   AdminReservation,
 } from "@/types/admin";
+import { createEmptyBookingForm } from "@/types/admin";
 import type { ReservationWheelPrizeSummary } from "@/types/reservation";
 import { Input } from "@/components/ui/input";
 import DateRangePicker from "@/components/ui/date-range-picker";
@@ -40,31 +41,7 @@ import {
   formatWheelPrizeExpiry,
 } from "@/lib/wheelFormatting";
 
-const EMPTY_BOOKING = {
-  rental_start_date: "",
-  rental_end_date: "",
-  with_deposit: true,
-  service_ids: [] as number[],
-  total_services: 0,
-  coupon_type: "",
-  coupon_amount: "",
-  coupon_code: "",
-  customer_name: "",
-  customer_phone: "",
-  customer_email: "",
-  car_id: null as number | null,
-  car_name: "",
-  car_image: "",
-  car_license_plate: "",
-  car_transmission: "",
-  car_fuel: "",
-  sub_total: 0,
-  total: 0,
-  price_per_day: 0,
-  total_before_wheel_prize: null as number | null,
-  wheel_prize_discount: 0,
-  wheel_prize: null as ReservationWheelPrizeSummary | null,
-};
+const EMPTY_BOOKING = createEmptyBookingForm();
 
 const parseOptionalNumber = (value: unknown): number | null => {
   if (value == null || value === "") return null;
@@ -86,6 +63,12 @@ const formatTimeLabel = (iso?: string | null): string | undefined => {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return undefined;
   return date.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
+};
+
+const pickNonEmptyString = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 };
 
 const normalizeWheelPrizeSummary = (
@@ -113,9 +96,9 @@ const normalizeWheelPrizeSummary = (
         ? raw.name
         : null) ?? "Premiu DaCars";
   const prizeType =
-    (typeof raw.type === "string" && raw.type) ??
-    (typeof raw.prize_type === "string" && raw.prize_type) ??
-    (wheelInfo && typeof wheelInfo.type === "string" ? wheelInfo.type : undefined) ??
+    pickNonEmptyString(raw.type) ??
+    pickNonEmptyString(raw.prize_type) ??
+    (wheelInfo ? pickNonEmptyString(wheelInfo.type) : undefined) ??
     "other";
 
   return {
@@ -468,21 +451,51 @@ const ReservationsPage = () => {
         const advancePayment =
           parseOptionalNumber(info.advance_payment ?? (info as { advancePayment?: unknown }).advancePayment) ?? 0;
         const couponAmount =
-          parseOptionalNumber(info.coupon_amount ?? info.discount) ??
-          info.coupon_amount ??
-          0;
+          parseOptionalNumber(info.coupon_amount ?? info.discount) ?? 0;
         const subTotal =
-          parseOptionalNumber(info.sub_total ?? (info as { subTotal?: unknown }).subTotal) ??
-          info.sub_total ??
+          parseOptionalNumber(info.sub_total) ??
+          parseOptionalNumber((info as { subTotal?: unknown }).subTotal) ??
           0;
         const total =
-          parseOptionalNumber(info.total) ?? info.total ??
-          parseOptionalNumber(info.total_price) ?? info.total_price ??
+          parseOptionalNumber(info.total) ??
+          parseOptionalNumber(info.total_price) ??
           0;
         const taxAmount =
-          parseOptionalNumber(info.tax_amount ?? (info as { taxAmount?: unknown }).taxAmount) ??
-          info.tax_amount ??
+          parseOptionalNumber(info.tax_amount) ??
+          parseOptionalNumber((info as { taxAmount?: unknown }).taxAmount) ??
           0;
+
+        const carId = parseOptionalNumber(info?.car_id ?? info?.car?.id);
+
+        const couponType =
+          pickNonEmptyString(info?.coupon_type) ??
+          pickNonEmptyString(info?.discount_type) ??
+          "";
+
+        const carImage =
+          pickNonEmptyString((info as { car_image?: unknown }).car_image) ??
+          pickNonEmptyString(info?.car?.image_preview) ??
+          pickNonEmptyString(info?.image_preview) ??
+          pickNonEmptyString(info?.car?.image) ??
+          "";
+        const carLicensePlate =
+          pickNonEmptyString(info?.car?.license_plate) ??
+          pickNonEmptyString((info as { license_plate?: unknown }).license_plate) ??
+          pickNonEmptyString(info?.car?.plate) ??
+          "";
+        const carTransmission =
+          pickNonEmptyString(info?.car?.transmission?.name) ??
+          pickNonEmptyString((info as { transmission_name?: unknown }).transmission_name) ??
+          "";
+        const carFuel =
+          pickNonEmptyString(info?.car?.fuel?.name) ??
+          pickNonEmptyString((info as { fuel_name?: unknown }).fuel_name) ??
+          "";
+        const carDeposit =
+          parseOptionalNumber(
+            (info as { car_deposit?: unknown }).car_deposit ?? info?.car?.deposit,
+          ) ?? null;
+        const locationValue = pickNonEmptyString(info?.location ?? null) ?? undefined;
 
         const formatted = {
           ...EMPTY_BOOKING,
@@ -492,31 +505,20 @@ const ReservationsPage = () => {
           rental_start_date: toLocalDateTimeInput(info?.rental_start_date),
           rental_end_date: toLocalDateTimeInput(info?.rental_end_date),
           coupon_amount: couponAmount,
-          coupon_type: info?.coupon_type ?? info?.discount_type ?? null,
+          coupon_type: couponType,
           coupon_code: info?.coupon_code ?? "",
           customer_name: info?.customer_name ?? info?.customer?.name ?? "",
           customer_email: info?.customer_email ?? info?.customer?.email ?? "",
           customer_phone: info?.customer_phone ?? info?.customer?.phone ?? "",
           customer_age: info?.customer_age ?? info?.customer?.age ?? "",
           customer_id: info?.customer_id ?? info?.customer?.id ?? "",
-          car_id: info?.car_id ?? info?.car?.id ?? null,
+          car_id: carId ?? null,
           car_name: info?.car_name ?? info?.car?.name ?? "",
-          car_image:
-            info?.car_image ??
-            info?.car?.image_preview ??
-            info?.image_preview ??
-            info?.car?.image ??
-            "",
-          car_license_plate:
-            info?.car?.license_plate ?? info?.license_plate ?? info?.car?.plate ?? "",
-          car_transmission:
-            info?.car?.transmission?.name ?? info?.transmission_name ?? "",
-          car_fuel: info?.car?.fuel?.name ?? info?.fuel_name ?? "",
-          car_deposit:
-            parseOptionalNumber(info?.car_deposit ?? info?.car?.deposit) ??
-            info?.car_deposit ??
-            info?.car?.deposit ??
-            null,
+          car_image: carImage,
+          car_license_plate: carLicensePlate,
+          car_transmission: carTransmission,
+          car_fuel: carFuel,
+          car_deposit: carDeposit,
           service_ids: normalizedServiceIds,
           services: Array.isArray(info?.services) ? info.services : [],
           total_services: totalServices ?? 0,
@@ -527,7 +529,10 @@ const ReservationsPage = () => {
           original_price_per_day: originalPricePerDay,
           base_price: basePrice,
           base_price_casco: basePriceCasco,
-          days: parseOptionalNumber(info?.days ?? info?.total_days) ?? info?.days ?? 0,
+          days:
+            parseOptionalNumber(info?.days) ??
+            parseOptionalNumber((info as { total_days?: unknown }).total_days) ??
+            0,
           keep_old_price: normalizeBoolean(info?.keep_old_price, true),
           send_email: normalizeBoolean(info?.send_email, false),
           with_deposit: normalizeBoolean(info?.with_deposit, true),
@@ -538,6 +543,7 @@ const ReservationsPage = () => {
           advance_payment: advancePayment,
           note: info?.note ?? info?.notes ?? "",
           currency_id: info?.currency_id ?? info?.currencyId ?? "",
+          location: locationValue,
         };
 
         setBookingInfo(formatted);

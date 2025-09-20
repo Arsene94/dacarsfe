@@ -8,6 +8,7 @@ import { Popup } from "@/components/ui/popup";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import apiClient from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
 import { cn } from "@/lib/utils";
 import { DynamicPrice, DynamicPricePercentage } from "@/types/admin";
 
@@ -71,7 +72,7 @@ const DynamicPricesPage = () => {
   const fetchPrices = async () => {
     try {
       const res = await apiClient.getDynamicPrices();
-      setPrices(res.data || []);
+      setPrices(extractList(res));
     } catch (e) {
       console.error(e);
     }

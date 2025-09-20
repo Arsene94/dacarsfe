@@ -7,6 +7,7 @@ import { DataTable } from "@/components/ui/table";
 import { Popup } from "@/components/ui/popup";
 import { Input } from "@/components/ui/input";
 import apiClient from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
 import type { Column } from "@/types/ui";
 import type { AdminService } from "@/types/admin";
 
@@ -45,11 +46,7 @@ const AdditionalServicesPage = () => {
     const fetchServices = useCallback(async () => {
         try {
             const response = await apiClient.getServices();
-            const rawList = Array.isArray(response?.data)
-                ? response.data
-                : Array.isArray(response)
-                    ? response
-                    : [];
+            const rawList = extractList(response);
 
             const mapped = rawList
                 .map((item): AdminService | null => {

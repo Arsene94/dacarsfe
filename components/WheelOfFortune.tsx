@@ -142,7 +142,16 @@ const mapPrize = (item: unknown): WheelPrize | null => {
     const colorSource = item.color ?? item.hex ?? item.swatch ?? "#1E7149";
     const probabilitySource = item.probability ?? item.weight ?? item.chance ?? 0;
     const typeSource = item.type ?? item.prize_type ?? item.category ?? "other";
-    const periodId = Number(item.period_id ?? item.period?.id);
+    const periodCandidate =
+        item.period_id ??
+        (isRecord(item.period)
+            ? item.period.id ??
+                (item.period as Record<string, unknown>).period_id ??
+                (item.period as Record<string, unknown>).value
+            : typeof item.period === "string" || typeof item.period === "number"
+                ? item.period
+                : null);
+    const periodIdValue = toOptionalNumber(periodCandidate);
     const amountSource =
         item.amount ??
         item.quantity ??
@@ -157,7 +166,9 @@ const mapPrize = (item: unknown): WheelPrize | null => {
 
     const basePrize: WheelPrize = {
         id,
-        period_id: Number.isFinite(periodId) ? periodId : 0,
+        period_id: typeof periodIdValue === "number" && Number.isFinite(periodIdValue)
+            ? periodIdValue
+            : 0,
         title,
         description: typeof descriptionSource === "string" ? descriptionSource : null,
         amount: toOptionalNumber(amountSource),

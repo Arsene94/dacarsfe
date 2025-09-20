@@ -130,7 +130,7 @@ const FORBIDDEN_MESSAGE = "Forbidden";
 
 type ApiError = Error & { status?: number };
 
-const sanitizePayload = <T extends Record<string, unknown>>(payload: T): Partial<T> => {
+const sanitizePayload = <T extends object>(payload: T): Partial<T> => {
     const cleaned: Partial<T> = {};
     (Object.entries(payload) as [keyof T, T[keyof T]][]).forEach(([key, value]) => {
         if (typeof value !== "undefined") {

@@ -14,12 +14,14 @@ import {
   Users,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {useBooking} from "@/context/BookingContext";
 import { CarCategory } from "@/types/car";
+import type { ApiListResult } from "@/types/api";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -89,43 +91,67 @@ const HeroSection = () => {
 
   useEffect(() => {
     const getCategories = async () => {
-        const res = await apiClient.getCarCategories()
-        const raw = res?.data ?? res
+        const res = await apiClient.getCarCategories();
+        const list = extractList<Record<string, unknown>>(
+            res as ApiListResult<Record<string, unknown>>,
+        );
 
-        const normalized: Array<{ id: number; name: string; order?: number; status?: string | null }> = [];
+        const normalized: Array<{
+            id: number;
+            name: string;
+            order?: number;
+            status?: string | null;
+        }> = [];
 
-        if (Array.isArray(raw)) {
-            raw.forEach((entry) => {
-                if (!isRecord(entry)) return;
-                const id = Number(entry.id ?? entry.value);
-                if (!Number.isFinite(id)) return;
-                const nameSource = entry.name ?? entry.title ?? entry.label;
-                if (typeof nameSource !== "string" || nameSource.trim().length === 0) return;
-                normalized.push({
-                    id,
-                    name: nameSource.trim(),
-                    order: typeof entry.order === "number" ? entry.order : undefined,
-                    status: typeof entry.status === "string" ? entry.status : null,
-                });
+        list.forEach((entry) => {
+            if (!isRecord(entry)) return;
+            const idCandidate = entry.id ?? entry.value ?? entry.key;
+            const id = Number(idCandidate);
+            if (!Number.isFinite(id)) return;
+            const nameSource = entry.name ?? entry.title ?? entry.label;
+            if (typeof nameSource !== "string" || nameSource.trim().length === 0) return;
+            normalized.push({
+                id,
+                name: nameSource.trim(),
+                order:
+                    typeof entry.order === "number"
+                        ? entry.order
+                        : Number.isFinite(Number(entry.order))
+                            ? Number(entry.order)
+                            : undefined,
+                status:
+                    typeof entry.status === "string"
+                        ? entry.status
+                        : null,
             });
-        } else if (isRecord(raw)) {
-            Object.entries(raw).forEach(([id, name]) => {
+        });
+
+        if (
+            normalized.length === 0 &&
+            isRecord(res) &&
+            !("data" in res) &&
+            !("items" in res) &&
+            !("results" in res) &&
+            !("payload" in res)
+        ) {
+            Object.entries(res).forEach(([id, name]) => {
                 const numericId = Number(id);
                 if (!Number.isFinite(numericId)) return;
                 const title = typeof name === "string" ? name : String(name);
-                normalized.push({ id: numericId, name: title });
+                if (title.trim().length === 0) return;
+                normalized.push({ id: numericId, name: title.trim() });
             });
         }
 
         const cat: CarCategory[] = normalized
-            .filter((item) => !item.status || item.status === 'published')
+            .filter((item) => !item.status || item.status === "published")
             .map(({ id, name, order }) => ({ id, name, order }));
 
         cat.sort((a, b) => {
-            const ao = a.order ?? Number.POSITIVE_INFINITY
-            const bo = b.order ?? Number.POSITIVE_INFINITY
-            return ao - bo || a.id - b.id
-        })
+            const ao = a.order ?? Number.POSITIVE_INFINITY;
+            const bo = b.order ?? Number.POSITIVE_INFINITY;
+            return ao - bo || a.id - b.id;
+        });
 
         setCategories(cat);
     };
