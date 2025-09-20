@@ -25,7 +25,7 @@ interface RoleFormState {
   name: string;
   description: string;
   isDefault: boolean;
-  permissionsInput: string;
+  selectedPermissions: string[];
 }
 
 interface RolesPaginationMeta {
@@ -54,12 +54,17 @@ type NormalizedRole = Omit<
   permissions: RolePermission[];
 };
 
+interface NormalizedPermissionGroup {
+  group: string;
+  permissions: RolePermission[];
+}
+
 const defaultFormState: RoleFormState = {
   slug: "",
   name: "",
   description: "",
   isDefault: false,
-  permissionsInput: "",
+  selectedPermissions: [],
 };
 
 const subtleButtonClass =
@@ -157,19 +162,66 @@ const mapRoleResource = (value: unknown): NormalizedRole | null => {
   };
 };
 
-const parsePermissionsInput = (value: string): string[] => {
-  return value
-    .split(/[\n,]+/)
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0)
-    .filter((entry, index, list) =>
-      list.findIndex((candidate) => candidate.toLowerCase() === entry.toLowerCase()) ===
-      index,
-    );
+const mapPermissionGroup = (value: unknown): NormalizedPermissionGroup | null => {
+  if (!value || typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+  const rawGroup = record.group;
+  const group =
+    typeof rawGroup === "string" && rawGroup.trim().length > 0
+      ? rawGroup.trim()
+      : "other";
+
+  const rawPermissions = Array.isArray(record.permissions)
+    ? record.permissions
+    : [];
+
+  const permissions = rawPermissions
+    .map((permission) => mapPermission(permission))
+    .filter((permission): permission is RolePermission => Boolean(permission))
+    .sort((a, b) => a.name.localeCompare(b.name, "ro", { sensitivity: "base" }));
+
+  if (permissions.length === 0) {
+    return null;
+  }
+
+  return {
+    group,
+    permissions,
+  };
 };
 
-const formatPermissionsForInput = (permissions: RolePermission[]): string => {
-  return permissions.map((permission) => permission.name).join("\n");
+const formatGroupTitle = (value: string): string => {
+  if (!value) return "Alte permisiuni";
+
+  const segments = value
+    .split(/[./]/)
+    .map((segment) =>
+      segment
+        .split(/[-_]/)
+        .filter((part) => part.length > 0)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" "),
+    )
+    .filter((segment) => segment.length > 0);
+
+  if (segments.length === 0) {
+    return "Alte permisiuni";
+  }
+
+  return segments.join(" / ");
+};
+
+const formatGroupRoute = (value: string): string => {
+  if (!value) return "/";
+  return `/${value.replace(/[.]/g, "/")}`;
+};
+
+const formatPermissionLabel = (value: string): string => {
+  if (!value) return "";
+  const [, action] = value.split(".");
+  const label = (action ?? value).replace(/[-_.]/g, " ");
+  return label.charAt(0).toUpperCase() + label.slice(1);
 };
 
 const formatDateTime = (value: string | null | undefined): string => {
@@ -211,6 +263,11 @@ const RolesAdminPage = () => {
   const [deleteTarget, setDeleteTarget] = useState<NormalizedRole | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [permissionGroups, setPermissionGroups] = useState<
+    NormalizedPermissionGroup[]
+  >([]);
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [permissionsError, setPermissionsError] = useState<string | null>(null);
 
   const fetchRoles = useCallback(
     async (page: number) => {
@@ -260,9 +317,93 @@ const RolesAdminPage = () => {
     [],
   );
 
+  const fetchPermissionGroups = useCallback(async () => {
+    setPermissionsLoading(true);
+    setPermissionsError(null);
+
+    try {
+      const response = await apiClient.getPermissionGroups();
+
+      let rawGroups: unknown[] = [];
+
+      if (Array.isArray(response)) {
+        rawGroups = response;
+      } else if (
+        response &&
+        typeof response === "object" &&
+        Array.isArray((response as Record<string, unknown>).data)
+      ) {
+        rawGroups = (response as Record<string, unknown>).data as unknown[];
+      }
+
+      const mapped = rawGroups
+        .map((entry) => mapPermissionGroup(entry))
+        .filter(
+          (
+            entry: NormalizedPermissionGroup | null,
+          ): entry is NormalizedPermissionGroup => entry !== null,
+        );
+
+      const grouped = mapped.reduce<Map<string, NormalizedPermissionGroup>>(
+        (acc, group) => {
+          const key = group.group.toLowerCase();
+          const existing = acc.get(key);
+
+          if (existing) {
+            const seen = new Set(
+              existing.permissions.map((permission) =>
+                permission.name.toLowerCase(),
+              ),
+            );
+            const merged = [...existing.permissions];
+
+            group.permissions.forEach((permission) => {
+              const normalizedName = permission.name.toLowerCase();
+              if (seen.has(normalizedName)) return;
+              seen.add(normalizedName);
+              merged.push(permission);
+            });
+
+            merged.sort((a, b) =>
+              a.name.localeCompare(b.name, "ro", { sensitivity: "base" }),
+            );
+
+            acc.set(key, { group: existing.group, permissions: merged });
+          } else {
+            acc.set(key, {
+              group: group.group,
+              permissions: [...group.permissions],
+            });
+          }
+
+          return acc;
+        },
+        new Map(),
+      );
+
+      const normalized = Array.from(grouped.values()).sort((a, b) =>
+        a.group.localeCompare(b.group, "ro", { sensitivity: "base" }),
+      );
+
+      setPermissionGroups(normalized);
+    } catch (err) {
+      console.error("Failed to fetch permission catalogue", err);
+      setPermissionGroups([]);
+      setPermissionsError(
+        "Nu am putut încărca permisiunile. Încearcă din nou.",
+      );
+    } finally {
+      setPermissionsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void fetchRoles(currentPage);
   }, [currentPage, fetchRoles]);
+
+  useEffect(() => {
+    void fetchPermissionGroups();
+  }, [fetchPermissionGroups]);
 
   const visibleRoles = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -285,6 +426,16 @@ const RolesAdminPage = () => {
     });
   }, [roles, searchTerm]);
 
+  const selectedPermissionsSet = useMemo(
+    () =>
+      new Set(
+        formState.selectedPermissions.map((permission) =>
+          permission.toLowerCase(),
+        ),
+      ),
+    [formState.selectedPermissions],
+  );
+
   const openCreateModal = () => {
     setEditingRole(null);
     setFormState({ ...defaultFormState });
@@ -306,7 +457,13 @@ const RolesAdminPage = () => {
       name: role.name,
       description: role.description ?? "",
       isDefault: role.is_default,
-      permissionsInput: formatPermissionsForInput(role.permissions),
+      selectedPermissions: role.permissions
+        .map((permission) => permission.name)
+        .filter((permission, index, list) =>
+          list.findIndex(
+            (candidate) => candidate.toLowerCase() === permission.toLowerCase(),
+          ) === index,
+        ),
     });
     setFormError(null);
     setIsModalOpen(true);
@@ -324,7 +481,7 @@ const RolesAdminPage = () => {
   }, []);
 
   const handleTextChange = (
-    field: "slug" | "name" | "description" | "permissionsInput",
+    field: "slug" | "name" | "description",
   ) =>
     (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setFormState((prev) => ({ ...prev, [field]: event.target.value }));
@@ -333,6 +490,26 @@ const RolesAdminPage = () => {
   const handleCheckboxChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFormState((prev) => ({ ...prev, isDefault: event.target.checked }));
   };
+
+  const handlePermissionToggle = (permissionName: string) =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setFormState((prev) => {
+        const trimmedName = permissionName.trim();
+        const normalizedTarget = trimmedName.toLowerCase();
+        const withoutTarget = prev.selectedPermissions.filter(
+          (permission) => permission.toLowerCase() !== normalizedTarget,
+        );
+
+        if (event.target.checked) {
+          return {
+            ...prev,
+            selectedPermissions: [...withoutTarget, trimmedName],
+          };
+        }
+
+        return { ...prev, selectedPermissions: withoutTarget };
+      });
+    };
 
   const handleSearchReset = () => {
     setSearchTerm("");
@@ -346,6 +523,10 @@ const RolesAdminPage = () => {
   const handleRefresh = () => {
     void fetchRoles(currentPage);
   };
+
+  const handlePermissionsRetry = useCallback(() => {
+    void fetchPermissionGroups();
+  }, [fetchPermissionGroups]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -368,7 +549,16 @@ const RolesAdminPage = () => {
       return;
     }
 
-    const permissions = parsePermissionsInput(formState.permissionsInput);
+    const permissions: string[] = [];
+    const seen = new Set<string>();
+    formState.selectedPermissions.forEach((permission) => {
+      const trimmed = permission.trim();
+      if (!trimmed) return;
+      const normalized = trimmed.toLowerCase();
+      if (seen.has(normalized)) return;
+      seen.add(normalized);
+      permissions.push(trimmed);
+    });
     const description = formState.description.trim();
 
     const payload: Record<string, unknown> = {
@@ -383,13 +573,7 @@ const RolesAdminPage = () => {
       payload.description = null;
     }
 
-    if (
-      editingRole ||
-      permissions.length > 0 ||
-      formState.permissionsInput.trim().length === 0
-    ) {
-      payload.permissions = permissions;
-    }
+    payload.permissions = permissions;
 
     setIsSaving(true);
     try {
@@ -732,25 +916,89 @@ const RolesAdminPage = () => {
             </p>
           </div>
 
-          <div>
-            <label
-              htmlFor="role-permissions"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
+          <fieldset className="space-y-3">
+            <legend className="mb-1 block text-sm font-medium text-gray-700">
               Permisiuni
-            </label>
-            <textarea
-              id="role-permissions"
-              value={formState.permissionsInput}
-              onChange={handleTextChange("permissionsInput")}
-              placeholder={"Introdu permisiunile una pe linie sau separate prin virgule"}
-              className={textareaClass}
-              rows={5}
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Exemplu: bookings.view, bookings.update, bookings.cancel
+            </legend>
+            <p className="text-xs text-gray-500">
+              Bifează permisiunile necesare rolului. Gruparea este realizată după
+              ruta funcționalității.
             </p>
-          </div>
+
+            {permissionsError ? (
+              <div className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <p>{permissionsError}</p>
+                <button
+                  type="button"
+                  onClick={handlePermissionsRetry}
+                  className="inline-flex items-center gap-2 text-xs font-medium text-red-700 underline-offset-2 hover:underline"
+                >
+                  Reîncearcă încărcarea permisiunilor
+                </button>
+              </div>
+            ) : permissionsLoading ? (
+              <div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+                <Loader2 className="h-4 w-4 animate-spin text-jade" />
+                Se încarcă permisiunile disponibile...
+              </div>
+            ) : permissionGroups.length === 0 ? (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-500">
+                Nu există permisiuni disponibile în acest moment.
+              </div>
+            ) : (
+              <div className="max-h-80 space-y-4 overflow-y-auto pr-1">
+                {permissionGroups.map((group) => (
+                  <div
+                    key={group.group}
+                    className="rounded-lg border border-gray-200 p-3"
+                  >
+                    <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                      <span className="text-sm font-semibold text-gray-900">
+                        {formatGroupTitle(group.group)}
+                      </span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        {formatGroupRoute(group.group)}
+                      </span>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {group.permissions.map((permission) => {
+                        const normalizedName = permission.name.toLowerCase();
+                        const isChecked =
+                          selectedPermissionsSet.has(normalizedName);
+
+                        return (
+                          <label
+                            key={permission.id}
+                            className={cn(
+                              "flex items-start gap-2 rounded-lg border border-transparent px-2 py-1.5 transition-colors",
+                              isChecked
+                                ? "bg-jade/5 border-jade/30"
+                                : "hover:border-jade/30",
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={handlePermissionToggle(permission.name)}
+                              className="mt-1 h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+                            />
+                            <span className="flex flex-col">
+                              <span className="text-sm font-medium text-gray-800">
+                                {formatPermissionLabel(permission.name)}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {permission.name}
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </fieldset>
 
           {formError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

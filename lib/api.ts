@@ -960,6 +960,10 @@ class ApiClient {
         });
     }
 
+    async getPermissionGroups(): Promise<unknown> {
+        return this.request<unknown>(`/permissions/grouped`);
+    }
+
     async getCarForBooking(
         params: CarSearchUiPayload & { car_id: number | string },
     ): Promise<CarAvailabilityResponse> {
