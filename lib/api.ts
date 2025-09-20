@@ -44,6 +44,11 @@ type RolePayload = {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+export const FORBIDDEN_EVENT = "dacars:api:forbidden";
+const FORBIDDEN_MESSAGE = "Forbidden";
+
+type ApiError = Error & { status?: number };
+
 const sanitizePayload = <T extends Record<string, any>>(payload: T) => {
     const cleaned: Record<string, any> = {};
     Object.entries(payload).forEach(([key, value]) => {
@@ -79,6 +84,19 @@ class ApiClient {
         if (typeof window !== 'undefined') {
             localStorage.removeItem('auth_token');
         }
+    }
+
+    private notifyForbidden(message?: string) {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const detail =
+            typeof message === 'string' && message.trim().length > 0
+                ? message
+                : FORBIDDEN_MESSAGE;
+
+        window.dispatchEvent(new CustomEvent(FORBIDDEN_EVENT, { detail }));
     }
 
     private async request<T>(
@@ -130,13 +148,36 @@ class ApiClient {
 
             if (!response.ok) {
                 let errorMessage = `HTTP error! status: ${response.status}`;
+                let errorData: any = null;
+
                 try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || errorMessage;
+                    const errorContentType = response.headers.get('content-type');
+                    if (errorContentType?.includes('application/json')) {
+                        errorData = await response.json();
+                        if (typeof errorData?.message === 'string') {
+                            const normalizedMessage = errorData.message.trim();
+                            if (normalizedMessage.length > 0) {
+                                errorMessage = normalizedMessage;
+                                errorData.message = normalizedMessage;
+                            }
+                        }
+                    } else {
+                        errorMessage = response.statusText || errorMessage;
+                    }
                 } catch (e) {
                     errorMessage = response.statusText || errorMessage;
                 }
-                throw new Error(errorMessage);
+
+                if (
+                    response.status === 403 &&
+                    (errorData?.message === FORBIDDEN_MESSAGE || errorMessage === FORBIDDEN_MESSAGE)
+                ) {
+                    this.notifyForbidden(errorMessage);
+                }
+
+                const apiError: ApiError = new Error(errorMessage);
+                apiError.status = response.status;
+                throw apiError;
             }
 
             const contentType = response.headers.get('content-type');
