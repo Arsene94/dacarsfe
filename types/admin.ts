@@ -1,5 +1,5 @@
 import type { ApiCar } from "@/types/car";
-import type { ReservationWheelPrizeSummary } from "@/types/reservation";
+import type { ReservationWheelPrizeSummary, ServiceStatus } from "@/types/reservation";
 
 export interface AdminReservation {
   id: string;
@@ -159,6 +159,14 @@ export interface AdminService {
   id: number;
   name: string;
   price: number;
+  description?: string | null;
+  content?: string | null;
+  status?: ServiceStatus | null;
+  image?: string | null;
+  logo?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  [key: string]: unknown;
 }
 
 export interface AdminBookingLinkedService {

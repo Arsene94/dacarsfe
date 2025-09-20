@@ -1,10 +1,17 @@
-import { extractItem } from "@/lib/apiResponse";
+import { extractItem, extractList } from "@/lib/apiResponse";
 import { mapCarSearchFilters } from "@/lib/mapFilters";
 import { toQuery } from "@/lib/qs";
 import type { WidgetActivityResponse } from "@/types/activity";
 import type { ActivityLog, ActivityLogListParams } from "@/types/activity-log";
 import { ensureUser } from "@/types/auth";
-import type { AuthResponse, User } from "@/types/auth";
+import type {
+    AdminLoginPayload,
+    AdminRegisterPayload,
+    AuthResponse,
+    ForgotPasswordPayload,
+    ResetPasswordPayload,
+    User,
+} from "@/types/auth";
 import type {
     AdminBookingResource,
     BookingContractResponse,
@@ -26,7 +33,26 @@ import type {
     CarCategory,
     CarFilterParams,
     CarSearchUiPayload,
+    CarSyncCategoriesPayload,
+    CarSyncColorsPayload,
+    CarTranslation,
 } from "@/types/car";
+import type {
+    BlogCategory,
+    BlogCategoryPayload,
+    BlogPost,
+    BlogPostListParams,
+    BlogPostPayload,
+    BlogTag,
+    BlogTagPayload,
+} from "@/types/blog";
+import type {
+    Coupon,
+    CouponListParams,
+    CouponPayload,
+    CouponQuickValidationParams,
+    CouponQuickValidationResponse,
+} from "@/types/coupon";
 import type {
     MailBrandingResponse,
     MailBrandingUpdatePayload,
@@ -44,8 +70,22 @@ import type {
     QuotePriceResponse,
     ReservationPayload,
     Service,
+    ServiceListParams,
+    ServicePayload,
+    ServiceTranslation,
 } from "@/types/reservation";
 import type { Role } from "@/types/roles";
+import type {
+    Customer,
+    CustomerAuthResponse,
+    CustomerForgotPasswordPayload,
+    CustomerLoginPayload,
+    CustomerProfileResponse,
+    CustomerRegisterPayload,
+    CustomerResetPasswordPayload,
+    CustomerVerifyPayload,
+} from "@/types/customer";
+import type { Tax, TaxListParams, TaxPayload, TaxTranslation } from "@/types/tax";
 import type {
     WheelOfFortunePeriod,
     WheelOfFortunePrizePayload,
@@ -315,6 +355,53 @@ class ApiClient {
         });
     }
 
+    async syncCarCategories(
+        id: number | string,
+        payload: CarSyncCategoriesPayload,
+    ): Promise<UnknownRecord> {
+        const body = sanitizePayload(payload);
+        return this.request<UnknownRecord>(`/cars/${id}/sync-categories`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async syncCarColors(id: number | string, payload: CarSyncColorsPayload): Promise<UnknownRecord> {
+        const body = sanitizePayload(payload);
+        return this.request<UnknownRecord>(`/cars/${id}/sync-colors`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async getCarTranslations(id: number | string): Promise<CarTranslation[]> {
+        const response = await this.request<CarTranslation[] | ApiListResult<CarTranslation>>(
+            `/cars/${id}/translations`,
+        );
+        return Array.isArray(response) ? response : extractList<CarTranslation>(response);
+    }
+
+    async upsertCarTranslation(
+        id: number | string,
+        lang: string,
+        payload: Partial<CarTranslation>,
+    ): Promise<CarTranslation> {
+        const { lang_code: _ignored, ...rest } = payload;
+        const body = sanitizePayload(rest);
+        const language = encodeURIComponent(lang.trim());
+        return this.request<CarTranslation>(`/cars/${id}/translations/${language}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const language = encodeURIComponent(lang.trim());
+        return this.request<ApiDeleteResponse>(`/cars/${id}/translations/${language}`, {
+            method: 'DELETE',
+        });
+    }
+
     async getCarMakes(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
@@ -327,6 +414,55 @@ class ApiClient {
 
     async getCarMake(id: number | string): Promise<ApiItemResult<LookupRecord>> {
         return this.request<ApiItemResult<LookupRecord>>(`/car-makes/${id}`);
+    }
+
+    async createCarMake(payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<LookupRecord>>(`/car-makes`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateCarMake(id: number | string, payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<LookupRecord>>(`/car-makes/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarMake(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/car-makes/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getCarMakeTranslations(id: number | string): Promise<UnknownRecord[]> {
+        const response = await this.request<UnknownRecord[] | ApiListResult<UnknownRecord>>(
+            `/car-makes/${id}/translations`,
+        );
+        return Array.isArray(response) ? response : extractList<UnknownRecord>(response);
+    }
+
+    async upsertCarMakeTranslation(
+        id: number | string,
+        lang: string,
+        payload: Record<string, unknown>,
+    ): Promise<UnknownRecord> {
+        const body = sanitizePayload(payload);
+        const language = encodeURIComponent(lang.trim());
+        return this.request<UnknownRecord>(`/car-makes/${id}/translations/${language}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarMakeTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const language = encodeURIComponent(lang.trim());
+        return this.request<ApiDeleteResponse>(`/car-makes/${id}/translations/${language}`, {
+            method: 'DELETE',
+        });
     }
 
     async getCarTypes(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
@@ -343,6 +479,55 @@ class ApiClient {
         return this.request<ApiItemResult<LookupRecord>>(`/car-types/${id}`);
     }
 
+    async createCarType(payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<LookupRecord>>(`/car-types`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateCarType(id: number | string, payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<LookupRecord>>(`/car-types/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarType(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/car-types/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getCarTypeTranslations(id: number | string): Promise<UnknownRecord[]> {
+        const response = await this.request<UnknownRecord[] | ApiListResult<UnknownRecord>>(
+            `/car-types/${id}/translations`,
+        );
+        return Array.isArray(response) ? response : extractList<UnknownRecord>(response);
+    }
+
+    async upsertCarTypeTranslation(
+        id: number | string,
+        lang: string,
+        payload: Record<string, unknown>,
+    ): Promise<UnknownRecord> {
+        const body = sanitizePayload(payload);
+        const language = encodeURIComponent(lang.trim());
+        return this.request<UnknownRecord>(`/car-types/${id}/translations/${language}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarTypeTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const language = encodeURIComponent(lang.trim());
+        return this.request<ApiDeleteResponse>(`/car-types/${id}/translations/${language}`, {
+            method: 'DELETE',
+        });
+    }
+
     async getCarTransmissions(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
@@ -357,6 +542,55 @@ class ApiClient {
         return this.request<ApiItemResult<LookupRecord>>(`/car-transmissions/${id}`);
     }
 
+    async createCarTransmission(payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<LookupRecord>>(`/car-transmissions`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateCarTransmission(id: number | string, payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<LookupRecord>>(`/car-transmissions/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarTransmission(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/car-transmissions/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getCarTransmissionTranslations(id: number | string): Promise<UnknownRecord[]> {
+        const response = await this.request<UnknownRecord[] | ApiListResult<UnknownRecord>>(
+            `/car-transmissions/${id}/translations`,
+        );
+        return Array.isArray(response) ? response : extractList<UnknownRecord>(response);
+    }
+
+    async upsertCarTransmissionTranslation(
+        id: number | string,
+        lang: string,
+        payload: Record<string, unknown>,
+    ): Promise<UnknownRecord> {
+        const body = sanitizePayload(payload);
+        const language = encodeURIComponent(lang.trim());
+        return this.request<UnknownRecord>(`/car-transmissions/${id}/translations/${language}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarTransmissionTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const language = encodeURIComponent(lang.trim());
+        return this.request<ApiDeleteResponse>(`/car-transmissions/${id}/translations/${language}`, {
+            method: 'DELETE',
+        });
+    }
+
     async getCarFuels(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
@@ -369,6 +603,55 @@ class ApiClient {
 
     async getCarFuel(id: number | string): Promise<ApiItemResult<LookupRecord>> {
         return this.request<ApiItemResult<LookupRecord>>(`/car-fuels/${id}`);
+    }
+
+    async createCarFuel(payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<LookupRecord>>(`/car-fuels`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateCarFuel(id: number | string, payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<LookupRecord>>(`/car-fuels/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarFuel(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/car-fuels/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getCarFuelTranslations(id: number | string): Promise<UnknownRecord[]> {
+        const response = await this.request<UnknownRecord[] | ApiListResult<UnknownRecord>>(
+            `/car-fuels/${id}/translations`,
+        );
+        return Array.isArray(response) ? response : extractList<UnknownRecord>(response);
+    }
+
+    async upsertCarFuelTranslation(
+        id: number | string,
+        lang: string,
+        payload: Record<string, unknown>,
+    ): Promise<UnknownRecord> {
+        const body = sanitizePayload(payload);
+        const language = encodeURIComponent(lang.trim());
+        return this.request<UnknownRecord>(`/car-fuels/${id}/translations/${language}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarFuelTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const language = encodeURIComponent(lang.trim());
+        return this.request<ApiDeleteResponse>(`/car-fuels/${id}/translations/${language}`, {
+            method: 'DELETE',
+        });
     }
 
     async getCarCategories(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<CarCategory>> {
@@ -401,6 +684,55 @@ class ApiClient {
 
     async getCarColor(id: number | string): Promise<ApiItemResult<LookupRecord>> {
         return this.request<ApiItemResult<LookupRecord>>(`/car-colors/${id}`);
+    }
+
+    async createCarColor(payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<LookupRecord>>(`/car-colors`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateCarColor(id: number | string, payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<LookupRecord>>(`/car-colors/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarColor(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/car-colors/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getCarColorTranslations(id: number | string): Promise<UnknownRecord[]> {
+        const response = await this.request<UnknownRecord[] | ApiListResult<UnknownRecord>>(
+            `/car-colors/${id}/translations`,
+        );
+        return Array.isArray(response) ? response : extractList<UnknownRecord>(response);
+    }
+
+    async upsertCarColorTranslation(
+        id: number | string,
+        lang: string,
+        payload: Record<string, unknown>,
+    ): Promise<UnknownRecord> {
+        const body = sanitizePayload(payload);
+        const language = encodeURIComponent(lang.trim());
+        return this.request<UnknownRecord>(`/car-colors/${id}/translations/${language}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarColorTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const language = encodeURIComponent(lang.trim());
+        return this.request<ApiDeleteResponse>(`/car-colors/${id}/translations/${language}`, {
+            method: 'DELETE',
+        });
     }
 
     async getUsers(
@@ -598,22 +930,245 @@ class ApiClient {
         );
     }
 
-    async getServices(): Promise<ApiListResult<Service>> {
-        return this.request<ApiListResult<Service>>(`/services`);
+    async getServices(params: ServiceListParams = {}): Promise<ApiListResult<Service>> {
+        const searchParams = new URLSearchParams();
+        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
+            searchParams.append('page', params.page.toString());
+        }
+        const perPageCandidate =
+            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
+                ? params.perPage
+                : typeof (params as { per_page?: number }).per_page === 'number'
+                    ? (params as { per_page: number }).per_page
+                    : undefined;
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
+            searchParams.append('limit', params.limit.toString());
+        }
+        if (typeof params.status === 'string' && params.status.trim().length > 0) {
+            searchParams.append('status', params.status.trim());
+        }
+        if (typeof params.name_like === 'string' && params.name_like.trim().length > 0) {
+            searchParams.append('name_like', params.name_like.trim());
+        }
+        if (typeof params.include === 'string' && params.include.trim().length > 0) {
+            searchParams.append('include', params.include.trim());
+        }
+        const query = searchParams.toString();
+        return this.request<ApiListResult<Service>>(`/services${query ? `?${query}` : ''}`);
     }
 
-    async createService(payload: { name: string; price: number }): Promise<ApiItemResult<Service>> {
+    async getService(id: number | string): Promise<ApiItemResult<Service>> {
+        return this.request<ApiItemResult<Service>>(`/services/${id}`);
+    }
+
+    async createService(payload: ServicePayload): Promise<ApiItemResult<Service>> {
+        const body = sanitizePayload(payload);
         return this.request<ApiItemResult<Service>>(`/services`, {
             method: 'POST',
-            body: JSON.stringify(payload),
+            body: JSON.stringify(body),
         });
     }
 
-    async updateService(id: number, payload: { name: string; price: number }): Promise<ApiItemResult<Service>> {
+    async updateService(id: number | string, payload: ServicePayload): Promise<ApiItemResult<Service>> {
+        const body = sanitizePayload(payload);
         return this.request<ApiItemResult<Service>>(`/services/${id}`, {
             method: 'PUT',
-            body: JSON.stringify(payload),
+            body: JSON.stringify(body),
         });
+    }
+
+    async deleteService(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/services/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getServiceTranslations(id: number | string): Promise<ServiceTranslation[]> {
+        const response = await this.request<ServiceTranslation[] | ApiListResult<ServiceTranslation>>(
+            `/services/${id}/translations`,
+        );
+        return Array.isArray(response) ? response : extractList<ServiceTranslation>(response);
+    }
+
+    async upsertServiceTranslation(
+        id: number | string,
+        lang: string,
+        payload: Partial<ServiceTranslation>,
+    ): Promise<ServiceTranslation> {
+        const { lang_code: _ignored, ...rest } = payload;
+        const body = sanitizePayload(rest);
+        const language = encodeURIComponent(lang.trim());
+        return this.request<ServiceTranslation>(`/services/${id}/translations/${language}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteServiceTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const language = encodeURIComponent(lang.trim());
+        return this.request<ApiDeleteResponse>(`/services/${id}/translations/${language}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getTaxes(params: TaxListParams = {}): Promise<ApiListResult<Tax>> {
+        const searchParams = new URLSearchParams();
+        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
+            searchParams.append('page', params.page.toString());
+        }
+        const perPageCandidate =
+            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
+                ? params.perPage
+                : typeof (params as { per_page?: number }).per_page === 'number'
+                    ? (params as { per_page: number }).per_page
+                    : undefined;
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
+            searchParams.append('limit', params.limit.toString());
+        }
+        if (typeof params.status === 'string' && params.status.trim().length > 0) {
+            searchParams.append('status', params.status.trim());
+        }
+        if (typeof params.name_like === 'string' && params.name_like.trim().length > 0) {
+            searchParams.append('name_like', params.name_like.trim());
+        }
+        const query = searchParams.toString();
+        return this.request<ApiListResult<Tax>>(`/taxes${query ? `?${query}` : ''}`);
+    }
+
+    async getTax(id: number | string): Promise<ApiItemResult<Tax>> {
+        return this.request<ApiItemResult<Tax>>(`/taxes/${id}`);
+    }
+
+    async createTax(payload: TaxPayload): Promise<ApiItemResult<Tax>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<Tax>>(`/taxes`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateTax(id: number | string, payload: TaxPayload): Promise<ApiItemResult<Tax>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<Tax>>(`/taxes/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteTax(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/taxes/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getTaxTranslations(id: number | string): Promise<TaxTranslation[]> {
+        const response = await this.request<TaxTranslation[] | ApiListResult<TaxTranslation>>(
+            `/taxes/${id}/translations`,
+        );
+        return Array.isArray(response) ? response : extractList<TaxTranslation>(response);
+    }
+
+    async upsertTaxTranslation(
+        id: number | string,
+        lang: string,
+        payload: Partial<TaxTranslation>,
+    ): Promise<TaxTranslation> {
+        const { lang_code: _ignored, ...rest } = payload;
+        const body = sanitizePayload(rest);
+        const language = encodeURIComponent(lang.trim());
+        return this.request<TaxTranslation>(`/taxes/${id}/translations/${language}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteTaxTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const language = encodeURIComponent(lang.trim());
+        return this.request<ApiDeleteResponse>(`/taxes/${id}/translations/${language}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getCoupons(params: CouponListParams = {}): Promise<ApiListResult<Coupon>> {
+        const searchParams = new URLSearchParams();
+        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
+            searchParams.append('page', params.page.toString());
+        }
+        const perPageCandidate =
+            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
+                ? params.perPage
+                : typeof (params as { per_page?: number }).per_page === 'number'
+                    ? (params as { per_page: number }).per_page
+                    : undefined;
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
+            searchParams.append('limit', params.limit.toString());
+        }
+        if (typeof params.search === 'string' && params.search.trim().length > 0) {
+            searchParams.append('search', params.search.trim());
+        }
+        if (typeof params.code_like === 'string' && params.code_like.trim().length > 0) {
+            searchParams.append('code_like', params.code_like.trim());
+        }
+        if (typeof params.type === 'string' && params.type.trim().length > 0) {
+            searchParams.append('type', params.type.trim());
+        }
+        if (typeof params.is_unlimited !== 'undefined') {
+            searchParams.append('is_unlimited', String(params.is_unlimited));
+        }
+        if (typeof params.is_unlimited_expires !== 'undefined') {
+            searchParams.append('is_unlimited_expires', String(params.is_unlimited_expires));
+        }
+        const query = searchParams.toString();
+        return this.request<ApiListResult<Coupon>>(`/coupons${query ? `?${query}` : ''}`);
+    }
+
+    async getCoupon(id: number | string): Promise<ApiItemResult<Coupon>> {
+        return this.request<ApiItemResult<Coupon>>(`/coupons/${id}`);
+    }
+
+    async createCoupon(payload: CouponPayload): Promise<ApiItemResult<Coupon>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<Coupon>>(`/coupons`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateCoupon(id: number | string, payload: CouponPayload): Promise<ApiItemResult<Coupon>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<Coupon>>(`/coupons/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCoupon(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/coupons/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async validateCouponQuick(params: CouponQuickValidationParams): Promise<CouponQuickValidationResponse> {
+        const searchParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if (typeof value === 'undefined' || value === null) {
+                return;
+            }
+            searchParams.append(key, String(value));
+        });
+        const query = searchParams.toString();
+        return this.request<CouponQuickValidationResponse>(
+            `/coupons/validate${query ? `?${query}` : ''}`,
+        );
     }
 
     async validateDiscountCode(params: DiscountValidationPayload): Promise<DiscountValidationResponse> {
@@ -737,6 +1292,165 @@ class ApiClient {
         return this.request<ApiListResult<CustomerPhoneSearchResult>>(`/customers/get/byphone`, {
             method: 'POST',
             body: JSON.stringify({ phone }),
+        });
+    }
+
+    async getBlogCategories(
+        params: { page?: number; perPage?: number; limit?: number; search?: string } = {},
+    ): Promise<ApiListResult<BlogCategory>> {
+        const searchParams = new URLSearchParams();
+        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
+            searchParams.append('page', params.page.toString());
+        }
+        const perPageCandidate =
+            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
+                ? params.perPage
+                : undefined;
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
+            searchParams.append('limit', params.limit.toString());
+        }
+        if (typeof params.search === 'string' && params.search.trim().length > 0) {
+            searchParams.append('search', params.search.trim());
+        }
+        const query = searchParams.toString();
+        return this.request<ApiListResult<BlogCategory>>(`/blog-categories${query ? `?${query}` : ''}`);
+    }
+
+    async getBlogCategory(id: number | string): Promise<ApiItemResult<BlogCategory>> {
+        return this.request<ApiItemResult<BlogCategory>>(`/blog-categories/${id}`);
+    }
+
+    async createBlogCategory(payload: BlogCategoryPayload): Promise<ApiItemResult<BlogCategory>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<BlogCategory>>(`/blog-categories`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateBlogCategory(id: number | string, payload: BlogCategoryPayload): Promise<ApiItemResult<BlogCategory>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<BlogCategory>>(`/blog-categories/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteBlogCategory(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/blog-categories/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getBlogTags(
+        params: { page?: number; perPage?: number; limit?: number; search?: string } = {},
+    ): Promise<ApiListResult<BlogTag>> {
+        const searchParams = new URLSearchParams();
+        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
+            searchParams.append('page', params.page.toString());
+        }
+        const perPageCandidate =
+            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
+                ? params.perPage
+                : undefined;
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
+            searchParams.append('limit', params.limit.toString());
+        }
+        if (typeof params.search === 'string' && params.search.trim().length > 0) {
+            searchParams.append('search', params.search.trim());
+        }
+        const query = searchParams.toString();
+        return this.request<ApiListResult<BlogTag>>(`/blog-tags${query ? `?${query}` : ''}`);
+    }
+
+    async getBlogTag(id: number | string): Promise<ApiItemResult<BlogTag>> {
+        return this.request<ApiItemResult<BlogTag>>(`/blog-tags/${id}`);
+    }
+
+    async createBlogTag(payload: BlogTagPayload): Promise<ApiItemResult<BlogTag>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<BlogTag>>(`/blog-tags`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateBlogTag(id: number | string, payload: BlogTagPayload): Promise<ApiItemResult<BlogTag>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<BlogTag>>(`/blog-tags/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteBlogTag(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/blog-tags/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getBlogPosts(params: BlogPostListParams = {}): Promise<ApiListResult<BlogPost>> {
+        const searchParams = new URLSearchParams();
+        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
+            searchParams.append('page', params.page.toString());
+        }
+        const perPageCandidate =
+            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
+                ? params.perPage
+                : typeof (params as { per_page?: number }).per_page === 'number'
+                    ? (params as { per_page: number }).per_page
+                    : undefined;
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
+            searchParams.append('limit', params.limit.toString());
+        }
+        if (typeof params.category_id !== 'undefined' && params.category_id !== null) {
+            searchParams.append('category_id', String(params.category_id));
+        }
+        if (typeof params.status === 'string' && params.status.trim().length > 0) {
+            searchParams.append('status', params.status.trim());
+        }
+        if (typeof params.search === 'string' && params.search.trim().length > 0) {
+            searchParams.append('search', params.search.trim());
+        }
+        if (typeof params.include === 'string' && params.include.trim().length > 0) {
+            searchParams.append('include', params.include.trim());
+        }
+        const query = searchParams.toString();
+        return this.request<ApiListResult<BlogPost>>(`/blog-posts${query ? `?${query}` : ''}`);
+    }
+
+    async getBlogPost(id: number | string): Promise<ApiItemResult<BlogPost>> {
+        return this.request<ApiItemResult<BlogPost>>(`/blog-posts/${id}`);
+    }
+
+    async createBlogPost(payload: BlogPostPayload): Promise<ApiItemResult<BlogPost>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<BlogPost>>(`/blog-posts`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateBlogPost(id: number | string, payload: BlogPostPayload): Promise<ApiItemResult<BlogPost>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<BlogPost>>(`/blog-posts/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteBlogPost(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/blog-posts/${id}`, {
+            method: 'DELETE',
         });
     }
 
@@ -972,7 +1686,7 @@ class ApiClient {
 
     // Authentication helpers
 
-    async login(payload: { login: string; password: string }): Promise<AuthResponse> {
+    async login(payload: AdminLoginPayload): Promise<AuthResponse> {
         const response = await this.request<AuthResponse>(`/auth/login`, {
             method: 'POST',
             body: JSON.stringify(payload),
@@ -987,6 +1701,45 @@ class ApiClient {
         };
     }
 
+    async register(payload: AdminRegisterPayload): Promise<AuthResponse> {
+        const response = await this.request<AuthResponse>(`/auth/register`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+        if (response?.token) {
+            this.setToken(response.token);
+        }
+        const user = ensureUser(response?.user);
+        return {
+            ...response,
+            user,
+        };
+    }
+
+    async requestPasswordReset(
+        payload: ForgotPasswordPayload,
+        options: { public?: boolean } = {},
+    ): Promise<ApiMessageResponse> {
+        const endpoint = options.public ? `/password/forgot` : `/auth/password/forgot`;
+        return this.request<ApiMessageResponse>(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async resetPassword(
+        payload: ResetPasswordPayload,
+        options: { public?: boolean } = {},
+    ): Promise<ApiMessageResponse> {
+        const endpoint = options.public ? `/password/reset` : `/auth/password/reset`;
+        const response = await this.request<ApiMessageResponse>(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+        this.removeToken();
+        return response;
+    }
+
     async me(): Promise<User> {
         const response = await this.request<ApiItemResult<User>>(`/auth/me`);
         const user = extractItem<User>(response);
@@ -996,6 +1749,89 @@ class ApiClient {
     async logout(): Promise<void> {
         await this.request(`/auth/logout`, { method: 'POST' });
         this.removeToken();
+    }
+
+    async logoutAll(): Promise<void> {
+        await this.request(`/auth/logout-all`, { method: 'POST' });
+        this.removeToken();
+    }
+
+    async customerRegister(payload: CustomerRegisterPayload): Promise<CustomerAuthResponse> {
+        return this.request<CustomerAuthResponse>(`/customer/register`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async customerLogin(payload: CustomerLoginPayload): Promise<CustomerAuthResponse> {
+        return this.request<CustomerAuthResponse>(`/customer/login`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async customerForgotPassword(payload: CustomerForgotPasswordPayload): Promise<ApiMessageResponse> {
+        return this.request<ApiMessageResponse>(`/customer/password/forgot`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async customerResetPassword(payload: CustomerResetPasswordPayload): Promise<ApiMessageResponse> {
+        return this.request<ApiMessageResponse>(`/customer/password/reset`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async customerVerify(payload: CustomerVerifyPayload): Promise<ApiMessageResponse> {
+        return this.request<ApiMessageResponse>(`/customer/verify`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async customerMe(token: string): Promise<Customer> {
+        const normalized = token.trim();
+        if (!normalized) {
+            throw new Error('Customer token is required');
+        }
+        const response = await this.request<CustomerProfileResponse | ApiItemResult<Customer>>(`/customer/me`, {
+            headers: { Authorization: `Bearer ${normalized}` },
+        });
+        if (response && typeof response === 'object' && 'data' in response) {
+            const profile = (response as CustomerProfileResponse).data;
+            if (profile) {
+                return profile;
+            }
+        }
+        const customer = extractItem<Customer>(response as ApiItemResult<Customer>);
+        if (!customer) {
+            throw new Error('Invalid customer profile response');
+        }
+        return customer;
+    }
+
+    async customerLogout(token: string): Promise<ApiMessageResponse> {
+        const normalized = token.trim();
+        if (!normalized) {
+            throw new Error('Customer token is required');
+        }
+        return this.request<ApiMessageResponse>(`/customer/logout`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${normalized}` },
+        });
+    }
+
+    async customerLogoutAll(token: string): Promise<ApiMessageResponse> {
+        const normalized = token.trim();
+        if (!normalized) {
+            throw new Error('Customer token is required');
+        }
+        return this.request<ApiMessageResponse>(`/customer/logout-all`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${normalized}` },
+        });
     }
 
     async fetchWidgetActivity(period: string, paginate = 20): Promise<WidgetActivityResponse> {

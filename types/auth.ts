@@ -19,6 +19,31 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface AdminLoginPayload {
+  login: string;
+  password: string;
+}
+
+export interface AdminRegisterPayload {
+  first_name: string;
+  last_name: string;
+  email: string;
+  username: string;
+  password: string;
+  [key: string]: unknown;
+}
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 

@@ -103,6 +103,25 @@ export interface CarSearchUiPayload {
   [key: string]: unknown;
 }
 
+export interface CarTranslation {
+  lang_code: string;
+  dacars_cars_id?: number;
+  name?: string | null;
+  description?: string | null;
+  content?: string | null;
+  [key: string]: unknown;
+}
+
+export interface CarSyncCategoriesPayload {
+  category_ids?: Array<number | string>;
+  category_id?: number | string;
+}
+
+export interface CarSyncColorsPayload {
+  color_ids?: Array<number | string>;
+  color_id?: number | string;
+}
+
 export interface CarFilterParams {
   start_date?: string;
   end_date?: string;

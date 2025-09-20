@@ -1,6 +1,12 @@
 import type { ApiCar, Car } from "@/types/car";
 import type { WheelOfFortuneType } from "@/types/wheel";
 
+export type ServiceStatus =
+  | "published"
+  | "pending"
+  | "unavailable"
+  | (string & {});
+
 export interface ReservationFormData {
   customer_name: string;
   customer_email: string;
@@ -15,11 +21,46 @@ export interface ReservationFormData {
   coupon_code: string;
 }
 
-export type Service = {
+export interface Service {
   id: number;
   name: string;
   price: number;
-};
+  description?: string | null;
+  content?: string | null;
+  status?: ServiceStatus | null;
+  image?: string | null;
+  logo?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  [key: string]: unknown;
+}
+
+export type ServicePayload = Partial<{
+  name: string;
+  description: string | null;
+  content: string | null;
+  price: number | string;
+  status: ServiceStatus | null;
+  image: string | null;
+  logo: string | null;
+}> & Record<string, unknown>;
+
+export interface ServiceListParams {
+  page?: number;
+  perPage?: number;
+  limit?: number;
+  status?: string;
+  name_like?: string;
+  include?: string;
+}
+
+export interface ServiceTranslation {
+  lang_code: string;
+  name?: string | null;
+  description?: string | null;
+  content?: string | null;
+  [key: string]: unknown;
+}
 
 export interface ReservationWheelPrizeSummary {
   wheel_of_fortune_id: number | null;
