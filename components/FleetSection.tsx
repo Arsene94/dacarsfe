@@ -27,7 +27,7 @@ const toImageUrl = (p?: string | null): string => {
     return `${base}/${path}`;
 };
 
-const parsePrice = (priceText?: string): number | undefined => {
+const parsePrice = (priceText?: string | null): number | undefined => {
     if (!priceText) return undefined;
     const m = priceText.match(/([\d.,]+)/);
     if (!m) return undefined;

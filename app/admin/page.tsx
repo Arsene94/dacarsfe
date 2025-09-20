@@ -97,6 +97,21 @@ const normalizeBoolean = (value: unknown, defaultValue = false): boolean => {
     return defaultValue;
 };
 
+const pickLookupName = (value: unknown): string | undefined => {
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    if (isRecord(value)) {
+        const name = toSafeString(value.name ?? (value as { label?: unknown }).label);
+        const trimmed = name.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    return undefined;
+};
+
 const toLocalDateTimeInput = (iso?: string | null): string => {
     if (!iso) return "";
     const date = new Date(iso);
@@ -554,11 +569,11 @@ const AdminDashboard = () => {
                 "",
             );
             const carTransmission = toSafeString(
-                carInfo?.transmission?.name ?? info.transmission_name,
+                pickLookupName(carInfo?.transmission) ?? info.transmission_name,
                 "",
             );
             const carFuel = toSafeString(
-                carInfo?.fuel?.name ?? info.fuel_name,
+                pickLookupName(carInfo?.fuel) ?? info.fuel_name,
                 "",
             );
             const carDeposit =

@@ -104,6 +104,31 @@ const resolveFirstString = (...values: Array<unknown>): string | null => {
     return null;
 };
 
+const resolveLookupName = (value: unknown): string | null => {
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+
+    if (value && typeof value === "object" && "name" in value) {
+        const name = (value as { name?: unknown }).name;
+        if (typeof name === "string") {
+            const trimmed = name.trim();
+            return trimmed.length > 0 ? trimmed : null;
+        }
+    }
+
+    return null;
+};
+
+const resolveLookupId = (value: unknown): number | null => {
+    if (value && typeof value === "object" && "id" in value) {
+        return coerceId((value as { id?: unknown }).id);
+    }
+
+    return coerceId(value);
+};
+
 const mapApiCarToCar = (apiCar: ApiCar): Car => {
     const extras = apiCar as Record<string, unknown>;
     const imageCandidates: Array<unknown> = [
@@ -150,21 +175,20 @@ const mapApiCarToCar = (apiCar: ApiCar): Car => {
     const passengers = Math.max(0, Math.round(coerceNumber(apiCar.number_of_seats)));
     const transmissionName =
         resolveFirstString(
-            apiCar.transmission?.name,
+            resolveLookupName(apiCar.transmission),
             extras["transmission_name"],
             extras["transmissionName"],
         ) ?? "—";
-    const transmissionId = coerceId(
-        apiCar.transmission?.id ?? extras["transmission_id"],
-    );
+    const transmissionId =
+        resolveLookupId(apiCar.transmission) ?? coerceId(extras["transmission_id"]);
 
     const fuelName =
         resolveFirstString(
-            apiCar.fuel?.name,
+            resolveLookupName(apiCar.fuel),
             extras["fuel_name"],
             extras["fuelName"],
         ) ?? "—";
-    const fuelId = coerceId(apiCar.fuel?.id ?? extras["fuel_id"]);
+    const fuelId = resolveLookupId(apiCar.fuel) ?? coerceId(extras["fuel_id"]);
 
     const totalDepositRaw =
         apiCar.total_deposit ?? (extras["totalDeposit"] as unknown);

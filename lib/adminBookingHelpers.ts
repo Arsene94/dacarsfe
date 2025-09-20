@@ -11,26 +11,47 @@ import type { ApiCar, CarAvailabilityResponse } from "@/types/car";
 const toTrimmedString = (value: unknown): string =>
   typeof value === "string" ? value.trim() : "";
 
-export const normalizeAdminCarOption = (car: ApiCar): AdminBookingCarOption => {
-  const license = car.license_plate ?? car.licensePlate ?? car.plate ?? "";
+export const normalizeAdminCarOption = (
+  car: ApiCar | AdminBookingCarOption,
+): AdminBookingCarOption => {
+  const license =
+    toTrimmedString(car.license_plate) ||
+    toTrimmedString((car as { licensePlate?: unknown }).licensePlate) ||
+    toTrimmedString((car as { plate?: unknown }).plate);
   const transmissionName =
     typeof car.transmission === "string"
-      ? car.transmission
-      : car.transmission?.name ?? car.transmission_name ?? car.transmissionName ?? "";
+      ? car.transmission.trim()
+      :
+          toTrimmedString((car.transmission as { name?: unknown })?.name) ||
+          toTrimmedString(car.transmission_name) ||
+          toTrimmedString(car.transmissionName);
   const fuelName =
     typeof car.fuel === "string"
-      ? car.fuel
-      : car.fuel?.name ?? car.fuel_name ?? car.fuelName ?? "";
+      ? car.fuel.trim()
+      :
+          toTrimmedString((car.fuel as { name?: unknown })?.name) ||
+          toTrimmedString(car.fuel_name) ||
+          toTrimmedString(car.fuelName);
 
-  const transmission =
-    typeof car.transmission === "object" && car.transmission !== null
-      ? { ...car.transmission, name: car.transmission.name ?? transmissionName }
-      : { name: transmissionName };
+  const normalizeRelation = (
+    value: ApiCar["transmission"] | AdminBookingCarOption["transmission"],
+    fallback: string,
+  ): AdminBookingCarOption["transmission"] => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return { name: trimmed.length > 0 ? trimmed : fallback };
+    }
 
-  const fuel =
-    typeof car.fuel === "object" && car.fuel !== null
-      ? { ...car.fuel, name: car.fuel.name ?? fuelName }
-      : { name: fuelName };
+    if (value && typeof value === "object") {
+      const name = toTrimmedString((value as { name?: unknown }).name) || fallback;
+      return { ...(value as Record<string, unknown>), name } as AdminBookingCarOption["transmission"];
+    }
+
+    return { name: fallback };
+  };
+
+  const transmission = normalizeRelation(car.transmission, transmissionName);
+  const fuel = normalizeRelation(car.fuel, fuelName);
 
   return {
     ...car,

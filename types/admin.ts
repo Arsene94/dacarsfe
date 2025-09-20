@@ -1,4 +1,4 @@
-import type { ApiCar } from "@/types/car";
+import type { ApiCar, CarLookup } from "@/types/car";
 import type { ReservationWheelPrizeSummary, ServiceStatus } from "@/types/reservation";
 
 export interface AdminReservation {
@@ -250,11 +250,11 @@ export interface AdminBookingCustomerSummary {
   email: string;
 }
 
-export interface AdminBookingCarOption extends ApiCar {
+export type AdminBookingCarOption = Omit<ApiCar, "transmission" | "fuel"> & {
   license_plate: string;
-  transmission: { name: string | null } | null;
-  fuel: { name: string | null } | null;
-}
+  transmission: CarLookup | { name: string | null } | string | null | undefined;
+  fuel: CarLookup | { name: string | null } | string | null | undefined;
+};
 
 export interface AdminBookingFormValues {
   id: number | string | null;

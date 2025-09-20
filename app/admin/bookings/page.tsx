@@ -71,6 +71,18 @@ const pickNonEmptyString = (value: unknown): string | undefined => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+const pickLookupName = (value: unknown): string | undefined => {
+  if (typeof value === "string") {
+    return pickNonEmptyString(value);
+  }
+
+  if (isRecord(value)) {
+    return pickNonEmptyString(value.name);
+  }
+
+  return undefined;
+};
+
 const normalizeWheelPrizeSummary = (
   raw: unknown,
 ): ReservationWheelPrizeSummary | null => {
@@ -484,11 +496,11 @@ const ReservationsPage = () => {
           pickNonEmptyString(info?.car?.plate) ??
           "";
         const carTransmission =
-          pickNonEmptyString(info?.car?.transmission?.name) ??
+          pickLookupName(info?.car?.transmission) ??
           pickNonEmptyString((info as { transmission_name?: unknown }).transmission_name) ??
           "";
         const carFuel =
-          pickNonEmptyString(info?.car?.fuel?.name) ??
+          pickLookupName(info?.car?.fuel) ??
           pickNonEmptyString((info as { fuel_name?: unknown }).fuel_name) ??
           "";
         const carDeposit =

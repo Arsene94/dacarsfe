@@ -38,6 +38,48 @@ const parsePrice = (raw: unknown): number => {
     return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const toDisplayString = (value: unknown, fallback = ""): string => {
+    if (typeof value === "string") {
+        return value;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+        return String(value);
+    }
+    return fallback;
+};
+
+const resolveAdminCarName = (
+    car: AdminBookingCarOption | null | undefined,
+    fallback: string,
+): string => {
+    if (car && typeof car.name === "string") {
+        const trimmed = car.name.trim();
+        if (trimmed.length > 0) {
+            return trimmed;
+        }
+    }
+    return fallback;
+};
+
+type CarRelation = AdminBookingCarOption["transmission"];
+
+const resolveRelationLabel = (relation: CarRelation, fallback = ""): string => {
+    if (typeof relation === "string") {
+        const trimmed = relation.trim();
+        return trimmed.length > 0 ? trimmed : fallback;
+    }
+
+    if (relation && typeof relation === "object" && "name" in relation) {
+        const name = (relation as { name?: unknown }).name;
+        if (typeof name === "string") {
+            const trimmed = name.trim();
+            return trimmed.length > 0 ? trimmed : fallback;
+        }
+    }
+
+    return fallback;
+};
+
 const toOptionalNumber = (value: unknown): number | null => {
     if (value == null || value === "") return null;
     if (typeof value === "number") {
@@ -305,11 +347,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
                     return recalcTotals({
                         ...prev,
-                        car_name: normalized.name ?? prev.car_name,
+                        car_name: resolveAdminCarName(normalized, prev.car_name),
                         car_image: nextImage,
-                        car_license_plate: normalized.license_plate ?? prev.car_license_plate,
-                        car_transmission: normalized.transmission?.name ?? prev.car_transmission,
-                        car_fuel: normalized.fuel?.name ?? prev.car_fuel,
+                        car_license_plate: toDisplayString(
+                            normalized.license_plate,
+                            prev.car_license_plate,
+                        ),
+                        car_transmission:
+                            resolveRelationLabel(normalized.transmission, prev.car_transmission),
+                        car_fuel: resolveRelationLabel(normalized.fuel, prev.car_fuel),
                         price_per_day: parsePrice(
                             normalized.rental_rate ?? prev.price_per_day,
                         ),
@@ -357,11 +403,17 @@ const BookingForm: React.FC<BookingFormProps> = ({
         const updated = recalcTotals({
             ...bookingInfo,
             car_id: Number(car.id),
-            car_name: normalized.name ?? bookingInfo.car_name,
+            car_name: resolveAdminCarName(normalized, bookingInfo.car_name),
             car_image: nextImage,
-            car_license_plate: normalized.license_plate ?? "",
-            car_transmission: normalized.transmission?.name ?? "",
-            car_fuel: normalized.fuel?.name ?? "",
+            car_license_plate: toDisplayString(
+                normalized.license_plate,
+                bookingInfo.car_license_plate,
+            ),
+            car_transmission: resolveRelationLabel(
+                normalized.transmission,
+                bookingInfo.car_transmission,
+            ),
+            car_fuel: resolveRelationLabel(normalized.fuel, bookingInfo.car_fuel),
             price_per_day: price,
             base_price: parsePrice(normalized.rental_rate),
             base_price_casco: parsePrice(normalized.rental_rate_casco),
@@ -559,73 +611,83 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             onSelect={handleSelectCar}
                             onOpen={handleCarSearchOpen}
                             placeholder="Selectează mașina"
-                            renderItem={(car) => (
-                                <>
-                                    <Image
-                                        src={
-                                            car.image_preview || car.image
-                                                ?
-                                                      STORAGE_BASE +
-                                                      "/" +
-                                                      (car.image_preview || car.image)
-                                                : "/images/placeholder-car.svg"
-                                        }
-                                        alt={car.name ?? "Autovehicul"}
-                                        width={64}
-                                        height={40}
-                                        className="w-16 h-10 object-cover rounded"
-                                    />
-                                    <div className="flex justify-between items-end w-full">
-                                        <div>
-                                            <div className="font-dm-sans font-semibold">{car.name}</div>
-                                            <div className="text-xs">
-                                                {car.license_plate} • {typeof car.transmission === "string"
-                                                    ? car.transmission
-                                                    : car.transmission?.name} • {typeof car.fuel === "string"
-                                                    ? car.fuel
-                                                    : car.fuel?.name}
+                            renderItem={(car) => {
+                                const carName = resolveAdminCarName(car, "Autovehicul");
+                                const transmissionLabel = resolveRelationLabel(car.transmission);
+                                const fuelLabel = resolveRelationLabel(car.fuel);
+                                const imagePath = car.image_preview || car.image;
+
+                                return (
+                                    <>
+                                        <Image
+                                            src={
+                                                imagePath
+                                                    ?
+                                                          STORAGE_BASE +
+                                                          "/" +
+                                                          imagePath
+                                                    : "/images/placeholder-car.svg"
+                                            }
+                                            alt={carName}
+                                            width={64}
+                                            height={40}
+                                            className="w-16 h-10 object-cover rounded"
+                                        />
+                                        <div className="flex justify-between items-end w-full">
+                                            <div>
+                                                <div className="font-dm-sans font-semibold">{carName}</div>
+                                                <div className="text-xs">
+                                                    {toDisplayString(car.license_plate)} • {transmissionLabel} • {fuelLabel}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs">
+                                                    Preț cu garanție: {toDisplayString(car.rental_rate)}€ x {toDisplayString(car.days)} zile = {toDisplayString(car.total_deposit)}€
+                                                </div>
+                                                <div className="text-xs">
+                                                    Preț fără garanție: {toDisplayString(car.rental_rate_casco)}€ x {toDisplayString(car.days)} zile = {toDisplayString(car.total_without_deposit)}€
+                                                </div>
                                             </div>
                                         </div>
-                                        <div>
-                                            <div className="text-xs">Preț cu garanție: {car.rental_rate}€ x {car.days} zile = {car.total_deposit}€</div>
-                                            <div className="text-xs">Preț fără garanție: {car.rental_rate_casco}€ x {car.days} zile = {car.total_without_deposit}€</div>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
+                                    </>
+                                );
+                            }}
                             itemClassName={(car) =>
                                 car.available
                                     ? "bg-green-100 text-green-700 hover:bg-green-200"
                                     : "bg-red-100 text-red-700 hover:bg-red-200"
                             }
-                            renderValue={(car) => (
-                                <div className="flex items-center gap-3">
-                                    <Image
-                                        src={
-                                            car.image_preview || car.image
-                                                ?
-                                                      STORAGE_BASE +
-                                                      "/" +
-                                                      (car.image_preview || car.image)
-                                                : "/images/placeholder-car.svg"
-                                        }
-                                        alt={car.name ?? "Autovehicul"}
-                                        width={64}
-                                        height={40}
-                                        className="w-16 h-10 object-cover rounded"
-                                    />
-                                    <div className="text-left">
-                                        <div className="font-dm-sans font-semibold text-gray-700">{car.name}</div>
-                                        <div className="text-xs text-gray-600">
-                                            {car.license_plate} • {typeof car.transmission === "string"
-                                                ? car.transmission
-                                                : car.transmission?.name} • {typeof car.fuel === "string"
-                                                ? car.fuel
-                                                : car.fuel?.name}
+                            renderValue={(car) => {
+                                const carName = resolveAdminCarName(car, "Autovehicul");
+                                const transmissionLabel = resolveRelationLabel(car.transmission);
+                                const fuelLabel = resolveRelationLabel(car.fuel);
+                                const imagePath = car.image_preview || car.image;
+
+                                return (
+                                    <div className="flex items-center gap-3">
+                                        <Image
+                                            src={
+                                                imagePath
+                                                    ?
+                                                          STORAGE_BASE +
+                                                          "/" +
+                                                          imagePath
+                                                    : "/images/placeholder-car.svg"
+                                            }
+                                            alt={carName}
+                                            width={64}
+                                            height={40}
+                                            className="w-16 h-10 object-cover rounded"
+                                        />
+                                        <div className="text-left">
+                                            <div className="font-dm-sans font-semibold text-gray-700">{carName}</div>
+                                            <div className="text-xs text-gray-600">
+                                                {toDisplayString(car.license_plate)} • {transmissionLabel} • {fuelLabel}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                );
+                            }}
                         />
                     </div>
 

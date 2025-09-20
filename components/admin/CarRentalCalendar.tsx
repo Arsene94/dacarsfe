@@ -82,6 +82,19 @@ const pickNonEmptyString = (value: unknown): string | undefined => {
     return trimmed.length > 0 ? trimmed : undefined;
 };
 
+const pickLookupName = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    if (value && typeof value === 'object' && 'name' in value) {
+        return pickNonEmptyString((value as { name?: unknown }).name);
+    }
+
+    return undefined;
+};
+
 const toSafeString = (value: unknown, fallback = ''): string => {
     return pickNonEmptyString(value) ?? fallback;
 };
@@ -678,12 +691,12 @@ const CarRentalCalendar: React.FC = () => {
             const carTransmission =
                 pickNonEmptyString(info.car_transmission) ??
                 pickNonEmptyString((info as { transmission_name?: unknown }).transmission_name) ??
-                pickNonEmptyString(carInfo?.transmission?.name) ??
+                pickLookupName(carInfo?.transmission) ??
                 baseForm.car_transmission;
             const carFuel =
                 pickNonEmptyString(info.car_fuel) ??
                 pickNonEmptyString((info as { fuel_name?: unknown }).fuel_name) ??
-                pickNonEmptyString(carInfo?.fuel?.name) ??
+                pickLookupName(carInfo?.fuel) ??
                 baseForm.car_fuel;
             const carDeposit =
                 parseOptionalNumber(info.car_deposit ?? carInfo?.deposit) ?? baseForm.car_deposit;
