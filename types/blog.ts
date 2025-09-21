@@ -25,6 +25,18 @@ export type BlogCategoryPayload = Partial<{
   is_default: boolean | number | null;
 }> & Record<string, unknown>;
 
+export interface BlogCategoryListParams {
+  page?: number;
+  perPage?: number;
+  per_page?: number;
+  limit?: number;
+  name?: string;
+  slug?: string;
+  sort?: string;
+  fields?: string;
+  search?: string;
+}
+
 export interface BlogTag {
   id: number;
   name: string;
@@ -39,6 +51,18 @@ export type BlogTagPayload = Partial<{
   name: string;
   description: string | null;
 }> & Record<string, unknown>;
+
+export interface BlogTagListParams {
+  page?: number;
+  perPage?: number;
+  per_page?: number;
+  limit?: number;
+  name?: string;
+  slug?: string;
+  sort?: string;
+  fields?: string;
+  search?: string;
+}
 
 export interface BlogPostAuthor {
   id: number;
@@ -94,9 +118,15 @@ export type BlogPostPayload = Partial<{
 export interface BlogPostListParams {
   page?: number;
   perPage?: number;
+  per_page?: number;
   limit?: number;
   category_id?: number | string;
+  author_id?: number | string;
   status?: BlogPostStatus | string;
+  slug?: string;
+  title?: string;
+  sort?: string;
+  fields?: string;
+  include?: string | readonly string[];
   search?: string;
-  include?: string;
 }

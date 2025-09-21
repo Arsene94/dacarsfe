@@ -26,6 +26,7 @@ import {
   ScrollText,
   Receipt,
   Wrench,
+  Newspaper,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -416,6 +417,32 @@ const menuItems: readonly AdminSidebarItem[] = [
       "fortune",
       "wheeloffortune",
     ]),
+  },
+  {
+    name: "Blog",
+    icon: Newspaper,
+    requiredPermissions: buildPermissionList("blog", [
+      "blog-posts",
+      "blog-categories",
+      "blog-tags",
+    ]),
+    subItems: [
+      {
+        name: "Articole",
+        href: "/admin/blog",
+        requiredPermissions: buildPermissionList("blog-posts", ["blog_post"]),
+      },
+      {
+        name: "Categorii",
+        href: "/admin/blog/categories",
+        requiredPermissions: buildPermissionList("blog-categories", ["blog_category"]),
+      },
+      {
+        name: "Etichete",
+        href: "/admin/blog/tags",
+        requiredPermissions: buildPermissionList("blog-tags", ["blog_tag"]),
+      },
+    ],
   },
   {
     name: "Mockup",
