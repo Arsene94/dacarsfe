@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import PageTransition from "../components/PageTransition";
@@ -5,6 +6,8 @@ import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { DM_Sans, Poppins } from "next/font/google";
+import { buildMetadata } from "@/lib/seo/meta";
+import { siteMetadata } from "@/lib/seo/siteMetadata";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -21,9 +24,30 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
-export const metadata = {
-  title: 'DaCars',
-  description: 'Mașini oneste pentru români onești',
+const baseMetadata = buildMetadata({
+  title: siteMetadata.defaultTitle,
+  description: siteMetadata.description,
+  keywords: siteMetadata.keywords,
+  path: "/",
+  openGraphTitle: siteMetadata.defaultTitle,
+  twitterTitle: siteMetadata.defaultTitle,
+});
+
+export const metadata: Metadata = {
+  ...baseMetadata,
+  metadataBase: new URL(siteMetadata.siteUrl),
+  title: {
+    default: siteMetadata.defaultTitle,
+    template: `%s | ${siteMetadata.siteName}`,
+  },
+  applicationName: siteMetadata.siteName,
+  authors: [{ name: siteMetadata.siteName }],
+  creator: siteMetadata.siteName,
+  publisher: siteMetadata.siteName,
+  icons: {
+    icon: "/images/dacars-icon.png",
+    apple: "/images/dacars-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -36,13 +60,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           href="/images/bg-hero-mobile.webp"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <link rel="dns-prefetch" href="//vercel.app" />
-          <meta name="format-detection" content="telephone=no" />
-          <meta name="mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-          <meta httpEquiv="x-dns-prefetch-control" content="on" />
-          <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+        <link rel="dns-prefetch" href="//vercel.app" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta httpEquiv="x-dns-prefetch-control" content="on" />
         <link
           rel="preload"
           as="image"
