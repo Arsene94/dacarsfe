@@ -122,6 +122,7 @@ export interface BlogPostListParams {
   author_id?: number | string;
   status?: BlogPostStatus | string;
   title?: string;
+  title_like?: string;
   slug?: string;
   sort?: string;
   fields?: string;

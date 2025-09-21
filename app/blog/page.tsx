@@ -138,11 +138,11 @@ const getPageNumbers = (current: number, total: number): number[] => {
 };
 
 type BlogPageProps = {
-  searchParams?: BlogPageSearchParams;
+  searchParams?: BlogPageSearchParams | Promise<BlogPageSearchParams>;
 };
 
 const BlogPage = async ({ searchParams }: BlogPageProps) => {
-  const params = searchParams ?? {};
+  const params = (await searchParams) ?? {};
   const categorySlug = getStringParam(params.categorie ?? params.category);
   const query = getStringParam(params.q ?? params.search);
   const page = parsePageNumber(getStringParam(params.page));
@@ -161,7 +161,7 @@ const BlogPage = async ({ searchParams }: BlogPageProps) => {
     status: "published",
     sort: "-published_at,-id",
     ...(selectedCategory ? { category_id: selectedCategory.id } : {}),
-    ...(query ? { title: query } : {}),
+    ...(query ? { title_like: query } : {}),
   });
 
   const posts = extractList(postsResponse);

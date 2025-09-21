@@ -1650,8 +1650,14 @@ class ApiClient {
         if (typeof params.status === 'string' && params.status.trim().length > 0) {
             searchParams.append('status', params.status.trim());
         }
-        if (typeof params.title === 'string' && params.title.trim().length > 0) {
-            searchParams.append('title', params.title.trim());
+        const titleLikeCandidate =
+            typeof params.title_like === 'string' && params.title_like.trim().length > 0
+                ? params.title_like.trim()
+                : typeof params.title === 'string' && params.title.trim().length > 0
+                    ? params.title.trim()
+                    : null;
+        if (titleLikeCandidate) {
+            searchParams.append('title_like', titleLikeCandidate);
         }
         if (typeof params.slug === 'string' && params.slug.trim().length > 0) {
             searchParams.append('slug', params.slug.trim());
