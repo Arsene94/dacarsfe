@@ -1,13 +1,13 @@
 # Blog Categories API
 
-All routes live under the `/api` prefix and require an authenticated Sanctum token together with the `blog_categories.*` permission bundle. The controllers are built on top of `BaseCrudController`, so pagination, filtering and sparse fieldsets behave consistently with the rest of the admin APIs.
+All endpoints live under the `/api` prefix. Read-only requests (`GET`) are public and no longer need a Sanctum token, while write operations still require authentication plus the `blog_categories.*` permission bundle. The controllers are built on top of `BaseCrudController`, so pagination, filtering and sparse fieldsets behave consistently with the rest of the admin APIs.
 
 ## Endpoint overview
 | Method | URL | Description | Required permission |
 | --- | --- | --- | --- |
-| GET | `/api/blog-categories` | Paginated list of categories with optional filters. | `blog_categories.view` |
-| GET | `/api/blog-categories?limit=10` | Return the first N records without pagination metadata. | `blog_categories.view` |
-| GET | `/api/blog-categories/{id}` | Retrieve a single category by id. | `blog_categories.view` |
+| GET | `/api/blog-categories` | Paginated list of categories with optional filters. | None (public) |
+| GET | `/api/blog-categories?limit=10` | Return the first N records without pagination metadata. | None (public) |
+| GET | `/api/blog-categories/{id}` | Retrieve a single category by id. | None (public) |
 | POST | `/api/blog-categories` | Create a new category (slug is generated automatically). | `blog_categories.create` |
 | PUT | `/api/blog-categories/{id}` | Update an existing category. | `blog_categories.update` |
 | DELETE | `/api/blog-categories/{id}` | Soft-delete is not used; the record is removed permanently. | `blog_categories.delete` |

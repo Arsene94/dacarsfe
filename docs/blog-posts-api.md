@@ -1,13 +1,13 @@
 # Blog Posts API
 
-The blog post endpoints expose full CRUD plus tag synchronisation and eager-loaded relationships (category, tags, author). All routes require an authenticated Sanctum token and the relevant `blog_posts.*` permission.
+The blog post endpoints expose full CRUD plus tag synchronisation and eager-loaded relationships (category, tags, author). Public reads (`GET`) no longer require a Sanctum token, while mutating routes still expect authentication alongside the relevant `blog_posts.*` permission.
 
 ## Endpoint overview
 | Method | URL | Description | Required permission |
 | --- | --- | --- | --- |
-| GET | `/api/blog-posts` | Paginated list of posts including category, tags and author metadata. | `blog_posts.view` |
-| GET | `/api/blog-posts?limit=5` | First N posts ordered by `id DESC`. | `blog_posts.view` |
-| GET | `/api/blog-posts/{id}` | Retrieve a post with its relationships. | `blog_posts.view` |
+| GET | `/api/blog-posts` | Paginated list of posts including category, tags and author metadata. | None (public) |
+| GET | `/api/blog-posts?limit=5` | First N posts ordered by `id DESC`. | None (public) |
+| GET | `/api/blog-posts/{id}` | Retrieve a post with its relationships. | None (public) |
 | POST | `/api/blog-posts` | Create a new post and attach tags. | `blog_posts.create` |
 | PUT | `/api/blog-posts/{id}` | Update post fields and tag associations. | `blog_posts.update` |
 | DELETE | `/api/blog-posts/{id}` | Permanently delete a post (pivot rows cascade). | `blog_posts.delete` |

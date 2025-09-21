@@ -1,13 +1,13 @@
 # Blog Tags API
 
-Blog tags share the same CRUD infrastructure as categories. All routes sit under `/api`, expect an authenticated Sanctum token and enforce the `blog_tags.*` permission scope.
+Blog tags share the same CRUD infrastructure as categories. Read endpoints are now public (no Sanctum token required), while creates/updates/deletes continue to require authentication and the `blog_tags.*` permission scope.
 
 ## Endpoint overview
 | Method | URL | Description | Required permission |
 | --- | --- | --- | --- |
-| GET | `/api/blog-tags` | Paginated listing with filters. | `blog_tags.view` |
-| GET | `/api/blog-tags?limit=15` | First N records without pagination metadata. | `blog_tags.view` |
-| GET | `/api/blog-tags/{id}` | Fetch a single tag. | `blog_tags.view` |
+| GET | `/api/blog-tags` | Paginated listing with filters. | None (public) |
+| GET | `/api/blog-tags?limit=15` | First N records without pagination metadata. | None (public) |
+| GET | `/api/blog-tags/{id}` | Fetch a single tag. | None (public) |
 | POST | `/api/blog-tags` | Create a tag (slug auto-generated). | `blog_tags.create` |
 | PUT | `/api/blog-tags/{id}` | Update name / description. | `blog_tags.update` |
 | DELETE | `/api/blog-tags/{id}` | Remove a tag (detaches automatically from pivot). | `blog_tags.delete` |
