@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import PageTransition from "../components/PageTransition";
@@ -5,6 +6,7 @@ import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { DM_Sans, Poppins } from "next/font/google";
+import { resolveSiteUrl } from "@/lib/seo/structuredData";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -21,9 +23,68 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
-export const metadata = {
-  title: 'DaCars',
-  description: 'Mașini oneste pentru români onești',
+const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+const siteUrl = resolveSiteUrl(rawSiteUrl);
+
+const BASE_DESCRIPTION =
+  "Platformă de închirieri auto DaCars – flotă completă, predare 24/7 și oferte flexibile în București și Otopeni.";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "DaCars Rent a Car | Mașini oneste pentru români onești",
+    template: "%s | DaCars Rent a Car",
+  },
+  description: BASE_DESCRIPTION,
+  applicationName: "DaCars Rent a Car",
+  keywords: [
+    "închirieri auto",
+    "rent a car",
+    "Otopeni",
+    "București",
+    "mașini fără garanție",
+    "rezervare mașină",
+  ],
+  authors: [{ name: "DaCars" }],
+  creator: "DaCars",
+  publisher: "DaCars",
+  icons: {
+    icon: "/images/dacars-icon.png",
+    apple: "/images/dacars-icon.png",
+  },
+  openGraph: {
+    type: "website",
+    url: siteUrl,
+    title: "DaCars Rent a Car | Mașini oneste pentru români onești",
+    description: BASE_DESCRIPTION,
+    locale: "ro_RO",
+    siteName: "DaCars Rent a Car",
+    images: [
+      {
+        url: `${siteUrl}/images/logo-308x154.webp`,
+        width: 308,
+        height: 154,
+        alt: "DaCars Rent a Car",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DaCars Rent a Car",
+    description: BASE_DESCRIPTION,
+    images: [`${siteUrl}/images/logo-308x154.webp`],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      maxSnippet: -1,
+      maxVideoPreview: -1,
+      maxImagePreview: "large",
+    },
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

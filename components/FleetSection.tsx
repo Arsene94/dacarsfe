@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -12,12 +12,21 @@ import {
     ChevronRight,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
-import { Button } from '@/components/ui/button';
-import { extractList } from '@/lib/apiResponse';
-import { ApiCar, CarCategory, FleetCar } from '@/types/car';
+import { Button } from "@/components/ui/button";
+import { extractList } from "@/lib/apiResponse";
+import JsonLd from "@/components/seo/JsonLd";
+import {
+    createVehicleItemListStructuredData,
+    mapFleetCarsToStructuredData,
+    resolveSiteUrl,
+} from "@/lib/seo/structuredData";
+import { ApiCar, CarCategory, FleetCar } from "@/types/car";
 
 const STORAGE_BASE =
-    process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://backend.dacars.ro/storage';
+    process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
+const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+const siteUrl = resolveSiteUrl(rawSiteUrl);
+const featuredFleetUrl = `${siteUrl}/cars`;
 
 const toImageUrl = (p?: string | null): string => {
     if (!p) return "/images/placeholder-car.svg";
@@ -142,6 +151,25 @@ const FleetSection = () => {
         return () => clearInterval(id);
     }, [cars.length, nextSlide]);
 
+    const structuredData = useMemo(() => {
+        if (cars.length === 0) {
+            return null;
+        }
+
+        const mapped = mapFleetCarsToStructuredData(cars, siteUrl).map((item) => ({
+            ...item,
+            url: `${featuredFleetUrl}#car-${item.id}`,
+        }));
+
+        return createVehicleItemListStructuredData(mapped, {
+            baseUrl: siteUrl,
+            pageUrl: `${siteUrl}/`,
+            name: "Mașini recomandate din flota DaCars",
+            description: "Selecție curentă de vehicule populare disponibile pentru închiriere la DaCars.",
+            currency: "EUR",
+        });
+    }, [cars]);
+
     const CarCard = ({ car, index }: { car: FleetCar; index: number }) => (
         <div
             className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group border border-gray-100 animate-slide-up"
@@ -212,6 +240,9 @@ const FleetSection = () => {
     return (
         <section id="flota" className="py-20 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {structuredData && (
+                    <JsonLd data={structuredData} id="dacars-featured-cars" />
+                )}
                 <div className="text-center mb-16 animate-fade-in">
                     <h2 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
                         Flota noastră <span className="text-jade">premium</span>
