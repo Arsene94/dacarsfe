@@ -42,9 +42,14 @@ const buildAuthorName = (post: BlogPost): string | null => {
 };
 
 const fetchPostBySlug = async (slug: string): Promise<BlogPost | null> => {
-  const response = await apiClient.getBlogPosts({ limit: 1, slug, status: "published" });
-  const posts = extractList(response);
-  return posts.length > 0 ? posts[0] : null;
+  try {
+    const response = await apiClient.getBlogPosts({ limit: 1, slug, status: "published" });
+    const posts = extractList(response);
+    return posts.length > 0 ? posts[0] : null;
+  } catch (error) {
+    console.error(`Nu am putut încărca articolul de blog pentru slug-ul ${slug}`, error);
+    return null;
+  }
 };
 
 type BlogPostPageProps = {
@@ -73,16 +78,21 @@ const BlogPostPage = async ({ params }: BlogPostPageProps) => {
     notFound();
   }
 
-  const relatedResponse = await apiClient.getBlogPosts({
-    limit: 4,
-    status: "published",
-    sort: "-published_at,-id",
-    ...(post.category?.id ? { category_id: post.category.id } : {}),
-  });
-  const relatedPosts = extractList(relatedResponse)
-    .filter((item): item is BlogPost => Boolean(item))
-    .filter((item) => item.slug !== post.slug)
-    .slice(0, 3);
+  let relatedPosts: BlogPost[] = [];
+  try {
+    const relatedResponse = await apiClient.getBlogPosts({
+      limit: 4,
+      status: "published",
+      sort: "-published_at,-id",
+      ...(post.category?.id ? { category_id: post.category.id } : {}),
+    });
+    relatedPosts = extractList(relatedResponse)
+      .filter((item): item is BlogPost => Boolean(item))
+      .filter((item) => item.slug !== post.slug)
+      .slice(0, 3);
+  } catch (error) {
+    console.error("Nu am putut încărca articolele similare pentru blog", error);
+  }
 
   const authorName = buildAuthorName(post);
   const publishedDate = formatPublishedDate(post);

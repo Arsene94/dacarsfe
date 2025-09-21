@@ -147,28 +147,41 @@ const BlogPage = async ({ searchParams }: BlogPageProps) => {
   const query = getStringParam(params.q ?? params.search);
   const page = parsePageNumber(getStringParam(params.page));
 
-  const categoriesResponse = await apiClient.getBlogCategories({ limit: 24, sort: "name" });
-  const categories = extractList(categoriesResponse)
-    .filter((item): item is BlogCategory => Boolean(item && typeof item === "object"))
-    .map((item) => ({ ...item }))
-    .filter((item): item is BlogCategory => typeof item.id === "number" && typeof item.name === "string" && typeof item.slug === "string");
+  let categories: BlogCategory[] = [];
+  let categoriesError = false;
+  try {
+    const categoriesResponse = await apiClient.getBlogCategories({ limit: 24, sort: "name" });
+    categories = extractList(categoriesResponse)
+      .filter((item): item is BlogCategory => Boolean(item && typeof item === "object"))
+      .map((item) => ({ ...item }))
+      .filter((item): item is BlogCategory => typeof item.id === "number" && typeof item.name === "string" && typeof item.slug === "string");
+  } catch (error) {
+    console.error("Nu am putut încărca categoriile de blog", error);
+    categoriesError = true;
+  }
 
   const selectedCategory = categories.find((category) => category.slug === categorySlug);
 
-  const postsResponse = await apiClient.getBlogPosts({
-    perPage: BLOG_PAGE_SIZE,
-    page,
-    status: "published",
-    sort: "-published_at,-id",
-    ...(selectedCategory ? { category_id: selectedCategory.id } : {}),
-    ...(query ? { title_like: query } : {}),
-  });
+  let postsSource: ApiListResponse<BlogPost> | BlogPost[] = [];
+  let posts: BlogPost[] = [];
+  let postsError = false;
+  try {
+    const postsResponse = await apiClient.getBlogPosts({
+      perPage: BLOG_PAGE_SIZE,
+      page,
+      status: "published",
+      sort: "-published_at,-id",
+      ...(selectedCategory ? { category_id: selectedCategory.id } : {}),
+      ...(query ? { title_like: query } : {}),
+    });
+    postsSource = postsResponse as ApiListResponse<BlogPost> | BlogPost[];
+    posts = extractList(postsResponse);
+  } catch (error) {
+    console.error("Nu am putut încărca articolele de blog", error);
+    postsError = true;
+  }
 
-  const posts = extractList(postsResponse);
-  const totalPages = computeTotalPages(
-    postsResponse as ApiListResponse<BlogPost> | BlogPost[],
-    BLOG_PAGE_SIZE,
-  );
+  const totalPages = computeTotalPages(postsSource, BLOG_PAGE_SIZE);
   const safePage = Math.min(Math.max(page, 1), totalPages);
   const pageNumbers = getPageNumbers(safePage, totalPages);
 
@@ -226,12 +239,21 @@ const BlogPage = async ({ searchParams }: BlogPageProps) => {
               );
             })}
           </div>
+          {categoriesError && (
+            <p className="mt-3 text-sm text-red-600">
+              Nu am putut încărca categoriile de blog. Te rugăm să reîncerci mai târziu.
+            </p>
+          )}
         </div>
       </section>
 
       <section className="py-12">
         <div className="mx-auto max-w-6xl px-4">
-          {posts.length === 0 ? (
+          {postsError ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-12 text-center text-red-700">
+              Nu am putut încărca articolele de blog. Te rugăm să reîncerci mai târziu.
+            </div>
+          ) : posts.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center text-gray-600">
               Nu am găsit articole care să corespundă filtrării curente.
             </div>
