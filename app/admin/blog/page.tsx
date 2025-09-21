@@ -22,16 +22,12 @@ type AuthorLike = {
 
 const statusLabels: Record<string, string> = {
   draft: "Draft",
-  scheduled: "Programat",
   published: "Publicat",
-  archived: "Arhivat",
 };
 
 const BLOG_STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
-  { value: "scheduled", label: "Programat" },
   { value: "published", label: "Publicat" },
-  { value: "archived", label: "Arhivat" },
 ] as const;
 
 const formatDateTime = (value?: string | null): string => {

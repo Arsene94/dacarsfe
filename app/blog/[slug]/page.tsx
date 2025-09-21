@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import JsonLd from "@/components/seo/JsonLd";
 import { BlogCard } from "@/components/blog/BlogCard";
 import apiClient from "@/lib/api";
@@ -8,6 +9,7 @@ import { extractList } from "@/lib/apiResponse";
 import { buildMetadata } from "@/lib/seo/meta";
 import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
 import { createBreadcrumbStructuredData } from "@/lib/seo/structuredData";
+import { getBlogRequestOptions } from "@/lib/blogServer";
 import type { BlogPost } from "@/types/blog";
 
 const dateFormatter = new Intl.DateTimeFormat("ro-RO", {
@@ -41,16 +43,19 @@ const buildAuthorName = (post: BlogPost): string | null => {
   return author.email ?? null;
 };
 
-const fetchPostBySlug = async (slug: string): Promise<BlogPost | null> => {
+const fetchPostBySlug = cache(async (slug: string): Promise<BlogPost | null> => {
   try {
-    const response = await apiClient.getBlogPosts({ limit: 1, slug, status: "published" });
+    const response = await apiClient.getBlogPosts(
+      { limit: 1, slug, status: "published" },
+      getBlogRequestOptions(),
+    );
     const posts = extractList(response);
     return posts.length > 0 ? posts[0] : null;
   } catch (error) {
     console.error(`Nu am putut încărca articolul de blog pentru slug-ul ${slug}`, error);
     return null;
   }
-};
+});
 
 type BlogPostPageProps = {
   params: {
@@ -79,13 +84,18 @@ const BlogPostPage = async ({ params }: BlogPostPageProps) => {
   }
 
   let relatedPosts: BlogPost[] = [];
+  const blogRequestOptions = getBlogRequestOptions();
+
   try {
-    const relatedResponse = await apiClient.getBlogPosts({
-      limit: 4,
-      status: "published",
-      sort: "-published_at,-id",
-      ...(post.category?.id ? { category_id: post.category.id } : {}),
-    });
+    const relatedResponse = await apiClient.getBlogPosts(
+      {
+        limit: 4,
+        status: "published",
+        sort: "-published_at,-id",
+        ...(post.category?.id ? { category_id: post.category.id } : {}),
+      },
+      blogRequestOptions,
+    );
     relatedPosts = extractList(relatedResponse)
       .filter((item): item is BlogPost => Boolean(item))
       .filter((item) => item.slug !== post.slug)

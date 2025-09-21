@@ -12,6 +12,7 @@ import {
   createBreadcrumbStructuredData,
   createSearchActionStructuredData,
 } from "@/lib/seo/structuredData";
+import { getBlogRequestOptions } from "@/lib/blogServer";
 import type { ApiListResponse } from "@/types/api";
 import type { BlogCategory, BlogPost } from "@/types/blog";
 
@@ -146,11 +147,15 @@ const BlogPage = async ({ searchParams }: BlogPageProps) => {
   const categorySlug = getStringParam(params.categorie ?? params.category);
   const query = getStringParam(params.q ?? params.search);
   const page = parsePageNumber(getStringParam(params.page));
+  const blogRequestOptions = getBlogRequestOptions();
 
   let categories: BlogCategory[] = [];
   let categoriesError = false;
   try {
-    const categoriesResponse = await apiClient.getBlogCategories({ limit: 24, sort: "name" });
+    const categoriesResponse = await apiClient.getBlogCategories(
+      { limit: 24, sort: "name" },
+      blogRequestOptions,
+    );
     categories = extractList(categoriesResponse)
       .filter((item): item is BlogCategory => Boolean(item && typeof item === "object"))
       .map((item) => ({ ...item }))
@@ -166,14 +171,17 @@ const BlogPage = async ({ searchParams }: BlogPageProps) => {
   let posts: BlogPost[] = [];
   let postsError = false;
   try {
-    const postsResponse = await apiClient.getBlogPosts({
-      perPage: BLOG_PAGE_SIZE,
-      page,
-      status: "published",
-      sort: "-published_at,-id",
-      ...(selectedCategory ? { category_id: selectedCategory.id } : {}),
-      ...(query ? { title_like: query } : {}),
-    });
+    const postsResponse = await apiClient.getBlogPosts(
+      {
+        perPage: BLOG_PAGE_SIZE,
+        page,
+        status: "published",
+        sort: "-published_at,-id",
+        ...(selectedCategory ? { category_id: selectedCategory.id } : {}),
+        ...(query ? { title_like: query } : {}),
+      },
+      blogRequestOptions,
+    );
     postsSource = postsResponse as ApiListResponse<BlogPost> | BlogPost[];
     posts = extractList(postsResponse);
   } catch (error) {

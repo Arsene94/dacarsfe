@@ -140,6 +140,11 @@ type RolePayload = {
     permissions?: string[];
 } & Record<string, unknown>;
 
+export type ApiRequestOptions = RequestInit & {
+    authToken?: string | null;
+    skipAuth?: boolean;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export const FORBIDDEN_EVENT = "dacars:api:forbidden";
@@ -224,16 +229,23 @@ class ApiClient {
 
     private async request<T>(
         endpoint: string,
-        options: RequestInit = {}
+        options: ApiRequestOptions = {},
     ): Promise<T> {
         const url = `${this.baseURL}${endpoint}`;
+
+        const { authToken, skipAuth, headers: customHeaders, ...restOptions } = options;
+        const normalizedToken =
+            typeof authToken === 'string' && authToken.trim().length > 0
+                ? authToken.trim()
+                : '';
+        const effectiveToken = skipAuth ? '' : normalizedToken || (this.token ?? '');
 
         const isFormData =
             typeof FormData !== 'undefined' && options.body instanceof FormData;
 
         const headers: Record<string, string> = {
             ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-            ...(this.token && { Authorization: `Bearer ${this.token}` }),
+            ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
             'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
         };
 
@@ -258,11 +270,12 @@ class ApiClient {
             });
         };
 
-        applyHeaders(options.headers);
+        applyHeaders(customHeaders);
 
+        const requestCredentials = restOptions.credentials ?? 'omit';
         const config: RequestInit = {
-            ...options,
-            credentials: options.credentials ?? 'omit',
+            ...restOptions,
+            credentials: requestCredentials,
             headers,
         };
 
@@ -1504,6 +1517,7 @@ class ApiClient {
 
     async getBlogCategories(
         params: BlogCategoryListParams = {},
+        options?: ApiRequestOptions,
     ): Promise<ApiListResult<BlogCategory>> {
         const searchParams = new URLSearchParams();
         if (typeof params.page === 'number' && Number.isFinite(params.page)) {
@@ -1534,37 +1548,54 @@ class ApiClient {
             searchParams.append('fields', params.fields.trim());
         }
         const query = searchParams.toString();
-        return this.request<ApiListResult<BlogCategory>>(`/blog-categories${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<BlogCategory>>(`/blog-categories${query ? `?${query}` : ''}`, options);
     }
 
-    async getBlogCategory(id: number | string): Promise<ApiItemResult<BlogCategory>> {
-        return this.request<ApiItemResult<BlogCategory>>(`/blog-categories/${id}`);
+    async getBlogCategory(
+        id: number | string,
+        options?: ApiRequestOptions,
+    ): Promise<ApiItemResult<BlogCategory>> {
+        return this.request<ApiItemResult<BlogCategory>>(`/blog-categories/${id}`, options);
     }
 
-    async createBlogCategory(payload: BlogCategoryPayload): Promise<ApiItemResult<BlogCategory>> {
+    async createBlogCategory(
+        payload: BlogCategoryPayload,
+        options?: ApiRequestOptions,
+    ): Promise<ApiItemResult<BlogCategory>> {
         const body = sanitizePayload(payload);
         return this.request<ApiItemResult<BlogCategory>>(`/blog-categories`, {
             method: 'POST',
             body: JSON.stringify(body),
+            ...(options ?? {}),
         });
     }
 
-    async updateBlogCategory(id: number | string, payload: BlogCategoryPayload): Promise<ApiItemResult<BlogCategory>> {
+    async updateBlogCategory(
+        id: number | string,
+        payload: BlogCategoryPayload,
+        options?: ApiRequestOptions,
+    ): Promise<ApiItemResult<BlogCategory>> {
         const body = sanitizePayload(payload);
         return this.request<ApiItemResult<BlogCategory>>(`/blog-categories/${id}`, {
             method: 'PUT',
             body: JSON.stringify(body),
+            ...(options ?? {}),
         });
     }
 
-    async deleteBlogCategory(id: number | string): Promise<ApiDeleteResponse> {
+    async deleteBlogCategory(
+        id: number | string,
+        options?: ApiRequestOptions,
+    ): Promise<ApiDeleteResponse> {
         return this.request<ApiDeleteResponse>(`/blog-categories/${id}`, {
             method: 'DELETE',
+            ...(options ?? {}),
         });
     }
 
     async getBlogTags(
         params: BlogTagListParams = {},
+        options?: ApiRequestOptions,
     ): Promise<ApiListResult<BlogTag>> {
         const searchParams = new URLSearchParams();
         if (typeof params.page === 'number' && Number.isFinite(params.page)) {
@@ -1595,36 +1626,55 @@ class ApiClient {
             searchParams.append('fields', params.fields.trim());
         }
         const query = searchParams.toString();
-        return this.request<ApiListResult<BlogTag>>(`/blog-tags${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<BlogTag>>(`/blog-tags${query ? `?${query}` : ''}`, options);
     }
 
-    async getBlogTag(id: number | string): Promise<ApiItemResult<BlogTag>> {
-        return this.request<ApiItemResult<BlogTag>>(`/blog-tags/${id}`);
+    async getBlogTag(
+        id: number | string,
+        options?: ApiRequestOptions,
+    ): Promise<ApiItemResult<BlogTag>> {
+        return this.request<ApiItemResult<BlogTag>>(`/blog-tags/${id}`, options);
     }
 
-    async createBlogTag(payload: BlogTagPayload): Promise<ApiItemResult<BlogTag>> {
+    async createBlogTag(
+        payload: BlogTagPayload,
+        options?: ApiRequestOptions,
+    ): Promise<ApiItemResult<BlogTag>> {
         const body = sanitizePayload(payload);
         return this.request<ApiItemResult<BlogTag>>(`/blog-tags`, {
             method: 'POST',
             body: JSON.stringify(body),
+            ...(options ?? {}),
         });
     }
 
-    async updateBlogTag(id: number | string, payload: BlogTagPayload): Promise<ApiItemResult<BlogTag>> {
+    async updateBlogTag(
+        id: number | string,
+        payload: BlogTagPayload,
+        options?: ApiRequestOptions,
+    ): Promise<ApiItemResult<BlogTag>> {
         const body = sanitizePayload(payload);
         return this.request<ApiItemResult<BlogTag>>(`/blog-tags/${id}`, {
             method: 'PUT',
             body: JSON.stringify(body),
+            ...(options ?? {}),
         });
     }
 
-    async deleteBlogTag(id: number | string): Promise<ApiDeleteResponse> {
+    async deleteBlogTag(
+        id: number | string,
+        options?: ApiRequestOptions,
+    ): Promise<ApiDeleteResponse> {
         return this.request<ApiDeleteResponse>(`/blog-tags/${id}`, {
             method: 'DELETE',
+            ...(options ?? {}),
         });
     }
 
-    async getBlogPosts(params: BlogPostListParams = {}): Promise<ApiListResult<BlogPost>> {
+    async getBlogPosts(
+        params: BlogPostListParams = {},
+        options?: ApiRequestOptions,
+    ): Promise<ApiListResult<BlogPost>> {
         const searchParams = new URLSearchParams();
         if (typeof params.page === 'number' && Number.isFinite(params.page)) {
             searchParams.append('page', params.page.toString());
@@ -1672,14 +1722,20 @@ class ApiClient {
             searchParams.append('include', params.include.trim());
         }
         const query = searchParams.toString();
-        return this.request<ApiListResult<BlogPost>>(`/blog-posts${query ? `?${query}` : ''}`);
+        return this.request<ApiListResult<BlogPost>>(`/blog-posts${query ? `?${query}` : ''}`, options);
     }
 
-    async getBlogPost(id: number | string): Promise<ApiItemResult<BlogPost>> {
-        return this.request<ApiItemResult<BlogPost>>(`/blog-posts/${id}`);
+    async getBlogPost(
+        id: number | string,
+        options?: ApiRequestOptions,
+    ): Promise<ApiItemResult<BlogPost>> {
+        return this.request<ApiItemResult<BlogPost>>(`/blog-posts/${id}`, options);
     }
 
-    async createBlogPost(payload: BlogPostPayload): Promise<ApiItemResult<BlogPost>> {
+    async createBlogPost(
+        payload: BlogPostPayload,
+        options?: ApiRequestOptions,
+    ): Promise<ApiItemResult<BlogPost>> {
         const normalizedPayload: BlogPostPayload = Array.isArray(payload.tag_ids)
             ? {
                 ...payload,
@@ -1701,10 +1757,15 @@ class ApiClient {
         return this.request<ApiItemResult<BlogPost>>(`/blog-posts`, {
             method: 'POST',
             body: JSON.stringify(body),
+            ...(options ?? {}),
         });
     }
 
-    async updateBlogPost(id: number | string, payload: BlogPostPayload): Promise<ApiItemResult<BlogPost>> {
+    async updateBlogPost(
+        id: number | string,
+        payload: BlogPostPayload,
+        options?: ApiRequestOptions,
+    ): Promise<ApiItemResult<BlogPost>> {
         const normalizedPayload: BlogPostPayload = Array.isArray(payload.tag_ids)
             ? {
                 ...payload,
@@ -1726,12 +1787,17 @@ class ApiClient {
         return this.request<ApiItemResult<BlogPost>>(`/blog-posts/${id}`, {
             method: 'PUT',
             body: JSON.stringify(body),
+            ...(options ?? {}),
         });
     }
 
-    async deleteBlogPost(id: number | string): Promise<ApiDeleteResponse> {
+    async deleteBlogPost(
+        id: number | string,
+        options?: ApiRequestOptions,
+    ): Promise<ApiDeleteResponse> {
         return this.request<ApiDeleteResponse>(`/blog-posts/${id}`, {
             method: 'DELETE',
+            ...(options ?? {}),
         });
     }
 
