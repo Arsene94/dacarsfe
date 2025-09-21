@@ -40,11 +40,13 @@ import type {
 } from "@/types/car";
 import type {
     BlogCategory,
+    BlogCategoryListParams,
     BlogCategoryPayload,
     BlogPost,
     BlogPostListParams,
     BlogPostPayload,
     BlogTag,
+    BlogTagListParams,
     BlogTagPayload,
 } from "@/types/blog";
 import type {
@@ -1501,7 +1503,7 @@ class ApiClient {
     }
 
     async getBlogCategories(
-        params: { page?: number; perPage?: number; limit?: number; search?: string } = {},
+        params: BlogCategoryListParams = {},
     ): Promise<ApiListResult<BlogCategory>> {
         const searchParams = new URLSearchParams();
         if (typeof params.page === 'number' && Number.isFinite(params.page)) {
@@ -1510,15 +1512,26 @@ class ApiClient {
         const perPageCandidate =
             typeof params.perPage === 'number' && Number.isFinite(params.perPage)
                 ? params.perPage
-                : undefined;
+                : typeof params.per_page === 'number' && Number.isFinite(params.per_page)
+                    ? params.per_page
+                    : undefined;
         if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
             searchParams.append('per_page', perPageCandidate.toString());
         }
         if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
             searchParams.append('limit', params.limit.toString());
         }
-        if (typeof params.search === 'string' && params.search.trim().length > 0) {
-            searchParams.append('search', params.search.trim());
+        if (typeof params.name === 'string' && params.name.trim().length > 0) {
+            searchParams.append('name', params.name.trim());
+        }
+        if (typeof params.slug === 'string' && params.slug.trim().length > 0) {
+            searchParams.append('slug', params.slug.trim());
+        }
+        if (typeof params.sort === 'string' && params.sort.trim().length > 0) {
+            searchParams.append('sort', params.sort.trim());
+        }
+        if (typeof params.fields === 'string' && params.fields.trim().length > 0) {
+            searchParams.append('fields', params.fields.trim());
         }
         const query = searchParams.toString();
         return this.request<ApiListResult<BlogCategory>>(`/blog-categories${query ? `?${query}` : ''}`);
@@ -1551,7 +1564,7 @@ class ApiClient {
     }
 
     async getBlogTags(
-        params: { page?: number; perPage?: number; limit?: number; search?: string } = {},
+        params: BlogTagListParams = {},
     ): Promise<ApiListResult<BlogTag>> {
         const searchParams = new URLSearchParams();
         if (typeof params.page === 'number' && Number.isFinite(params.page)) {
@@ -1560,15 +1573,26 @@ class ApiClient {
         const perPageCandidate =
             typeof params.perPage === 'number' && Number.isFinite(params.perPage)
                 ? params.perPage
-                : undefined;
+                : typeof params.per_page === 'number' && Number.isFinite(params.per_page)
+                    ? params.per_page
+                    : undefined;
         if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
             searchParams.append('per_page', perPageCandidate.toString());
         }
         if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
             searchParams.append('limit', params.limit.toString());
         }
-        if (typeof params.search === 'string' && params.search.trim().length > 0) {
-            searchParams.append('search', params.search.trim());
+        if (typeof params.name === 'string' && params.name.trim().length > 0) {
+            searchParams.append('name', params.name.trim());
+        }
+        if (typeof params.slug === 'string' && params.slug.trim().length > 0) {
+            searchParams.append('slug', params.slug.trim());
+        }
+        if (typeof params.sort === 'string' && params.sort.trim().length > 0) {
+            searchParams.append('sort', params.sort.trim());
+        }
+        if (typeof params.fields === 'string' && params.fields.trim().length > 0) {
+            searchParams.append('fields', params.fields.trim());
         }
         const query = searchParams.toString();
         return this.request<ApiListResult<BlogTag>>(`/blog-tags${query ? `?${query}` : ''}`);
@@ -1608,8 +1632,8 @@ class ApiClient {
         const perPageCandidate =
             typeof params.perPage === 'number' && Number.isFinite(params.perPage)
                 ? params.perPage
-                : typeof (params as { per_page?: number }).per_page === 'number'
-                    ? (params as { per_page: number }).per_page
+                : typeof params.per_page === 'number' && Number.isFinite(params.per_page)
+                    ? params.per_page
                     : undefined;
         if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
             searchParams.append('per_page', perPageCandidate.toString());
@@ -1620,11 +1644,23 @@ class ApiClient {
         if (typeof params.category_id !== 'undefined' && params.category_id !== null) {
             searchParams.append('category_id', String(params.category_id));
         }
+        if (typeof params.author_id !== 'undefined' && params.author_id !== null) {
+            searchParams.append('author_id', String(params.author_id));
+        }
         if (typeof params.status === 'string' && params.status.trim().length > 0) {
             searchParams.append('status', params.status.trim());
         }
-        if (typeof params.search === 'string' && params.search.trim().length > 0) {
-            searchParams.append('search', params.search.trim());
+        if (typeof params.title === 'string' && params.title.trim().length > 0) {
+            searchParams.append('title', params.title.trim());
+        }
+        if (typeof params.slug === 'string' && params.slug.trim().length > 0) {
+            searchParams.append('slug', params.slug.trim());
+        }
+        if (typeof params.sort === 'string' && params.sort.trim().length > 0) {
+            searchParams.append('sort', params.sort.trim());
+        }
+        if (typeof params.fields === 'string' && params.fields.trim().length > 0) {
+            searchParams.append('fields', params.fields.trim());
         }
         if (typeof params.include === 'string' && params.include.trim().length > 0) {
             searchParams.append('include', params.include.trim());
@@ -1638,7 +1674,24 @@ class ApiClient {
     }
 
     async createBlogPost(payload: BlogPostPayload): Promise<ApiItemResult<BlogPost>> {
-        const body = sanitizePayload(payload);
+        const normalizedPayload: BlogPostPayload = Array.isArray(payload.tag_ids)
+            ? {
+                ...payload,
+                tag_ids: payload.tag_ids
+                    .map((value) => {
+                        if (typeof value === 'number' && Number.isFinite(value)) {
+                            return value;
+                        }
+                        if (typeof value === 'string') {
+                            const parsed = Number(value);
+                            return Number.isFinite(parsed) ? parsed : null;
+                        }
+                        return null;
+                    })
+                    .filter((value): value is number => Number.isFinite(value ?? Number.NaN)),
+            }
+            : payload;
+        const body = sanitizePayload(normalizedPayload);
         return this.request<ApiItemResult<BlogPost>>(`/blog-posts`, {
             method: 'POST',
             body: JSON.stringify(body),
@@ -1646,7 +1699,24 @@ class ApiClient {
     }
 
     async updateBlogPost(id: number | string, payload: BlogPostPayload): Promise<ApiItemResult<BlogPost>> {
-        const body = sanitizePayload(payload);
+        const normalizedPayload: BlogPostPayload = Array.isArray(payload.tag_ids)
+            ? {
+                ...payload,
+                tag_ids: payload.tag_ids
+                    .map((value) => {
+                        if (typeof value === 'number' && Number.isFinite(value)) {
+                            return value;
+                        }
+                        if (typeof value === 'string') {
+                            const parsed = Number(value);
+                            return Number.isFinite(parsed) ? parsed : null;
+                        }
+                        return null;
+                    })
+                    .filter((value): value is number => Number.isFinite(value ?? Number.NaN)),
+            }
+            : payload;
+        const body = sanitizePayload(normalizedPayload);
         return this.request<ApiItemResult<BlogPost>>(`/blog-posts/${id}`, {
             method: 'PUT',
             body: JSON.stringify(body),

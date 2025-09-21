@@ -14,6 +14,17 @@ export interface BlogCategory {
   [key: string]: unknown;
 }
 
+export interface BlogCategoryListParams {
+  page?: number;
+  perPage?: number;
+  per_page?: number;
+  limit?: number;
+  name?: string;
+  slug?: string;
+  sort?: string;
+  fields?: string;
+}
+
 export type BlogCategoryPayload = Partial<{
   name: string;
   description: string | null;
@@ -33,6 +44,17 @@ export interface BlogTag {
   created_at?: string | null;
   updated_at?: string | null;
   [key: string]: unknown;
+}
+
+export interface BlogTagListParams {
+  page?: number;
+  perPage?: number;
+  per_page?: number;
+  limit?: number;
+  name?: string;
+  slug?: string;
+  sort?: string;
+  fields?: string;
 }
 
 export type BlogTagPayload = Partial<{
@@ -94,9 +116,14 @@ export type BlogPostPayload = Partial<{
 export interface BlogPostListParams {
   page?: number;
   perPage?: number;
+  per_page?: number;
   limit?: number;
   category_id?: number | string;
+  author_id?: number | string;
   status?: BlogPostStatus | string;
-  search?: string;
+  title?: string;
+  slug?: string;
+  sort?: string;
+  fields?: string;
   include?: string;
 }
