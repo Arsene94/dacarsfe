@@ -18,14 +18,13 @@ import JsonLd from "@/components/seo/JsonLd";
 import {
     createVehicleItemListStructuredData,
     mapFleetCarsToStructuredData,
-    resolveSiteUrl,
 } from "@/lib/seo/structuredData";
+import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { ApiCar, CarCategory, FleetCar } from "@/types/car";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
-const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-const siteUrl = resolveSiteUrl(rawSiteUrl);
+const siteUrl = siteMetadata.siteUrl;
 const featuredFleetUrl = `${siteUrl}/cars`;
 
 const toImageUrl = (p?: string | null): string => {

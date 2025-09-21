@@ -1,21 +1,18 @@
 import { NextResponse } from "next/server";
-import { resolveSiteUrl } from "@/lib/seo/structuredData";
+import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
 
-const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-const siteUrl = resolveSiteUrl(rawSiteUrl);
+const siteUrl = siteMetadata.siteUrl;
 
 const ROUTES: Array<{ path: string; priority: string; changefreq: string }> = [
     { path: "/", priority: "1.0", changefreq: "daily" },
     { path: "/cars", priority: "0.9", changefreq: "daily" },
-    { path: "/checkout", priority: "0.6", changefreq: "weekly" },
-    { path: "/success", priority: "0.4", changefreq: "monthly" },
 ];
 
 const buildSitemapXml = (): string => {
     const lastmod = new Date().toISOString();
 
     const urls = ROUTES.map(({ path, priority, changefreq }) => {
-        const loc = path === "/" ? siteUrl : `${siteUrl}${path}`;
+        const loc = path === "/" ? siteUrl : absoluteUrl(path);
         return [
             "  <url>",
             `    <loc>${loc}</loc>`,

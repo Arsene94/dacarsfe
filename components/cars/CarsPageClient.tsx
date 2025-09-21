@@ -11,12 +11,12 @@ import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
-import { createVehicleItemListStructuredData, resolveSiteUrl } from "@/lib/seo/structuredData";
+import { createVehicleItemListStructuredData } from "@/lib/seo/structuredData";
+import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { useBooking } from "@/context/BookingContext";
 import { ApiCar, Car, CarCategory } from "@/types/car";
 
-const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-const siteUrl = resolveSiteUrl(rawSiteUrl);
+const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
 
 const STORAGE_BASE = "https://backend.dacars.ro/storage";

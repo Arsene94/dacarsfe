@@ -1,45 +1,22 @@
 import type { Metadata } from "next";
 import CarsPageClient from "@/components/cars/CarsPageClient";
 import JsonLd from "@/components/seo/JsonLd";
+import { buildMetadata } from "@/lib/seo/meta";
+import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
 import {
     createBreadcrumbStructuredData,
     createSearchActionStructuredData,
-    resolveSiteUrl,
 } from "@/lib/seo/structuredData";
 
-const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-const siteUrl = resolveSiteUrl(rawSiteUrl);
-const pageUrl = `${siteUrl}/cars`;
+const siteUrl = siteMetadata.siteUrl;
+const pageUrl = absoluteUrl("/cars");
 
 const PAGE_DESCRIPTION =
     "Analizează toată flota DaCars și filtrează rapid mașinile disponibile pentru închiriere.";
 
-export const metadata: Metadata = {
-    title: "Flota completă de mașini pentru închiriere | DaCars Rent a Car",
+const carsMetadata = buildMetadata({
+    title: "Flota completă de mașini pentru închiriere",
     description: PAGE_DESCRIPTION,
-    alternates: {
-        canonical: pageUrl,
-    },
-    openGraph: {
-        type: "website",
-        url: pageUrl,
-        title: "Flota completă de mașini pentru închiriere | DaCars",
-        description: PAGE_DESCRIPTION,
-        images: [
-            {
-                url: `${siteUrl}/images/logo-308x154.webp`,
-                width: 308,
-                height: 154,
-                alt: "DaCars Rent a Car",
-            },
-        ],
-    },
-    twitter: {
-        card: "summary_large_image",
-        title: "Flota DaCars de închirieri auto",
-        description: PAGE_DESCRIPTION,
-        images: [`${siteUrl}/images/logo-308x154.webp`],
-    },
     keywords: [
         "flotă închirieri auto",
         "mașini disponibile București",
@@ -47,11 +24,17 @@ export const metadata: Metadata = {
         "rezervare mașină online",
         "DaCars flotă auto",
     ],
+    path: "/cars",
+    openGraphTitle: "Flota completă de mașini pentru închiriere | DaCars Rent a Car",
+});
+
+export const metadata: Metadata = {
+    ...carsMetadata,
 };
 
 const searchStructuredData = createSearchActionStructuredData({
     siteUrl,
-    siteName: "DaCars Rent a Car",
+    siteName: siteMetadata.siteName,
     target: `${pageUrl}?search={search_term_string}`,
     queryInput: "required name=search_term_string",
 });

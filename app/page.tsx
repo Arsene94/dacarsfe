@@ -1,26 +1,21 @@
 import type { Metadata } from "next";
 import HomePageClient from "@/components/home/HomePageClient";
 import JsonLd from "@/components/seo/JsonLd";
+import { buildMetadata } from "@/lib/seo/meta";
+import { siteMetadata } from "@/lib/seo/siteMetadata";
 import {
     createOrganizationStructuredData,
     createRentalServiceStructuredData,
-    resolveSiteUrl,
 } from "@/lib/seo/structuredData";
 
 const FALLBACK_DESCRIPTION =
     "Închiriază rapid mașini moderne de la DaCars în București și Otopeni. " +
     "Flotă variată, predare non-stop și oferte flexibile cu sau fără garanție.";
 
-const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-const siteUrl = resolveSiteUrl(rawSiteUrl);
-const metadataBase = new URL(siteUrl);
+const siteUrl = siteMetadata.siteUrl;
 
-export const metadata: Metadata = {
-    metadataBase,
-    title: {
-        default: "DaCars Rent a Car | Închirieri auto rapide în București și Otopeni",
-        template: "%s | DaCars Rent a Car",
-    },
+const homeMetadata = buildMetadata({
+    title: "Închirieri auto rapide în București și Otopeni",
     description: FALLBACK_DESCRIPTION,
     keywords: [
         "închirieri auto București",
@@ -30,76 +25,46 @@ export const metadata: Metadata = {
         "flotă auto premium",
         "rezervare mașină online",
     ],
-    category: "travel",
-    authors: [{ name: "DaCars" }],
-    creator: "DaCars",
-    publisher: "DaCars",
+    path: "/",
+    openGraphTitle: "DaCars Rent a Car – Închirieri auto rapide în București și Otopeni",
+});
+
+export const metadata: Metadata = {
+    ...homeMetadata,
     alternates: {
         canonical: siteUrl,
         languages: {
             "ro-RO": siteUrl,
         },
     },
-    openGraph: {
-        type: "website",
-        url: siteUrl,
-        title: "DaCars Rent a Car | Închirieri auto rapide în București și Otopeni",
-        description: FALLBACK_DESCRIPTION,
-        siteName: "DaCars Rent a Car",
-        locale: "ro_RO",
-        images: [
-            {
-                url: `${siteUrl}/images/logo-308x154.webp`,
-                width: 308,
-                height: 154,
-                alt: "DaCars Rent a Car",
-            },
-        ],
-    },
-    twitter: {
-        card: "summary_large_image",
-        title: "DaCars Rent a Car",
-        description: FALLBACK_DESCRIPTION,
-        images: [`${siteUrl}/images/logo-308x154.webp`],
-    },
-    robots: {
-        index: true,
-        follow: true,
-        googleBot: {
-            index: true,
-            follow: true,
-            "max-snippet": -1,
-            "max-video-preview": -1,
-            "max-image-preview": "large",
-        },
-    },
+    category: "travel",
+    authors: [{ name: siteMetadata.siteName }],
+    creator: siteMetadata.siteName,
+    publisher: siteMetadata.siteName,
 };
 
 const organizationStructuredData = createOrganizationStructuredData({
-    name: "DaCars Rent a Car",
+    name: siteMetadata.siteName,
     url: siteUrl,
     logo: "/images/logo.svg",
     description: FALLBACK_DESCRIPTION,
-    telephone: "+40 723 817 551",
-    email: "contact@dacars.ro",
-    sameAs: [
-        "https://www.facebook.com/dacars.ro",
-        "https://www.instagram.com/dacars.ro",
-    ],
+    telephone: siteMetadata.contact.phone,
+    email: siteMetadata.contact.email,
+    sameAs: [...siteMetadata.socialProfiles],
     address: {
-        streetAddress: "Calea Bucureștilor 305",
-        addressLocality: "Otopeni",
-        addressRegion: "Ilfov",
-        postalCode: "075100",
-        addressCountry: "RO",
+        streetAddress: siteMetadata.address.street,
+        addressLocality: siteMetadata.address.locality,
+        addressRegion: siteMetadata.address.region,
+        postalCode: siteMetadata.address.postalCode,
+        addressCountry: siteMetadata.address.country,
     },
     contactPoints: [
         {
             contactType: "customer support",
-            telephone: "+40 723 817 551",
+            telephone: siteMetadata.contact.phone,
             areaServed: "RO",
             availableLanguage: ["ro", "en"],
-            email: "contact@dacars.ro",
+            email: siteMetadata.contact.email,
         },
     ],
     openingHours: [
@@ -120,7 +85,7 @@ const organizationStructuredData = createOrganizationStructuredData({
 });
 
 const serviceStructuredData = createRentalServiceStructuredData({
-    name: "DaCars Rent a Car",
+    name: siteMetadata.siteName,
     url: siteUrl,
     description: "Servicii complete de închirieri auto, cu predare 24/7 în București și Otopeni.",
     areaServed: ["RO", "BG", "HU"],
