@@ -129,9 +129,10 @@ Omitting `permissions` leaves the role without abilities. When updating, include
 ## Permissions (`/api/permissions`)
 | Method | Description | Permission |
 | --- | --- | --- |
-| GET `/api/permissions` | Return the full permission catalogue grouped alphabetically. | `permissions.view` |
+| GET `/api/permissions` | Flat list of all permissions ordered by group and name. | `permissions.view` |
+| GET `/api/permissions/grouped` | Permission catalogue grouped by category for UI pickers. | `permissions.view` |
 
-### Response
+### Response (`/api/permissions`)
 ```json
 [
   { "id": 1, "name": "bookings.view", "group": "bookings" },
@@ -144,7 +145,30 @@ Omitting `permissions` leaves the role without abilities. When updating, include
 ]
 ```
 
-Use the catalogue to build permission pickers in the admin UI. Permissions follow the `group.action` naming convention and mirror the entries seeded by `PermissionSeeder`.
+### Response (`/api/permissions/grouped`)
+```json
+[
+  {
+    "group": "bookings",
+    "permissions": [
+      { "id": 1, "name": "bookings.view", "group": "bookings" },
+      { "id": 2, "name": "bookings.update", "group": "bookings" },
+      { "id": 3, "name": "bookings.delete", "group": "bookings" }
+    ]
+  },
+  {
+    "group": "cars",
+    "permissions": [
+      { "id": 4, "name": "cars.view", "group": "cars" },
+      { "id": 5, "name": "cars.create", "group": "cars" },
+      { "id": 6, "name": "cars.update", "group": "cars" },
+      { "id": 7, "name": "cars.delete", "group": "cars" }
+    ]
+  }
+]
+```
+
+Use the grouped catalogue to build permission pickers in the admin UI, while the flat endpoint remains available for legacy forms or quick lookups. Permissions follow the `group.action` naming convention and mirror the entries seeded by `PermissionSeeder`.
 
 ---
 
