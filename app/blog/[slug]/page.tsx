@@ -19,6 +19,35 @@ const dateFormatter = new Intl.DateTimeFormat("ro-RO", {
 const FALLBACK_DESCRIPTION =
   "Articole despre închirieri auto, trasee recomandate și modul în care DaCars te ajută să ajungi mai rapid la destinație.";
 
+const stripHtml = (value: string): string => value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+const buildDescription = (post: BlogPost | null): string => {
+  if (!post) {
+    return FALLBACK_DESCRIPTION;
+  }
+
+  const excerpt = post.excerpt?.trim();
+  if (excerpt) {
+    return excerpt;
+  }
+
+  const content = post.content?.trim();
+  if (!content) {
+    return FALLBACK_DESCRIPTION;
+  }
+
+  const stripped = stripHtml(content);
+  if (!stripped) {
+    return FALLBACK_DESCRIPTION;
+  }
+
+  if (stripped.length <= 220) {
+    return stripped;
+  }
+
+  return `${stripped.slice(0, 220).trimEnd()}…`;
+};
+
 const formatPublishedDate = (post: BlogPost): string | null => {
   const candidate = post.published_at ?? post.created_at;
   if (!candidate) {
@@ -65,7 +94,7 @@ type BlogPostPageProps = {
 
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
   const post = await fetchPostBySlug(params.slug);
-  const description = post?.excerpt ?? post?.meta_description ?? FALLBACK_DESCRIPTION;
+  const description = buildDescription(post);
   const path = `/blog/${params.slug}`;
 
   return buildMetadata({
@@ -107,6 +136,7 @@ const BlogPostPage = async ({ params }: BlogPostPageProps) => {
   const authorName = buildAuthorName(post);
   const publishedDate = formatPublishedDate(post);
   const articleUrl = absoluteUrl(`/blog/${post.slug}`);
+  const articleDescription = buildDescription(post);
 
   const breadcrumbStructuredData = createBreadcrumbStructuredData([
     { name: "Acasă", item: siteMetadata.siteUrl },
@@ -119,7 +149,7 @@ const BlogPostPage = async ({ params }: BlogPostPageProps) => {
     "@type": "BlogPosting",
     headline: post.title,
     mainEntityOfPage: articleUrl,
-    ...(post.excerpt ? { description: post.excerpt } : {}),
+    ...(articleDescription ? { description: articleDescription } : {}),
     ...(post.published_at ? { datePublished: post.published_at } : {}),
     ...(post.updated_at ? { dateModified: post.updated_at } : {}),
     ...(post.category ? { articleSection: post.category.name } : {}),

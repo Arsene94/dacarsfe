@@ -87,8 +87,6 @@ type BlogPostFormState = {
   excerpt: string;
   content: string;
   tagIds: number[];
-  metaTitle: string;
-  metaDescription: string;
 };
 
 const initialFormState: BlogPostFormState = {
@@ -100,8 +98,6 @@ const initialFormState: BlogPostFormState = {
   excerpt: "",
   content: "",
   tagIds: [],
-  metaTitle: "",
-  metaDescription: "",
 };
 
 const buildAuthorName = (person: AuthorLike): string => {
@@ -202,8 +198,6 @@ export default function BlogPostsPage() {
         : Array.isArray(post.tag_ids)
           ? post.tag_ids.filter((value): value is number => typeof value === "number")
           : [],
-      metaTitle: post.meta_title ?? "",
-      metaDescription: post.meta_description ?? "",
     });
     setFormError(null);
     setIsModalOpen(true);
@@ -260,9 +254,6 @@ export default function BlogPostsPage() {
     }
 
     const trimmedExcerpt = formState.excerpt.trim();
-    const trimmedMetaTitle = formState.metaTitle.trim();
-    const trimmedMetaDescription = formState.metaDescription.trim();
-
     const payload: BlogPostPayload = {
       title: trimmedTitle,
       category_id: categoryId,
@@ -271,8 +262,6 @@ export default function BlogPostsPage() {
       excerpt: trimmedExcerpt.length > 0 ? trimmedExcerpt : null,
       content: trimmedContent,
       published_at: formState.publishedAt ? fromDateTimeLocal(formState.publishedAt) : null,
-      meta_title: trimmedMetaTitle.length > 0 ? trimmedMetaTitle : null,
-      meta_description: trimmedMetaDescription.length > 0 ? trimmedMetaDescription : null,
       tag_ids: formState.tagIds,
     };
 
@@ -609,37 +598,6 @@ export default function BlogPostsPage() {
                 })}
               </div>
             )}
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label htmlFor="blog-post-meta-title" className="block text-sm font-medium text-gray-700">
-                Meta title
-              </label>
-              <Input
-                id="blog-post-meta-title"
-                value={formState.metaTitle}
-                onChange={(event) =>
-                  setFormState((previous) => ({ ...previous, metaTitle: event.target.value }))
-                }
-                placeholder="Titlu personalizat pentru SEO (opțional)"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="blog-post-meta-description" className="block text-sm font-medium text-gray-700">
-                Meta description
-              </label>
-              <textarea
-                id="blog-post-meta-description"
-                value={formState.metaDescription}
-                onChange={(event) =>
-                  setFormState((previous) => ({ ...previous, metaDescription: event.target.value }))
-                }
-                rows={3}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-jade"
-                placeholder="Descriere optimizată pentru motoarele de căutare (opțional)."
-              />
-            </div>
           </div>
 
           {formError && (
