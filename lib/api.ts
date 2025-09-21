@@ -244,6 +244,7 @@ class ApiClient {
             typeof FormData !== 'undefined' && options.body instanceof FormData;
 
         const headers: Record<string, string> = {
+            Accept: 'application/json',
             ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
             ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
             'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
