@@ -654,275 +654,281 @@ const BlogPostsPage = () => {
         )}
       </div>
 
-      <Popup open={isModalOpen} onClose={closeModal} className="max-w-3xl">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <h2 className="text-lg font-semibold text-berkeley">
-            {editing ? "Editează articolul" : "Adaugă articol"}
-          </h2>
+      <Popup
+        open={isModalOpen}
+        onClose={closeModal}
+        className="max-w-3xl max-h-[calc(100vh-3rem)] overflow-hidden p-0"
+      >
+        <form onSubmit={handleSubmit} className="flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="space-y-4 p-6">
+              <h2 className="text-lg font-semibold text-berkeley">
+                {editing ? "Editează articolul" : "Adaugă articol"}
+              </h2>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-title">
-                Titlu
-              </label>
-              <Input
-                id="blog-post-title"
-                value={formState.title}
-                onChange={(event) => {
-                  setFormState((prev) => ({ ...prev, title: event.target.value }));
-                  if (formError) {
-                    setFormError(null);
-                  }
-                }}
-                placeholder="Introdu titlul articolului"
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-category">
-                Categorie
-              </label>
-              <Select
-                id="blog-post-category"
-                value={formState.categoryId}
-                onValueChange={(value) => {
-                  setFormState((prev) => ({ ...prev, categoryId: value }));
-                  if (formError) {
-                    setFormError(null);
-                  }
-                }}
-                required
-              >
-                <option value="">Selectează o categorie</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={String(category.id)}>
-                    {category.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-author">
-                Autor
-              </label>
-              <Select
-                id="blog-post-author"
-                value={formState.authorId}
-                onValueChange={(value) => {
-                  setFormState((prev) => ({ ...prev, authorId: value }));
-                  if (formError) {
-                    setFormError(null);
-                  }
-                }}
-                required
-              >
-                <option value="">Selectează un autor</option>
-                {authors.map((candidate) => (
-                  <option key={candidate.id} value={String(candidate.id)}>
-                    {getUserDisplayName(candidate)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-status">
-                Stare
-              </label>
-              <Select
-                id="blog-post-status"
-                value={formState.status}
-                onValueChange={(value) =>
-                  setFormState((prev) => ({ ...prev, status: value as BlogPostStatus }))
-                }
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1">
-              <label
-                className="text-sm font-medium text-gray-700"
-                htmlFor="blog-post-published-at"
-              >
-                Publicat la
-              </label>
-              <Input
-                id="blog-post-published-at"
-                type="datetime-local"
-                value={formState.publishedAt}
-                onChange={(event) => setFormState((prev) => ({ ...prev, publishedAt: event.target.value }))}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-excerpt">
-                Rezumat scurt
-              </label>
-              <Textarea
-                id="blog-post-excerpt"
-                value={formState.excerpt}
-                onChange={(event) => setFormState((prev) => ({ ...prev, excerpt: event.target.value }))}
-                placeholder="Introdu un paragraf scurt pentru listări."
-                rows={4}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-image">
-              Imagine principală
-            </label>
-            <p className="text-xs text-gray-500">
-              Se afișează pe pagina publică a articolului și în listările din blog.
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-              <div
-                className={`relative h-40 w-full overflow-hidden rounded-xl border ${
-                  imageState.previewUrl
-                    ? "border-gray-200 bg-white"
-                    : "border-dashed border-gray-300 bg-gray-50"
-                } sm:max-w-xs`}
-              >
-                {imageState.previewUrl ? (
-                  <Image
-                    src={imageState.previewUrl}
-                    alt="Previzualizare imagine articol"
-                    fill
-                    sizes="(max-width: 640px) 100vw, 256px"
-                    unoptimized={imageState.previewUrl.startsWith("blob:")}
-                    className="object-cover"
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-title">
+                    Titlu
+                  </label>
+                  <Input
+                    id="blog-post-title"
+                    value={formState.title}
+                    onChange={(event) => {
+                      setFormState((prev) => ({ ...prev, title: event.target.value }));
+                      if (formError) {
+                        setFormError(null);
+                      }
+                    }}
+                    placeholder="Introdu titlul articolului"
+                    required
                   />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-category">
+                    Categorie
+                  </label>
+                  <Select
+                    id="blog-post-category"
+                    value={formState.categoryId}
+                    onValueChange={(value) => {
+                      setFormState((prev) => ({ ...prev, categoryId: value }));
+                      if (formError) {
+                        setFormError(null);
+                      }
+                    }}
+                    required
+                  >
+                    <option value="">Selectează o categorie</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={String(category.id)}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-author">
+                    Autor
+                  </label>
+                  <Select
+                    id="blog-post-author"
+                    value={formState.authorId}
+                    onValueChange={(value) => {
+                      setFormState((prev) => ({ ...prev, authorId: value }));
+                      if (formError) {
+                        setFormError(null);
+                      }
+                    }}
+                    required
+                  >
+                    <option value="">Selectează un autor</option>
+                    {authors.map((candidate) => (
+                      <option key={candidate.id} value={String(candidate.id)}>
+                        {getUserDisplayName(candidate)}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-status">
+                    Stare
+                  </label>
+                  <Select
+                    id="blog-post-status"
+                    value={formState.status}
+                    onValueChange={(value) =>
+                      setFormState((prev) => ({ ...prev, status: value as BlogPostStatus }))
+                    }
+                  >
+                    {STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label
+                    className="text-sm font-medium text-gray-700"
+                    htmlFor="blog-post-published-at"
+                  >
+                    Publicat la
+                  </label>
+                  <Input
+                    id="blog-post-published-at"
+                    type="datetime-local"
+                    value={formState.publishedAt}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, publishedAt: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-excerpt">
+                    Rezumat scurt
+                  </label>
+                  <Textarea
+                    id="blog-post-excerpt"
+                    value={formState.excerpt}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, excerpt: event.target.value }))}
+                    placeholder="Introdu un paragraf scurt pentru listri."
+                    rows={4}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-image">
+                  Imagine principală
+                </label>
+                <p className="text-xs text-gray-500">
+                  Se afișează pe pagina publică a articolului și în listările din blog.
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+                  <div
+                    className={`relative h-40 w-full overflow-hidden rounded-xl border ${
+                      imageState.previewUrl
+                        ? "border-gray-200 bg-white"
+                        : "border-dashed border-gray-300 bg-gray-50"
+                    } sm:max-w-xs`}
+                  >
+                    {imageState.previewUrl || imageState.existingPath ? (
+                      <Image
+                        src={
+                          imageState.previewUrl
+                            ? imageState.previewUrl
+                            : resolveMediaUrl(imageState.existingPath ?? "")
+                        }
+                        alt="Previzualizare imagine articol"
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                        Nicio imagine selectată
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col gap-3">
+                    <label
+                      htmlFor="blog-post-image"
+                      className="inline-flex w-fit items-center gap-2 rounded-md border border-jade bg-jade px-4 py-2 text-sm font-medium text-white transition hover:bg-jade/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-jade disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <input
+                        id="blog-post-image"
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={handleImageChange}
+                        disabled={isSaving}
+                      />
+                      <UploadCloud className="h-4 w-4" aria-hidden="true" />
+                      {imageState.previewUrl ? "Schimbă imaginea" : "Încarcă imagine"}
+                    </label>
+                    {(imageState.previewUrl || imageState.existingPath) && (
+                      <button
+                        type="button"
+                        onClick={handleImageRemove}
+                        className="inline-flex w-fit items-center gap-2 text-sm text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={isSaving}
+                      >
+                        <X className="h-4 w-4" aria-hidden="true" />
+                        Elimină imaginea
+                      </button>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      Acceptă imagini JPG, PNG sau WebP. Dimensiune recomandată 1280×720px.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-content">
+                  Conținut
+                </label>
+                <Textarea
+                  id="blog-post-content"
+                  value={formState.content}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, content: event.target.value }))}
+                  placeholder="Conținutul HTML sau Markdown al articolului."
+                  rows={8}
+                  required
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-meta-title">
+                    Meta title
+                  </label>
+                  <Input
+                    id="blog-post-meta-title"
+                    value={formState.metaTitle}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, metaTitle: event.target.value }))}
+                    placeholder="Titlu SEO (opțional)"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    className="text-sm font-medium text-gray-700"
+                    htmlFor="blog-post-meta-description"
+                  >
+                    Meta description
+                  </label>
+                  <Textarea
+                    id="blog-post-meta-description"
+                    value={formState.metaDescription}
+                    onChange={(event) =>
+                      setFormState((prev) => ({ ...prev, metaDescription: event.target.value }))
+                    }
+                    placeholder="Descriere SEO (opțional)"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">Etichete</p>
+                {tags.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Nu există etichete disponibile. Adaugă etichete înainte de a le atașa articolelor.
+                  </p>
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-gray-400">
-                    <span>Nu este selectată nicio imagine.</span>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {tags.map((tag) => {
+                      const checked = formState.tagIds.includes(tag.id);
+                      const inputId = `blog-tag-${tag.id}`;
+                      return (
+                        <label key={tag.id} htmlFor={inputId} className="flex items-center gap-2 text-sm">
+                          <input
+                            id={inputId}
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleTag(tag.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+                          />
+                          <span>{tag.name}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 )}
               </div>
-              <div className="flex flex-col gap-2 text-sm text-gray-600">
-                <label
-                  className={`inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 font-medium transition ${
-                    isSaving
-                      ? "cursor-not-allowed border-gray-200 text-gray-400"
-                      : "border-jade text-jade hover:bg-jade/10"
-                  }`}
-                >
-                  <input
-                    id="blog-post-image"
-                    type="file"
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={handleImageChange}
-                    disabled={isSaving}
-                  />
-                  <UploadCloud className="h-4 w-4" aria-hidden="true" />
-                  {imageState.previewUrl ? "Schimbă imaginea" : "Încarcă imagine"}
-                </label>
-                {(imageState.previewUrl || imageState.existingPath) && (
-                  <button
-                    type="button"
-                    onClick={handleImageRemove}
-                    className="inline-flex w-fit items-center gap-2 text-sm text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={isSaving}
-                  >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                    Elimină imaginea
-                  </button>
-                )}
-                <p className="text-xs text-gray-500">
-                  Acceptă imagini JPG, PNG sau WebP. Dimensiune recomandată 1280×720px.
+
+              {formError && (
+                <p className="text-sm text-red-600" role="alert">
+                  {formError}
                 </p>
-              </div>
+              )}
             </div>
           </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-content">
-              Conținut
-            </label>
-            <Textarea
-              id="blog-post-content"
-              value={formState.content}
-              onChange={(event) => setFormState((prev) => ({ ...prev, content: event.target.value }))}
-              placeholder="Conținutul HTML sau Markdown al articolului."
-              rows={8}
-              required
-            />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-meta-title">
-                Meta title
-              </label>
-              <Input
-                id="blog-post-meta-title"
-                value={formState.metaTitle}
-                onChange={(event) => setFormState((prev) => ({ ...prev, metaTitle: event.target.value }))}
-                placeholder="Titlu SEO (opțional)"
-              />
-            </div>
-            <div className="space-y-1">
-              <label
-                className="text-sm font-medium text-gray-700"
-                htmlFor="blog-post-meta-description"
-              >
-                Meta description
-              </label>
-              <Textarea
-                id="blog-post-meta-description"
-                value={formState.metaDescription}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, metaDescription: event.target.value }))
-                }
-                placeholder="Descriere SEO (opțional)"
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-700">Etichete</p>
-            {tags.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                Nu există etichete disponibile. Adaugă etichete înainte de a le atașa articolelor.
-              </p>
-            ) : (
-              <div className="grid gap-2 md:grid-cols-2">
-                {tags.map((tag) => {
-                  const checked = formState.tagIds.includes(tag.id);
-                  const inputId = `blog-tag-${tag.id}`;
-                  return (
-                    <label key={tag.id} htmlFor={inputId} className="flex items-center gap-2 text-sm">
-                      <input
-                        id={inputId}
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleTag(tag.id)}
-                        className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
-                      />
-                      <span>{tag.name}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {formError && (
-            <p className="text-sm text-red-600" role="alert">
-              {formError}
-            </p>
-          )}
-
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-white p-6">
             <Button type="button" variant="secondary" onClick={closeModal}>
               Renunță
             </Button>
@@ -932,6 +938,7 @@ const BlogPostsPage = () => {
           </div>
         </form>
       </Popup>
+
     </div>
   );
 };
