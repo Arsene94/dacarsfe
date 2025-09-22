@@ -231,25 +231,25 @@ const HeroSection = () => {
               </span>
             </p>
 
-            <div className="hidden sm:flex flex-col sm:flex-row gap-4 mb-8">
-              <Link href="/checkout" aria-label="Rezervă mașina">
-                <Button
-                  className="transform hover:scale-105 shadow-xl group"
-                  aria-label="Rezervă mașina"
-                >
-                  Rezervă mașina
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
-                </Button>
-              </Link>
+            {/*<div className="hidden sm:flex flex-col sm:flex-row gap-4 mb-8">*/}
+            {/*  <Link href="/checkout" aria-label="Rezervă mașina">*/}
+            {/*    <Button*/}
+            {/*      className="transform hover:scale-105 shadow-xl group"*/}
+            {/*      aria-label="Rezervă mașina"*/}
+            {/*    >*/}
+            {/*      Rezervă mașina*/}
+            {/*      <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />*/}
+            {/*    </Button>*/}
+            {/*  </Link>*/}
 
-              <Button
-                variant="outline"
-                className="border-white/30 text-white hover:bg-white/10"
-                aria-label="Vezi flota"
-              >
-                Vezi flota
-              </Button>
-            </div>
+            {/*  <Button*/}
+            {/*    variant="outline"*/}
+            {/*    className="border-white/30 text-white hover:bg-white/10"*/}
+            {/*    aria-label="Vezi flota"*/}
+            {/*  >*/}
+            {/*    Vezi flota*/}
+            {/*  </Button>*/}
+            {/*</div>*/}
 
             {/* Features */}
             <div className="hidden sm:grid sm:grid-cols-3 gap-6">
