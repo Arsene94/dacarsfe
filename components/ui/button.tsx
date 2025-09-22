@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { Slot } from '@radix-ui/react-slot';
 
 import { cn } from '@/lib/utils';
 import { ButtonProps } from '@/types/ui';
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+type ButtonRef = HTMLElement;
+
+const Button = React.forwardRef<ButtonRef, ButtonProps>(
   (
     {
       className,
@@ -35,36 +36,55 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const variantClasses = variants[variant] ?? variants.default;
     const sizeClasses = sizes[size] ?? sizes.md;
 
-    const { ['aria-label']: ariaLabel, ...rest } = props;
-    const Component = asChild ? Slot : 'button';
+    const { ['aria-label']: ariaLabelProp, ...rest } = props;
+    const ariaLabel =
+      ariaLabelProp ?? (typeof children === 'string' ? children : undefined);
 
-    const sharedProps = {
-      ...rest,
-      className: cn(
-        'inline-flex items-center justify-center font-dm-sans font-semibold rounded-lg transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60',
-        sizeClasses,
-        variantClasses,
-        className
-      ),
-      'aria-label': ariaLabel ?? (typeof children === 'string' ? children : undefined),
-    };
+    const baseClassName = cn(
+      'inline-flex items-center justify-center font-dm-sans font-semibold rounded-lg transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60',
+      sizeClasses,
+      variantClasses,
+      className
+    );
 
-    if (asChild) {
-      return (
-        <Component ref={ref as React.Ref<HTMLElement>} {...sharedProps}>
-          {children}
-        </Component>
+    if (asChild && React.isValidElement(children)) {
+      const child = React.Children.only(children);
+      const childClassName = (child.props as { className?: string }).className;
+      const existingRef =
+        (child as React.ReactElement & { ref?: React.Ref<ButtonRef> }).ref;
+      const safeChildRef =
+        typeof existingRef === 'string' ? undefined : existingRef;
+      const mergedRef = composeRefs<ButtonRef>(
+        ref as React.Ref<ButtonRef>,
+        safeChildRef
       );
+
+      const childProps: Record<string, unknown> = {
+        ...rest,
+        className: cn(baseClassName, childClassName),
+      };
+
+      if (ariaLabel) {
+        childProps['aria-label'] = ariaLabel;
+      }
+
+      if (mergedRef) {
+        (childProps as { ref?: React.Ref<ButtonRef> }).ref = mergedRef;
+      }
+
+      return React.cloneElement(child, childProps);
     }
 
     return (
-      <Component
-        ref={ref}
+      <button
+        ref={ref as React.Ref<HTMLButtonElement>}
         type={type ?? 'button'}
-        {...sharedProps}
+        {...rest}
+        className={baseClassName}
+        aria-label={ariaLabel}
       >
         {children}
-      </Component>
+      </button>
     );
   }
 );
@@ -72,3 +92,24 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = 'Button';
 
 export { Button };
+
+function composeRefs<T>(
+  ...refs: (React.Ref<T> | undefined)[]
+): ((instance: T | null) => void) | undefined {
+  const validRefs = refs.filter(Boolean) as React.Ref<T>[];
+
+  if (validRefs.length === 0) {
+    return undefined;
+  }
+
+  return (node: T | null) => {
+    for (const ref of validRefs) {
+      if (typeof ref === 'function') {
+        ref(node);
+        continue;
+      }
+
+      (ref as React.MutableRefObject<T | null>).current = node;
+    }
+  };
+}
