@@ -109,9 +109,31 @@ const ContactSection = () => {
 
             <div className="mt-6 p-4 bg-jade/5 rounded-xl">
               <p className="text-berkeley font-dm-sans">
-                <strong>Instrucțiuni de sosire:</strong> Când aterizezi, sună-ne la numărul de telefon, iar apoi ne întâlnim în fața stației CFR, în fața cupolei verde de sticlă, la terminalul Sosiri.
+                <strong>Consultant:</strong> Când aterizezi, sună-ne la numărul de telefon <a href="tel:+40723817551">+40 723 817 551</a>
               </p>
             </div>
+              {/*<div className="mt-6 p-4 bg-jade/5 rounded-xl">*/}
+              {/*    <p className="text-berkeley font-dm-sans">*/}
+              {/*        <strong>Instrucțiuni de sosire:</strong> Când aterizezi, sună-ne la numărul de telefon, iar apoi ne întâlnim în fața stației CFR, în fața cupolei verde de sticlă, la terminalul Sosiri.*/}
+              {/*    </p>*/}
+              {/*</div>*/}
+              <div className="mt-6 p-4 bg-jade/5 rounded-xl">
+                  <p className="text-berkeley font-dm-sans">
+                      <strong>Client:</strong> Pai si? Dupa ce fac?
+                  </p>
+              </div>
+
+              <div className="mt-6 p-4 bg-jade/5 rounded-xl">
+                  <p className="text-berkeley font-dm-sans">
+                      <strong>DaCars:</strong> Apoi ne întâlnim în fața stației CFR, în fața cupolei verde de sticlă, la terminalul Sosiri.
+                  </p>
+              </div>
+
+              <div className="mt-6 p-4 bg-jade/5 rounded-xl">
+                  <p className="text-berkeley font-dm-sans">
+                      <strong>Client:</strong> Bine bossu meu, asa facem
+                  </p>
+              </div>
           </div>
         </div>
       </div>
