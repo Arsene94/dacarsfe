@@ -164,12 +164,19 @@ const BlogPostsPage = () => {
       if (post.author) {
         return getUserDisplayName({ ...post.author });
       }
+
+      const relationAuthor =
+        post.author && typeof post.author === "object" && post.author !== null
+          ? post.author
+          : null;
+
       const authorId =
         typeof post.author_id === "number"
           ? post.author_id
-          : typeof post.author?.id === "number"
-            ? post.author.id
+          : relationAuthor && typeof relationAuthor.id === "number"
+            ? relationAuthor.id
             : null;
+
       if (authorId === null) {
         return "—";
       }
@@ -302,7 +309,14 @@ const BlogPostsPage = () => {
       if (prev.previewUrl && prev.file) {
         URL.revokeObjectURL(prev.previewUrl);
       }
-      const rawPath = post.image ?? post.thumbnail ?? null;
+
+      const rawImage =
+        typeof post.image === "string" && post.image.trim().length > 0 ? post.image : null;
+      const rawThumbnail =
+        typeof post.thumbnail === "string" && post.thumbnail.trim().length > 0
+          ? post.thumbnail
+          : null;
+      const rawPath = rawImage ?? rawThumbnail ?? null;
       const preview = rawPath ? resolveMediaUrl(rawPath) : null;
       return {
         file: null,
@@ -563,6 +577,10 @@ const BlogPostsPage = () => {
     setAppliedSearch("");
   };
 
+  const previewSource =
+    imageState.previewUrl ??
+    (imageState.existingPath ? resolveMediaUrl(imageState.existingPath) : null);
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -792,18 +810,14 @@ const BlogPostsPage = () => {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
                   <div
                     className={`relative h-40 w-full overflow-hidden rounded-xl border ${
-                      imageState.previewUrl
+                      previewSource
                         ? "border-gray-200 bg-white"
                         : "border-dashed border-gray-300 bg-gray-50"
                     } sm:max-w-xs`}
                   >
-                    {imageState.previewUrl || imageState.existingPath ? (
+                    {previewSource ? (
                       <Image
-                        src={
-                          imageState.previewUrl
-                            ? imageState.previewUrl
-                            : resolveMediaUrl(imageState.existingPath ?? "")
-                        }
+                        src={previewSource}
                         alt="Previzualizare imagine articol"
                         fill
                         className="object-cover"
@@ -828,9 +842,9 @@ const BlogPostsPage = () => {
                         disabled={isSaving}
                       />
                       <UploadCloud className="h-4 w-4" aria-hidden="true" />
-                      {imageState.previewUrl ? "Schimbă imaginea" : "Încarcă imagine"}
+                      {previewSource ? "Schimbă imaginea" : "Încarcă imagine"}
                     </label>
-                    {(imageState.previewUrl || imageState.existingPath) && (
+                    {previewSource && (
                       <button
                         type="button"
                         onClick={handleImageRemove}
