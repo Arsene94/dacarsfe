@@ -9,6 +9,7 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'secondary' | 'outline' | 'danger' | 'blue' | 'yellow';
   size?: 'sm' | 'md' | 'lg';
+  asChild?: boolean;
   'aria-label'?: string;
 }
 

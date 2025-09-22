@@ -1,9 +1,22 @@
 import * as React from 'react';
+import { Slot } from '@radix-ui/react-slot';
+
 import { cn } from '@/lib/utils';
 import { ButtonProps } from '@/types/ui';
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'default', size = 'md', children, ...props }, ref) => {
+  (
+    {
+      className,
+      variant = 'default',
+      size = 'md',
+      asChild = false,
+      children,
+      type,
+      ...props
+    },
+    ref
+  ) => {
     const variants = {
       default: 'bg-jade text-white hover:bg-jadeLight',
       secondary: 'bg-berkeley text-white hover:bg-berkeley/90',
@@ -23,21 +36,35 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const sizeClasses = sizes[size] ?? sizes.md;
 
     const { ['aria-label']: ariaLabel, ...rest } = props;
+    const Component = asChild ? Slot : 'button';
+
+    const sharedProps = {
+      ...rest,
+      className: cn(
+        'inline-flex items-center justify-center font-dm-sans font-semibold rounded-lg transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60',
+        sizeClasses,
+        variantClasses,
+        className
+      ),
+      'aria-label': ariaLabel ?? (typeof children === 'string' ? children : undefined),
+    };
+
+    if (asChild) {
+      return (
+        <Component ref={ref as React.Ref<HTMLElement>} {...sharedProps}>
+          {children}
+        </Component>
+      );
+    }
 
     return (
-      <button
+      <Component
         ref={ref}
-        className={cn(
-          'inline-flex items-center justify-center font-dm-sans font-semibold rounded-lg transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60',
-          sizeClasses,
-          variantClasses,
-          className
-        )}
-        aria-label={ariaLabel ?? (typeof children === 'string' ? children : undefined)}
-        {...rest}
+        type={type ?? 'button'}
+        {...sharedProps}
       >
         {children}
-      </button>
+      </Component>
     );
   }
 );
