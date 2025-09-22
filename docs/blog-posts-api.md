@@ -24,6 +24,7 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
 | `content` | yes on store | string | Rich HTML/Markdown body. |
 | `status` | optional | string | Defaults to `draft`. Allowed values: `draft`, `published`. |
 | `published_at` | optional | date-time | ISO 8601 timestamp. |
+| `image` | optional | file or string | Acceptă fie un câmp `multipart/form-data` numit `image` (o singură imagine), fie un path existent. Trimite `null` pentru a elimina imaginea curentă. |
 | `tag_ids` | optional | array<int> | Each id must exist in `blog_tags.id`. Omitting keeps current tags. |
 
 ## Filtering & sorting
@@ -44,6 +45,7 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
       "content": "<p>Pentru o predare fără emoții...</p>",
       "status": "published",
       "published_at": "2025-01-12T07:00:00Z",
+      "image": "blog/posts/24/hero.webp",
       "category": {
         "id": 7,
         "name": "Travel Guides",
@@ -99,6 +101,7 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
     "content": "<p>Pentru o predare fără emoții...</p>",
     "status": "published",
     "published_at": "2025-01-12T07:00:00Z",
+    "image": "blog/posts/24/hero.webp",
     "category": {
       "id": 7,
       "name": "Travel Guides",
@@ -131,6 +134,8 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
 
 ## POST `/api/blog-posts`
 
+> Pentru a încărca imaginea principală trimite un request `multipart/form-data` și atașează fișierul în câmpul `image`. Alternativ poți trimite un path existent în corpul JSON. Folosește `image: null` pe update pentru a elimina imaginea curentă.
+
 ### Example request body
 ```json
 {
@@ -156,6 +161,7 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
     "content": "<p>Pentru o predare fără emoții...</p>",
     "status": "published",
     "published_at": "2025-01-12T07:00:00Z",
+    "image": "blog/posts/24/hero.webp",
     "category": {
       "id": 7,
       "name": "Travel Guides",
@@ -179,12 +185,15 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
 
 ## PUT `/api/blog-posts/{id}`
 
+> Acceptă fie corp JSON, fie `multipart/form-data` (pentru a încărca o imagine nouă prin câmpul `image`). Trimite `image: null` când vrei să elimini fotografia existentă.
+
 ### Example request body
 ```json
 {
   "title": "Checklist predare mașină în Otopeni",
   "status": "draft",
-  "tag_ids": [11]
+  "tag_ids": [11],
+  "image": null
 }
 ```
 
@@ -198,6 +207,7 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
     "excerpt": "Tot ce trebuie să știi când predai mașina în aeroportul Henri Coandă.",
     "content": "<p>Pentru o predare fără emoții...</p>",
     "status": "draft",
+    "image": null,
     "published_at": "2025-01-12T07:00:00Z",
     "category": {
       "id": 7,

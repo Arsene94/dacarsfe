@@ -99,7 +99,6 @@ const nextConfig = {
         // Package imports optimization
         optimizePackageImports: [
             'lucide-react',
-            '@radix-ui/react-slot',
             'class-variance-authority',
             'date-fns'
         ],
