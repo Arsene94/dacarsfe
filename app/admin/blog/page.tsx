@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { Edit, Plus, Trash2, UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/table";
 import { Popup } from "@/components/ui/popup";
@@ -12,6 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { formatDateTime, toIsoStringFromInput, toLocalDatetimeInputValue } from "@/lib/datetime";
+import { resolveMediaUrl } from "@/lib/media";
 import { getUserDisplayName } from "@/lib/users";
 import type { Column } from "@/types/ui";
 import type {
@@ -37,6 +39,20 @@ type BlogPostFormState = {
   metaTitle: string;
   metaDescription: string;
 };
+
+type BlogPostImageState = {
+  file: File | null;
+  previewUrl: string | null;
+  existingPath: string | null;
+  remove: boolean;
+};
+
+const createEmptyImageState = (): BlogPostImageState => ({
+  file: null,
+  previewUrl: null,
+  existingPath: null,
+  remove: false,
+});
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
@@ -88,6 +104,60 @@ const BlogPostsPage = () => {
   });
   const [searchValue, setSearchValue] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
+  const [imageState, setImageState] = useState<BlogPostImageState>(() => createEmptyImageState());
+
+  const resetImageState = useCallback(() => {
+    setImageState((prev) => {
+      if (prev.previewUrl && prev.file) {
+        URL.revokeObjectURL(prev.previewUrl);
+      }
+      return createEmptyImageState();
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (imageState.previewUrl && imageState.file) {
+        URL.revokeObjectURL(imageState.previewUrl);
+      }
+    };
+  }, [imageState.previewUrl, imageState.file]);
+
+  const handleImageChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setImageState((prev) => {
+      if (prev.previewUrl && prev.file) {
+        URL.revokeObjectURL(prev.previewUrl);
+      }
+      return {
+        file,
+        previewUrl: URL.createObjectURL(file),
+        existingPath: null,
+        remove: false,
+      };
+    });
+
+    event.target.value = "";
+  }, []);
+
+  const handleImageRemove = useCallback(() => {
+    setImageState((prev) => {
+      if (prev.previewUrl && prev.file) {
+        URL.revokeObjectURL(prev.previewUrl);
+      }
+      const hadExisting = typeof prev.existingPath === "string" && prev.existingPath.length > 0;
+      return {
+        file: null,
+        previewUrl: null,
+        existingPath: null,
+        remove: hadExisting,
+      };
+    });
+  }, []);
 
   const resolveAuthorName = useCallback(
     (post: BlogPost): string => {
@@ -191,6 +261,7 @@ const BlogPostsPage = () => {
       authorId: user?.id ? String(user.id) : "",
       status: "draft",
     });
+    resetImageState();
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -227,6 +298,19 @@ const BlogPostsPage = () => {
       metaTitle: post.meta_title ?? "",
       metaDescription: post.meta_description ?? "",
     });
+    setImageState((prev) => {
+      if (prev.previewUrl && prev.file) {
+        URL.revokeObjectURL(prev.previewUrl);
+      }
+      const rawPath = post.image ?? post.thumbnail ?? null;
+      const preview = rawPath ? resolveMediaUrl(rawPath) : null;
+      return {
+        file: null,
+        previewUrl: preview,
+        existingPath: rawPath,
+        remove: false,
+      };
+    });
     setFormError(null);
     setIsModalOpen(true);
   }, []);
@@ -237,6 +321,7 @@ const BlogPostsPage = () => {
     setIsSaving(false);
     setFormState({ ...EMPTY_FORM, authorId: user?.id ? String(user.id) : "" });
     setFormError(null);
+    resetImageState();
   };
 
   const toggleTag = (tagId: number) => {
@@ -316,12 +401,58 @@ const BlogPostsPage = () => {
       payload.published_at = null;
     }
 
+    const shouldUploadImage = Boolean(imageState.file);
+    const shouldRemoveExistingImage = imageState.remove && !imageState.file;
+
+    if (shouldRemoveExistingImage) {
+      payload.image = null;
+    }
+
+    let requestPayload: BlogPostPayload | FormData = payload;
+
+    if (shouldUploadImage && imageState.file) {
+      const formData = new FormData();
+      const appendValue = (key: string, value: unknown) => {
+        if (typeof value === "undefined") {
+          return;
+        }
+
+        if (value === null) {
+          formData.append(key, "");
+          return;
+        }
+
+        if (Array.isArray(value)) {
+          if (value.length === 0) {
+            formData.append(key, "");
+            return;
+          }
+          value.forEach((item) => appendValue(`${key}[]`, item));
+          return;
+        }
+
+        if (typeof value === "boolean") {
+          formData.append(key, value ? "1" : "0");
+          return;
+        }
+
+        formData.append(key, String(value));
+      };
+
+      Object.entries(payload).forEach(([key, value]) => {
+        appendValue(key, value);
+      });
+
+      formData.append("image", imageState.file, imageState.file.name);
+      requestPayload = formData;
+    }
+
     setIsSaving(true);
     try {
       if (editing) {
-        await apiClient.updateBlogPost(editing.id, payload);
+        await apiClient.updateBlogPost(editing.id, requestPayload);
       } else {
-        await apiClient.createBlogPost(payload);
+        await apiClient.createBlogPost(requestPayload);
       }
       await fetchPosts();
       closeModal();
@@ -642,6 +773,73 @@ const BlogPostsPage = () => {
                 placeholder="Introdu un paragraf scurt pentru listări."
                 rows={4}
               />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-image">
+              Imagine principală
+            </label>
+            <p className="text-xs text-gray-500">
+              Se afișează pe pagina publică a articolului și în listările din blog.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+              <div
+                className={`relative h-40 w-full overflow-hidden rounded-xl border ${
+                  imageState.previewUrl
+                    ? "border-gray-200 bg-white"
+                    : "border-dashed border-gray-300 bg-gray-50"
+                } sm:max-w-xs`}
+              >
+                {imageState.previewUrl ? (
+                  <Image
+                    src={imageState.previewUrl}
+                    alt="Previzualizare imagine articol"
+                    fill
+                    sizes="(max-width: 640px) 100vw, 256px"
+                    unoptimized={imageState.previewUrl.startsWith("blob:")}
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-gray-400">
+                    <span>Nu este selectată nicio imagine.</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2 text-sm text-gray-600">
+                <label
+                  className={`inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 font-medium transition ${
+                    isSaving
+                      ? "cursor-not-allowed border-gray-200 text-gray-400"
+                      : "border-jade text-jade hover:bg-jade/10"
+                  }`}
+                >
+                  <input
+                    id="blog-post-image"
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={handleImageChange}
+                    disabled={isSaving}
+                  />
+                  <UploadCloud className="h-4 w-4" aria-hidden="true" />
+                  {imageState.previewUrl ? "Schimbă imaginea" : "Încarcă imagine"}
+                </label>
+                {(imageState.previewUrl || imageState.existingPath) && (
+                  <button
+                    type="button"
+                    onClick={handleImageRemove}
+                    className="inline-flex w-fit items-center gap-2 text-sm text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isSaving}
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                    Elimină imaginea
+                  </button>
+                )}
+                <p className="text-xs text-gray-500">
+                  Acceptă imagini JPG, PNG sau WebP. Dimensiune recomandată 1280×720px.
+                </p>
+              </div>
             </div>
           </div>
 

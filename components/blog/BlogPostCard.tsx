@@ -24,7 +24,7 @@ const buildCategoryHref = (slug?: string | null, query?: string): string => {
 };
 
 const BlogPostCard = ({ post }: BlogPostCardProps) => {
-  const imageUrl = resolveMediaUrl(post.thumbnail ?? null);
+  const imageUrl = resolveMediaUrl(post.image ?? post.thumbnail ?? null);
   const authorName = post.author ? getUserDisplayName(post.author) : null;
   const publishedLabel = formatDate(post.published_at ?? post.created_at);
   const hasPublishedDate = publishedLabel !== "—";

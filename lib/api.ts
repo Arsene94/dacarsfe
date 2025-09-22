@@ -1700,7 +1700,14 @@ export class ApiClient {
         return this.request<ApiItemResult<BlogPost>>(`/blog-posts/${id}`);
     }
 
-    async createBlogPost(payload: BlogPostPayload): Promise<ApiItemResult<BlogPost>> {
+    async createBlogPost(payload: BlogPostPayload | FormData): Promise<ApiItemResult<BlogPost>> {
+        if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+            return this.request<ApiItemResult<BlogPost>>(`/blog-posts`, {
+                method: 'POST',
+                body: payload,
+            });
+        }
+
         const body = sanitizePayload(payload);
         return this.request<ApiItemResult<BlogPost>>(`/blog-posts`, {
             method: 'POST',
@@ -1708,7 +1715,17 @@ export class ApiClient {
         });
     }
 
-    async updateBlogPost(id: number | string, payload: BlogPostPayload): Promise<ApiItemResult<BlogPost>> {
+    async updateBlogPost(
+        id: number | string,
+        payload: BlogPostPayload | FormData,
+    ): Promise<ApiItemResult<BlogPost>> {
+        if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+            return this.request<ApiItemResult<BlogPost>>(`/blog-posts/${id}`, {
+                method: 'PUT',
+                body: payload,
+            });
+        }
+
         const body = sanitizePayload(payload);
         return this.request<ApiItemResult<BlogPost>>(`/blog-posts/${id}`, {
             method: 'PUT',

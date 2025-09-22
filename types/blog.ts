@@ -87,6 +87,7 @@ export interface BlogPost {
   content?: string | null;
   status?: BlogPostStatus | null;
   published_at?: string | null;
+  image?: string | null;
   thumbnail?: string | null;
   category?: BlogCategory | null;
   category_id?: number | null;
@@ -109,6 +110,7 @@ export type BlogPostPayload = Partial<{
   content: string | null;
   status: BlogPostStatus | null;
   published_at: string | null;
+  image: string | null;
   thumbnail: string | null;
   meta_title: string | null;
   meta_description: string | null;

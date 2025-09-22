@@ -54,7 +54,7 @@ export const generateMetadata = async ({ params }: BlogPostPageProps): Promise<M
     post.meta_description ??
     post.excerpt ??
     `Citește articolul „${post.title}” pe blogul DaCars și descoperă sfaturi utile pentru următoarea închiriere auto.`;
-  const thumbnail = resolveMediaUrl(post.thumbnail ?? null);
+  const thumbnail = resolveMediaUrl(post.image ?? post.thumbnail ?? null);
 
   return buildMetadata({
     title: `${post.title} | Blog DaCars`,
@@ -122,10 +122,10 @@ const BlogPostPage = async ({ params }: BlogPostPageProps) => {
     dateModified: post.updated_at ?? post.published_at ?? post.created_at,
     url: pageUrl,
     mainEntityOfPage: pageUrl,
-    image: resolveMediaUrl(post.thumbnail ?? null) ?? undefined,
+    image: resolveMediaUrl(post.image ?? post.thumbnail ?? null) ?? undefined,
   };
 
-  const heroImage = resolveMediaUrl(post.thumbnail ?? null);
+  const heroImage = resolveMediaUrl(post.image ?? post.thumbnail ?? null);
   const publishedLabel = formatDate(post.published_at ?? post.created_at);
   const authorName = post.author ? getUserDisplayName(post.author) : null;
 

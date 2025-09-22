@@ -119,6 +119,7 @@ const BlogPage = async ({ searchParams }: BlogPageProps) => {
             headline: post.title,
             datePublished: post.published_at ?? post.created_at,
             dateModified: post.updated_at ?? post.published_at ?? post.created_at,
+            image: resolveMediaUrl(post.image ?? post.thumbnail ?? null) ?? undefined,
             url: absoluteUrl(`/blog/${post.slug}`),
           })),
         }
@@ -183,7 +184,7 @@ const BlogPage = async ({ searchParams }: BlogPageProps) => {
           <article className="grid gap-8 lg:grid-cols-2 lg:items-center">
             <div className="relative h-64 w-full overflow-hidden rounded-xl lg:h-full">
               {(() => {
-                const heroImage = resolveMediaUrl(heroPost.thumbnail ?? null);
+                const heroImage = resolveMediaUrl(heroPost.image ?? heroPost.thumbnail ?? null);
                 if (!heroImage) {
                   return <div className="h-full w-full bg-gradient-to-br from-berkeley/20 via-jade/10 to-berkeley/25" />;
                 }
