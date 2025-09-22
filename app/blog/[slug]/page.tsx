@@ -35,16 +35,17 @@ const fetchPostBySlug = cache(async (slug: string): Promise<BlogPost | null> => 
 });
 
 type BlogPostPageProps = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 export const generateMetadata = async ({ params }: BlogPostPageProps): Promise<Metadata> => {
-  const post = await fetchPostBySlug(params.slug);
+  const { slug } = await params;
+  const post = await fetchPostBySlug(slug);
   if (!post) {
     return buildMetadata({
       title: "Articolul de blog nu a fost găsit",
       description: "Articolul solicitat nu există sau a fost retras.",
-      path: `/blog/${params.slug}`,
+      path: `/blog/${slug}`,
       noIndex: true,
     });
   }
@@ -67,7 +68,8 @@ export const generateMetadata = async ({ params }: BlogPostPageProps): Promise<M
 };
 
 const BlogPostPage = async ({ params }: BlogPostPageProps) => {
-  const post = await fetchPostBySlug(params.slug);
+  const { slug } = await params;
+  const post = await fetchPostBySlug(slug);
   if (!post) {
     notFound();
   }

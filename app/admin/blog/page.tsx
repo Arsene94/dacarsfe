@@ -166,11 +166,14 @@ const BlogPostsPage = () => {
           ? post.author
           : null;
 
+      const relationAuthorId =
+        relationAuthor && typeof relationAuthor.id === "number"
+          ? relationAuthor.id
+          : null;
+
       if (relationAuthor) {
         return getUserDisplayName({ ...relationAuthor });
       }
-
-      const relationAuthorId = relationAuthor?.id;
 
       const authorId =
         typeof post.author_id === "number"
