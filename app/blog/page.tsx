@@ -129,7 +129,7 @@ const BlogPage = async ({ searchParams }: BlogPageProps) => {
     <div className="bg-slate-50">
       {breadcrumbStructuredData && <JsonLd data={breadcrumbStructuredData} id="dacars-blog-breadcrumb" />}
       {blogStructuredData && <JsonLd data={blogStructuredData} id="dacars-blog-list" />}
-      <section className="bg-berkeley py-16 text-white">
+      <section className="bg-berkeley py-16 text-white mt-8">
         <div className="mx-auto flex max-w-5xl flex-col gap-6 px-6">
           <div>
             <h1 className="text-3xl font-semibold leading-tight sm:text-4xl">Blog DaCars</h1>
