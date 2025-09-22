@@ -47,14 +47,20 @@ const buildFilterHref = (category?: string | null, query?: string): string => {
 };
 
 type BlogPageProps = {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 const BlogPage = async ({ searchParams }: BlogPageProps) => {
   const api = new ApiClient(getApiBaseUrl());
 
-  const searchTerm = typeof searchParams?.q === "string" ? searchParams.q.trim() : "";
-  const categorySlug = typeof searchParams?.category === "string" ? searchParams.category.trim() : "";
+  const resolvedSearchParams = await searchParams;
+
+  const searchTerm =
+    typeof resolvedSearchParams?.q === "string" ? resolvedSearchParams.q.trim() : "";
+  const categorySlug =
+    typeof resolvedSearchParams?.category === "string"
+      ? resolvedSearchParams.category.trim()
+      : "";
 
   const categoryResponse = await api.getBlogCategories({ perPage: 100, sort: "name" });
   let categories = sortCategories(extractList(categoryResponse));
