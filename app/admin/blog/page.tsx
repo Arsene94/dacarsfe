@@ -161,20 +161,22 @@ const BlogPostsPage = () => {
 
   const resolveAuthorName = useCallback(
     (post: BlogPost): string => {
-      if (post.author) {
-        return getUserDisplayName({ ...post.author });
-      }
-
       const relationAuthor =
-        post.author && typeof post.author === "object" && post.author !== null
+        typeof post.author === "object" && post.author !== null
           ? post.author
           : null;
+
+      if (relationAuthor) {
+        return getUserDisplayName({ ...relationAuthor });
+      }
+
+      const relationAuthorId = relationAuthor?.id;
 
       const authorId =
         typeof post.author_id === "number"
           ? post.author_id
-          : relationAuthor && typeof relationAuthor.id === "number"
-            ? relationAuthor.id
+          : typeof relationAuthorId === "number"
+            ? relationAuthorId
             : null;
 
       if (authorId === null) {
