@@ -188,6 +188,7 @@ const FleetPage = () => {
             location: location || undefined,
             page: currentPage,
             sort_by: sortBy,
+            status: 'available'
         };
         if (filters.car_type !== "all")   payload.car_type = Number(filters.car_type);
         if (filters.type !== "all")       payload.vehicle_type = Number(filters.type);
