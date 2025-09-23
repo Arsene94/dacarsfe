@@ -138,3 +138,48 @@
 .datetime-field::-webkit-clear-button {
     display: none;
 }
+
+/* Mobile form field consistency fixes */
+@media (max-width: 640px) {
+    .datetime-field,
+    .select-trigger {
+        min-height: 3rem !important;
+        max-height: 3rem !important;
+        height: 3rem !important;
+        line-height: 1.5 !important;
+        box-sizing: border-box !important;
+    }
+
+    .datetime-field::-webkit-date-and-time-value,
+    .datetime-field::-webkit-datetime-edit,
+    .datetime-field::-webkit-datetime-edit-fields-wrapper {
+        height: 100% !important;
+        min-height: 3rem !important;
+        display: flex !important;
+        align-items: center !important;
+        padding: 0 !important;
+    }
+
+    .datetime-field::-webkit-datetime-edit-text,
+    .datetime-field::-webkit-datetime-edit-hour-field,
+    .datetime-field::-webkit-datetime-edit-minute-field,
+    .datetime-field::-webkit-datetime-edit-day-field,
+    .datetime-field::-webkit-datetime-edit-month-field,
+    .datetime-field::-webkit-datetime-edit-year-field,
+    .datetime-field::-webkit-datetime-edit-ampm-field {
+        padding: 0 !important;
+        height: auto !important;
+        line-height: 1.5 !important;
+    }
+
+    /* Ensure select elements match the same height */
+    select.select-trigger {
+        appearance: none !important;
+        background-position: right 0.75rem center !important;
+        background-size: 1rem !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+}
