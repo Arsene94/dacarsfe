@@ -1,4 +1,4 @@
-# DaCars – Platformă Next.js pentru închirieri auto
+# DaCars – Platformă Next.js pentru rent a car
 
 Aplicația DaCars oferă o experiență completă de închirieri auto pentru clienți și echipa operațională. Frontend-ul este construit cu Next.js 15 și React 18, folosește TypeScript și Tailwind CSS pentru un design modern și performanțe ridicate, iar zona de administrare integrează fluxuri avansate pentru gestiunea flotei, rezervărilor și campaniilor de marketing.
 
