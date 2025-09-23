@@ -207,6 +207,7 @@ const HeroSection = () => {
                         alt="Fundal aeroport"
                         fill
                         priority
+                        fetchPriority="high"
                         sizes="100vw"
                         className="w-full h-full object-cover"
                     />
