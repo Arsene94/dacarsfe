@@ -278,13 +278,13 @@ const SuccessPage = () => {
             Printează detaliile
           </Button>
 
-          <Link href="/" aria-label="Înapoi la Acasă">
+          <Link href="/" aria-label="Înapoi Acasă">
             <Button
               className="transform hover:scale-105 shadow-lg"
-              aria-label="Înapoi la Acasă"
+              aria-label="Înapoi Acasă"
             >
               <Home className="h-5 w-5 mr-2" />
-              Înapoi la Acasă
+              Înapoi Acasă
             </Button>
           </Link>
         </div>

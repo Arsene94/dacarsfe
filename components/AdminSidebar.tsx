@@ -27,6 +27,12 @@ import {
   Receipt,
   Wrench,
   Newspaper,
+  Settings2,
+  Factory,
+  Layers,
+  Gauge,
+  Palette,
+  Fuel,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -376,6 +382,78 @@ const menuItems: readonly AdminSidebarItem[] = [
               ]),
           },
       ]
+  },
+  {
+    name: "Atribute Mașini",
+    icon: Settings2,
+    requiredPermissions: buildPermissionList("car-attributes", [
+      "car_attributes",
+      "car-makes",
+      "car-types",
+      "car-transmissions",
+      "car-fuels",
+      "car-colors",
+    ]),
+    subItems: [
+      {
+        name: "Mărci",
+        href: "/admin/car-attributes/makes",
+        icon: Factory,
+        requiredPermissions: buildPermissionList("car-makes", [
+          "car_makes",
+          "car_make",
+          "car-make",
+          "makes",
+        ]),
+      },
+      {
+        name: "Tipuri",
+        href: "/admin/car-attributes/types",
+        icon: Layers,
+        requiredPermissions: buildPermissionList("car-types", [
+          "car_types",
+          "car_type",
+          "vehicle-types",
+          "vehicle_type",
+        ]),
+      },
+      {
+        name: "Transmisii",
+        href: "/admin/car-attributes/transmissions",
+        icon: Gauge,
+        requiredPermissions: buildPermissionList("car-transmissions", [
+          "car_transmissions",
+          "car_transmission",
+          "transmissions",
+          "transmission",
+        ]),
+      },
+      {
+        name: "Combustibili",
+        href: "/admin/car-attributes/fuels",
+        icon: Fuel,
+        requiredPermissions: buildPermissionList("car-fuels", [
+          "car_fuels",
+          "car_fuel",
+          "fuel-types",
+          "fuel_type",
+          "fuel",
+        ]),
+      },
+      {
+        name: "Culori",
+        href: "/admin/car-attributes/colors",
+        icon: Palette,
+        requiredPermissions: buildPermissionList("car-colors", [
+          "car_colors",
+          "car_color",
+          "car-colours",
+          "car_colour",
+          "colors",
+          "colours",
+        ]),
+      },
+    ],
   },
   {
     name: "Cheltuieli flotă",

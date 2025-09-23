@@ -568,7 +568,7 @@ const ReservationPage = () => {
         const prize = wheelPrizeRecord.prize;
         const type = typeof prize.type === "string" ? prize.type : "other";
         const amount = typeof prize.amount === "number" && Number.isFinite(prize.amount)
-            ? prize.amount
+            ? Math.round(prize.amount)
             : null;
 
         let discountValue = 0;
@@ -597,7 +597,7 @@ const ReservationPage = () => {
         }
 
         const capped = Math.min(totalBeforeWheel, discountValue);
-        return Math.round(capped * 100) / 100;
+        return Math.round(Math.round(capped * 100) / 100);
     }, [
         hasWheelPrize,
         wheelPrizeRecord,
@@ -806,6 +806,8 @@ const ReservationPage = () => {
                     reservationId,
                 }),
             );
+            clearStoredWheelPrize();
+            setWheelPrizeRecord(null);
             router.push("/success");
         } catch (error) {
             console.error(error);
