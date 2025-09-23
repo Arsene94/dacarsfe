@@ -189,7 +189,8 @@ const HeroSection = () => {
   };
 
   const fieldWrapperClass = "space-y-2 w-full";
-  const controlClass = "h-12 w-full text-base";
+  const controlClass = "h-12 w-full text-sm sm:text-base";
+  const dateTimeControlClass = `${controlClass} pl-10 pr-10 datetime-field`;
 
   return (
     <section className="relative bg-berkeley text-white overflow-hidden">
@@ -325,7 +326,7 @@ const HeroSection = () => {
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   min={minstart_date}
-                  className={`${controlClass} pl-10 pr-4`}
+                  className={dateTimeControlClass}
                 />
               </div>
             </div>
@@ -347,7 +348,7 @@ const HeroSection = () => {
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   min={minend_date}
-                  className={`${controlClass} pl-10 pr-4`}
+                  className={dateTimeControlClass}
                 />
               </div>
             </div>
