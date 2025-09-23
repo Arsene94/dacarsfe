@@ -1249,7 +1249,7 @@ const ReservationPage = () => {
 
                                 <div className="flex justify-between items-center">
                                     <span className="font-dm-sans text-gray-600">Locație:</span>
-                                    <span className="font-dm-sans font-semibold text-berkeley">
+                                    <span className="font-dm-sans font-semibold text-berkeley text-end">
                     Aeroport Henri Coandă, Otopeni
                   </span>
                                 </div>

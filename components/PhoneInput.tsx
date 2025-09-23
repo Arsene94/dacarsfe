@@ -184,7 +184,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
           required={required}
           placeholder={placeholder}
           className={cn(
-            'flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300',
+            'flex-1 px-4 py-3 w-full border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300',
             !isValid && 'border-red-500 focus:ring-red-500',
           )}
         />
