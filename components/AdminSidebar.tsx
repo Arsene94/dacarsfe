@@ -33,6 +33,7 @@ import type { LucideIcon } from "lucide-react";
 type AdminSidebarSubItem = {
   name: string;
   href: string;
+  icon: LucideIcon;
   requiredPermissions?: readonly string[];
 };
 
@@ -314,51 +315,67 @@ const menuItems: readonly AdminSidebarItem[] = [
     requiredPermissions: buildPermissionList("dashboard", ["overview", "statistics"]),
   },
   {
-    name: "Rezervări",
-    href: "/admin/bookings",
-    icon: Calendar,
-    requiredPermissions: buildPermissionList("bookings", ["booking"]),
-  },
-  {
-    name: "Calendar",
-    href: "/admin/calendar",
-    icon: CalendarDays,
-    requiredPermissions: buildPermissionList("bookings-calendar", [
-      "bookings",
-      "booking",
-      "calendar",
-    ]),
-  },
-  {
-    name: "Mașini",
-    href: "/admin/cars",
-    icon: Car,
-    requiredPermissions: buildPermissionList("cars", ["car", "vehicles", "fleet"]),
-  },
-  {
-    name: "Categorii",
-    href: "/admin/categories",
-    icon: FolderTree,
-    requiredPermissions: buildPermissionList("categories", [
-      "category",
-      "car-categories",
-    ]),
-  },
-  {
-    name: "Dynamic Price",
-    href: "/admin/dynamic-prices",
-    icon: Percent,
-    requiredPermissions: buildPermissionList("dynamic-prices", [
-      "dynamic-price",
-      "dynamic_prices",
-      "prices",
-    ]),
-  },
-  {
-    name: "Servicii",
-    href: "/admin/services",
-    icon: ConciergeBell,
-    requiredPermissions: buildPermissionList("services", ["service", "extras"]),
+      name: "Închirieri",
+      icon: Car,
+      subItems: [
+          {
+              name: "Rezervări",
+              href: "/admin/bookings",
+              icon: Calendar,
+              requiredPermissions: buildPermissionList("bookings", ["booking"]),
+          },
+          {
+              name: "Calendar",
+              href: "/admin/calendar",
+              icon: CalendarDays,
+              requiredPermissions: buildPermissionList("bookings-calendar", [
+                  "bookings",
+                  "booking",
+                  "calendar",
+              ]),
+          },
+          {
+              name: "Mașini",
+              href: "/admin/cars",
+              icon: Car,
+              requiredPermissions: buildPermissionList("cars", ["car", "vehicles", "fleet"]),
+          },
+          {
+              name: "Categorii",
+              href: "/admin/categories",
+              icon: FolderTree,
+              requiredPermissions: buildPermissionList("categories", [
+                  "category",
+                  "car-categories",
+              ]),
+          },
+          {
+              name: "Dynamic Price",
+              href: "/admin/dynamic-prices",
+              icon: Percent,
+              requiredPermissions: buildPermissionList("dynamic-prices", [
+                  "dynamic-price",
+                  "dynamic_prices",
+                  "prices",
+              ]),
+          },
+          {
+              name: "Servicii",
+              href: "/admin/services",
+              icon: ConciergeBell,
+              requiredPermissions: buildPermissionList("services", ["service", "extras"]),
+          },
+          {
+              name: "Wheel of Fortune",
+              href: "/admin/wheel-of-fortune",
+              icon: Sparkles,
+              requiredPermissions: buildPermissionList("wheel-of-fortune", [
+                  "wheel",
+                  "fortune",
+                  "wheeloffortune",
+              ]),
+          },
+      ]
   },
   {
     name: "Cheltuieli flotă",
@@ -409,16 +426,6 @@ const menuItems: readonly AdminSidebarItem[] = [
     ]),
   },
   {
-    name: "Wheel of Fortune",
-    href: "/admin/wheel-of-fortune",
-    icon: Sparkles,
-    requiredPermissions: buildPermissionList("wheel-of-fortune", [
-      "wheel",
-      "fortune",
-      "wheeloffortune",
-    ]),
-  },
-  {
     name: "Blog",
     icon: Newspaper,
     requiredPermissions: buildPermissionList("blog", [
@@ -430,37 +437,23 @@ const menuItems: readonly AdminSidebarItem[] = [
       {
         name: "Articole",
         href: "/admin/blog",
+        icon: Newspaper,
         requiredPermissions: buildPermissionList("blog-posts", ["blog_post"]),
       },
       {
         name: "Categorii",
         href: "/admin/blog/categories",
+        icon: Newspaper,
         requiredPermissions: buildPermissionList("blog-categories", ["blog_category"]),
       },
       {
         name: "Etichete",
         href: "/admin/blog/tags",
+        icon: Newspaper,
         requiredPermissions: buildPermissionList("blog-tags", ["blog_tag"]),
       },
     ],
-  },
-  {
-    name: "Mockup",
-    icon: Folder,
-    requiredPermissions: buildPermissionList("mockup"),
-    subItems: [
-      {
-        name: "Sub Meniu 1",
-        href: "/admin/mockup/sub1",
-        requiredPermissions: buildPermissionList("mockup"),
-      },
-      {
-        name: "Sub Meniu 2",
-        href: "/admin/mockup/sub2",
-        requiredPermissions: buildPermissionList("mockup"),
-      },
-    ],
-  },
+  }
 ];
 
 export default function AdminSidebar() {
@@ -600,17 +593,19 @@ export default function AdminSidebar() {
                   <div className="mt-1 space-y-1 pl-9">
                     {item.subItems.map((sub) => {
                       const subActive = pathname === sub.href;
+                        const SubIcon = sub.icon;
                       return (
                         <Link
                           key={sub.href}
                           href={sub.href}
                           onClick={() => isMobile && setCollapsed(true)}
-                          className={`block rounded-md px-2 py-2 text-sm transition-colors ${
+                          className={`rounded-md px-2 py-2 text-sm transition-colors flex items-center gap-1 ${
                             subActive
                               ? "text-jade"
                               : "text-gray-700 hover:bg-gray-100"
                           }`}
                         >
+                          <SubIcon className="h-5 w-5" />
                           {sub.name}
                         </Link>
                       );
