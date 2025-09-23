@@ -322,7 +322,7 @@ const HeroSection = () => {
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   min={minstart_date}
-                  className="pl-10"
+                  className="pl-10 h-12"
                 />
               </div>
             </div>
@@ -344,7 +344,7 @@ const HeroSection = () => {
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   min={minend_date}
-                  className="pl-10"
+                  className="pl-10 h-12"
                 />
               </div>
             </div>
@@ -360,7 +360,7 @@ const HeroSection = () => {
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Select
                   id="hero-location"
-                  className="pl-9 pr-4 text-black h-[3.3rem]"
+                  className="pl-10 pr-10 text-black text-base h-12"
                   value={formData.location}
                   onValueChange={handleSelectChange("location")}
                   placeholder="Alege locația"
@@ -381,7 +381,7 @@ const HeroSection = () => {
                 <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Select
                   id="hero-car-type"
-                  className="pl-9 pr-4 text-black h-[3.3rem]"
+                  className="pl-10 pr-10 text-black text-base h-12"
                   value={formData.car_type}
                   onValueChange={handleSelectChange("car_type")}
                 >
