@@ -161,6 +161,7 @@ export interface CarSearchUiPayload {
   year?: number | string;
   search?: string;
   include?: string;
+  status?: string | null;
   [key: string]: unknown;
 }
 
