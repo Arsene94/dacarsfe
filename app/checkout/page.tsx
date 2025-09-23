@@ -806,6 +806,8 @@ const ReservationPage = () => {
                     reservationId,
                 }),
             );
+            clearStoredWheelPrize();
+            setWheelPrizeRecord(null);
             router.push("/success");
         } catch (error) {
             console.error(error);
