@@ -493,17 +493,6 @@ const menuItems: readonly AdminSidebarItem[] = [
     requiredPermissions: buildPermissionList("roles", ["role", "permissions"]),
   },
   {
-    name: "Loguri activitate",
-    href: "/admin/activity-logs",
-    icon: ScrollText,
-    requiredPermissions: buildPermissionList("activity-logs", [
-      "activity_logs",
-      "activity",
-      "logs",
-      "log",
-    ]),
-  },
-  {
     name: "Blog",
     icon: Newspaper,
     requiredPermissions: buildPermissionList("blog", [
@@ -531,6 +520,17 @@ const menuItems: readonly AdminSidebarItem[] = [
         requiredPermissions: buildPermissionList("blog-tags", ["blog_tag"]),
       },
     ],
+  },
+  {
+    name: "Loguri activitate",
+    href: "/admin/activity-logs",
+    icon: ScrollText,
+    requiredPermissions: buildPermissionList("activity-logs", [
+      "activity_logs",
+      "activity",
+      "logs",
+      "log",
+    ]),
   }
 ];
 
