@@ -930,33 +930,33 @@ const ReservationPage = () => {
                                             Cod de reducere
                                         </Label>
                                         {discountStatus?.isValid ? (
-                                            <div className="flex items-center space-x-2">
+                                            <div className="flex flex-col gap-2 md:flex-row md:items-center">
                                                 <input
                                                     id="reservation-discount"
                                                     type="text"
                                                     name="coupon_code"
                                                     value={formData.coupon_code}
                                                     disabled={true}
-                                                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 md:w-auto md:flex-1"
                                                     placeholder="Ex: WHEEL10"
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={handleRemoveDiscountCode}
-                                                    className="px-4 py-3 bg-red-500 text-white font-dm-sans font-semibold rounded-lg hover:bg-red-600 transition-all duration-300"
+                                                    className="w-full px-4 py-3 bg-red-500 text-white font-dm-sans font-semibold rounded-lg hover:bg-red-600 transition-all duration-300 md:w-auto"
                                                 >
                                                     Șterge cod
                                                 </button>
                                             </div>
                                         ) : (
-                                            <div className="flex space-x-2">
+                                            <div className="flex flex-col gap-2 md:flex-row md:items-center">
                                                 <input
                                                     id="reservation-discount"
                                                     type="text"
                                                     name="coupon_code"
                                                     value={formData.coupon_code}
                                                     onChange={handleInputChange}
-                                                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
+                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 md:w-auto md:flex-1"
                                                     placeholder="Ex: WHEEL10"
                                                 />
                                                 <Button
@@ -965,7 +965,7 @@ const ReservationPage = () => {
                                                     disabled={
                                                         isValidatingCode || !formData.coupon_code.trim()
                                                     }
-                                                    className="px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                                                    className="w-full px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 md:w-auto"
                                                     aria-label="Validează codul"
                                                 >
                                                     {isValidatingCode ? (

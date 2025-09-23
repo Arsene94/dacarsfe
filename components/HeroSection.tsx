@@ -188,6 +188,9 @@ const HeroSection = () => {
     router.push(`/cars?${params.toString()}`);
   };
 
+  const fieldWrapperClass = "space-y-2 w-full";
+  const controlClass = "h-12 w-full text-base";
+
   return (
     <section className="relative bg-berkeley text-white overflow-hidden">
       {/* Background Image */}
@@ -303,9 +306,9 @@ const HeroSection = () => {
         <div className="mt-5">
           <form
             onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
+            className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5"
           >
-            <div className="space-y-2">
+            <div className={fieldWrapperClass}>
               <Label
                 htmlFor="hero-pickup-date"
                 className="text-sm text-white font-medium font-['DM_Sans']"
@@ -322,12 +325,12 @@ const HeroSection = () => {
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   min={minstart_date}
-                  className="pl-10"
+                  className={`${controlClass} pl-10 pr-4`}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className={fieldWrapperClass}>
               <Label
                 htmlFor="hero-return-date"
                 className="text-sm text-white font-medium font-['DM_Sans']"
@@ -344,12 +347,12 @@ const HeroSection = () => {
                   onChange={handleInputChange}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   min={minend_date}
-                  className="pl-10"
+                  className={`${controlClass} pl-10 pr-4`}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className={fieldWrapperClass}>
               <Label
                 htmlFor="hero-location"
                 className="text-sm text-white font-medium font-['DM_Sans']"
@@ -360,7 +363,7 @@ const HeroSection = () => {
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Select
                   id="hero-location"
-                  className="pl-9 pr-4 text-black h-[3.3rem]"
+                  className={`${controlClass} pl-10 pr-10 text-[#191919]`}
                   value={formData.location}
                   onValueChange={handleSelectChange("location")}
                   placeholder="Alege locația"
@@ -370,7 +373,7 @@ const HeroSection = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className={fieldWrapperClass}>
               <Label
                 htmlFor="hero-car-type"
                 className="text-sm text-white font-medium font-['DM_Sans']"
@@ -381,7 +384,7 @@ const HeroSection = () => {
                 <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Select
                   id="hero-car-type"
-                  className="pl-9 pr-4 text-black h-[3.3rem]"
+                  className={`${controlClass} pl-10 pr-10 text-[#191919]`}
                   value={formData.car_type}
                   onValueChange={handleSelectChange("car_type")}
                 >
