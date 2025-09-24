@@ -154,6 +154,9 @@ type RolePayload = {
 } & Record<string, unknown>;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const INTERNAL_API_BASE = '/api';
+const PUBLIC_CONTENT_ENDPOINT_PREFIX = '/public/content';
+const ADMIN_PUBLIC_CONTENT_ENDPOINT_PREFIX = '/admin/public-content';
 
 export const FORBIDDEN_EVENT = "dacars:api:forbidden";
 const FORBIDDEN_MESSAGE = "Forbidden";
@@ -325,7 +328,7 @@ export class ApiClient {
         options: ApiRequestOptions = {}
     ): Promise<T> {
         const { suppressErrorLog, ...requestInit } = options;
-        const url = `${this.baseURL}${endpoint}`;
+        const url = this.resolveRequestUrl(endpoint);
 
         const isFormData =
             typeof FormData !== 'undefined' && requestInit.body instanceof FormData;
@@ -422,6 +425,20 @@ export class ApiClient {
             }
             throw error;
         }
+    }
+
+    private resolveRequestUrl(endpoint: string): string {
+        if (typeof window !== 'undefined') {
+            if (endpoint.startsWith(PUBLIC_CONTENT_ENDPOINT_PREFIX)) {
+                return `${INTERNAL_API_BASE}${endpoint}`;
+            }
+
+            if (endpoint.startsWith(ADMIN_PUBLIC_CONTENT_ENDPOINT_PREFIX)) {
+                return `${INTERNAL_API_BASE}${endpoint}`;
+            }
+        }
+
+        return `${this.baseURL}${endpoint}`;
     }
 
     async getCars(params: {
