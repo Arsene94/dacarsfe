@@ -7,7 +7,7 @@ import {Label} from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import {useBooking} from "@/context/BookingContext";
 import { apiClient } from "@/lib/api";
-import { extractList } from "@/lib/apiResponse";
+import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount, formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
 import {
@@ -127,6 +127,32 @@ const resolveLookupId = (value: unknown): number | null => {
     }
 
     return coerceId(value);
+};
+
+const parseReservationIdentifier = (value: unknown): string | null => {
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return String(value);
+    }
+
+    return null;
+};
+
+const resolveReservationIdentifier = (record: unknown): string | null => {
+    if (!record || typeof record !== "object") {
+        return null;
+    }
+
+    const source = record as Record<string, unknown>;
+    return (
+        parseReservationIdentifier(source.booking_number) ??
+        parseReservationIdentifier(source.bookingNumber) ??
+        parseReservationIdentifier(source.id)
+    );
 };
 
 const mapApiCarToCar = (apiCar: ApiCar): Car => {
@@ -785,10 +811,11 @@ const ReservationPage = () => {
 
         try {
             const res = await apiClient.createBooking(payload);
+            const bookingRecord = extractItem(res);
             const reservationId =
-                res?.data?.booking_number ||
-                res?.data?.id ||
-                "#" + Math.floor(1000000 + Math.random() * 9000000);
+                resolveReservationIdentifier(bookingRecord) ??
+                resolveReservationIdentifier(res) ??
+                `#${Math.floor(1000000 + Math.random() * 9000000)}`;
             localStorage.setItem(
                 "reservationData",
                 JSON.stringify({
