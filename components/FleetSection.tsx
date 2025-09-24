@@ -20,7 +20,10 @@ import {
     mapFleetCarsToStructuredData,
 } from "@/lib/seo/structuredData";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
-import { ApiCar, CarCategory, FleetCar } from "@/types/car";
+import { ApiCar, FleetCar } from "@/types/car";
+import { usePublicContentSection } from "@/context/PublicContentContext";
+import { HOME_FLEET_COPY_FALLBACK } from "@/lib/publicContent/defaults";
+import { formatTemplate } from "@/lib/publicContent/utils";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
@@ -93,6 +96,7 @@ const resolveRelationName = (relation: unknown, fallback: string): string => {
 };
 
 const FleetSection = () => {
+    const copy = usePublicContentSection("home.fleet", HOME_FLEET_COPY_FALLBACK);
     const [cars, setCars] = useState<FleetCar[]>([]);
     const [current, setCurrent] = useState(0);
 
@@ -203,7 +207,11 @@ const FleetSection = () => {
                     <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                         <div className="flex items-center space-x-2">
                             <Users className="h-4 w-4 text-jade" />
-                            <span>{car.number_of_seats} persoane</span>
+                            <span>
+                                {formatTemplate(copy.passengersTemplate, {
+                                    count: car.number_of_seats,
+                                })}
+                            </span>
                         </div>
                         <div className="flex items-center space-x-2">
                             <Settings className="h-4 w-4 text-jade" />
@@ -243,15 +251,20 @@ const FleetSection = () => {
                     <JsonLd data={structuredData} id="dacars-featured-cars" />
                 )}
                 <div className="text-center mb-16 animate-fade-in">
-                    <h2 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
-                        Flota noastră <span className="text-jade">premium</span>
-                    </h2>
+                    <h2
+                        className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6"
+                        dangerouslySetInnerHTML={{ __html: copy.heading.title }}
+                    />
                     <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                        Mașini moderne, verificate și întreținute cu grijă pentru confortul și siguranța ta.
+                        {copy.heading.description}
                     </p>
                 </div>
 
-                <div className="md:hidden relative overflow-hidden" role="region" aria-label="Carousel">
+                <div
+                    className="md:hidden relative overflow-hidden"
+                    role="region"
+                    aria-label={copy.carousel.regionAriaLabel}
+                >
                     <div
                         className="flex transition-transform duration-700 ease-out"
                         style={{ transform: `translateX(-${current * 100}%)` }}
@@ -263,7 +276,10 @@ const FleetSection = () => {
                                 className="min-w-full"
                                 role="group"
                                 aria-roledescription="slide"
-                                aria-label={`${index + 1} din ${cars.length}`}
+                                aria-label={formatTemplate(copy.carousel.slideLabelTemplate, {
+                                    current: index + 1,
+                                    total: cars.length,
+                                })}
                             >
                                 <CarCard car={car} index={index} />
                             </div>
@@ -274,14 +290,14 @@ const FleetSection = () => {
                         <>
                             <button
                                 onClick={prevSlide}
-                                aria-label="Mașina precedentă"
+                                aria-label={copy.carousel.previousAriaLabel}
                                 className="absolute top-1/2 left-2 -translate-y-1/2 p-2 rounded-full bg-white/80 shadow hover:bg-white"
                             >
                                 <ChevronLeft className="h-5 w-5 text-jade" />
                             </button>
                             <button
                                 onClick={nextSlide}
-                                aria-label="Mașina următoare"
+                                aria-label={copy.carousel.nextAriaLabel}
                                 className="absolute top-1/2 right-2 -translate-y-1/2 p-2 rounded-full bg-white/80 shadow hover:bg-white"
                             >
                                 <ChevronRight className="h-5 w-5 text-jade" />
@@ -297,13 +313,13 @@ const FleetSection = () => {
                 </div>
 
                 <div className="text-center mt-12">
-                    <Link href="/cars" aria-label="Vezi toată flota">
+                    <Link href={copy.cta.href} aria-label={copy.cta.ariaLabel}>
                         <Button
-                            aria-label="Vezi toată flota"
+                            aria-label={copy.cta.ariaLabel}
                             variant="outline"
                             className="border-jade text-jade hover:bg-jade hover:text-white"
                         >
-                            Vezi toată flota
+                            {copy.cta.label}
                         </Button>
                     </Link>
                 </div>

@@ -14,7 +14,7 @@ GET /api/public/content
 | --- | --- | --- | --- |
 | `locale` | string | `ro` | Codul limbii cerute (ex. `ro`, `en`). |
 | `fallback_locale` | string | – | Limbă alternativă folosită dacă pentru `locale` nu există conținut complet. |
-| `sections` | string / listă | – | Subset de secțiuni cerute (`header,hero,benefits`). Dacă lipsește se returnează întregul copy public. |
+| `sections` | string / listă | – | Subset de secțiuni cerute (`header,hero,benefits,home.fleet,cars`). Dacă lipsește se returnează întregul copy public. |
 | `version` | string | – | Identificatorul versiunii locale din cache-ul frontend-ului. Dacă este identic, backend-ul poate răspunde cu 304 / payload gol. |
 | `include_draft` | boolean | `false` | Forțează servirea versiunii draft (util pentru pre-vizualizare). |
 
@@ -28,7 +28,13 @@ GET /api/public/content
   "sections": [
     "header",
     "hero",
-    "benefits"
+    "benefits",
+    "home.fleet",
+    "home.offers",
+    "home.process",
+    "home.contact",
+    "cars",
+    "footer"
   ],
   "content": {
     "header": {
@@ -56,67 +62,68 @@ GET /api/public/content
         "ariaLabel": "Schimbă limba"
       }
     },
-    "hero": {
-      "badge": "Te ținem aproape de casă",
-      "title": "Închiriere auto București - Otopeni",
-      "subtitle": "Predare în aeroport în sub 5 minute.",
-      "highlight": "Fără taxe ascunse.",
-      "metrics": {
-        "fast": {
-          "title": "Sub 5 min",
-          "description": "Predare rapidă"
+    "hero": { "badge": "Te ținem aproape de casă", "title": "Închiriere auto București - Otopeni" },
+    "benefits": { "title": "De ce să alegi <span class=\"text-jade\">DaCars</span>?" },
+    "home": {
+      "fleet": {
+        "heading": {
+          "title": "Flota noastră <span class=\"text-jade\">premium</span>",
+          "description": "Mașini moderne și verificate pentru fiecare călătorie."
         },
-        "transparent": {
-          "title": "Fără taxe",
-          "description": "Preț transparent"
+        "carousel": {
+          "regionAriaLabel": "Carousel cu mașini recomandate",
+          "previousAriaLabel": "Mașina precedentă",
+          "nextAriaLabel": "Mașina următoare"
         },
-        "availability": {
-          "title": "24/7",
-          "description": "Disponibil non-stop"
-        }
+        "cta": { "label": "Vezi toată flota", "href": "/cars" }
       },
-      "form": {
-        "startDate": { "label": "Data ridicare" },
-        "endDate": { "label": "Data returnare" },
-        "location": {
-          "label": "Locația",
-          "placeholder": "Alege locația",
-          "options": [
-            { "value": "otopeni", "label": "Aeroport Otopeni" }
-          ]
-        },
-        "carType": {
-          "label": "Tip mașină",
-          "all": "Toate tipurile"
-        },
-        "submit": {
-          "label": "Caută mașini",
-          "aria": "Caută mașini"
-        }
+      "offers": {
+        "title": "Oferte <span class=\"text-jadeLight\">speciale</span>",
+        "cards": [
+          { "title": "Pachet Nuntă", "discount": "10% reducere" },
+          { "title": "Reducere Prieteni", "discount": "20% reducere" }
+        ]
       },
-      "background": {
-        "alt": "Fundal aeroport"
+      "process": {
+        "title": "Procesul nostru <span class=\"text-jade\">simplu</span>",
+        "steps": [
+          { "number": "01", "title": "Rezervă online" },
+          { "number": "02", "title": "Ridici la aeroport" },
+          { "number": "03", "title": "Drum bun acasă" }
+        ]
+      },
+      "contact": {
+        "title": "Contactează-ne <span class=\"text-jade\">oricând</span>",
+        "items": [
+          { "icon": "phone", "title": "Telefon", "link": { "href": "tel:+40723817551" } },
+          { "icon": "mail", "title": "Email", "link": { "href": "mailto:contact@dacars.ro" } },
+          { "icon": "mapPin", "title": "Locație" }
+        ]
       }
     },
-    "benefits": {
-      "title": "De ce să alegi <span class=\"text-jade\">DaCars</span>?",
-      "description": "Serviciu de încredere pentru românii care se întorc acasă.",
-      "items": [
-        {
-          "icon": "file",
-          "title": "Fără birocrație",
-          "description": "Proces simplu și rapid."
-        },
-        {
-          "icon": "clock",
-          "title": "Disponibil 24/7",
-          "description": "Predare și ridicare non-stop la aeroport."
-        }
-      ],
-      "stats": [
-        { "value": "500+", "label": "Clienți fericiți" },
-        { "value": "24/7", "label": "Disponibilitate" }
-      ]
+    "cars": {
+      "header": {
+        "title": "Flota noastră <span class=\"text-jade\">completă</span>",
+        "description": "Descoperă toate mașinile disponibile și alege varianta potrivită."
+      },
+      "search": {
+        "placeholder": "Caută mașină...",
+        "filtersToggle": { "label": "Filtre", "ariaLabel": "Comută filtrele" }
+      },
+      "filters": {
+        "categoriesLabel": "Categorie",
+        "allOption": "Toate",
+        "clear": { "label": "Resetează filtrele" }
+      },
+      "results": {
+        "countLabel": "mașini găsite",
+        "emptyState": { "title": "Nu am găsit mașini", "description": "Încearcă să modifici filtrele." }
+      },
+      "cta": { "title": "Nu găsești mașina potrivită?", "primary": { "label": "Rezervă acum" } }
+    },
+    "footer": {
+      "brand": { "title": "DaCars" },
+      "navigation": { "items": [] }
     }
   }
 }
@@ -187,11 +194,28 @@ Publică ultima variantă de draft. Răspunsul trebuie să includă noua versiun
   "locale": "ro",
   "version": null,
   "updated_at": null,
-  "sections": ["header", "hero", "benefits", "footer"],
+  "sections": [
+    "header",
+    "hero",
+    "benefits",
+    "home.fleet",
+    "home.offers",
+    "home.process",
+    "home.contact",
+    "cars",
+    "footer"
+  ],
   "content": {
     "header": { "brandAria": "DaCars — închirieri auto rapide și oneste", "navigation": { "items": [] } },
     "hero": { "badge": "Te ținem aproape de casă", "title": "Închiriere auto București - Otopeni" },
     "benefits": { "title": "De ce să alegi <span class=\"text-jade\">DaCars</span>?" },
+    "home": {
+      "fleet": { "heading": { "title": "Flota noastră <span class=\"text-jade\">premium</span>" } },
+      "offers": { "title": "Oferte <span class=\"text-jadeLight\">speciale</span>" },
+      "process": { "title": "Procesul nostru <span class=\"text-jade\">simplu</span>" },
+      "contact": { "title": "Contactează-ne <span class=\"text-jade\">oricând</span>" }
+    },
+    "cars": { "header": { "title": "Flota noastră <span class=\"text-jade\">completă</span>" } },
     "footer": { "brand": { "title": "DaCars" } }
   }
 }
@@ -208,11 +232,23 @@ Acest endpoint primește payload-ul complet generat de pagina de export și îl 
 ```json
 {
   "locale": "ro",
-  "sections": ["header", "hero", "benefits", "footer"],
+  "sections": [
+    "header",
+    "hero",
+    "benefits",
+    "home.fleet",
+    "home.offers",
+    "home.process",
+    "home.contact",
+    "cars",
+    "footer"
+  ],
   "content": {
     "header": { "brandAria": "DaCars — închirieri auto rapide și oneste" },
     "hero": { "title": "Închirieri auto rapide în București și Otopeni" },
     "benefits": { "title": "De ce să alegi <span class=\"text-jade\">DaCars</span>?" },
+    "home": { "fleet": { "heading": { "title": "Flota noastră <span class=\"text-jade\">premium</span>" } } },
+    "cars": { "header": { "title": "Flota noastră <span class=\"text-jade\">completă</span>" } },
     "footer": { "brand": { "title": "DaCars" } }
   },
   "version": null,

@@ -9,15 +9,25 @@ import { usePublicContent } from "@/context/PublicContentContext";
 import apiClient from "@/lib/api";
 import {
   BENEFITS_COPY_FALLBACK,
+  CARS_PAGE_COPY_FALLBACK,
   FOOTER_COPY_FALLBACK,
   HEADER_COPY_FALLBACK,
   HERO_COPY_FALLBACK,
+  HOME_CONTACT_COPY_FALLBACK,
+  HOME_FLEET_COPY_FALLBACK,
+  HOME_OFFERS_COPY_FALLBACK,
+  HOME_PROCESS_COPY_FALLBACK,
 } from "@/lib/publicContent/defaults";
 
 const SECTION_FALLBACKS = {
   header: HEADER_COPY_FALLBACK,
   hero: HERO_COPY_FALLBACK,
   benefits: BENEFITS_COPY_FALLBACK,
+  "home.fleet": HOME_FLEET_COPY_FALLBACK,
+  "home.offers": HOME_OFFERS_COPY_FALLBACK,
+  "home.process": HOME_PROCESS_COPY_FALLBACK,
+  "home.contact": HOME_CONTACT_COPY_FALLBACK,
+  cars: CARS_PAGE_COPY_FALLBACK,
   footer: FOOTER_COPY_FALLBACK,
 } as const;
 

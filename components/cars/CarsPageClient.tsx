@@ -14,6 +14,9 @@ import { extractList } from "@/lib/apiResponse";
 import { createVehicleItemListStructuredData } from "@/lib/seo/structuredData";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { useBooking } from "@/context/BookingContext";
+import { usePublicContentSection } from "@/context/PublicContentContext";
+import { CARS_PAGE_COPY_FALLBACK } from "@/lib/publicContent/defaults";
+import { formatTemplate } from "@/lib/publicContent/utils";
 import { ApiCar, Car, CarCategory } from "@/types/car";
 
 const siteUrl = siteMetadata.siteUrl;
@@ -117,6 +120,7 @@ const FleetPage = () => {
     const router = useRouter();
     const pathname = usePathname();
     const { setBooking } = useBooking();
+    const copy = usePublicContentSection("cars", CARS_PAGE_COPY_FALLBACK);
 
     const [filters, setFilters] = useState(() => ({
         car_type: searchParams.get("car_type") || "all",
@@ -367,10 +371,17 @@ const FleetPage = () => {
             const label = filterOptions.fuels.find((f) => String(f.id) === filters.fuel)?.name;
             if (label) active.push({ key: "fuel", label });
         }
-        if (filters.passengers !== "all") active.push({ key: "passengers", label: `${filters.passengers} persoane` });
+        if (filters.passengers !== "all") {
+            active.push({
+                key: "passengers",
+                label: formatTemplate(copy.filters.passengersTemplate, {
+                    count: filters.passengers,
+                }),
+            });
+        }
         if (filters.priceRange !== "all") active.push({ key: "priceRange", label: String(filters.priceRange) });
         return active;
-    }, [filters, categories, filterOptions]);
+    }, [filters, categories, filterOptions, copy.filters.passengersTemplate]);
 
     const handleBooking = (withDeposit: boolean, car: Car) => {
         if (startDate && endDate) {
@@ -405,7 +416,11 @@ const FleetPage = () => {
                         <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                             <div className="flex items-center space-x-2">
                                 <Users className="h-4 w-4 text-jade" />
-                                <span>{car.features.passengers} persoane</span>
+                                <span>
+                                    {formatTemplate(copy.features.passengersTemplate, {
+                                        count: car.features.passengers,
+                                    })}
+                                </span>
                             </div>
                             {!isListView && (
                                 <div className="flex items-center space-x-2">
@@ -431,12 +446,16 @@ const FleetPage = () => {
                     <>
                         <div className="flex items-center justify-between mb-5">
                             <div className="me-1">
-                                <span className="text-jade font-bold font-dm-sans">Fără garanție </span>
+                                <span className="text-jade font-bold font-dm-sans">{copy.booking.withoutDeposit.label} </span>
                                 <span className="text-base font-poppins font-bold text-jade">{car.rental_rate_casco}€</span>
-                                <span className="text-jade font-bold font-dm-sans">/zi</span>
+                                <span className="text-jade font-bold font-dm-sans">{copy.booking.withoutDeposit.perDaySuffix}</span>
                                 {startDate && endDate && (
                                     <div>
-                                        <span className="text-jade font-bold font-dm-sans">x {car.days} zile = </span>
+                                        <span className="text-jade font-bold font-dm-sans">
+                                            {formatTemplate(copy.booking.withoutDeposit.totalPrefixTemplate, {
+                                                days: car.days,
+                                            })}
+                                        </span>
                                         <span className="text-base font-poppins font-bold text-jade">{car.total_without_deposit}€</span>
                                     </div>
                                 )}
@@ -444,20 +463,24 @@ const FleetPage = () => {
                             <Button
                                 onClick={startDate && endDate ? () => handleBooking(false, car) : undefined}
                                 className="px-2 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
-                                aria-label="Rezervă"
+                                aria-label={copy.booking.withoutDeposit.button.ariaLabel}
                             >
-                                Rezervă fără garanție
+                                {copy.booking.withoutDeposit.button.label}
                             </Button>
                         </div>
 
                         <div className="flex items-center justify-between">
                             <div className="me-3">
-                                <span className="text-gray-600 font-dm-sans">Cu garanție </span>
+                                <span className="text-gray-600 font-dm-sans">{copy.booking.withDeposit.label} </span>
                                 <span className="text-base font-poppins font-bold text-berkeley">{car.rental_rate}€</span>
-                                <span className="text-gray-600 font-dm-sans">/zi</span>
+                                <span className="text-gray-600 font-dm-sans">{copy.booking.withDeposit.perDaySuffix}</span>
                                 {startDate && endDate && (
                                     <div>
-                                        <span className="text-gray-600 font-bold font-dm-sans">x {car.days} zile = </span>
+                                        <span className="text-gray-600 font-bold font-dm-sans">
+                                            {formatTemplate(copy.booking.withDeposit.totalPrefixTemplate, {
+                                                days: car.days,
+                                            })}
+                                        </span>
                                         <span className="text-base font-poppins font-bold text-berkeley">{car.total_deposit}€</span>
                                     </div>
                                 )}
@@ -465,9 +488,9 @@ const FleetPage = () => {
                             <Button
                                 onClick={startDate && endDate ? () => handleBooking(true, car) : undefined}
                                 className="px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg hover:!bg-jade/90 hover:!text-white transition-colors duration-300"
-                                aria-label="Rezervă"
+                                aria-label={copy.booking.withDeposit.button.ariaLabel}
                             >
-                                Rezervă cu garanție
+                                {copy.booking.withDeposit.button.label}
                             </Button>
                         </div>
                     </>
@@ -530,11 +553,12 @@ const FleetPage = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     {/* Header */}
                     <div className="text-center mb-12 animate-fade-in">
-                        <h1 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
-                            Flota noastră <span className="text-jade">completă</span>
-                        </h1>
+                        <h1
+                            className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6"
+                            dangerouslySetInnerHTML={{ __html: copy.header.title }}
+                        />
                         <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                            Descoperă toate mașinile disponibile și alege cea potrivită pentru călătoria ta.
+                            {copy.header.description}
                         </p>
                     </div>
 
@@ -545,8 +569,8 @@ const FleetPage = () => {
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Caută mașină..."
-                                    aria-label="Caută mașină"
+                                    placeholder={copy.search.placeholder}
+                                    aria-label={copy.search.ariaLabel}
                                     value={searchTerm}
                                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
@@ -558,21 +582,24 @@ const FleetPage = () => {
                                     className="w-auto px-4 py-2 transition-all duration-300"
                                     value={sortBy}
                                     onValueChange={(v) => { setSortBy(v); setCurrentPage(1); }}
-                                    aria-label="Sortează mașinile"
+                                    aria-label={copy.search.sort.ariaLabel}
                                 >
-                                    <option value="cheapest">Preț crescător</option>
-                                    <option value="most_expensive">Preț descrescător</option>
+                                    {copy.search.sort.options.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
                                 </Select>
 
                                 <button
-                                    onClick={() => setShowFilters(s => !s)}
+                                    onClick={() => setShowFilters((s) => !s)}
                                     className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-300 ${
                                         showFilters ? "bg-jade text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                                     }`}
-                                    aria-label="Comută filtrele"
+                                    aria-label={copy.search.filtersToggle.ariaLabel}
                                 >
                                     <SlidersHorizontal className="h-5 w-5" />
-                                    <span className="font-dm-sans">Filtre</span>
+                                    <span className="font-dm-sans">{copy.search.filtersToggle.label}</span>
                                 </button>
                             </div>
                         </div>
@@ -581,14 +608,14 @@ const FleetPage = () => {
                             <div className="border-t border-gray-200 pt-6 animate-slide-up">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                                     <div>
-                                        <Label htmlFor="filter-car-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Categorie</Label>
+                                        <Label htmlFor="filter-car-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{copy.filters.categoriesLabel}</Label>
                                         <Select
                                             id="filter-car-type"
                                             className="px-3 py-2 transition-all duration-300"
                                             value={filters.car_type}
                                             onValueChange={(v) => handleFilterChange("car_type", v)}
                                         >
-                                            <option value="all">Toate</option>
+                                            <option value="all">{copy.filters.allOption}</option>
                                             {categories?.map((category) => (
                                                 <option key={category.id} value={String(category.id)}>{category.name}</option>
                                             ))}
@@ -596,25 +623,25 @@ const FleetPage = () => {
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="filter-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Tip mașină</Label>
+                                        <Label htmlFor="filter-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{copy.filters.typeLabel}</Label>
                                         <Select id="filter-type" className="px-3 py-2" value={filters.type} onValueChange={(v) => handleFilterChange("type", v)}>
-                                            <option value="all">Toate</option>
+                                            <option value="all">{copy.filters.allOption}</option>
                                             {filterOptions.types.map(t => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
                                         </Select>
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="filter-transmission" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Transmisie</Label>
+                                        <Label htmlFor="filter-transmission" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{copy.filters.transmissionLabel}</Label>
                                         <Select id="filter-transmission" className="px-3 py-2" value={filters.transmission} onValueChange={(v) => handleFilterChange("transmission", v)}>
-                                            <option value="all">Toate</option>
+                                            <option value="all">{copy.filters.allOption}</option>
                                             {filterOptions.transmissions.map(t => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
                                         </Select>
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="filter-fuel" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Combustibil</Label>
+                                        <Label htmlFor="filter-fuel" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{copy.filters.fuelLabel}</Label>
                                         <Select id="filter-fuel" className="px-3 py-2" value={filters.fuel} onValueChange={(v) => handleFilterChange("fuel", v)}>
-                                            <option value="all">Toate</option>
+                                            <option value="all">{copy.filters.allOption}</option>
                                             {filterOptions.fuels.map(f => <option key={f.id} value={String(f.id)}>{f.name}</option>)}
                                         </Select>
                                     </div>
@@ -624,13 +651,13 @@ const FleetPage = () => {
                                     {activeFilters.map((f) => (
                                         <span key={f.key} className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full">
                       {f.label}
-                                            <button onClick={() => handleFilterChange(f.key, "all")} className="ml-2 hover:text-berkeley" aria-label={`Elimină filtrul ${f.label}`}>
+                                            <button onClick={() => handleFilterChange(f.key, "all")} className="ml-2 hover:text-berkeley" aria-label={formatTemplate(copy.filters.removeFilterAria, { label: f.label })}>
                         <X className="h-4 w-4" />
                       </button>
                     </span>
                                     ))}
-                                    <button onClick={clearFilters} className="px-4 py-2 text-jade font-dm-sans font-semibold hover:bg-jade/10 rounded-lg transition-colors duration-300" aria-label="Resetează filtrele">
-                                        Resetează filtrele
+                                    <button onClick={clearFilters} className="px-4 py-2 text-jade font-dm-sans font-semibold hover:bg-jade/10 rounded-lg transition-colors duration-300" aria-label={copy.filters.clear.ariaLabel}>
+                                        {copy.filters.clear.label}
                                     </button>
                                 </div>
                             </div>
@@ -640,7 +667,7 @@ const FleetPage = () => {
                     {/* Results Count */}
                     <div id="results-section" className="flex items-center mb-8">
                         <p className="text-gray-600 font-dm-sans">
-                            <span className="font-semibold text-berkeley">{totalCars}</span> mașini găsite
+                            <span className="font-semibold text-berkeley">{totalCars}</span> {copy.results.countLabel}
                         </p>
                     </div>
 
@@ -658,16 +685,16 @@ const FleetPage = () => {
                             <div className="bg-gray-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <Filter className="h-12 w-12 text-gray-400" />
                             </div>
-                            <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-4">Nu am găsit mașini</h3>
+                            <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-4">{copy.results.emptyState.title}</h3>
                             <p className="text-gray-600 font-dm-sans mb-6 max-w-md mx-auto">
-                                Încearcă să modifici filtrele sau să cauți altceva.
+                                {copy.results.emptyState.description}
                             </p>
                             <div className="flex flex-wrap items-center justify-center gap-2">
-                                <Button onClick={clearFilters} className="px-6 py-3" aria-label="Resetează filtrele">Resetează filtrele</Button>
+                                <Button onClick={clearFilters} className="px-6 py-3" aria-label={copy.results.emptyState.clearButton.ariaLabel}>{copy.results.emptyState.clearButton.label}</Button>
                                 {activeFilters.map((f) => (
                                     <span key={f.key} className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full">
                     {f.label}
-                                        <button onClick={() => handleFilterChange(f.key, "all")} className="ml-2 hover:text-berkeley" aria-label={`Elimină filtrul ${f.label}`}>
+                                        <button onClick={() => handleFilterChange(f.key, "all")} className="ml-2 hover:text-berkeley" aria-label={formatTemplate(copy.filters.removeFilterAria, { label: f.label })}>
                       <X className="h-4 w-4" />
                     </button>
                   </span>
@@ -681,19 +708,25 @@ const FleetPage = () => {
 
                     {/* CTA */}
                     <div className="mt-16 bg-gradient-to-r from-berkeley/5 to-jade/5 rounded-3xl p-8 lg:p-12 text-center">
-                        <h3 className="text-3xl font-poppins font-bold text-berkeley mb-4">Nu găsești mașina potrivită?</h3>
+                        <h3 className="text-3xl font-poppins font-bold text-berkeley mb-4">{copy.cta.title}</h3>
                         <p className="text-xl font-dm-sans text-gray-600 mb-8 max-w-2xl mx-auto">
-                            Contactează-ne și te ajutăm să găsești soluția perfectă pentru călătoria ta.
+                            {copy.cta.description}
                         </p>
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
-                            <Link href="/checkout" aria-label="Rezervă acum">
-                                <Button className="transform hover:scale-105 shadow-lg" aria-label="Rezervă acum">Rezervă acum</Button>
-                            </Link>
-                            <a href="#contact" aria-label="Contactează-ne">
-                                <Button variant="outline" className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white" aria-label="Contactează-ne">
-                                    Contactează-ne
+                            <Link href={copy.cta.primary.href} aria-label={copy.cta.primary.ariaLabel}>
+                                <Button className="transform hover:scale-105 shadow-lg" aria-label={copy.cta.primary.ariaLabel}>
+                                    {copy.cta.primary.label}
                                 </Button>
-                            </a>
+                            </Link>
+                            <Link href={copy.cta.secondary.href} aria-label={copy.cta.secondary.ariaLabel}>
+                                <Button
+                                    variant="outline"
+                                    className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white"
+                                    aria-label={copy.cta.secondary.ariaLabel}
+                                >
+                                    {copy.cta.secondary.label}
+                                </Button>
+                            </Link>
                         </div>
                     </div>
                 </div>

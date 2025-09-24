@@ -62,3 +62,17 @@ export const isCompatibleValue = (value: unknown, fallback: unknown): boolean =>
   return typeof value === typeof fallback;
 };
 
+export const formatTemplate = (
+  template: string,
+  params: Record<string, string | number>,
+): string => {
+  if (typeof template !== "string" || template.length === 0) {
+    return "";
+  }
+
+  return template.replace(/{{\s*(\w+)\s*}}/g, (_match, key: string) => {
+    const value = params[key];
+    return typeof value === "undefined" || value === null ? "" : String(value);
+  });
+};
+
