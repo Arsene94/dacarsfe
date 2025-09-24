@@ -51,3 +51,20 @@ export interface AdminPublicContentSnapshotPayload {
   updated_at?: string | null;
 }
 
+export type TranslatePublicContentMode = "missing" | "full";
+
+export interface TranslatePublicContentPayload {
+  source_locale: PublicLocale;
+  target_locale: PublicLocale;
+  sections?: readonly string[] | string | null;
+  mode?: TranslatePublicContentMode | null;
+}
+
+export interface TranslatePublicContentResponse {
+  source_locale: PublicLocale;
+  target_locale: PublicLocale;
+  sections: readonly string[];
+  translated: number;
+  content: PublicContentDictionary;
+}
+

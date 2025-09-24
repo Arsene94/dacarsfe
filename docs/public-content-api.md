@@ -139,6 +139,11 @@ Frontend-ul trimite `version`. Dacă backend-ul decide că versiunea nu s-a schi
 
 ## Flux admin — gestionare copy
 
+Consola admin oferă două instrumente dedicate super administratorilor:
+
+- `/admin/public-content` — editor JSON care permite actualizarea draft-urilor, publicarea ultimelor modificări și generarea de traduceri automate între limbi.
+- `/admin/public-content/export` — utilitarul de export descris mai jos, folosit pentru snapshot-uri complete și bootstrap în backend.
+
 ### `GET /api/admin/public-content/{locale}`
 
 Returnează structura completă (inclusiv câmpuri non-publice, meta, istoricul versiunilor). Frontend-ul admin folosește răspunsul pentru a popula formularul de editare.
@@ -169,6 +174,7 @@ Payload minim:
 - `version` — versiunea curentă cunoscută de client; backend-ul trebuie să respingă cu `409 Conflict` dacă există un draft mai nou.
 - `status` — `draft` / `published` (menține compatibilitatea cu toggle-urile din admin).
 - `content` — patch JSON cu secțiunile modificate. Backend-ul trebuie să fuzioneze cu structura existentă.
+- `publish` — opțional (`true/false`). Dacă este `true`, backend-ul poate publica imediat draft-ul rezultat fără a apela explicit endpoint-ul de mai jos.
 
 Răspuns: structura completă a versiunii actualizate (`PublicContentResponse`).
 
@@ -183,6 +189,45 @@ Payload opțional:
 ```
 
 Publică ultima variantă de draft. Răspunsul trebuie să includă noua versiune (`status = "published"`, `version` actualizat).
+
+### `POST /api/admin/public-content/translate`
+
+Endpoint folosit de pagina de gestionare pentru a cere backend-ului traduceri automate între două limbi suportate.
+
+#### Request
+
+```json
+{
+  "source_locale": "ro",
+  "target_locale": "en",
+  "mode": "missing",
+  "sections": ["hero", "checkout.summary"]
+}
+```
+
+- `source_locale` — limba sursă.
+- `target_locale` — limba țintă.
+- `mode` — `missing` (implicit, traduce doar câmpurile lipsă) sau `full` (suprascrie complet cu traducerea generată).
+- `sections` — listă opțională de chei pentru a restrânge traducerea. Dacă lipsește, backend-ul trebuie să proceseze întregul conținut public.
+
+#### Response `200 OK`
+
+```json
+{
+  "source_locale": "ro",
+  "target_locale": "en",
+  "sections": ["hero", "checkout.summary"],
+  "translated": 12,
+  "content": {
+    "hero": {
+      "title": "Fast car rentals in Bucharest and Otopeni"
+    }
+  }
+}
+```
+
+- `translated` — numărul de chei actualizate de motorul de traducere.
+- `content` — structura JSON ce conține traducerile generate; frontend-ul o poate insera direct în editorul locale-ului țintă.
 
 ### Export batch din consola (super admin)
 

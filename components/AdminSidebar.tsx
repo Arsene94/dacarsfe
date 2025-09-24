@@ -34,6 +34,7 @@ import {
   Palette,
   Fuel,
   Languages,
+  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -494,9 +495,15 @@ const menuItems: readonly AdminSidebarItem[] = [
     requiredPermissions: buildPermissionList("mail-branding", ["mailbranding", "mail"]),
   },
   {
-    name: "Conținut public",
-    href: "/admin/public-content/export",
+    name: "Gestionare conținut",
+    href: "/admin/public-content",
     icon: Languages,
+    superUserOnly: true,
+  },
+  {
+    name: "Export conținut public",
+    href: "/admin/public-content/export",
+    icon: FileText,
     superUserOnly: true,
   },
   {

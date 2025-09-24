@@ -115,6 +115,8 @@ import type {
     PublicContentRequestParams,
     PublicContentResponse,
     PublicLocale,
+    TranslatePublicContentPayload,
+    TranslatePublicContentResponse,
     UpdatePublicContentPayload,
 } from "@/types/public-content";
 
@@ -2487,6 +2489,53 @@ export class ApiClient {
                     Object.keys(payload).length > 0
                         ? JSON.stringify(payload)
                         : undefined,
+            },
+        );
+    }
+
+    async translateAdminPublicContent(
+        payload: TranslatePublicContentPayload,
+    ): Promise<TranslatePublicContentResponse> {
+        const sourceLocale = normalizePublicLocale(payload.source_locale);
+        const targetLocale = normalizePublicLocale(payload.target_locale);
+
+        const sectionsSource = payload.sections;
+        const resolvedSections = (() => {
+            if (!sectionsSource) {
+                return undefined;
+            }
+
+            const normalizeValue = (value: unknown): string =>
+                typeof value === 'string' ? value.trim() : '';
+
+            const rawValues = Array.isArray(sectionsSource)
+                ? sectionsSource.map(normalizeValue)
+                : `${sectionsSource}`
+                      .split(',')
+                      .map((entry) => entry.trim());
+
+            const filtered = rawValues.filter((entry) => entry.length > 0);
+            if (filtered.length === 0) {
+                return undefined;
+            }
+
+            return Array.from(new Set(filtered));
+        })();
+
+        const mode = payload.mode === 'full' || payload.mode === 'missing' ? payload.mode : undefined;
+
+        const body = sanitizePayload({
+            source_locale: sourceLocale,
+            target_locale: targetLocale,
+            sections: resolvedSections,
+            mode,
+        });
+
+        return this.request<TranslatePublicContentResponse>(
+            '/admin/public-content/translate',
+            {
+                method: 'POST',
+                body: JSON.stringify(body),
             },
         );
     }
