@@ -2894,26 +2894,26 @@ const MailBrandingPage = () => {
                   <p className="text-xs text-gray-500 lg:max-w-sm lg:text-right">
                     Selectează o variabilă sau un fragment Twig pentru a-l insera la poziția cursorului din editor.
                   </p>
-                  {availableVariableMetadata.length > 0 && (
-                    <div className="lg:w-full lg:basis-full">
-                      <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
-                        <p className="font-medium text-gray-700">Descrieri variabile</p>
-                        <ul className="mt-2 space-y-2">
-                          {availableVariableMetadata.map((entry) => (
-                            <li
-                              key={entry.key}
-                              className="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-2"
-                            >
-                              <span className="font-mono text-berkeley">{`{{ ${entry.key} }}`}</span>
-                              <span className="text-gray-600">
-                                {describeVariableEntry(entry)}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
+                  {/*{availableVariableMetadata.length > 0 && (*/}
+                  {/*  <div className="lg:w-full lg:basis-full">*/}
+                  {/*    <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">*/}
+                  {/*      <p className="font-medium text-gray-700">Descrieri variabile</p>*/}
+                  {/*      <ul className="mt-2 space-y-2">*/}
+                  {/*        {availableVariableMetadata.map((entry) => (*/}
+                  {/*          <li*/}
+                  {/*            key={entry.key}*/}
+                  {/*            className="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-2"*/}
+                  {/*          >*/}
+                  {/*            <span className="font-mono text-berkeley">{`{{ ${entry.key} }}`}</span>*/}
+                  {/*            <span className="text-gray-600">*/}
+                  {/*              {describeVariableEntry(entry)}*/}
+                  {/*            </span>*/}
+                  {/*          </li>*/}
+                  {/*        ))}*/}
+                  {/*      </ul>*/}
+                  {/*    </div>*/}
+                  {/*  </div>*/}
+                  {/*)}*/}
                 </div>
                   <div className="mt-4 min-h-[360px]">
                     {isClient ? (
