@@ -258,6 +258,16 @@ export const PublicContentProvider = ({
           return;
         }
 
+        const status = (fetchError as { status?: number })?.status;
+        if (status === 404) {
+          console.warn(
+            "Endpoint-ul de conținut public nu este disponibil încă. Configurează ruta backend /api/public/content.",
+            fetchError,
+          );
+          setError("Conținutul public nu este încă disponibil.");
+          return;
+        }
+
         console.error("Failed to fetch public content", fetchError);
         setError(
           fetchError instanceof Error

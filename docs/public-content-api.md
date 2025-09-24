@@ -194,6 +194,7 @@ Publică ultima variantă de draft. Răspunsul trebuie să includă noua versiun
 - Este recomandată validarea cheilor transmise în `content` (whitelist) pentru a preveni introducerea de noduri neașteptate.
 - Pentru scalabilitate, se poate implementa un mecanism de versionare bazat pe hash (ex. `version = sha256(content)`), folosind anteturi HTTP `ETag`/`If-None-Match`.
 - Admin-ul poate păstra un istoric al versiunilor pentru audit (ex. tabel `public_contents` cu `locale`, `status`, `content`, `version`, `published_at`).
+- Până la implementarea rutei `GET /api/public/content`, frontend-ul folosește fallback-urile locale și afișează doar un avertisment în consolă (fără eroare). După ce backend-ul răspunde cu succes, provider-ul actualizează automat textele.
 
 ## Chei uzuale
 

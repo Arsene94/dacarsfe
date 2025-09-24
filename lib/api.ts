@@ -154,6 +154,8 @@ const FORBIDDEN_MESSAGE = "Forbidden";
 
 type ApiError = Error & { status?: number };
 
+type ApiRequestOptions = RequestInit & { suppressErrorLog?: boolean };
+
 const sanitizePayload = <T extends object>(payload: T): Partial<T> => {
     const cleaned: Partial<T> = {};
     (Object.entries(payload) as [keyof T, T[keyof T]][]).forEach(([key, value]) => {
@@ -231,12 +233,13 @@ export class ApiClient {
 
     private async request<T>(
         endpoint: string,
-        options: RequestInit = {}
+        options: ApiRequestOptions = {}
     ): Promise<T> {
+        const { suppressErrorLog, ...requestInit } = options;
         const url = `${this.baseURL}${endpoint}`;
 
         const isFormData =
-            typeof FormData !== 'undefined' && options.body instanceof FormData;
+            typeof FormData !== 'undefined' && requestInit.body instanceof FormData;
 
         const headers: Record<string, string> = {
             ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
@@ -265,11 +268,11 @@ export class ApiClient {
             });
         };
 
-        applyHeaders(options.headers);
+        applyHeaders(requestInit.headers);
 
         const config: RequestInit = {
-            ...options,
-            credentials: options.credentials ?? 'omit',
+            ...requestInit,
+            credentials: requestInit.credentials ?? 'omit',
             headers,
         };
 
@@ -325,7 +328,9 @@ export class ApiClient {
             }
             return {} as T;
         } catch (error) {
-            console.error('API request failed:', error);
+            if (!suppressErrorLog) {
+                console.error('API request failed:', error);
+            }
             throw error;
         }
     }
@@ -2425,7 +2430,7 @@ export class ApiClient {
         const query = searchParams.toString();
         return this.request<PublicContentResponse>(
             `/public/content${query ? `?${query}` : ''}`,
-            { signal: options.signal },
+            { signal: options.signal, suppressErrorLog: true },
         );
     }
 
