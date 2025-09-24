@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Copy, RefreshCcw, ShieldAlert } from "lucide-react";
+import { Download, Copy, RefreshCcw, ShieldAlert, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { usePublicContent } from "@/context/PublicContentContext";
+import apiClient from "@/lib/api";
 import {
   BENEFITS_COPY_FALLBACK,
   FOOTER_COPY_FALLBACK,
@@ -51,9 +52,11 @@ const ExportPublicContentPage = () => {
   } = usePublicContent();
 
   const [localError, setLocalError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
@@ -90,6 +93,7 @@ const ExportPublicContentPage = () => {
 
   const handleCopy = useCallback(async () => {
     setLocalError(null);
+    setSubmitSuccess(null);
     setIsCopying(true);
     try {
       if (navigator.clipboard?.writeText) {
@@ -125,6 +129,7 @@ const ExportPublicContentPage = () => {
 
   const handleDownload = useCallback(() => {
     setLocalError(null);
+    setSubmitSuccess(null);
     try {
       const blob = new Blob([payloadJson], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -143,6 +148,7 @@ const ExportPublicContentPage = () => {
 
   const handleRefresh = useCallback(async () => {
     setLocalError(null);
+    setSubmitSuccess(null);
     setIsRefreshing(true);
     try {
       await refresh();
@@ -155,6 +161,29 @@ const ExportPublicContentPage = () => {
   }, [refresh]);
 
   const summary = useMemo(() => buildFallbackSummary(sections), [sections]);
+
+  const handlePushToBackend = useCallback(async () => {
+    setLocalError(null);
+    setSubmitSuccess(null);
+    setIsSubmitting(true);
+    try {
+      await apiClient.pushAdminPublicContentSnapshot(locale, {
+        locale,
+        sections: exportPayload.sections,
+        content: exportPayload.content,
+        version: exportPayload.version,
+        updated_at: exportPayload.updated_at,
+      });
+      setSubmitSuccess("Payload-ul a fost trimis către backend.");
+    } catch (error) {
+      console.error("Failed to push public content snapshot", error);
+      setLocalError(
+        "Nu am putut trimite payload-ul către backend. Încearcă din nou sau verifică jurnalul serverului.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [exportPayload.content, exportPayload.sections, exportPayload.updated_at, exportPayload.version, locale]);
 
   if (!user?.super_user) {
     return (
@@ -220,6 +249,12 @@ const ExportPublicContentPage = () => {
           </div>
         )}
 
+        {submitSuccess && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+            {submitSuccess}
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-3">
           <Button onClick={handleCopy} disabled={isCopying || isLoading} className="flex items-center gap-2">
             <Copy className="h-4 w-4" />
@@ -233,6 +268,14 @@ const ExportPublicContentPage = () => {
           >
             <Download className="h-4 w-4" />
             Descarcă fișier
+          </Button>
+          <Button
+            onClick={handlePushToBackend}
+            className="flex items-center gap-2"
+            disabled={isLoading || isSubmitting}
+          >
+            <UploadCloud className={`h-4 w-4 ${isSubmitting ? "animate-pulse" : ""}`} />
+            Trimite către backend
           </Button>
           <Button
             onClick={handleRefresh}

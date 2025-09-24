@@ -43,3 +43,11 @@ export interface PublishPublicContentPayload {
   version?: string | null;
 }
 
+export interface AdminPublicContentSnapshotPayload {
+  locale: PublicLocale;
+  sections: readonly string[];
+  content: PublicContentDictionary;
+  version?: string | null;
+  updated_at?: string | null;
+}
+

@@ -179,7 +179,7 @@ Publică ultima variantă de draft. Răspunsul trebuie să includă noua versiun
 
 - Frontend-ul expune utilitarul `/admin/public-content/export` pentru a extrage dintr-un foc toate textele publice disponibile în contextul curent.
 - Accesul este limitat la utilizatorii cu `super_user = true` (nu este suficient `manage_supers`).
-- Pagina afișează rezumatul secțiunilor active și oferă două acțiuni: `Copiază JSON` (clipboard) și `Descarcă fișier` (`dacars-public-content-<locale>.json`).
+- Pagina afișează rezumatul secțiunilor active și oferă acțiunile `Copiază JSON` (clipboard), `Descarcă fișier` (`dacars-public-content-<locale>.json`) și `Trimite către backend` (apel API descris mai jos).
 - Structura exportată respectă schema de mai jos și poate fi folosită direct ca payload pentru `PUT /api/admin/public-content/{locale}` sau pentru popularea inițială a bazei de date.
 
 ```json
@@ -198,6 +198,44 @@ Publică ultima variantă de draft. Răspunsul trebuie să includă noua versiun
 ```
 
 > Valorile din exemplu au fost scurtate pentru lizibilitate; în aplicație se exportă structura completă, identică cu fallback-urile locale sau cu răspunsul backend disponibil.
+
+### `POST /api/admin/public-content/{locale}/snapshot`
+
+Acest endpoint primește payload-ul complet generat de pagina de export și îl stochează în backend (de ex. într-o zonă tampon folosită pentru bootstrap-ul bazei de date).
+
+#### Request
+
+```json
+{
+  "locale": "ro",
+  "sections": ["header", "hero", "benefits", "footer"],
+  "content": {
+    "header": { "brandAria": "DaCars — închirieri auto rapide și oneste" },
+    "hero": { "title": "Închirieri auto rapide în București și Otopeni" },
+    "benefits": { "title": "De ce să alegi <span class=\"text-jade\">DaCars</span>?" },
+    "footer": { "brand": { "title": "DaCars" } }
+  },
+  "version": null,
+  "updated_at": null
+}
+```
+
+- `locale` — limba payload-ului.
+- `sections` — lista completă a secțiunilor incluse în `content`.
+- `content` — obiectul cu toate valorile agregate.
+- `version` — șir (`string`) dacă există versiune, `null` altfel.
+- `updated_at` — timestamp ISO 8601 (`string`) sau `null`.
+
+#### Response `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "Public content snapshot received"
+}
+```
+
+Backend-ul poate returna orice mesaj informativ; frontend-ul afișează notificarea de succes dacă `success = true`.
 
 ## Integrare în frontend
 

@@ -111,6 +111,7 @@ import type {
     WheelPrize,
 } from "@/types/wheel";
 import type {
+    AdminPublicContentSnapshotPayload,
     PublicContentRequestParams,
     PublicContentResponse,
     PublicLocale,
@@ -2486,6 +2487,61 @@ export class ApiClient {
                     Object.keys(payload).length > 0
                         ? JSON.stringify(payload)
                         : undefined,
+            },
+        );
+    }
+
+    async pushAdminPublicContentSnapshot(
+        locale: PublicLocale,
+        payload: AdminPublicContentSnapshotPayload,
+    ): Promise<ApiMessageResponse> {
+        const normalized = normalizePublicLocale(locale);
+        const encodedLocale = encodeURIComponent(normalized);
+        const normalizedPayloadLocale = normalizePublicLocale(payload.locale);
+
+        const sections = Array.isArray(payload.sections)
+            ? payload.sections
+                  .map((section) =>
+                      typeof section === 'string' ? section.trim() : '',
+                  )
+                  .filter((section) => section.length > 0)
+            : [];
+
+        const resolveVersion = (): string | null | undefined => {
+            if (typeof payload.version === 'string') {
+                const trimmed = payload.version.trim();
+                return trimmed.length > 0 ? trimmed : null;
+            }
+            if (payload.version === null) {
+                return null;
+            }
+            return undefined;
+        };
+
+        const resolveUpdatedAt = (): string | null | undefined => {
+            if (typeof payload.updated_at === 'string') {
+                const trimmed = payload.updated_at.trim();
+                return trimmed.length > 0 ? trimmed : null;
+            }
+            if (payload.updated_at === null) {
+                return null;
+            }
+            return undefined;
+        };
+
+        const body = sanitizePayload({
+            locale: normalizedPayloadLocale,
+            sections,
+            content: payload.content,
+            version: resolveVersion(),
+            updated_at: resolveUpdatedAt(),
+        });
+
+        return this.request<ApiMessageResponse>(
+            `/admin/public-content/${encodedLocale}/snapshot`,
+            {
+                method: 'POST',
+                body: JSON.stringify(body),
             },
         );
     }
