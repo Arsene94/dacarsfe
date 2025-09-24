@@ -1003,7 +1003,7 @@ const getAttachmentDisplayName = (attachment: MailTemplateAttachment): string =>
     }
   }
 
-  return attachment.uuid;
+  return attachment.id;
 };
 
 const formatAttachmentSize = (
@@ -2333,12 +2333,12 @@ const MailBrandingPage = () => {
       });
   };
 
-  const handleAttachmentDelete = (uuid: string) => {
-    if (!selectedTemplateKey || !uuid) return;
-    setAttachmentDeleting(uuid);
+  const handleAttachmentDelete = (id: string) => {
+    if (!selectedTemplateKey || !id) return;
+    setAttachmentDeleting(id);
     setTemplateStatus(null);
     apiClient
-      .deleteMailTemplateAttachment(selectedTemplateKey, uuid)
+      .deleteMailTemplateAttachment(selectedTemplateKey, id)
       .then((response) => {
         const attachmentsFromResponse = Array.isArray(response?.data?.attachments)
           ? (response.data.attachments as MailTemplateAttachment[])

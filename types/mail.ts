@@ -60,7 +60,7 @@ export interface MailTemplateSummary {
 }
 
 export interface MailTemplateAttachment {
-  uuid: string;
+  id: string;
   name?: string | null;
   filename?: string | null;
   original_name?: string | null;
