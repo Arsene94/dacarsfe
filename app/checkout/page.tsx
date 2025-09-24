@@ -786,8 +786,8 @@ const ReservationPage = () => {
         try {
             const res = await apiClient.createBooking(payload);
             const reservationId =
-                res?.booking_number ||
-                res?.id ||
+                res?.data?.booking_number ||
+                res?.data?.id ||
                 "#" + Math.floor(1000000 + Math.random() * 9000000);
             localStorage.setItem(
                 "reservationData",
