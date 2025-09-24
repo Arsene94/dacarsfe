@@ -403,6 +403,11 @@ const getEditorPlainText = (editor: Editor | null): string => {
   return doc.textBetween(0, doc.content.size, "\n", "\n");
 };
 
+const defaultNonTextTags =
+  (sanitizeHtml.defaults as typeof sanitizeHtml.defaults & {
+    nonTextTags?: string[];
+  }).nonTextTags ?? ["style", "script", "textarea", "option"];
+
 const MAIL_PREVIEW_SANITIZE_OPTIONS: IOptions = {
   allowedTags: [
     ...sanitizeHtml.defaults.allowedTags,
@@ -522,7 +527,7 @@ const MAIL_PREVIEW_SANITIZE_OPTIONS: IOptions = {
   },
   allowProtocolRelative: true,
   selfClosing: [...sanitizeHtml.defaults.selfClosing, "meta", "link", "source"],
-  nonTextTags: sanitizeHtml.defaults.nonTextTags,
+  nonTextTags: defaultNonTextTags,
   disallowedTagsMode: "discard",
   enforceHtmlBoundary: true,
 };
