@@ -111,9 +111,12 @@ import type {
     WheelPrize,
 } from "@/types/wheel";
 import type {
+    AdminPublicContentRecord,
     AdminPublicContentSnapshotPayload,
+    AdminPublicContentVersion,
     PublicContentRequestParams,
     PublicContentResponse,
+    PublicContentStatus,
     PublicLocale,
     TranslatePublicContentPayload,
     TranslatePublicContentResponse,
@@ -192,6 +195,89 @@ const resolveIncludeParam = (include?: string | readonly string[]): string | nul
     }
 
     return null;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null;
+
+const isPublicContentStatus = (value: unknown): value is PublicContentStatus =>
+    value === 'draft' || value === 'published' || value === 'archived';
+
+const ensureAdminPublicContentVersion = (
+    value: unknown,
+    fallbackLocale: PublicLocale,
+): AdminPublicContentVersion | null => {
+    if (!isRecord(value)) {
+        return null;
+    }
+
+    const version = value as AdminPublicContentVersion;
+    const normalizedSections = Array.isArray(version.sections)
+        ? version.sections.filter((section): section is string =>
+              typeof section === 'string' && section.trim().length > 0,
+          )
+        : undefined;
+    const normalizedLocale =
+        typeof version.locale === 'string'
+            ? normalizePublicLocale(version.locale)
+            : fallbackLocale;
+
+    const contentValue = isRecord(version.content)
+        ? (version.content as AdminPublicContentVersion['content'])
+        : null;
+
+    return {
+        id: version.id ?? null,
+        locale: normalizedLocale,
+        status: isPublicContentStatus(version.status) ? version.status : undefined,
+        version: typeof version.version === 'string' ? version.version : null,
+        sections: normalizedSections,
+        created_at: typeof version.created_at === 'string' ? version.created_at : null,
+        updated_at: typeof version.updated_at === 'string' ? version.updated_at : null,
+        published_at: typeof version.published_at === 'string' ? version.published_at : null,
+        superseded_at:
+            typeof version.superseded_at === 'string' ? version.superseded_at : null,
+        content: contentValue,
+    };
+};
+
+const ensureAdminPublicContentRecord = (
+    payload: unknown,
+    fallbackLocale: PublicLocale,
+): AdminPublicContentRecord => {
+    if (isRecord(payload) && 'data' in payload) {
+        const container = payload as { data?: unknown };
+        return ensureAdminPublicContentRecord(container.data, fallbackLocale);
+    }
+
+    if (!isRecord(payload)) {
+        return {
+            locale: fallbackLocale,
+            draft: null,
+            published: null,
+            history: [],
+        };
+    }
+
+    const record = payload as AdminPublicContentRecord & Record<string, unknown>;
+    const normalizedLocale =
+        typeof record.locale === 'string'
+            ? normalizePublicLocale(record.locale)
+            : fallbackLocale;
+
+    const draft = ensureAdminPublicContentVersion(record.draft, normalizedLocale);
+    const published = ensureAdminPublicContentVersion(record.published, normalizedLocale);
+    const historySource = Array.isArray(record.history) ? record.history : [];
+    const history = historySource
+        .map((entry) => ensureAdminPublicContentVersion(entry, normalizedLocale))
+        .filter((entry): entry is AdminPublicContentVersion => entry !== null);
+
+    return {
+        locale: normalizedLocale,
+        draft,
+        published,
+        history,
+    };
 };
 
 export class ApiClient {
@@ -2437,18 +2523,20 @@ export class ApiClient {
         );
     }
 
-    async getAdminPublicContent(locale: PublicLocale): Promise<PublicContentResponse> {
+    async getAdminPublicContent(locale: PublicLocale): Promise<AdminPublicContentRecord> {
         const normalized = normalizePublicLocale(locale);
         const encodedLocale = encodeURIComponent(normalized);
-        return this.request<PublicContentResponse>(
+        const result = await this.request<ApiItemResult<AdminPublicContentRecord>>(
             `/admin/public-content/${encodedLocale}`,
         );
+        const extracted = extractItem(result);
+        return ensureAdminPublicContentRecord(extracted ?? result, normalized);
     }
 
     async updateAdminPublicContent(
         locale: PublicLocale,
         payload: UpdatePublicContentPayload,
-    ): Promise<PublicContentResponse> {
+    ): Promise<AdminPublicContentRecord> {
         const normalized = normalizePublicLocale(locale);
         const encodedLocale = encodeURIComponent(normalized);
         const { locale: payloadLocale, ...rest } = payload;
@@ -2461,19 +2549,21 @@ export class ApiClient {
             locale: normalizedPayloadLocale,
         });
 
-        return this.request<PublicContentResponse>(
+        const result = await this.request<ApiItemResult<AdminPublicContentRecord>>(
             `/admin/public-content/${encodedLocale}`,
             {
                 method: 'PUT',
                 body: JSON.stringify(body),
             },
         );
+        const extracted = extractItem(result);
+        return ensureAdminPublicContentRecord(extracted ?? result, normalized);
     }
 
     async publishAdminPublicContent(
         locale: PublicLocale,
         version?: string | null,
-    ): Promise<PublicContentResponse> {
+    ): Promise<AdminPublicContentRecord> {
         const normalized = normalizePublicLocale(locale);
         const encodedLocale = encodeURIComponent(normalized);
         const payload: Record<string, string> = {};
@@ -2481,7 +2571,7 @@ export class ApiClient {
             payload.version = version.trim();
         }
 
-        return this.request<PublicContentResponse>(
+        const result = await this.request<ApiItemResult<AdminPublicContentRecord>>(
             `/admin/public-content/${encodedLocale}/publish`,
             {
                 method: 'POST',
@@ -2491,6 +2581,8 @@ export class ApiClient {
                         : undefined,
             },
         );
+        const extracted = extractItem(result);
+        return ensureAdminPublicContentRecord(extracted ?? result, normalized);
     }
 
     async translateAdminPublicContent(

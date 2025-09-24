@@ -24,10 +24,12 @@ import {
   extractStringLeafEntries,
   mergeContent,
   setByPath,
+  isPlainObject,
 } from "@/lib/publicContent/utils";
 import type {
+  AdminPublicContentRecord,
+  AdminPublicContentVersion,
   PublicContentDictionary,
-  PublicContentResponse,
   PublicContentStatus,
   PublicLocale,
   TranslatePublicContentMode,
@@ -70,20 +72,76 @@ const stringifyContent = (content: PublicContentDictionary): string => {
   }
 };
 
-const extractContent = (response: PublicContentResponse | null | undefined): PublicContentDictionary => {
-  if (!response) {
+const getVersionContent = (
+  version: AdminPublicContentVersion | null | undefined,
+): PublicContentDictionary => {
+  if (!version) {
     return {};
   }
 
-  if (response.content && typeof response.content === "object") {
-    return response.content;
-  }
-
-  if (response.meta && typeof response.meta === "object") {
-    return response.meta as PublicContentDictionary;
+  const { content } = version;
+  if (isPlainObject(content)) {
+    return content as PublicContentDictionary;
   }
 
   return {};
+};
+
+const pickEditableVersion = (
+  record: AdminPublicContentRecord | null | undefined,
+): AdminPublicContentVersion | null => {
+  if (!record) {
+    return null;
+  }
+
+  if (record.draft) {
+    return record.draft;
+  }
+
+  if (record.published) {
+    return record.published;
+  }
+
+  if (Array.isArray(record.history)) {
+    const firstNonNull = record.history.find((entry) => Boolean(entry));
+    if (firstNonNull) {
+      return firstNonNull;
+    }
+  }
+
+  return null;
+};
+
+const extractContent = (
+  record: AdminPublicContentRecord | null | undefined,
+): PublicContentDictionary => {
+  const primary = pickEditableVersion(record);
+  const primaryContent = getVersionContent(primary);
+
+  if (Object.keys(primaryContent).length > 0) {
+    return primaryContent;
+  }
+
+  if (record?.published && record.published !== primary) {
+    const publishedContent = getVersionContent(record.published);
+    if (Object.keys(publishedContent).length > 0) {
+      return publishedContent;
+    }
+  }
+
+  if (Array.isArray(record?.history)) {
+    for (const entry of record.history) {
+      if (!entry || entry === primary) {
+        continue;
+      }
+      const content = getVersionContent(entry);
+      if (Object.keys(content).length > 0) {
+        return content;
+      }
+    }
+  }
+
+  return primaryContent;
 };
 
 const parseSectionsInput = (value: string): string[] => {
@@ -159,17 +217,59 @@ const PublicContentManagerPage = () => {
     setContent((previous) => setByPath(previous, path, value));
   }, []);
 
-  const applyResponse = useCallback((response: PublicContentResponse | null | undefined) => {
-    if (!response) {
+  const applyResponse = useCallback((record: AdminPublicContentRecord | null | undefined) => {
+    if (!record) {
       return;
     }
 
-    const nextStatus = isStatus(response.status) ? response.status : "draft";
-    setStatus(nextStatus);
-    setUpdatedAt(typeof response.updated_at === "string" ? response.updated_at : null);
-    setPublishedAt(typeof response.published_at === "string" ? response.published_at : null);
-    setVersionValue(typeof response.version === "string" ? response.version : "");
-    setContent(extractContent(response));
+    const primary = pickEditableVersion(record);
+    const primaryStatus = primary?.status;
+    if (isStatus(primaryStatus)) {
+      setStatus(primaryStatus);
+    } else if (record.draft) {
+      setStatus("draft");
+    } else if (record.published) {
+      setStatus("published");
+    } else {
+      setStatus("draft");
+    }
+
+    const resolvedPublishedAt = (() => {
+      const published = record.published;
+      if (published) {
+        if (typeof published.published_at === "string") {
+          return published.published_at;
+        }
+        if (typeof published.updated_at === "string") {
+          return published.updated_at;
+        }
+        if (typeof published.created_at === "string") {
+          return published.created_at;
+        }
+      }
+      return null;
+    })();
+
+    const resolvedUpdatedAt = (() => {
+      if (primary) {
+        if (typeof primary.updated_at === "string") {
+          return primary.updated_at;
+        }
+        if (typeof primary.created_at === "string") {
+          return primary.created_at;
+        }
+      }
+      return null;
+    })();
+
+    setUpdatedAt(resolvedUpdatedAt ?? resolvedPublishedAt ?? null);
+    setPublishedAt(resolvedPublishedAt);
+    setVersionValue(
+      typeof primary?.version === "string" && primary.version.trim().length > 0
+        ? primary.version
+        : "",
+    );
+    setContent(extractContent(record));
   }, []);
 
   const fetchLocaleContent = useCallback(

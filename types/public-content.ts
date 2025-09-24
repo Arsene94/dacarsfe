@@ -21,6 +21,26 @@ export interface PublicContentResponse {
   meta?: UnknownRecord | null;
 }
 
+export interface AdminPublicContentVersion {
+  id?: number | string | null;
+  locale?: PublicLocale | null;
+  status?: PublicContentStatus | null;
+  version?: string | null;
+  sections?: string[] | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  published_at?: string | null;
+  superseded_at?: string | null;
+  content?: PublicContentDictionary | null;
+}
+
+export interface AdminPublicContentRecord {
+  locale: PublicLocale;
+  draft: AdminPublicContentVersion | null;
+  published: AdminPublicContentVersion | null;
+  history: AdminPublicContentVersion[];
+}
+
 export interface PublicContentRequestParams {
   locale?: PublicLocale;
   fallbackLocale?: PublicLocale | null;

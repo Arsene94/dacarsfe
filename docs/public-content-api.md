@@ -146,7 +146,61 @@ Consola admin oferă două instrumente dedicate super administratorilor:
 
 ### `GET /api/admin/public-content/{locale}`
 
-Returnează structura completă (inclusiv câmpuri non-publice, meta, istoricul versiunilor). Frontend-ul admin folosește răspunsul pentru a popula formularul de editare.
+Returnează structura completă (inclusiv câmpuri non-publice și istoricul versiunilor). Frontend-ul admin folosește răspunsul pentru a popula formularul de editare.
+
+Răspunsul este livrat sub forma unui `data` wrapper cu schema `AdminPublicContentRecord`:
+
+```json
+{
+  "data": {
+    "locale": "ro",
+    "draft": null,
+    "published": {
+      "id": 14,
+      "locale": "ro",
+      "status": "published",
+      "version": "1",
+      "sections": ["footer"],
+      "created_at": "2025-09-24T19:51:15.000000Z",
+      "updated_at": "2025-09-24T19:51:15.000000Z",
+      "published_at": null,
+      "superseded_at": null,
+      "content": {
+        "brand": {
+          "title": "DaCars",
+          "description": "Mașini oneste pentru români onești. Predare în aeroport în sub 5 minute, fără taxe ascunse."
+        },
+        "navigation": {
+          "title": "Linkuri Rapide",
+          "items": [
+            { "href": "/", "label": "Acasă", "ariaLabel": "Acasă" },
+            { "href": "/cars", "label": "Flota Auto", "ariaLabel": "Flota Auto" }
+          ]
+        }
+      }
+    },
+    "history": [
+      {
+        "id": 13,
+        "locale": "ro",
+        "status": "published",
+        "sections": ["success"],
+        "created_at": "2025-09-24T19:51:15.000000Z",
+        "content": {
+          "header": {
+            "title": {
+              "lead": "Rezervarea este",
+              "highlight": "confirmată!"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+`draft` conține varianta editabilă (dacă există una nepublicată), `published` include ultima versiune online, iar `history` listează reviziile anterioare în ordine descrescătoare. Frontend-ul afișează câmpurile din `draft.content` când este disponibil; în lipsă, folosește `published.content` sau primul element din `history`.
 
 ### `PUT /api/admin/public-content/{locale}`
 
@@ -176,7 +230,7 @@ Payload minim:
 - `content` — patch JSON cu secțiunile modificate. Backend-ul trebuie să fuzioneze cu structura existentă.
 - `publish` — opțional (`true/false`). Dacă este `true`, backend-ul poate publica imediat draft-ul rezultat fără a apela explicit endpoint-ul de mai jos.
 
-Răspuns: structura completă a versiunii actualizate (`PublicContentResponse`).
+Răspuns: structura completă actualizată (`AdminPublicContentRecord`) învelită în câmpul `data`.
 
 ### `POST /api/admin/public-content/{locale}/publish`
 
@@ -188,7 +242,7 @@ Payload opțional:
 }
 ```
 
-Publică ultima variantă de draft. Răspunsul trebuie să includă noua versiune (`status = "published"`, `version` actualizat).
+Publică ultima variantă de draft și returnează aceeași structură (`AdminPublicContentRecord`) cu secțiunea `published` actualizată.
 
 ### `POST /api/admin/public-content/translate`
 
