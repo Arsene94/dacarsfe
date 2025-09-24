@@ -1,3 +1,5 @@
+"use client";
+
 import { DollarSign, FileX, Zap, Clock } from "lucide-react";
 import { usePublicContentSection } from "@/context/PublicContentContext";
 

@@ -1,3 +1,5 @@
+"use client";
+
 import { Car, Clock, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { usePublicContentSection } from "@/context/PublicContentContext";
