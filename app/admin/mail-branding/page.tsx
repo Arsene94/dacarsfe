@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import type { TwigModule, TwigTemplate } from "twig";
+import type { SyntaxNode } from "@lezer/common";
+import type { EditorState } from "@codemirror/state";
 import CodeMirror from "@uiw/react-codemirror";
 import "@uiw/react-codemirror/dist/codemirror.css";
 import { html } from "@codemirror/lang-html";
-import { tagMatching, bracketMatching } from "@codemirror/language";
+import { bracketMatching, syntaxTree } from "@codemirror/language";
+import { RangeSetBuilder } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { EditorView } from "@codemirror/view";
+import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { Code2, FunctionSquare, Loader2, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -72,6 +75,148 @@ const normalizeLinkArray = (links?: MailMenuLink[] | null): MailMenuLink[] => {
     url: item?.url ?? "",
   }));
 };
+
+type HtmlTagMatch = {
+  primary: SyntaxNode;
+  partner: SyntaxNode | null;
+  mismatch: boolean;
+};
+
+const matchingTagDecoration = Decoration.mark({ class: "cm-matchingTag" });
+const mismatchingTagDecoration = Decoration.mark({ class: "cm-nonmatchingTag" });
+
+const findChildOfType = (
+  node: SyntaxNode | null | undefined,
+  types: readonly string[],
+): SyntaxNode | null => {
+  if (!node) return null;
+  let child: SyntaxNode | null = node.firstChild;
+  while (child) {
+    if (types.includes(child.name)) {
+      return child;
+    }
+    child = child.nextSibling;
+  }
+  return null;
+};
+
+const findHtmlTagMatch = (state: EditorState, position: number): HtmlTagMatch | null => {
+  const tree = syntaxTree(state);
+  let node = tree.resolveInner(position, -1);
+
+  while (node && node.name !== "TagName") {
+    node = node.parent;
+  }
+
+  if (!node) {
+    return null;
+  }
+
+  const tagParent = node.parent;
+  if (!tagParent) {
+    return null;
+  }
+
+  if (tagParent.name === "SelfClosingTag") {
+    return null;
+  }
+
+  if (tagParent.name === "OpenTag") {
+    const element = tagParent.parent;
+    if (!element || element.name !== "Element") {
+      return { primary: node, partner: null, mismatch: true };
+    }
+
+    const closing = findChildOfType(element, ["CloseTag", "MismatchedCloseTag"]);
+    const closingName = findChildOfType(closing, ["TagName"]);
+
+    if (!closing || !closingName) {
+      return { primary: node, partner: null, mismatch: true };
+    }
+
+    const openName = state.sliceDoc(node.from, node.to);
+    const closeName = state.sliceDoc(closingName.from, closingName.to);
+    const mismatch = closing.name === "MismatchedCloseTag" || openName !== closeName;
+
+    return {
+      primary: node,
+      partner: closingName,
+      mismatch,
+    };
+  }
+
+  if (tagParent.name === "CloseTag" || tagParent.name === "MismatchedCloseTag") {
+    const element = tagParent.parent;
+    const opening = element && element.name === "Element" ? findChildOfType(element, ["OpenTag"]) : null;
+    const openingName = findChildOfType(opening, ["TagName"]);
+
+    if (!openingName) {
+      return { primary: node, partner: null, mismatch: true };
+    }
+
+    const openName = state.sliceDoc(openingName.from, openingName.to);
+    const closeName = state.sliceDoc(node.from, node.to);
+    const mismatch = tagParent.name === "MismatchedCloseTag" || openName !== closeName;
+
+    return {
+      primary: node,
+      partner: openingName,
+      mismatch,
+    };
+  }
+
+  return null;
+};
+
+const htmlTagMatchingExtension = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+
+    constructor(view: EditorView) {
+      this.decorations = this.createDecorations(view);
+    }
+
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.selectionSet) {
+        this.decorations = this.createDecorations(update.view);
+      }
+    }
+
+    createDecorations(view: EditorView): DecorationSet {
+      const builder = new RangeSetBuilder<Decoration>();
+      const seen = new Set<string>();
+
+      for (const range of view.state.selection.ranges) {
+        if (!range.empty) continue;
+
+        const match = findHtmlTagMatch(view.state, range.head);
+        if (!match) continue;
+
+        const decoration = match.mismatch ? mismatchingTagDecoration : matchingTagDecoration;
+        const { primary, partner } = match;
+
+        const primaryKey = `${primary.from}-${primary.to}`;
+        if (!seen.has(primaryKey)) {
+          builder.add(primary.from, primary.to, decoration);
+          seen.add(primaryKey);
+        }
+
+        if (partner) {
+          const partnerKey = `${partner.from}-${partner.to}`;
+          if (!seen.has(partnerKey)) {
+            builder.add(partner.from, partner.to, decoration);
+            seen.add(partnerKey);
+          }
+        }
+      }
+
+      return builder.finish();
+    }
+  },
+  {
+    decorations: (plugin) => plugin.decorations,
+  },
+);
 
 const isTwigModule = (value: unknown): value is TwigModule =>
   typeof value === "object" &&
@@ -1312,6 +1457,7 @@ const MailBrandingPage = () => {
   const editorViewRef = useRef<EditorView | null>(null);
   const templateContentRef = useRef(templateContent);
   const [isClient, setIsClient] = useState(false);
+  const isEditorEditable = Boolean(selectedTemplateKey) && !templateLoading;
 
   const computeBasePreviewContext = useCallback(() => {
     const siteDetails =
@@ -1880,7 +2026,7 @@ const MailBrandingPage = () => {
       if (view) {
         const mainSelection = view.state.selection.main;
         const docLength = view.state.doc.length;
-        const hasFocus = view.hasFocus();
+        const hasFocus = view.hasFocus;
         const from = hasFocus ? mainSelection.from : docLength;
         const to = hasFocus ? mainSelection.to : docLength;
         const placeholderIndex = placeholder ? snippet.indexOf(placeholder) : -1;
@@ -2205,11 +2351,9 @@ const MailBrandingPage = () => {
     ? attachmentsList
     : [];
 
-  const isEditorEditable = Boolean(selectedTemplateKey) && !templateLoading;
-
   const editorExtensions = useMemo(() => [
     html({ autoCloseTags: true, matchClosingTags: true }),
-    tagMatching(),
+    htmlTagMatchingExtension,
     bracketMatching(),
     EditorView.lineWrapping,
     EditorView.editable.of(isEditorEditable),
