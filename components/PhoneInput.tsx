@@ -13,6 +13,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   required = false,
   className = '',
   placeholder = 'Numărul de telefon',
+  label = 'Telefon',
 }) => {
   const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -110,7 +111,8 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
     <div className={cn('relative', className)}>
       <Label htmlFor={inputId} className="mb-2">
         <Phone className="h-4 w-4 inline text-jade mr-1" />
-        Telefon {required ? '*' : ''}
+        {label}
+        {required ? ' *' : ''}
       </Label>
       <div className="flex">
         <div className="relative" ref={dropdownRef}>

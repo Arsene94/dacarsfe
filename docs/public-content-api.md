@@ -14,7 +14,7 @@ GET /api/public/content
 | --- | --- | --- | --- |
 | `locale` | string | `ro` | Codul limbii cerute (ex. `ro`, `en`). |
 | `fallback_locale` | string | – | Limbă alternativă folosită dacă pentru `locale` nu există conținut complet. |
-| `sections` | string / listă | – | Subset de secțiuni cerute (`header,hero,benefits,home.fleet,cars`). Dacă lipsește se returnează întregul copy public. |
+| `sections` | string / listă | – | Subset de secțiuni cerute (`header,hero,benefits,home.fleet,cars,checkout,success`). Dacă lipsește se returnează întregul copy public. |
 | `version` | string | – | Identificatorul versiunii locale din cache-ul frontend-ului. Dacă este identic, backend-ul poate răspunde cu 304 / payload gol. |
 | `include_draft` | boolean | `false` | Forțează servirea versiunii draft (util pentru pre-vizualizare). |
 
@@ -34,6 +34,8 @@ GET /api/public/content
     "home.process",
     "home.contact",
     "cars",
+    "checkout",
+    "success",
     "footer"
   ],
   "content": {
@@ -216,6 +218,16 @@ Publică ultima variantă de draft. Răspunsul trebuie să includă noua versiun
       "contact": { "title": "Contactează-ne <span class=\"text-jade\">oricând</span>" }
     },
     "cars": { "header": { "title": "Flota noastră <span class=\"text-jade\">completă</span>" } },
+    "checkout": {
+      "hero": { "title": { "lead": "Rezervă-ți", "highlight": "mașina" } },
+      "form": { "personal": { "title": "Informații personale" } },
+      "summary": { "title": "Rezumatul rezervării" }
+    },
+    "success": {
+      "header": { "title": { "lead": "Rezervarea este", "highlight": "confirmată!" } },
+      "details": { "title": "Detaliile rezervării tale" },
+      "contact": { "title": "Contactează-ne oricând:" }
+    },
     "footer": { "brand": { "title": "DaCars" } }
   }
 }
@@ -241,6 +253,8 @@ Acest endpoint primește payload-ul complet generat de pagina de export și îl 
     "home.process",
     "home.contact",
     "cars",
+    "checkout",
+    "success",
     "footer"
   ],
   "content": {
@@ -249,6 +263,8 @@ Acest endpoint primește payload-ul complet generat de pagina de export și îl 
     "benefits": { "title": "De ce să alegi <span class=\"text-jade\">DaCars</span>?" },
     "home": { "fleet": { "heading": { "title": "Flota noastră <span class=\"text-jade\">premium</span>" } } },
     "cars": { "header": { "title": "Flota noastră <span class=\"text-jade\">completă</span>" } },
+    "checkout": { "summary": { "title": "Rezumatul rezervării" } },
+    "success": { "header": { "title": { "lead": "Rezervarea este", "highlight": "confirmată!" } } },
     "footer": { "brand": { "title": "DaCars" } }
   },
   "version": null,
@@ -296,5 +312,5 @@ Backend-ul poate returna orice mesaj informativ; frontend-ul afișează notifica
 
 ## Chei uzuale
 
-Secțiuni deja consumate de frontend (2025-02-10): `header`, `hero`, `benefits`, `footer`. Cheile trebuie păstrate stabile; adăugările noi se pot face sub același nod (ex. `header.navigation.secondary`).
+Secțiuni deja consumate de frontend (2025-02-10): `header`, `hero`, `benefits`, `home.*`, `cars`, `checkout`, `success`, `footer`. Cheile trebuie păstrate stabile; adăugările noi se pot face sub același nod (ex. `header.navigation.secondary`).
 

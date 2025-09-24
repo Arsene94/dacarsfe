@@ -6,6 +6,7 @@ import {Calendar, Gift, Plane, User,} from "lucide-react";
 import {Label} from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import {useBooking} from "@/context/BookingContext";
+import { usePublicContentSection } from "@/context/PublicContentContext";
 import { apiClient } from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
@@ -19,6 +20,8 @@ import {
 import {ApiCar, Car} from "@/types/car";
 import {ReservationFormData, Service, type DiscountValidationPayload} from "@/types/reservation";
 import {Button} from "@/components/ui/button";
+import { CHECKOUT_PAGE_COPY_FALLBACK } from "@/lib/publicContent/defaults";
+import { formatTemplate } from "@/lib/publicContent/utils";
 
 const STORAGE_BASE = "https://backend.dacars.ro/storage";
 
@@ -272,6 +275,13 @@ const mapApiCarToCar = (apiCar: ApiCar): Car => {
 const ReservationPage = () => {
     const router = useRouter();
     const { booking, setBooking } = useBooking();
+    const copy = usePublicContentSection("checkout", CHECKOUT_PAGE_COPY_FALLBACK);
+    const formCopy = copy.form;
+    const summaryCopy = copy.summary;
+    const wheelPrizeCopy = copy.wheelPrize;
+    const heroCopy = copy.hero;
+    const validationCopy = copy.validation;
+    const guardCopy = copy.guard;
 
     const storedDiscount =
         typeof window !== "undefined"
@@ -386,7 +396,7 @@ const ReservationPage = () => {
         storedDiscount
             ? {
                 isValid: true,
-                message: "Reducere aplicată!",
+                message: formCopy.discount.successMessage,
                 discount: String(storedDiscount.discount ?? "0"),
                 discountCasco: String(storedDiscount.discountCasco ?? "0"),
             }
@@ -414,9 +424,7 @@ const ReservationPage = () => {
                 const start = new Date(`${rental_start_date}T${rental_start_time || "00:00"}`);
                 const end = new Date(`${rental_end_date}T${rental_end_time || "00:00"}`);
                 if (end <= start) {
-                    setAvailabilityError(
-                        "Data de returnare trebuie să fie mai mare decât data de ridicare.",
-                    );
+                    setAvailabilityError(validationCopy.endBeforeStart);
                     return;
                 }
             }
@@ -457,9 +465,7 @@ const ReservationPage = () => {
             const end = `${formData.rental_end_date}T${formData.rental_end_time}`;
 
             if (new Date(end) <= new Date(start)) {
-                setAvailabilityError(
-                    "Data de returnare trebuie să fie mai mare decât data de ridicare.",
-                );
+                setAvailabilityError(validationCopy.endBeforeStart);
                 return;
             }
 
@@ -471,9 +477,7 @@ const ReservationPage = () => {
             const checkAvailability = await apiClient.checkCarAvailability(payload);
 
             if (checkAvailability.available === false) {
-                setAvailabilityError(
-                    "Mașina nu este disponibilă în perioada selectată.",
-                );
+                setAvailabilityError(validationCopy.carUnavailable);
                 return;
             }
             setAvailabilityError(null);
@@ -664,7 +668,7 @@ const ReservationPage = () => {
             if (data.valid === false) {
                 setDiscountStatus({
                     isValid: false,
-                    message: "Eroare la validarea codului.",
+                    message: formCopy.discount.errorMessage,
                     discount: "0",
                     discountCasco: "0",
                 });
@@ -692,7 +696,7 @@ const ReservationPage = () => {
                 localStorage.setItem("originalCar", JSON.stringify(carForValidation));
                 setDiscountStatus({
                     isValid: true,
-                    message: "Reducere aplicată!",
+                    message: formCopy.discount.successMessage,
                     discount: String(discountData.discount),
                     discountCasco: String(discountData.discountCasco),
                 });
@@ -700,7 +704,7 @@ const ReservationPage = () => {
         } catch (error) {
             setDiscountStatus({
                 isValid: false,
-                message: "Eroare la validarea codului.",
+                message: formCopy.discount.errorMessage,
                 discount: "0",
                 discountCasco: "0",
             });
@@ -756,7 +760,7 @@ const ReservationPage = () => {
         return (
             <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
                 <p className="text-xl font-dm-sans text-gray-600">
-                    Trebuie să completezi datele și să selectezi mașina.
+                    {guardCopy.missingSelection}
                 </p>
             </div>
         );
@@ -856,15 +860,45 @@ const ReservationPage = () => {
         : totalBeforeWheel;
     const wheelPrizeApplied = wheelPrizeDiscount > 0;
 
+    const locationValues = summaryCopy.locationValues as Record<string, string>;
+    const selectedLocationLabel =
+        (formData.location && locationValues[formData.location]) ??
+        locationValues.aeroport;
+    const summaryPriceLabel = formatTemplate(summaryCopy.price.priceTemplate, {
+        rate:
+            booking.withDeposit
+                ? booking.selectedCar?.rental_rate ?? booking.selectedCar?.price ?? 0
+                : booking.selectedCar?.rental_rate_casco ?? booking.selectedCar?.price ?? 0,
+        days: booking.selectedCar?.days ?? 0,
+    });
+    const wheelPrizeExpiryText = wheelPrizeExpiryLabel
+        ? formatTemplate(wheelPrizeCopy.expiryWithDateTemplate, {
+              date: wheelPrizeExpiryLabel,
+          })
+        : wheelPrizeCopy.expiryFallback;
+    const wheelPrizeTitle = wheelPrizeRecord?.prize.title ?? wheelPrizeCopy.title;
+    const wheelPrizeSavingsText =
+        wheelPrizeApplied && wheelPrizeDiscount > 0
+            ? formatTemplate(wheelPrizeCopy.savingsTemplate, {
+                  amount: formatPrice(wheelPrizeDiscount),
+              })
+            : null;
+    const depositSuffixLabel =
+        booking.withDeposit && selectedCar
+            ? formatTemplate(summaryCopy.price.depositSuffixTemplate, {
+                  deposit: selectedCar.deposit ?? 0,
+              })
+            : null;
+
     return (
         <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="text-center mb-12">
                     <h1 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
-                        Rezervă-ți <span className="text-jade">mașina</span>
+                        {heroCopy.title.lead} <span className="text-jade">{heroCopy.title.highlight}</span>
                     </h1>
                     <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto">
-                        Completează formularul și te întâlnim la aeroport în sub 5 minute!
+                        {heroCopy.subtitle}
                     </p>
                 </div>
 
@@ -877,7 +911,7 @@ const ReservationPage = () => {
                                 <div>
                                     <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">
                                         <User className="h-6 w-6 text-jade mr-3" />
-                                        Informații personale
+                                        {formCopy.personal.title}
                                     </h3>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -886,7 +920,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-name"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Nume *
+                                                {formCopy.personal.name.label}
                                             </Label>
                                             <input
                                                 id="reservation-name"
@@ -896,7 +930,7 @@ const ReservationPage = () => {
                                                 onChange={handleInputChange}
                                                 required
                                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                                                placeholder="Introduceți numele complet"
+                                                placeholder={formCopy.personal.name.placeholder}
                                             />
                                         </div>
 
@@ -905,7 +939,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-email"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Email *
+                                                {formCopy.personal.email.label}
                                             </Label>
                                             <input
                                                 id="reservation-email"
@@ -915,7 +949,7 @@ const ReservationPage = () => {
                                                 onChange={handleInputChange}
                                                 required
                                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                                                placeholder="nume@email.com"
+                                                placeholder={formCopy.personal.email.placeholder}
                                             />
                                         </div>
 
@@ -925,7 +959,8 @@ const ReservationPage = () => {
                                                 setFormData((prev) => ({ ...prev, customer_phone: val }))
                                             }
                                             required
-                                            placeholder="+40 722 123 456"
+                                            label={formCopy.personal.phone.label}
+                                            placeholder={formCopy.personal.phone.placeholder}
                                         />
                                       </div>
                                         <div className="mt-6">
@@ -934,7 +969,7 @@ const ReservationPage = () => {
                                             className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                         >
                                             <Plane className="h-4 w-4 inline text-jade mr-1" />
-                                            Zbor (opțional)
+                                            {formCopy.flight.label}
                                         </Label>
                                         <input
                                             id="reservation-flight"
@@ -943,7 +978,7 @@ const ReservationPage = () => {
                                             value={formData.flight_number}
                                             onChange={handleInputChange}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                                            placeholder="Ex: RO123 sau Blue Air 456"
+                                            placeholder={formCopy.flight.placeholder}
                                         />
                                     </div>
 
@@ -954,7 +989,7 @@ const ReservationPage = () => {
                                             className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                         >
                                             <Gift className="h-4 w-4 inline text-jade mr-1" />
-                                            Cod de reducere
+                                            {formCopy.discount.title}
                                         </Label>
                                         {discountStatus?.isValid ? (
                                             <div className="flex flex-col gap-2 md:flex-row md:items-center">
@@ -965,14 +1000,14 @@ const ReservationPage = () => {
                                                     value={formData.coupon_code}
                                                     disabled={true}
                                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 md:w-auto md:flex-1"
-                                                    placeholder="Ex: WHEEL10"
+                                                    placeholder={formCopy.discount.placeholder}
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={handleRemoveDiscountCode}
                                                     className="w-full px-4 py-3 bg-red-500 text-white font-dm-sans font-semibold rounded-lg hover:bg-red-600 transition-all duration-300 md:w-auto"
                                                 >
-                                                    Șterge cod
+                                                    {formCopy.discount.removeLabel}
                                                 </button>
                                             </div>
                                         ) : (
@@ -984,7 +1019,7 @@ const ReservationPage = () => {
                                                     value={formData.coupon_code}
                                                     onChange={handleInputChange}
                                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 md:w-auto md:flex-1"
-                                                    placeholder="Ex: WHEEL10"
+                                                    placeholder={formCopy.discount.placeholder}
                                                 />
                                                 <Button
                                                     type="button"
@@ -993,12 +1028,12 @@ const ReservationPage = () => {
                                                         isValidatingCode || !formData.coupon_code.trim()
                                                     }
                                                     className="w-full px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 md:w-auto"
-                                                    aria-label="Validează codul"
+                                                    aria-label={formCopy.discount.validateAriaLabel}
                                                 >
                                                     {isValidatingCode ? (
                                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                                                     ) : (
-                                                        "Validează"
+                                                        formCopy.discount.validateLabel
                                                     )}
                                                 </Button>
                                             </div>
@@ -1024,7 +1059,7 @@ const ReservationPage = () => {
                                 <div>
                                     <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">
                                         <Gift className="h-6 w-6 text-jade mr-3" />
-                                        Servicii Extra
+                                        {formCopy.services.title}
                                     </h3>
                                     <div className="space-y-4">
                                         {services.map((service) => (
@@ -1049,7 +1084,7 @@ const ReservationPage = () => {
                                         ))}
                                         {services.length === 0 && (
                                             <p className="font-dm-sans text-gray-600">
-                                                Niciun serviciu disponibil
+                                                {formCopy.services.emptyState}
                                             </p>
                                         )}
                                     </div>
@@ -1059,7 +1094,7 @@ const ReservationPage = () => {
                                 <div>
                                     <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">
                                         <Calendar className="h-6 w-6 text-jade mr-3" />
-                                        Detalii rezervare
+                                        {formCopy.reservation.title}
                                     </h3>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1068,7 +1103,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-pickup-date"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Dată ridicare *
+                                                {formCopy.reservation.startDateLabel}
                                             </Label>
                                               <input
                                                   id="reservation-pickup-date"
@@ -1087,7 +1122,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-pickup-time"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Oră ridicare *
+                                                {formCopy.reservation.startTimeLabel}
                                             </Label>
                                               <input
                                                   id="reservation-pickup-time"
@@ -1105,7 +1140,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-dropoff-date"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Dată returnare *
+                                                {formCopy.reservation.endDateLabel}
                                             </Label>
                                               <input
                                                   id="reservation-dropoff-date"
@@ -1127,7 +1162,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-dropoff-time"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Oră returnare *
+                                                {formCopy.reservation.endTimeLabel}
                                             </Label>
                                               <input
                                                   id="reservation-dropoff-time"
@@ -1149,7 +1184,7 @@ const ReservationPage = () => {
                                           htmlFor="deposit-none"
                                           className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                         >
-                                          Garanție
+                                          {formCopy.deposit.label}
                                         </Label>
                                         <div className="flex items-center space-x-6">
                                           <div className="flex items-center space-x-2">
@@ -1165,7 +1200,7 @@ const ReservationPage = () => {
                                               htmlFor="deposit-none"
                                               className="font-dm-sans text-gray-700 font-normal"
                                             >
-                                              Fără garanție
+                                              {formCopy.deposit.without}
                                             </Label>
                                           </div>
                                           <div className="flex items-center space-x-2">
@@ -1181,7 +1216,7 @@ const ReservationPage = () => {
                                               htmlFor="deposit-yes"
                                               className="font-dm-sans text-gray-700 font-normal"
                                             >
-                                              Cu garanție
+                                              {formCopy.deposit.with}
                                             </Label>
                                           </div>
                                         </div>
@@ -1192,15 +1227,15 @@ const ReservationPage = () => {
                                     type="submit"
                                     disabled={isSubmitting || !!availabilityError}
                                     className="w-full py-4 bg-jade text-white font-dm-sans font-semibold text-lg rounded-lg hover:bg-jade/90 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg flex items-center justify-center space-x-2"
-                                    aria-label="Finalizează rezervarea"
+                                    aria-label={formCopy.submit.ariaLabel}
                                 >
                                     {isSubmitting ? (
                                         <>
                                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                            <span>Se procesează...</span>
+                                            <span>{formCopy.submit.processing}</span>
                                         </>
                                     ) : (
-                                        <span>Finalizează rezervarea</span>
+                                        <span>{formCopy.submit.label}</span>
                                     )}
                                 </button>
                             </form>
@@ -1211,7 +1246,7 @@ const ReservationPage = () => {
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-2xl shadow-lg p-8 sticky top-24">
                             <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6">
-                                Rezumatul rezervării
+                                {summaryCopy.title}
                             </h3>
 
                             {hasWheelPrize && wheelPrizeRecord && (
@@ -1220,21 +1255,18 @@ const ReservationPage = () => {
                                         <Gift className="mt-1 h-5 w-5 text-jade" />
                                         <div className="space-y-1">
                                             <p className="font-poppins text-sm font-semibold text-berkeley">
-                                                Premiu Roata Norocului
+                                                {wheelPrizeCopy.title}
                                             </p>
                                             <p className="font-dm-sans text-sm text-gray-700">
-                                                {wheelPrizeRecord.prize.title}
+                                                {wheelPrizeTitle}
                                                 {wheelPrizeAmountLabel ? ` — ${wheelPrizeAmountLabel}` : ""}
                                             </p>
                                             <p className="font-dm-sans text-xs text-gray-600">
-                                                {wheelPrizeExpiryLabel
-                                                    ? `Valabil până la ${wheelPrizeExpiryLabel}.`
-                                                    : "Valabil 30 de zile de la momentul câștigării."}
-                                                {" "}Beneficiul va fi aplicat de echipa DaCars când finalizezi rezervarea.
+                                                {wheelPrizeExpiryText} {wheelPrizeCopy.applyNote}
                                             </p>
-                                            {wheelPrizeApplied && wheelPrizeDiscount > 0 && (
+                                            {wheelPrizeSavingsText && (
                                                 <p className="font-dm-sans text-xs font-semibold text-jade">
-                                                    Economisești {formatPrice(wheelPrizeDiscount)}€ la această rezervare.
+                                                    {wheelPrizeSavingsText}
                                                 </p>
                                             )}
                                         </div>
@@ -1245,7 +1277,7 @@ const ReservationPage = () => {
                             <div className="space-y-4 mb-6">
                                 {selectedCar && (
                                     <div className="flex justify-between items-center">
-                                        <span className="font-dm-sans text-gray-600">Mașină:</span>
+                                        <span className="font-dm-sans text-gray-600">{summaryCopy.carLabel}</span>
                                         <span className="font-dm-sans font-semibold text-berkeley">
                       {selectedCar.name.split(" - ")[0]}
                     </span>
@@ -1254,7 +1286,7 @@ const ReservationPage = () => {
 
                                 {formData.rental_start_date && (
                                     <div className="flex justify-between items-center">
-                                        <span className="font-dm-sans text-gray-600">De la:</span>
+                                        <span className="font-dm-sans text-gray-600">{summaryCopy.fromLabel}</span>
                                         <span className="font-dm-sans font-semibold text-berkeley">
                       {new Date(formData.rental_start_date).toLocaleDateString(
                           "ro-RO",
@@ -1265,7 +1297,7 @@ const ReservationPage = () => {
 
                                 {formData.rental_end_date && (
                                     <div className="flex justify-between items-center">
-                                        <span className="font-dm-sans text-gray-600">Până la:</span>
+                                        <span className="font-dm-sans text-gray-600">{summaryCopy.toLabel}</span>
                                         <span className="font-dm-sans font-semibold text-berkeley">
                       {new Date(formData.rental_end_date).toLocaleDateString(
                           "ro-RO",
@@ -1275,9 +1307,9 @@ const ReservationPage = () => {
                                 )}
 
                                 <div className="flex justify-between items-center">
-                                    <span className="font-dm-sans text-gray-600">Locație:</span>
+                                    <span className="font-dm-sans text-gray-600">{summaryCopy.locationLabel}</span>
                                     <span className="font-dm-sans font-semibold text-berkeley text-end">
-                    Aeroport Henri Coandă, Otopeni
+                    {selectedLocationLabel}
                   </span>
                                 </div>
                             </div>
@@ -1285,14 +1317,14 @@ const ReservationPage = () => {
                             <div className="border-t border-gray-200 pt-4">
                                 <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
-                    Sumar:
+                    {summaryCopy.price.summaryLabel}
                   </span>
                                     <span className="font-poppins font-bold text-jade">
-                    {booking.withDeposit ? booking.selectedCar.rental_rate : booking.selectedCar.rental_rate_casco}€ x {booking.selectedCar.days} zile
+                    {summaryPriceLabel}
                   </span>
                                 </div>
                                 <div className="flex justify-between items-center mb-2">
-                                    <span className="font-dm-sans text-gray-600">Subtotal:</span>
+                                    <span className="font-dm-sans text-gray-600">{summaryCopy.price.subtotalLabel}</span>
                                     <span className="font-dm-sans font-semibold text-berkeley">
                                         {formatPrice(rentalSubtotal)}€
                                     </span>
@@ -1300,7 +1332,7 @@ const ReservationPage = () => {
                                 {selectedServices.length > 0 && (
                                     <div className="mt-2">
                     <span className="font-poppins font-semibold text-berkeley">
-                      Servicii:
+                      {summaryCopy.price.servicesLabel}
                     </span>
                                         <div className="mt-2 space-y-1">
                                             {selectedServices.map((service) => (
@@ -1323,7 +1355,7 @@ const ReservationPage = () => {
                                 {wheelPrizeApplied && wheelPrizeDiscount > 0 && (
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="font-dm-sans text-jade">
-                                            Premiu Roata Norocului:
+                                            {summaryCopy.price.wheelPrizeLabel}
                                         </span>
                                         <span className="font-dm-sans text-jade">
                                             -{formatPrice(wheelPrizeDiscount)}€
@@ -1334,14 +1366,14 @@ const ReservationPage = () => {
                                     <>
                                         <div className="flex justify-between items-center mb-2">
                         <span className="font-dm-sans text-gray-600">
-                          Total înainte de reducere:
+                          {summaryCopy.price.totalBeforeDiscountLabel}
                         </span>
                                             <span className="font-dm-sans text-gray-600">
                                                 {formatPrice(originalTotal)}€
                         </span>
                                         </div>
                                         <div className="flex justify-between items-center mb-2">
-                                            <span className="font-dm-sans text-jade">Reducere:</span>
+                                            <span className="font-dm-sans text-jade">{summaryCopy.price.discountLabel}</span>
                                             <span className="font-dm-sans text-jade">
                                                 -{formatPrice(discountAmount)}€
                         </span>
@@ -1350,13 +1382,13 @@ const ReservationPage = () => {
                                 )}
                                 <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
-                    Total:
+                    {summaryCopy.price.totalLabel}
                   </span>
                                     <span className="font-poppins font-bold text-jade">
                                         {formatPrice(total)}€
                                         {booking.withDeposit && selectedCar && (
                                             <span className="text-xs font-dm-sans text-gray-600">
-                                                (+{selectedCar.deposit}€ garanție)
+                                                {depositSuffixLabel}
                                             </span>
                                         )}
                   </span>
@@ -1364,7 +1396,7 @@ const ReservationPage = () => {
                                 {booking.withDeposit && selectedCar && (
                                     <div className="flex justify-between items-center text-xl">
                         <span className="font-poppins font-semibold text-berkeley">
-                            Garanție:
+                            {summaryCopy.price.depositLabel}
                         </span>
                                         <span className="font-poppins font-bold text-jade">
                                             {selectedCar.deposit}€
@@ -1372,20 +1404,19 @@ const ReservationPage = () => {
                                     </div>
                                 )}
                                 <p className="text-sm text-gray-600 font-dm-sans mt-2">
-                                    *Preț final, fără taxe ascunse
+                                    {summaryCopy.price.footnote}
                                 </p>
                             </div>
 
                             {/* Benefits reminder */}
                             <div className="mt-8 p-4 bg-jade/5 rounded-lg">
                                 <h4 className="font-poppins font-semibold text-berkeley mb-2">
-                                    Include:
+                                    {summaryCopy.benefits.title}
                                 </h4>
                                 <ul className="text-sm font-dm-sans text-gray-600 space-y-1">
-                                    <li>✓ Predare în sub 5 minute</li>
-                                    <li>✓ Disponibilitate 24/7</li>
-                                    <li>✓ Fără taxe ascunse</li>
-                                    <li>✓ Modificare gratuită</li>
+                                    {summaryCopy.benefits.items.map((item) => (
+                                        <li key={item}>{item}</li>
+                                    ))}
                                 </ul>
                             </div>
                         </div>

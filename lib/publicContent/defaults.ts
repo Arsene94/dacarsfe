@@ -433,6 +433,218 @@ export const CARS_PAGE_COPY_FALLBACK = {
   },
 } as const;
 
+export const CHECKOUT_PAGE_COPY_FALLBACK = {
+  guard: {
+    missingSelection: "Trebuie să completezi datele și să selectezi mașina.",
+  },
+  hero: {
+    title: {
+      lead: "Rezervă-ți",
+      highlight: "mașina",
+    },
+    subtitle:
+      "Completează formularul și te întâlnim la aeroport în sub 5 minute!",
+  },
+  validation: {
+    endBeforeStart:
+      "Data de returnare trebuie să fie mai mare decât data de ridicare.",
+    carUnavailable: "Mașina nu este disponibilă în perioada selectată.",
+  },
+  form: {
+    personal: {
+      title: "Informații personale",
+      name: {
+        label: "Nume *",
+        placeholder: "Introduceți numele complet",
+      },
+      email: {
+        label: "Email *",
+        placeholder: "nume@email.com",
+      },
+      phone: {
+        label: "Telefon",
+        placeholder: "+40 722 123 456",
+      },
+    },
+    flight: {
+      label: "Zbor (opțional)",
+      placeholder: "Ex: RO123 sau Blue Air 456",
+    },
+    discount: {
+      title: "Cod de reducere",
+      placeholder: "Ex: WHEEL10",
+      validateLabel: "Validează",
+      validateAriaLabel: "Validează codul",
+      removeLabel: "Șterge cod",
+      successMessage: "Reducere aplicată!",
+      errorMessage: "Eroare la validarea codului.",
+      processingLabel: "Se procesează...",
+    },
+    services: {
+      title: "Servicii Extra",
+      emptyState: "Niciun serviciu disponibil",
+    },
+    reservation: {
+      title: "Detalii rezervare",
+      startDateLabel: "Dată ridicare *",
+      startTimeLabel: "Oră ridicare *",
+      endDateLabel: "Dată returnare *",
+      endTimeLabel: "Oră returnare *",
+    },
+    deposit: {
+      label: "Garanție",
+      without: "Fără garanție",
+      with: "Cu garanție",
+    },
+    submit: {
+      label: "Finalizează rezervarea",
+      processing: "Se procesează...",
+      ariaLabel: "Finalizează rezervarea",
+    },
+  },
+  wheelPrize: {
+    title: "Premiu Roata Norocului",
+    applyNote:
+      "Beneficiul va fi aplicat de echipa DaCars când finalizezi rezervarea.",
+    expiryWithDateTemplate: "Valabil până la {{date}}.",
+    expiryFallback: "Valabil 30 de zile de la momentul câștigării.",
+    savingsTemplate: "Economisești {{amount}}€ la această rezervare.",
+  },
+  summary: {
+    title: "Rezumatul rezervării",
+    carLabel: "Mașină:",
+    fromLabel: "De la:",
+    toLabel: "Până la:",
+    locationLabel: "Locație:",
+    locationValues: {
+      aeroport: "Aeroport Henri Coandă, Otopeni",
+      city: "Centrul Bucureștiului",
+      other: "Altă locație",
+    },
+    price: {
+      summaryLabel: "Sumar:",
+      priceTemplate: "{{rate}}€ x {{days}} zile",
+      subtotalLabel: "Subtotal:",
+      servicesLabel: "Servicii:",
+      wheelPrizeLabel: "Premiu Roata Norocului:",
+      totalBeforeDiscountLabel: "Total înainte de reducere:",
+      discountLabel: "Reducere:",
+      totalLabel: "Total:",
+      depositLabel: "Garanție:",
+      depositSuffixTemplate: "(+{{deposit}}€ garanție)",
+      footnote: "*Preț final, fără taxe ascunse",
+    },
+    benefits: {
+      title: "Include:",
+      items: [
+        "✓ Predare în sub 5 minute",
+        "✓ Disponibilitate 24/7",
+        "✓ Fără taxe ascunse",
+        "✓ Modificare gratuită",
+      ],
+    },
+  },
+} as const;
+
+export const SUCCESS_PAGE_COPY_FALLBACK = {
+  loading: {
+    message: "Se încarcă detaliile rezervării...",
+  },
+  header: {
+    title: {
+      lead: "Rezervarea este",
+      highlight: "confirmată!",
+    },
+    subtitleTemplate:
+      "Mulțumim, <strong>{{customerName}}</strong>! Mașina ta te așteaptă la aeroport.",
+    tagline: "Ne vedem acasă!",
+    badgeTemplate: "Rezervarea {{reservationId}}",
+  },
+  wheelPrize: {
+    title: "Premiu Roata Norocului",
+    fallbackTitle: "Premiu DaCars",
+    usage: {
+      prefix: "Ai folosit premiul",
+      amountTemplate: " — {{amount}}",
+    },
+    savingsTemplate: "Economisești {{amount}}€ la această rezervare.",
+    expiryWithDateTemplate: "Premiul este valabil până la {{date}}.",
+    expiryFallback: "Premiul rămâne valabil 30 de zile de la momentul câștigării.",
+  },
+  details: {
+    title: "Detaliile rezervării tale",
+    car: {
+      title: "Mașina ta",
+    },
+    period: {
+      title: "Perioada",
+      pickupLabel: "Ridicare",
+      returnLabel: "Returnare",
+    },
+    location: {
+      title: "Locația",
+      values: {
+        aeroport: "Aeroport Henri Coandă, Otopeni",
+        city: "Centrul Bucureștiului",
+        other: "Altă locație",
+      },
+    },
+    cost: {
+      title: "Costul total",
+      subtotalLabel: "Subtotal:",
+      servicesLabel: "Servicii:",
+      wheelPrizeLabel: "Premiu Roata Norocului:",
+      discountLabel: "Reducere:",
+      totalLabel: "Total",
+      footnote: "*Preț final, fără taxe ascunse",
+    },
+    flight: {
+      title: "Zborul tău",
+    },
+  },
+  nextSteps: {
+    title: "Ce urmează?",
+    items: [
+      {
+        step: "1",
+        title: "La aterizare",
+        description: "Sună-ne la numărul de telefon când ieși din terminal",
+      },
+      {
+        step: "2",
+        title: "Te întâlnim",
+        description: "Ajungem la tine în parcarea de scurtă durată în sub 5 minute",
+      },
+      {
+        step: "3",
+        title: "Drum bun!",
+        description: "Primești cheile și poți pleca acasă în siguranță",
+      },
+    ],
+  },
+  contact: {
+    title: "Contactează-ne oricând:",
+    phoneDisplay: "+40 722 123 456",
+    phoneHref: "tel:+40722123456",
+    phoneAriaLabel: "Sună la +40 722 123 456",
+    availability: "Disponibili 24/7 pentru urgențe",
+  },
+  actions: {
+    print: {
+      label: "Printează detaliile",
+      ariaLabel: "Printează detaliile",
+    },
+    home: {
+      label: "Înapoi Acasă",
+      ariaLabel: "Înapoi Acasă",
+    },
+  },
+  footer: {
+    confirmation:
+      "Vei primi o confirmare prin email cu toate detaliile rezervării.",
+  },
+} as const;
+
 export const PUBLIC_CONTENT_FALLBACKS: PublicContentDictionary = {
   header: HEADER_COPY_FALLBACK,
   hero: HERO_COPY_FALLBACK,
@@ -445,4 +657,6 @@ export const PUBLIC_CONTENT_FALLBACKS: PublicContentDictionary = {
     contact: HOME_CONTACT_COPY_FALLBACK,
   },
   cars: CARS_PAGE_COPY_FALLBACK,
+  checkout: CHECKOUT_PAGE_COPY_FALLBACK,
+  success: SUCCESS_PAGE_COPY_FALLBACK,
 };

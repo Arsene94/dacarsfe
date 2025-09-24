@@ -12,4 +12,5 @@ export interface PhoneInputProps {
   required?: boolean;
   className?: string;
   placeholder?: string;
+  label?: string;
 }
