@@ -218,19 +218,19 @@ const FleetSection = () => {
 
                 <div className="flex items-center justify-between">
                     <div>
-                        <span className="text-2xl font-poppins font-bold text-berkeley">
-                            {car.price != null ? ` de la ${car.price}€` : "—"}
-                        </span>
-                        <span className="text-gray-600 font-dm-sans">/zi</span>
+                        {/*<span className="text-2xl font-poppins font-bold text-berkeley">*/}
+                        {/*    {car.price != null ? ` de la ${car.price}€` : "—"}*/}
+                        {/*</span>*/}
+                        {/*<span className="text-gray-600 font-dm-sans">/zi</span>*/}
                     </div>
 
-                    <Link
-                        href="/checkout"
-                        className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
-                        aria-label="Rezervă"
-                    >
-                        Rezervă
-                    </Link>
+                    {/*<Link*/}
+                    {/*    href="/checkout"*/}
+                    {/*    className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"*/}
+                    {/*    aria-label="Rezervă"*/}
+                    {/*>*/}
+                    {/*    Rezervă*/}
+                    {/*</Link>*/}
                 </div>
             </div>
         </div>

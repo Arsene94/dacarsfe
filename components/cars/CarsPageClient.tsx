@@ -427,49 +427,51 @@ const FleetPage = () => {
                     </div>
                 </div>
 
-                <>
-                    <div className="flex items-center justify-between mb-5">
-                        <div className="me-1">
-                            <span className="text-jade font-bold font-dm-sans">Fără garanție </span>
-                            <span className="text-base font-poppins font-bold text-jade">{car.rental_rate_casco}€</span>
-                            <span className="text-jade font-bold font-dm-sans">/zi</span>
-                            {startDate && endDate && (
-                                <div>
-                                    <span className="text-jade font-bold font-dm-sans">x {car.days} zile = </span>
-                                    <span className="text-base font-poppins font-bold text-jade">{car.total_without_deposit}€</span>
-                                </div>
-                            )}
+                {startDate && endDate && (
+                    <>
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="me-1">
+                                <span className="text-jade font-bold font-dm-sans">Fără garanție </span>
+                                <span className="text-base font-poppins font-bold text-jade">{car.rental_rate_casco}€</span>
+                                <span className="text-jade font-bold font-dm-sans">/zi</span>
+                                {startDate && endDate && (
+                                    <div>
+                                        <span className="text-jade font-bold font-dm-sans">x {car.days} zile = </span>
+                                        <span className="text-base font-poppins font-bold text-jade">{car.total_without_deposit}€</span>
+                                    </div>
+                                )}
+                            </div>
+                            <Button
+                                onClick={startDate && endDate ? () => handleBooking(false, car) : undefined}
+                                className="px-2 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+                                aria-label="Rezervă"
+                            >
+                                Rezervă fără garanție
+                            </Button>
                         </div>
-                        <Button
-                            onClick={startDate && endDate ? () => handleBooking(false, car) : undefined}
-                            className="px-2 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
-                            aria-label="Rezervă"
-                        >
-                            Rezervă fără garanție
-                        </Button>
-                    </div>
 
-                    <div className="flex items-center justify-between">
-                        <div className="me-3">
-                            <span className="text-gray-600 font-dm-sans">Cu garanție </span>
-                            <span className="text-base font-poppins font-bold text-berkeley">{car.rental_rate}€</span>
-                            <span className="text-gray-600 font-dm-sans">/zi</span>
-                            {startDate && endDate && (
-                                <div>
-                                    <span className="text-gray-600 font-bold font-dm-sans">x {car.days} zile = </span>
-                                    <span className="text-base font-poppins font-bold text-berkeley">{car.total_deposit}€</span>
-                                </div>
-                            )}
+                        <div className="flex items-center justify-between">
+                            <div className="me-3">
+                                <span className="text-gray-600 font-dm-sans">Cu garanție </span>
+                                <span className="text-base font-poppins font-bold text-berkeley">{car.rental_rate}€</span>
+                                <span className="text-gray-600 font-dm-sans">/zi</span>
+                                {startDate && endDate && (
+                                    <div>
+                                        <span className="text-gray-600 font-bold font-dm-sans">x {car.days} zile = </span>
+                                        <span className="text-base font-poppins font-bold text-berkeley">{car.total_deposit}€</span>
+                                    </div>
+                                )}
+                            </div>
+                            <Button
+                                onClick={startDate && endDate ? () => handleBooking(true, car) : undefined}
+                                className="px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg hover:!bg-jade/90 hover:!text-white transition-colors duration-300"
+                                aria-label="Rezervă"
+                            >
+                                Rezervă cu garanție
+                            </Button>
                         </div>
-                        <Button
-                            onClick={startDate && endDate ? () => handleBooking(true, car) : undefined}
-                            className="px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg hover:!bg-jade/90 hover:!text-white transition-colors duration-300"
-                            aria-label="Rezervă"
-                        >
-                            Rezervă cu garanție
-                        </Button>
-                    </div>
-                </>
+                    </>
+                )}
             </div>
         </div>
     );
