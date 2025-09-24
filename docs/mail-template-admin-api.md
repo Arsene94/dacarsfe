@@ -85,6 +85,8 @@ overrides).
 }
 ```
 
+Attachment entries include a `with_deposit` field (null, `true`, or `false`) describing when the file is attached.
+
 `resolved_site` is the configuration the mailer loads after merging defaults with the saved override. URLs stay relative; the mail
 layer turns them into absolute links when building the email context.
 
@@ -223,8 +225,10 @@ are replaced wholesale, so send the entire array when you edit a single entry. T
 
 ## Mail templates
 Template keys follow dot notation (`booking/request.twig` → `booking.request`). Keys containing `..`, spaces, or special
-characters are rejected. Each template persists editable metadata (`title`, `subject`) plus an optional attachment list. The API
-also returns a preview context and the full list of available Twig variables so the dashboard can build a rich editor.
+characters are rejected. Each template persists editable metadata (`title`, `subject`) plus an optional attachment list. Every
+attachment entry exposes `id`, `name`, `size`, `mime_type`, `url`, and a `with_deposit` toggle that restricts delivery to
+bookings with (1) or without (0) a security deposit. The API also returns a preview context and the full list of available Twig
+variables so the dashboard can build a rich editor.
 
 ### GET `/api/mail-templates`
 Lists every editable Twig file together with stored metadata.
@@ -466,14 +470,17 @@ replaced with the payload you send when `contents` is present.
 Invalid keys respond with `422 { "message": "Invalid template key." }`, while unknown files yield a 404 payload.
 
 ### POST `/api/mail-templates/{template}/attachments`
-Uploads an attachment (multipart `file` field). The controller enforces the configured limit (`MAIL_TEMPLATE_ATTACHMENT_MAX_KB`,
-default 8192 KB) and responds with HTTP 201 when the upload succeeds.
+Uploads an attachment (multipart `file` field) and optionally receives a `with_deposit` toggle. Set `with_deposit=1` to deliver
+the file only when the booking includes a deposit, `with_deposit=0` to send it only for no-deposit reservations, or omit the
+field to attach it in every scenario. The controller enforces the configured limit (`MAIL_TEMPLATE_ATTACHMENT_MAX_KB`, default
+8192 KB) and responds with HTTP 201 when the upload succeeds.
 
 #### Example `curl`
 ```bash
 curl -X POST \
   -H "Authorization: Bearer <token>" \
   -F "file=@conditii-generale.pdf" \
+  -F "with_deposit=1" \
   https://dacars.ro/api/mail-templates/booking.status_reserved/attachments
 ```
 
@@ -486,7 +493,8 @@ curl -X POST \
       "name": "conditii-generale.pdf",
       "size": 245678,
       "mime_type": "application/pdf",
-      "url": "https://dacars.ro/storage/mail-template-attachments/booking/status_reserved/f9ae1c4d/conditii-generale.pdf"
+      "url": "https://dacars.ro/storage/mail-template-attachments/booking/status_reserved/f9ae1c4d/conditii-generale.pdf",
+      "with_deposit": true
     },
     "attachments": [
       {
@@ -494,7 +502,8 @@ curl -X POST \
         "name": "conditii-generale.pdf",
         "size": 245678,
         "mime_type": "application/pdf",
-        "url": "https://dacars.ro/storage/mail-template-attachments/booking/status_reserved/f9ae1c4d/conditii-generale.pdf"
+        "url": "https://dacars.ro/storage/mail-template-attachments/booking/status_reserved/f9ae1c4d/conditii-generale.pdf",
+        "with_deposit": true
       }
     ]
   }
