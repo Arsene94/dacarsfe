@@ -1947,7 +1947,11 @@ export class ApiClient {
         });
     }
 
-    async uploadMailTemplateAttachment(templateKey: string, file: File | Blob) {
+    async uploadMailTemplateAttachment(
+        templateKey: string,
+        file: File | Blob,
+        options?: { withDeposit?: boolean | null },
+    ) {
         const key = encodeURIComponent(templateKey.trim());
         const formData = new FormData();
         const fileName =
@@ -1955,6 +1959,12 @@ export class ApiClient {
                 ? file.name
                 : 'attachment';
         formData.append('file', file, fileName);
+        const depositFlag = options?.withDeposit;
+        if (depositFlag === true) {
+            formData.append('with_deposit', '1');
+        } else if (depositFlag === false) {
+            formData.append('with_deposit', '0');
+        }
         return this.request<MailTemplateAttachmentsResponse>(`/mail-templates/${key}/attachments`, {
             method: 'POST',
             body: formData,
