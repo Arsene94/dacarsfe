@@ -101,7 +101,7 @@ const findChildOfType = (
 
 const findHtmlTagMatch = (state: EditorState, position: number): HtmlTagMatch | null => {
   const tree = syntaxTree(state);
-  let node = tree.resolveInner(position, -1);
+  let node: SyntaxNode | null = tree.resolveInner(position, -1);
 
   while (node && node.name !== "TagName") {
     node = node.parent;
@@ -167,86 +167,85 @@ const findHtmlTagMatch = (state: EditorState, position: number): HtmlTagMatch | 
   return null;
 };
 
-const htmlTagMatchingExtension = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
+class HtmlTagMatchingPlugin {
+  decorations: DecorationSet;
 
-    constructor(view: EditorView) {
-      this.decorations = this.createDecorations(view);
+  constructor(view: EditorView) {
+    this.decorations = this.createDecorations(view);
+  }
+
+  update(update: ViewUpdate): void {
+    if (update.docChanged || update.selectionSet) {
+      this.decorations = this.createDecorations(update.view);
     }
+  }
 
-    update(update: ViewUpdate) {
-      if (update.docChanged || update.selectionSet) {
-        this.decorations = this.createDecorations(update.view);
+  private createDecorations(view: EditorView): DecorationSet {
+    const ranges = new Map<
+      string,
+      { from: number; to: number; decoration: Decoration; mismatch: boolean }
+    >();
+
+    for (const range of view.state.selection.ranges) {
+      if (!range.empty) continue;
+
+      const match = findHtmlTagMatch(view.state, range.head);
+      if (!match) continue;
+
+      const decoration = match.mismatch ? mismatchingTagDecoration : matchingTagDecoration;
+      const { primary, partner } = match;
+
+      const primaryKey = `${primary.from}-${primary.to}`;
+      const existingPrimary = ranges.get(primaryKey);
+      if (!existingPrimary || (!existingPrimary.mismatch && match.mismatch)) {
+        ranges.set(primaryKey, {
+          from: primary.from,
+          to: primary.to,
+          decoration,
+          mismatch: match.mismatch,
+        });
       }
-    }
 
-    createDecorations(view: EditorView): DecorationSet {
-      const ranges = new Map<
-        string,
-        { from: number; to: number; decoration: Decoration; mismatch: boolean }
-      >();
-
-      for (const range of view.state.selection.ranges) {
-        if (!range.empty) continue;
-
-        const match = findHtmlTagMatch(view.state, range.head);
-        if (!match) continue;
-
-        const decoration = match.mismatch ? mismatchingTagDecoration : matchingTagDecoration;
-        const { primary, partner } = match;
-
-        const primaryKey = `${primary.from}-${primary.to}`;
-        const existingPrimary = ranges.get(primaryKey);
-        if (!existingPrimary || (!existingPrimary.mismatch && match.mismatch)) {
-          ranges.set(primaryKey, {
-            from: primary.from,
-            to: primary.to,
+      if (partner) {
+        const partnerKey = `${partner.from}-${partner.to}`;
+        const existingPartner = ranges.get(partnerKey);
+        if (!existingPartner || (!existingPartner.mismatch && match.mismatch)) {
+          ranges.set(partnerKey, {
+            from: partner.from,
+            to: partner.to,
             decoration,
             mismatch: match.mismatch,
           });
         }
-
-        if (partner) {
-          const partnerKey = `${partner.from}-${partner.to}`;
-          const existingPartner = ranges.get(partnerKey);
-          if (!existingPartner || (!existingPartner.mismatch && match.mismatch)) {
-            ranges.set(partnerKey, {
-              from: partner.from,
-              to: partner.to,
-              decoration,
-              mismatch: match.mismatch,
-            });
-          }
-        }
       }
-
-      if (ranges.size === 0) {
-        return Decoration.none;
-      }
-
-      const builder = new RangeSetBuilder<Decoration>();
-      const sortedRanges = Array.from(ranges.values()).sort((a, b) => {
-        if (a.from !== b.from) {
-          return a.from - b.from;
-        }
-        if (a.mismatch !== b.mismatch) {
-          return a.mismatch ? -1 : 1;
-        }
-        return a.to - b.to;
-      });
-
-      for (const { from, to, decoration } of sortedRanges) {
-        builder.add(from, to, decoration);
-      }
-
-      return builder.finish();
     }
-  },
-  {
-    decorations: (plugin) => plugin.decorations,
-  },
-);
+
+    if (ranges.size === 0) {
+      return Decoration.none;
+    }
+
+    const builder = new RangeSetBuilder<Decoration>();
+    const sortedRanges = Array.from(ranges.values()).sort((a, b) => {
+      if (a.from !== b.from) {
+        return a.from - b.from;
+      }
+      if (a.mismatch !== b.mismatch) {
+        return a.mismatch ? -1 : 1;
+      }
+      return a.to - b.to;
+    });
+
+    for (const { from, to, decoration } of sortedRanges) {
+      builder.add(from, to, decoration);
+    }
+
+    return builder.finish();
+  }
+}
+
+const htmlTagMatchingExtension = ViewPlugin.fromClass(HtmlTagMatchingPlugin, {
+  decorations: (plugin: HtmlTagMatchingPlugin) => plugin.decorations,
+});
 
 const isTwigModule = (value: unknown): value is TwigModule =>
   typeof value === "object" &&
@@ -2931,7 +2930,7 @@ const MailBrandingPage = () => {
                               autocompletion: true,
                               foldGutter: true,
                             }}
-                            onChange={(value) => handleEditorChange(value)}
+                            onChange={handleEditorChange}
                             onCreateEditor={handleEditorCreate}
                             aria-labelledby={templateEditorLabelId}
                             aria-disabled={!isEditorEditable}
