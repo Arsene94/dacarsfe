@@ -3017,18 +3017,18 @@ const MailBrandingPage = () => {
                               <p className="text-xs text-gray-500">{sizeLabel}</p>
                             )}
                           </div>
-                          {typeof attachment.uuid === "string" && attachment.uuid.length > 0 && (
+                          {typeof attachment.id === "string" && attachment.id.length > 0 && (
                             <Button
                               type="button"
                               variant="danger"
                               size="sm"
                               className="flex items-center gap-2"
-                              onClick={() => handleAttachmentDelete(attachment.uuid)}
+                              onClick={() => handleAttachmentDelete(attachment.id)}
                               disabled={
-                                attachmentDeleting === attachment.uuid || attachmentUploading
+                                attachmentDeleting === attachment.id || attachmentUploading
                               }
                             >
-                              {attachmentDeleting === attachment.uuid ? (
+                              {attachmentDeleting === attachment.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                               ) : (
                                 <Trash2 className="h-4 w-4" aria-hidden="true" />
