@@ -38,6 +38,14 @@ export const getByPath = (source: unknown, path: string): unknown => {
       return acc;
     }
 
+    if (Array.isArray(acc)) {
+      const index = Number(segment);
+      if (Number.isInteger(index)) {
+        return acc[index];
+      }
+      return undefined;
+    }
+
     if (isPlainObject(acc) && segment in acc) {
       return (acc as Record<string, unknown>)[segment];
     }
@@ -74,5 +82,94 @@ export const formatTemplate = (
     const value = params[key];
     return typeof value === "undefined" || value === null ? "" : String(value);
   });
+};
+
+const isNumericSegment = (segment: string): boolean => /^\d+$/.test(segment);
+
+const setNestedValue = (
+  current: unknown,
+  segments: readonly string[],
+  value: unknown,
+): unknown => {
+  if (segments.length === 0) {
+    return value;
+  }
+
+  const [segment, ...rest] = segments;
+
+  if (isNumericSegment(segment)) {
+    const index = Number(segment);
+    const baseArray = Array.isArray(current) ? [...current] : [];
+    const existingValue = Array.isArray(current) ? current[index] : undefined;
+    baseArray[index] = setNestedValue(existingValue, rest, value);
+    return baseArray;
+  }
+
+  const baseObject = isPlainObject(current)
+    ? { ...(current as Record<string, unknown>) }
+    : {};
+  const existingValue = isPlainObject(current)
+    ? (current as Record<string, unknown>)[segment]
+    : undefined;
+  baseObject[segment] = setNestedValue(existingValue, rest, value);
+  return baseObject;
+};
+
+export const setByPath = (
+  source: PublicContentDictionary,
+  path: string,
+  value: unknown,
+): PublicContentDictionary => {
+  if (typeof path !== "string" || path.length === 0) {
+    return source;
+  }
+
+  const segments = path.split(".");
+  return setNestedValue(source, segments, value) as PublicContentDictionary;
+};
+
+export interface PublicContentLeafEntry {
+  path: string;
+  segments: readonly string[];
+  value: string;
+}
+
+const collectStringLeaves = (
+  value: unknown,
+  segments: string[],
+  acc: PublicContentLeafEntry[],
+) => {
+  if (typeof value === "string") {
+    const path = segments.join(".");
+    if (path.length > 0) {
+      acc.push({ path, segments, value });
+    }
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => {
+      collectStringLeaves(entry, [...segments, String(index)], acc);
+    });
+    return;
+  }
+
+  if (isPlainObject(value)) {
+    Object.entries(value).forEach(([key, child]) => {
+      collectStringLeaves(child, [...segments, key], acc);
+    });
+  }
+};
+
+export const extractStringLeafEntries = (
+  content: PublicContentDictionary | null | undefined,
+): PublicContentLeafEntry[] => {
+  if (!isPlainObject(content)) {
+    return [];
+  }
+
+  const entries: PublicContentLeafEntry[] = [];
+  collectStringLeaves(content, [], entries);
+  return entries;
 };
 

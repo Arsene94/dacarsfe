@@ -7,6 +7,7 @@ import {
   Languages,
   Loader2,
   RefreshCw,
+  Search,
   ShieldAlert,
   Sparkles,
   UploadCloud,
@@ -19,6 +20,11 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
+import {
+  extractStringLeafEntries,
+  mergeContent,
+  setByPath,
+} from "@/lib/publicContent/utils";
 import type {
   PublicContentDictionary,
   PublicContentResponse,
@@ -29,10 +35,6 @@ import type {
 } from "@/types/public-content";
 
 const SUPPORTED_LOCALES: PublicLocale[] = ["ro", "en"];
-
-const EDITOR_PLACEHOLDER = `{
-  "hero": { "title": "..." }
-}`;
 
 const isStatus = (value: unknown): value is PublicContentStatus =>
   value === "draft" || value === "published" || value === "archived";
@@ -91,11 +93,47 @@ const parseSectionsInput = (value: string): string[] => {
     .filter((entry) => entry.length > 0);
 };
 
+const isNumericSegment = (segment: string): boolean => /^\d+$/.test(segment);
+
+const humanizeSegment = (segment: string): string => {
+  if (!segment) {
+    return segment;
+  }
+
+  const trimmed = segment.replace(/[_-]+/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").trim();
+  if (!trimmed) {
+    return segment;
+  }
+
+  if (trimmed.length <= 3 && trimmed === trimmed.toLowerCase()) {
+    return trimmed.toUpperCase();
+  }
+
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+};
+
+const formatLabelFromSegments = (segments: readonly string[]): string => {
+  if (segments.length === 0) {
+    return "";
+  }
+
+  return segments
+    .map((segment) => (isNumericSegment(segment) ? `#${Number(segment) + 1}` : humanizeSegment(segment)))
+    .join(" › ");
+};
+
+type ContentField = {
+  path: string;
+  section: string;
+  label: string;
+  value: string;
+};
+
 const PublicContentManagerPage = () => {
   const { user } = useAuth();
 
   const [selectedLocale, setSelectedLocale] = useState<PublicLocale>("ro");
-  const [contentJson, setContentJson] = useState<string>("{}");
+  const [content, setContent] = useState<PublicContentDictionary>({});
   const [status, setStatus] = useState<PublicContentStatus>("draft");
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [publishedAt, setPublishedAt] = useState<string | null>(null);
@@ -105,6 +143,7 @@ const PublicContentManagerPage = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const [translationSource, setTranslationSource] = useState<PublicLocale>("ro");
   const [translationTarget, setTranslationTarget] = useState<PublicLocale>("en");
@@ -116,6 +155,10 @@ const PublicContentManagerPage = () => {
   const [isTranslating, setIsTranslating] = useState(false);
   const [lastTranslation, setLastTranslation] = useState<TranslatePublicContentResponse | null>(null);
 
+  const handleFieldChange = useCallback((path: string, value: string) => {
+    setContent((previous) => setByPath(previous, path, value));
+  }, []);
+
   const applyResponse = useCallback((response: PublicContentResponse | null | undefined) => {
     if (!response) {
       return;
@@ -126,7 +169,7 @@ const PublicContentManagerPage = () => {
     setUpdatedAt(typeof response.updated_at === "string" ? response.updated_at : null);
     setPublishedAt(typeof response.published_at === "string" ? response.published_at : null);
     setVersionValue(typeof response.version === "string" ? response.version : "");
-    setContentJson(stringifyContent(extractContent(response)));
+    setContent(extractContent(response));
   }, []);
 
   const fetchLocaleContent = useCallback(
@@ -160,37 +203,19 @@ const PublicContentManagerPage = () => {
       }
       const normalized = (SUPPORTED_LOCALES.find((locale) => locale === value) ?? "ro") as PublicLocale;
       setSelectedLocale(normalized);
+      setSearchTerm("");
       void fetchLocaleContent(normalized);
     },
     [fetchLocaleContent],
   );
-
-  const parseEditorContent = useCallback((): PublicContentDictionary | null => {
-    const trimmed = contentJson.trim();
-    if (!trimmed) {
-      return {};
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (parsed && typeof parsed === "object") {
-        return parsed as PublicContentDictionary;
-      }
-      setError("Structura JSON trebuie să fie un obiect.");
-    } catch (parseError) {
-      console.error("Invalid JSON payload", parseError);
-      setError("JSON invalid. Verifică ghilimelele și virgulele.");
-    }
-    return null;
-  }, [contentJson]);
 
   const handleSaveDraft = useCallback(async (): Promise<boolean> => {
     setError(null);
     setSuccessMessage(null);
     setTranslationError(null);
     setTranslationSummary(null);
-    const payloadContent = parseEditorContent();
-    if (!payloadContent) {
+    if (!content || typeof content !== "object") {
+      setError("Conținutul nu este valid pentru salvare.");
       return false;
     }
 
@@ -198,7 +223,7 @@ const PublicContentManagerPage = () => {
     try {
       const response = await apiClient.updateAdminPublicContent(selectedLocale, {
         locale: selectedLocale,
-        content: payloadContent,
+        content,
         status: "draft",
         version: versionValue.trim().length > 0 ? versionValue.trim() : null,
         publish: false,
@@ -217,7 +242,7 @@ const PublicContentManagerPage = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [applyResponse, parseEditorContent, selectedLocale, versionValue]);
+  }, [applyResponse, content, selectedLocale, versionValue]);
 
   const handlePublish = useCallback(async () => {
     setError(null);
@@ -295,14 +320,69 @@ const PublicContentManagerPage = () => {
     if (!canApplyTranslation || !lastTranslation) {
       return;
     }
-    setContentJson(stringifyContent(lastTranslation.content));
-    setSuccessMessage("Traducerea a fost transferată în editor. Salvează draft-ul pentru a o păstra.");
+    setContent((previous) => mergeContent(previous, lastTranslation.content));
+    setSuccessMessage("Traducerea a fost aplicată câmpurilor. Salvează draft-ul pentru a o păstra.");
   }, [canApplyTranslation, lastTranslation]);
 
   const handleSwapLocales = useCallback(() => {
     setTranslationSource(translationTarget);
     setTranslationTarget(translationSource);
   }, [translationSource, translationTarget]);
+
+  const contentFields = useMemo<ContentField[]>(() => {
+    const entries = extractStringLeafEntries(content);
+
+    return entries.map((entry) => {
+      const [section, ...rest] = entry.segments;
+      const sectionKey = section ?? "general";
+      const labelSegments = rest.length > 0 ? rest : [sectionKey];
+      return {
+        path: entry.path,
+        section: sectionKey,
+        label: formatLabelFromSegments(labelSegments),
+        value: entry.value,
+      } satisfies ContentField;
+    });
+  }, [content]);
+
+  const filteredFields = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    if (!normalizedSearch) {
+      return contentFields;
+    }
+
+    return contentFields.filter((field) => {
+      const label = field.label.toLowerCase();
+      const path = field.path.toLowerCase();
+      const value = field.value.toLowerCase();
+      return (
+        label.includes(normalizedSearch) ||
+        path.includes(normalizedSearch) ||
+        value.includes(normalizedSearch)
+      );
+    });
+  }, [contentFields, searchTerm]);
+
+  const groupedFields = useMemo(() => {
+    const grouped = filteredFields.reduce<Record<string, ContentField[]>>((acc, field) => {
+      if (!acc[field.section]) {
+        acc[field.section] = [];
+      }
+      acc[field.section].push(field);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([section, fields]) => ({
+        section,
+        fields: [...fields].sort((a, b) => a.path.localeCompare(b.path)),
+      }))
+      .sort((a, b) => a.section.localeCompare(b.section));
+  }, [filteredFields]);
+
+  const totalFields = contentFields.length;
+  const filteredCount = filteredFields.length;
+  const isEditingDisabled = isLoading || isSaving || isPublishing;
 
   if (!user?.super_user) {
     return (
@@ -329,7 +409,7 @@ const PublicContentManagerPage = () => {
             <h1 className="text-3xl font-semibold text-berkeley">Gestionare conținut public</h1>
           </div>
           <p className="max-w-3xl text-sm text-gray-600">
-            Editează structura JSON folosită de frontend pentru limbile publice, salvează draft-uri, publică versiunile finale și
+            Editează textele statice afișate utilizatorilor, grupate pe secțiuni, salvează draft-uri, publică versiunile finale și
             generează traduceri automate între română și engleză. Toate acțiunile sunt trimise către backend prin API-ul documentat.
           </p>
         </header>
@@ -393,27 +473,116 @@ const PublicContentManagerPage = () => {
           </div>
         )}
 
-        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
+        <section className="space-y-5 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-berkeley">
               <FileText className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">Editor conținut</h2>
+              <h2 className="text-lg font-semibold">Texte disponibile</h2>
             </div>
-            {isLoading && <Loader2 className="h-5 w-5 animate-spin text-gray-500" />}
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              <span>{filteredCount} texte</span>
+              {filteredCount !== totalFields && (
+                <span className="text-gray-400">din {totalFields}</span>
+              )}
+            </div>
           </div>
-          <Textarea
-            value={contentJson}
-            onChange={(event) => setContentJson(event.target.value)}
-            rows={24}
-            className="font-mono text-xs"
-            placeholder={EDITOR_PLACEHOLDER}
-          />
+
+          <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <div className="space-y-2">
+              <Label htmlFor="search-public-content">Caută text</Label>
+              <div className="relative">
+                <Input
+                  id="search-public-content"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Caută după cheie sau fragment din text"
+                  disabled={isLoading}
+                />
+                <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              </div>
+              <p className="text-xs text-gray-500">
+                Filtrează după numele cheii sau după orice fragment de text pentru a găsi rapid elementul dorit.
+              </p>
+            </div>
+            <div className="space-y-2 text-sm text-gray-600">
+              <Label>Instrucțiuni</Label>
+              <p>
+                Actualizează textele afișate mai jos și folosește acțiunile de salvare și publicare pentru a trimite modificările
+                către backend.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {groupedFields.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-500">
+                {isLoading
+                  ? "Încărcăm conținutul pentru limba selectată..."
+                  : "Nu am găsit texte care să corespundă filtrului curent."}
+              </div>
+            ) : (
+              groupedFields.map(({ section, fields }) => {
+                const sectionLabel = formatLabelFromSegments([section]);
+                return (
+                  <details
+                    key={section}
+                    open
+                    className="group rounded-lg border border-gray-100 bg-gray-50 p-4 transition-shadow hover:shadow-sm"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-berkeley">{sectionLabel}</p>
+                        <p className="text-xs text-gray-500">{fields.length} texte</p>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        <span className="group-open:hidden">Extinde</span>
+                        <span className="hidden group-open:inline">Restrânge</span>
+                      </div>
+                    </summary>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      {fields.map((field) => {
+                        const fieldId = `public-content-${field.path.replace(/[^a-zA-Z0-9]+/g, "-")}`.toLowerCase();
+                        const isMultiline = field.value.includes("\n") || field.value.length > 80;
+                        const lineCount = field.value.split("\n").length;
+                        const lengthBonus = Math.floor(field.value.length / 120);
+                        const rows = Math.min(10, Math.max(3, lineCount + lengthBonus));
+                        return (
+                          <div key={field.path} className="space-y-2">
+                            <Label htmlFor={fieldId}>{field.label}</Label>
+                            {isMultiline ? (
+                              <Textarea
+                                id={fieldId}
+                                value={field.value}
+                                onChange={(event) => handleFieldChange(field.path, event.target.value)}
+                                rows={rows}
+                                disabled={isEditingDisabled}
+                              />
+                            ) : (
+                              <Input
+                                id={fieldId}
+                                value={field.value}
+                                onChange={(event) => handleFieldChange(field.path, event.target.value)}
+                                disabled={isEditingDisabled}
+                              />
+                            )}
+                            <p className="text-[11px] text-gray-500">Cheie: {field.path}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </details>
+                );
+              })
+            )}
+          </div>
+
           <div className="flex flex-wrap items-center gap-3">
             <Button
               onClick={() => {
                 void handleSaveDraft();
               }}
-              disabled={isSaving || isLoading}
+              disabled={isSaving || isLoading || isPublishing}
               className="flex items-center gap-2"
             >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
@@ -423,7 +592,7 @@ const PublicContentManagerPage = () => {
               onClick={() => {
                 void handlePublish();
               }}
-              disabled={isPublishing || isLoading}
+              disabled={isPublishing || isLoading || isSaving}
               variant="secondary"
               className="flex items-center gap-2"
             >
@@ -436,7 +605,7 @@ const PublicContentManagerPage = () => {
               }}
               variant="outline"
               className="flex items-center gap-2"
-              disabled={status === "draft" || isSaving || isLoading}
+              disabled={status === "draft" || isSaving || isLoading || isPublishing}
             >
               <RefreshCw className="h-4 w-4" />
               Retrage în draft
@@ -550,7 +719,7 @@ const PublicContentManagerPage = () => {
               disabled={!canApplyTranslation || isTranslating}
               className="flex items-center gap-2"
             >
-              <UploadCloud className="h-4 w-4" /> Aplică în editor
+              <UploadCloud className="h-4 w-4" /> Aplică în câmpuri
             </Button>
             {translationResult && translationTarget !== selectedLocale && (
               <p className="text-xs text-blue-900">
