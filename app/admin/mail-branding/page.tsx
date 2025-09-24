@@ -10,8 +10,7 @@ import CodeBlock from "@tiptap/extension-code-block";
 import Placeholder from "@tiptap/extension-placeholder";
 import Text from "@tiptap/extension-text";
 import { TextSelection } from "prosemirror-state";
-import type { Editor } from "@tiptap/react";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { Editor as TiptapEditor, EditorContent } from "@tiptap/react";
 import sanitizeHtml, { type IOptions } from "sanitize-html";
 import { Code2, FunctionSquare, Loader2, Plus, Trash2 } from "lucide-react";
 
@@ -395,7 +394,7 @@ const createTwigEditorContent = (value: string): JSONContent => {
   };
 };
 
-const getEditorPlainText = (editor: Editor | null): string => {
+const getEditorPlainText = (editor: TiptapEditor | null): string => {
   if (!editor) {
     return "";
   }
@@ -1526,7 +1525,8 @@ const MailBrandingPage = () => {
   const templateVariableSelectId = useId();
   const templateFunctionSelectId = useId();
   const templateContentRef = useRef(templateContent);
-  const editorRef = useRef<Editor | null>(null);
+  const editorRef = useRef<TiptapEditor | null>(null);
+  const [tiptapEditor, setTiptapEditor] = useState<TiptapEditor | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   const computeBasePreviewContext = useCallback(() => {
@@ -1645,51 +1645,55 @@ const MailBrandingPage = () => {
     setIsClient(true);
   }, []);
 
-  const tiptapEditor = useEditor(
-    !isClient
-      ? undefined
-      : {
-          extensions: [
-            TwigDocument,
-            Text,
-            TwigCodeBlock,
-            History.configure({ depth: 500 }),
-            Placeholder.configure({
-              includeChildren: true,
-              placeholder: ({ node }) =>
-                node.type.name === "twigBlock"
-                  ? "Scrie sau lipește conținutul HTML/Twig al emailului."
-                  : "",
-              showOnlyCurrent: false,
-            }),
-          ],
-          content: createTwigEditorContent(templateContentRef.current ?? ""),
-          onUpdate: ({ editor }: { editor: Editor }) => {
-            const nextValue = getEditorPlainText(editor);
-            templateContentRef.current = nextValue;
-            setTemplateContent((prev) => (prev === nextValue ? prev : nextValue));
-          },
-          editorProps: {
-            attributes: {
-              class:
-                "tiptap-mail-editor block min-h-[320px] w-full whitespace-pre-wrap break-words px-4 py-5 font-mono text-sm leading-6 text-[#191919] focus:outline-none",
-              "aria-labelledby": templateEditorLabelId,
-              "data-gramm": "false",
-              spellCheck: "false",
-            },
-          },
-        },
-    [isClient, templateEditorLabelId],
-  );
-
   useEffect(() => {
-    editorRef.current = tiptapEditor ?? null;
+    if (!isClient) {
+      return;
+    }
+
+    setTiptapEditor((previous) => (previous ? null : previous));
+
+    const editor = new TiptapEditor({
+      extensions: [
+        TwigDocument,
+        Text,
+        TwigCodeBlock,
+        History.configure({ depth: 500 }),
+        Placeholder.configure({
+          includeChildren: true,
+          placeholder: ({ node }) =>
+            node.type.name === "twigBlock"
+              ? "Scrie sau lipește conținutul HTML/Twig al emailului."
+              : "",
+          showOnlyCurrent: false,
+        }),
+      ],
+      content: createTwigEditorContent(templateContentRef.current ?? ""),
+      onUpdate: ({ editor }) => {
+        const nextValue = getEditorPlainText(editor);
+        templateContentRef.current = nextValue;
+        setTemplateContent((prev) => (prev === nextValue ? prev : nextValue));
+      },
+      editorProps: {
+        attributes: {
+          class:
+            "tiptap-mail-editor block min-h-[320px] w-full whitespace-pre-wrap break-words px-4 py-5 font-mono text-sm leading-6 text-[#191919] focus:outline-none",
+          "aria-labelledby": templateEditorLabelId,
+          "data-gramm": "false",
+          spellCheck: "false",
+        },
+      },
+    });
+
+    editorRef.current = editor;
+    setTiptapEditor(editor);
+
     return () => {
-      if (editorRef.current === tiptapEditor) {
+      if (editorRef.current === editor) {
         editorRef.current = null;
       }
+      editor.destroy();
     };
-  }, [tiptapEditor]);
+  }, [isClient, templateEditorLabelId]);
 
   useEffect(() => {
     if (!tiptapEditor) {
