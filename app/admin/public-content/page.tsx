@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  AlertCircle,
   ArrowLeftRight,
+  CheckCircle2,
   FileText,
+  Globe2,
   Languages,
   Loader2,
   RefreshCw,
@@ -37,6 +40,41 @@ import type {
 } from "@/types/public-content";
 
 const SUPPORTED_LOCALES: PublicLocale[] = ["ro", "en"];
+
+const LOCALE_DETAILS: Record<PublicLocale, { label: string; description: string }> = {
+  ro: {
+    label: "Română",
+    description: "Conținutul afișat utilizatorilor din România și pentru fluxul principal al site-ului.",
+  },
+  en: {
+    label: "Engleză",
+    description: "Varianta în limba engleză pentru utilizatorii internaționali și comunicare externă.",
+  },
+};
+
+const STATUS_DETAILS: Record<
+  PublicContentStatus,
+  { label: string; description: string; badgeClass: string; dotClass: string }
+> = {
+  draft: {
+    label: "Draft",
+    description: "Modificările sunt vizibile doar aici. Publică versiunea pentru a o trimite utilizatorilor.",
+    badgeClass: "border-amber-200 bg-amber-50 text-amber-700",
+    dotClass: "bg-amber-500",
+  },
+  published: {
+    label: "Publicat",
+    description: "Această versiune este live pe site. Actualizează și salvează un draft înainte de a publica modificări noi.",
+    badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    dotClass: "bg-emerald-500",
+  },
+  archived: {
+    label: "Arhivat",
+    description: "Versiunea nu mai este folosită public, dar poate fi reutilizată pornind de la un draft nou.",
+    badgeClass: "border-slate-200 bg-slate-100 text-slate-600",
+    dotClass: "bg-slate-500",
+  },
+};
 
 const isStatus = (value: unknown): value is PublicContentStatus =>
   value === "draft" || value === "published" || value === "archived";
@@ -483,11 +521,22 @@ const PublicContentManagerPage = () => {
   const totalFields = contentFields.length;
   const filteredCount = filteredFields.length;
   const isEditingDisabled = isLoading || isSaving || isPublishing;
+  const localeDetails = LOCALE_DETAILS[selectedLocale];
+  const statusDetails = STATUS_DETAILS[status] ?? STATUS_DETAILS.draft;
+  const lastTranslationSectionsCount = lastTranslation
+    ? Array.isArray(lastTranslation.sections)
+      ? lastTranslation.sections.length
+      : null
+    : null;
+  const lastTranslationTranslatedCount =
+    lastTranslation && typeof lastTranslation.translated === "number"
+      ? lastTranslation.translated
+      : null;
 
   if (!user?.super_user) {
     return (
-      <div className="p-6">
-        <div className="mx-auto max-w-2xl rounded-lg border border-red-200 bg-red-50 p-6 shadow-sm">
+      <div className="min-h-screen bg-slate-50 p-6">
+        <div className="mx-auto max-w-2xl rounded-2xl border border-red-200 bg-red-50 p-6 shadow-sm">
           <div className="flex items-center gap-3 text-red-800">
             <ShieldAlert className="h-6 w-6" />
             <h1 className="text-xl font-semibold">Acces restricționat</h1>
@@ -501,337 +550,469 @@ const PublicContentManagerPage = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <header className="space-y-3">
-          <div className="flex items-center gap-3">
-            <Languages className="h-8 w-8 text-berkeley" />
-            <h1 className="text-3xl font-semibold text-berkeley">Gestionare conținut public</h1>
-          </div>
-          <p className="max-w-3xl text-sm text-gray-600">
-            Editează textele statice afișate utilizatorilor, grupate pe secțiuni, salvează draft-uri, publică versiunile finale și
-            generează traduceri automate între română și engleză. Toate acțiunile sunt trimise către backend prin API-ul documentat.
-          </p>
-        </header>
-
-        <section className="grid gap-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm md:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-2">
-            <Label htmlFor="locale-select">Limbă</Label>
-            <Select
-              id="locale-select"
-              value={selectedLocale}
-              onValueChange={handleLocaleChange}
-              disabled={isLoading}
-            >
-              {SUPPORTED_LOCALES.map((locale) => (
-                <option key={locale} value={locale}>
-                  {locale.toUpperCase()}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="status-value">Stare curentă</Label>
-            <Input
-              id="status-value"
-              value={status}
-              readOnly
-              className="bg-gray-100 font-medium uppercase text-gray-700"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="version-value">Versiune</Label>
-            <Input
-              id="version-value"
-              value={versionValue}
-              onChange={(event) => setVersionValue(event.target.value)}
-              placeholder="ex: 2025-02-10T09:45:12Z"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Ultima actualizare / publicare</Label>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
-              <p>
-                <span className="font-semibold text-gray-700">Actualizare:</span> {formatDateTime(updatedAt)}
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        <header className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="relative grid gap-8 px-6 py-8 sm:px-10 sm:py-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full bg-berkeley/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-berkeley">
+                <Languages className="h-4 w-4" />
+                <span>Super admin</span>
+              </div>
+              <h1 className="text-3xl font-semibold text-berkeley">Gestionare conținut public</h1>
+              <p className="max-w-2xl text-sm text-slate-600">
+                Editează, traduce și publică textele afișate utilizatorilor dintr-o singură interfață. Vizualizezi câmpurile grupate pe secțiuni, păstrezi versiuni intermediare și trimiți rapid modificările către backend.
               </p>
-              <p className="mt-1">
-                <span className="font-semibold text-gray-700">Publicare:</span> {formatDateTime(publishedAt)}
-              </p>
+              <ul className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-jade" />
+                  <span>Editează câmpurile grupate pe secțiuni pentru fiecare limbă.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-jade" />
+                  <span>Salvează draft-uri și publică versiunile aprobate în producție.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-jade" />
+                  <span>Generează traduceri automate și aplică doar secțiunile necesare.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-jade" />
+                  <span>Exportă conținutul pentru backup sau integrare în backend.</span>
+                </li>
+              </ul>
+            </div>
+            <div className="relative hidden h-full items-center justify-center rounded-2xl border border-slate-200 bg-slate-50/80 p-6 text-berkeley shadow-inner lg:flex">
+              <div className="absolute inset-0 bg-gradient-to-br from-berkeley/10 via-white to-jade/10" />
+              <Globe2 className="relative h-20 w-20" />
             </div>
           </div>
-        </section>
+        </header>
 
         {(error || translationError) && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error ?? translationError}
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-1 h-5 w-5 text-red-500" />
+              <div className="space-y-1 text-sm">
+                <p className="font-semibold text-red-700">A apărut o problemă</p>
+                <p className="text-red-600">{error ?? translationError}</p>
+              </div>
+            </div>
           </div>
         )}
 
         {(successMessage || translationSummary) && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
-            {successMessage ?? translationSummary}
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <div className="flex items-start gap-3 text-emerald-700">
+              <CheckCircle2 className="mt-1 h-5 w-5 text-emerald-500" />
+              <div className="space-y-1 text-sm">
+                <p className="font-semibold">Operațiune reușită</p>
+                <p>{successMessage ?? translationSummary}</p>
+              </div>
+            </div>
           </div>
         )}
 
-        <section className="space-y-5 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-berkeley">
-              <FileText className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">Texte disponibile</h2>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(280px,1fr)] xl:grid-cols-[minmax(0,3.5fr)_minmax(280px,1fr)]">
+          <main className="space-y-6">
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-berkeley">
+                  <FileText className="h-5 w-5" />
+                  <h2 className="text-lg font-semibold">Editor de conținut</h2>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  <span>{filteredCount} texte</span>
+                  {filteredCount !== totalFields && <span className="text-slate-400">din {totalFields}</span>}
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                <div className="space-y-2">
+                  <Label htmlFor="search-public-content">Caută text</Label>
+                  <div className="relative">
+                    <Input
+                      id="search-public-content"
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder="Caută după cheie sau fragment din text"
+                      disabled={isLoading}
+                    />
+                    <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Filtrează după numele cheii sau după orice fragment de text pentru a găsi rapid elementul dorit.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                  <p className="font-semibold text-slate-700">Cum funcționează</p>
+                  <ul className="mt-2 space-y-1 text-xs text-slate-500">
+                    <li>Editează textele relevante și salvează un draft pentru revizuire.</li>
+                    <li>Publică doar după confirmarea conținutului cu echipa de marketing.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:hidden">
+                <p className="text-sm font-semibold text-slate-700">Acțiuni rapide</p>
+                <Button
+                  onClick={() => {
+                    void handleSaveDraft();
+                  }}
+                  disabled={isSaving || isLoading || isPublishing}
+                  className="w-full gap-2"
+                >
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+                  Salvează draft
+                </Button>
+                <Button
+                  onClick={() => {
+                    void handlePublish();
+                  }}
+                  disabled={isPublishing || isLoading || isSaving}
+                  variant="secondary"
+                  className="w-full gap-2"
+                >
+                  {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  Publică versiunea
+                </Button>
+                <Button
+                  onClick={() => {
+                    void handleRetractToDraft();
+                  }}
+                  variant="outline"
+                  className="w-full gap-2"
+                  disabled={status === "draft" || isSaving || isLoading || isPublishing}
+                >
+                  <RefreshCw className="h-4 w-4" /> Retrage în draft
+                </Button>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                {groupedFields.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                    {isLoading
+                      ? "Încărcăm conținutul pentru limba selectată..."
+                      : "Nu am găsit texte care să corespundă filtrului curent."}
+                  </div>
+                ) : (
+                  groupedFields.map(({ section, fields }) => {
+                    const sectionLabel = formatLabelFromSegments([section]);
+                    return (
+                      <details
+                        key={section}
+                        open
+                        className="group rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition-shadow hover:shadow-sm"
+                      >
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-berkeley">{sectionLabel}</p>
+                            <p className="text-xs text-slate-500">{fields.length} texte</p>
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            <span className="group-open:hidden">Extinde</span>
+                            <span className="hidden group-open:inline">Restrânge</span>
+                          </div>
+                        </summary>
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                          {fields.map((field) => {
+                            const fieldId = `public-content-${field.path.replace(/[^a-zA-Z0-9]+/g, "-")}`.toLowerCase();
+                            const isMultiline = field.value.includes("\n") || field.value.length > 80;
+                            const lineCount = field.value.split("\n").length;
+                            const lengthBonus = Math.floor(field.value.length / 120);
+                            const rows = Math.min(10, Math.max(3, lineCount + lengthBonus));
+                            return (
+                              <div key={field.path} className="space-y-2 rounded-2xl border border-white bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between gap-2">
+                                  <Label htmlFor={fieldId}>{field.label}</Label>
+                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                                    {section}
+                                  </span>
+                                </div>
+                                {isMultiline ? (
+                                  <Textarea
+                                    id={fieldId}
+                                    value={field.value}
+                                    onChange={(event) => handleFieldChange(field.path, event.target.value)}
+                                    rows={rows}
+                                    disabled={isEditingDisabled}
+                                  />
+                                ) : (
+                                  <Input
+                                    id={fieldId}
+                                    value={field.value}
+                                    onChange={(event) => handleFieldChange(field.path, event.target.value)}
+                                    disabled={isEditingDisabled}
+                                  />
+                                )}
+                                <p className="text-[11px] text-slate-500">
+                                  Cheie: <span className="font-mono">{field.path}</span>
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </details>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-blue-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-blue-900">
+                  <Sparkles className="h-5 w-5" />
+                  <h2 className="text-lg font-semibold">Asistent traducere</h2>
+                </div>
+                <p className="text-xs text-blue-900 md:max-w-xs">
+                  Trimite conținutul către backend pentru a genera traduceri automate între română și engleză.
+                </p>
+              </div>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <Label htmlFor="translation-source">Sursă</Label>
+                  <Select
+                    id="translation-source"
+                    value={translationSource}
+                    onValueChange={(value) =>
+                      setTranslationSource((SUPPORTED_LOCALES.find((locale) => locale === value) ?? "ro") as PublicLocale)
+                    }
+                    disabled={isTranslating}
+                  >
+                    {SUPPORTED_LOCALES.map((locale) => (
+                      <option key={locale} value={locale}>
+                        {LOCALE_DETAILS[locale]?.label ?? locale.toUpperCase()}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="flex flex-col justify-end">
+                  <Button
+                    onClick={handleSwapLocales}
+                    type="button"
+                    variant="outline"
+                    className="mt-6 flex items-center gap-2"
+                    disabled={isTranslating}
+                  >
+                    <ArrowLeftRight className="h-4 w-4" /> Inversează
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="translation-target">Destinație</Label>
+                  <Select
+                    id="translation-target"
+                    value={translationTarget}
+                    onValueChange={(value) =>
+                      setTranslationTarget((SUPPORTED_LOCALES.find((locale) => locale === value) ?? "en") as PublicLocale)
+                    }
+                    disabled={isTranslating}
+                  >
+                    {SUPPORTED_LOCALES.map((locale) => (
+                      <option key={locale} value={locale}>
+                        {LOCALE_DETAILS[locale]?.label ?? locale.toUpperCase()}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="translation-mode">Mod</Label>
+                  <Select
+                    id="translation-mode"
+                    value={translationMode}
+                    onValueChange={(value) =>
+                      setTranslationMode((value === "full" ? "full" : "missing") as TranslatePublicContentMode)
+                    }
+                    disabled={isTranslating}
+                  >
+                    <option value="missing">Completează lipsurile</option>
+                    <option value="full">Suprascrie tot</option>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <Label htmlFor="translation-sections">Secțiuni (opțional)</Label>
+                <Textarea
+                  id="translation-sections"
+                  value={translationSections}
+                  onChange={(event) => setTranslationSections(event.target.value)}
+                  rows={3}
+                  placeholder="header, hero, checkout.summary"
+                  disabled={isTranslating}
+                />
+                <p className="text-xs text-blue-900">
+                  Listează cheile separate prin virgulă sau newline pentru a traduce doar anumite secțiuni. Dacă lași câmpul gol se va trimite întregul conținut.
+                </p>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Button
+                  onClick={() => {
+                    void handleTranslate();
+                  }}
+                  disabled={isTranslating}
+                  className="flex items-center gap-2"
+                >
+                  {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  Generează traducere
+                </Button>
+                <Button
+                  onClick={handleApplyTranslation}
+                  variant="secondary"
+                  disabled={!canApplyTranslation || isTranslating}
+                  className="flex items-center gap-2"
+                >
+                  <UploadCloud className="h-4 w-4" /> Aplică în câmpuri
+                </Button>
+                {translationResult && translationTarget !== selectedLocale && (
+                  <p className="text-xs text-blue-900">
+                    Selectează limba {LOCALE_DETAILS[translationTarget]?.label ?? translationTarget.toUpperCase()} în editor pentru a aplica traducerea.
+                  </p>
+                )}
+              </div>
+
+              {translationResult && (
+                <Textarea
+                  value={translationResult}
+                  readOnly
+                  rows={12}
+                  className="mt-4 bg-slate-900 font-mono text-xs text-slate-100"
+                />
+              )}
+            </section>
+          </main>
+
+          <aside className="space-y-4 lg:sticky lg:top-24">
+            <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Limba curentă</p>
+                  <p className="text-lg font-semibold text-berkeley">
+                    {localeDetails?.label ?? selectedLocale.toUpperCase()}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {localeDetails?.description ?? "Selectează limba pentru a încărca textele corespunzătoare."}
+                  </p>
+                </div>
+                <div className="rounded-full bg-berkeley/10 p-3 text-berkeley">
+                  <Languages className="h-6 w-6" />
+                </div>
+              </div>
+              <Select id="locale-select" value={selectedLocale} onValueChange={handleLocaleChange} disabled={isLoading}>
+                {SUPPORTED_LOCALES.map((locale) => (
+                  <option key={locale} value={locale}>
+                    {LOCALE_DETAILS[locale]?.label ?? locale.toUpperCase()}
+                  </option>
+                ))}
+              </Select>
+              <p className="text-xs text-slate-500">
+                Schimbarea limbii resetează filtrul și reîncarcă cea mai recentă versiune din backend.
+              </p>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-              <span>{filteredCount} texte</span>
-              {filteredCount !== totalFields && (
-                <span className="text-gray-400">din {totalFields}</span>
+
+            <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Stare conținut</p>
+                  <p className="text-base font-semibold text-slate-800">{statusDetails.label}</p>
+                </div>
+                <span
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusDetails.badgeClass}`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${statusDetails.dotClass}`} />
+                  {statusDetails.label}
+                </span>
+              </div>
+              <p className="text-sm text-slate-600">{statusDetails.description}</p>
+              <div className="grid gap-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Ultima actualizare</span>
+                  <span className="font-medium text-slate-700">{formatDateTime(updatedAt)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Ultima publicare</span>
+                  <span className="font-medium text-slate-700">{formatDateTime(publishedAt)}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="version-value">Versiune</Label>
+                <Input
+                  id="version-value"
+                  value={versionValue}
+                  onChange={(event) => setVersionValue(event.target.value)}
+                  placeholder="ex: 2025-02-10T09:45:12Z"
+                />
+                <p className="text-xs text-slate-500">
+                  Folosește un identificator de versiune ușor de urmărit (de ex. dată sau tag semantic).
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Statistici editor</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center">
+                  <p className="text-xs text-slate-500">Texte totale</p>
+                  <p className="text-lg font-semibold text-berkeley">{totalFields}</p>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center">
+                  <p className="text-xs text-slate-500">Filtru curent</p>
+                  <p className="text-lg font-semibold text-berkeley">{filteredCount}</p>
+                </div>
+              </div>
+              {lastTranslation && (
+                <div className="rounded-xl border border-slate-100 bg-white p-3 text-xs text-slate-500">
+                  Ultima traducere a actualizat
+                  <span className="font-semibold text-slate-700"> {lastTranslationTranslatedCount ?? 0} chei</span>
+                  {typeof lastTranslationSectionsCount === "number" && lastTranslationSectionsCount >= 0
+                    ? ` în ${lastTranslationSectionsCount} secțiuni.`
+                    : "."}
+                </div>
               )}
             </div>
-          </div>
 
-          <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-            <div className="space-y-2">
-              <Label htmlFor="search-public-content">Caută text</Label>
-              <div className="relative">
-                <Input
-                  id="search-public-content"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Caută după cheie sau fragment din text"
-                  disabled={isLoading}
-                />
-                <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              </div>
-              <p className="text-xs text-gray-500">
-                Filtrează după numele cheii sau după orice fragment de text pentru a găsi rapid elementul dorit.
-              </p>
-            </div>
-            <div className="space-y-2 text-sm text-gray-600">
-              <Label>Instrucțiuni</Label>
-              <p>
-                Actualizează textele afișate mai jos și folosește acțiunile de salvare și publicare pentru a trimite modificările
-                către backend.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {groupedFields.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-500">
-                {isLoading
-                  ? "Încărcăm conținutul pentru limba selectată..."
-                  : "Nu am găsit texte care să corespundă filtrului curent."}
-              </div>
-            ) : (
-              groupedFields.map(({ section, fields }) => {
-                const sectionLabel = formatLabelFromSegments([section]);
-                return (
-                  <details
-                    key={section}
-                    open
-                    className="group rounded-lg border border-gray-100 bg-gray-50 p-4 transition-shadow hover:shadow-sm"
-                  >
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-berkeley">{sectionLabel}</p>
-                        <p className="text-xs text-gray-500">{fields.length} texte</p>
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        <span className="group-open:hidden">Extinde</span>
-                        <span className="hidden group-open:inline">Restrânge</span>
-                      </div>
-                    </summary>
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      {fields.map((field) => {
-                        const fieldId = `public-content-${field.path.replace(/[^a-zA-Z0-9]+/g, "-")}`.toLowerCase();
-                        const isMultiline = field.value.includes("\n") || field.value.length > 80;
-                        const lineCount = field.value.split("\n").length;
-                        const lengthBonus = Math.floor(field.value.length / 120);
-                        const rows = Math.min(10, Math.max(3, lineCount + lengthBonus));
-                        return (
-                          <div key={field.path} className="space-y-2">
-                            <Label htmlFor={fieldId}>{field.label}</Label>
-                            {isMultiline ? (
-                              <Textarea
-                                id={fieldId}
-                                value={field.value}
-                                onChange={(event) => handleFieldChange(field.path, event.target.value)}
-                                rows={rows}
-                                disabled={isEditingDisabled}
-                              />
-                            ) : (
-                              <Input
-                                id={fieldId}
-                                value={field.value}
-                                onChange={(event) => handleFieldChange(field.path, event.target.value)}
-                                disabled={isEditingDisabled}
-                              />
-                            )}
-                            <p className="text-[11px] text-gray-500">Cheie: {field.path}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </details>
-                );
-              })
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              onClick={() => {
-                void handleSaveDraft();
-              }}
-              disabled={isSaving || isLoading || isPublishing}
-              className="flex items-center gap-2"
-            >
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
-              Salvează draft
-            </Button>
-            <Button
-              onClick={() => {
-                void handlePublish();
-              }}
-              disabled={isPublishing || isLoading || isSaving}
-              variant="secondary"
-              className="flex items-center gap-2"
-            >
-              {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Publică versiunea
-            </Button>
-            <Button
-              onClick={() => {
-                void handleRetractToDraft();
-              }}
-              variant="outline"
-              className="flex items-center gap-2"
-              disabled={status === "draft" || isSaving || isLoading || isPublishing}
-            >
-              <RefreshCw className="h-4 w-4" />
-              Retrage în draft
-            </Button>
-          </div>
-        </section>
-
-        <section className="space-y-4 rounded-lg border border-blue-200 bg-blue-50 p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-blue-900">
-              <Sparkles className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">Traduceri rapide</h2>
-            </div>
-            <p className="text-xs text-blue-900">
-              Trimite conținutul către backend pentru a genera traduceri automate între română și engleză.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="translation-source">Sursă</Label>
-              <Select
-                id="translation-source"
-                value={translationSource}
-                onValueChange={(value) =>
-                  setTranslationSource((SUPPORTED_LOCALES.find((locale) => locale === value) ?? "ro") as PublicLocale)
-                }
-                disabled={isTranslating}
-              >
-                {SUPPORTED_LOCALES.map((locale) => (
-                  <option key={locale} value={locale}>
-                    {locale.toUpperCase()}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex flex-col justify-end">
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Acțiuni rapide</p>
               <Button
-                onClick={handleSwapLocales}
-                type="button"
-                variant="outline"
-                className="mt-6 flex items-center gap-2"
-                disabled={isTranslating}
+                onClick={() => {
+                  void handleSaveDraft();
+                }}
+                disabled={isSaving || isLoading || isPublishing}
+                className="w-full gap-2"
               >
-                <ArrowLeftRight className="h-4 w-4" /> Inversează
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+                Salvează draft
               </Button>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="translation-target">Destinație</Label>
-              <Select
-                id="translation-target"
-                value={translationTarget}
-                onValueChange={(value) =>
-                  setTranslationTarget((SUPPORTED_LOCALES.find((locale) => locale === value) ?? "en") as PublicLocale)
-                }
-                disabled={isTranslating}
+              <Button
+                onClick={() => {
+                  void handlePublish();
+                }}
+                disabled={isPublishing || isLoading || isSaving}
+                variant="secondary"
+                className="w-full gap-2"
               >
-                {SUPPORTED_LOCALES.map((locale) => (
-                  <option key={locale} value={locale}>
-                    {locale.toUpperCase()}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="translation-mode">Mod</Label>
-              <Select
-                id="translation-mode"
-                value={translationMode}
-                onValueChange={(value) =>
-                  setTranslationMode((value === "full" ? "full" : "missing") as TranslatePublicContentMode)
-                }
-                disabled={isTranslating}
+                {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                Publică versiunea
+              </Button>
+              <Button
+                onClick={() => {
+                  void handleRetractToDraft();
+                }}
+                variant="outline"
+                className="w-full gap-2"
+                disabled={status === "draft" || isSaving || isLoading || isPublishing}
               >
-                <option value="missing">Completează lipsurile</option>
-                <option value="full">Suprascrie tot</option>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="translation-sections">Secțiuni (opțional)</Label>
-            <Textarea
-              id="translation-sections"
-              value={translationSections}
-              onChange={(event) => setTranslationSections(event.target.value)}
-              rows={3}
-              placeholder="header, hero, checkout.summary"
-              disabled={isTranslating}
-            />
-            <p className="text-xs text-blue-900">
-              Listează cheile separate prin virgulă sau newline pentru a traduce doar anumite secțiuni. Dacă lași câmpul gol se
-              va trimite întregul conținut.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              onClick={() => {
-                void handleTranslate();
-              }}
-              disabled={isTranslating}
-              className="flex items-center gap-2"
-            >
-              {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Generează traducere
-            </Button>
-            <Button
-              onClick={handleApplyTranslation}
-              variant="secondary"
-              disabled={!canApplyTranslation || isTranslating}
-              className="flex items-center gap-2"
-            >
-              <UploadCloud className="h-4 w-4" /> Aplică în câmpuri
-            </Button>
-            {translationResult && translationTarget !== selectedLocale && (
-              <p className="text-xs text-blue-900">
-                Selectează mai întâi limba {translationTarget.toUpperCase()} în editor pentru a aplica traducerea.
+                <RefreshCw className="h-4 w-4" /> Retrage în draft
+              </Button>
+              <p className="text-xs text-slate-500">
+                Publicarea trimite versiunea către utilizatori. Salvează un draft pentru modificările în lucru.
               </p>
-            )}
-          </div>
-
-          {translationResult && (
-            <Textarea value={translationResult} readOnly rows={12} className="font-mono text-xs" />
-          )}
-        </section>
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   );
