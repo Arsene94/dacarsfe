@@ -1641,43 +1641,39 @@ const MailBrandingPage = () => {
   }, []);
 
   const tiptapEditor = useEditor(
-    () => {
-      if (!isClient) {
-        return null;
-      }
-
-      return {
-        extensions: [
-          TwigDocument,
-          Text,
-          TwigCodeBlock,
-          History.configure({ depth: 500 }),
-          Placeholder.configure({
-            includeChildren: true,
-            placeholder: ({ node }) =>
-              node.type.name === "twigBlock"
-                ? "Scrie sau lipește conținutul HTML/Twig al emailului."
-                : "",
-            showOnlyCurrent: false,
-          }),
-        ],
-        content: createTwigEditorContent(templateContentRef.current ?? ""),
-        onUpdate: ({ editor }) => {
-          const nextValue = getEditorPlainText(editor);
-          templateContentRef.current = nextValue;
-          setTemplateContent((prev) => (prev === nextValue ? prev : nextValue));
-        },
-        editorProps: {
-          attributes: {
-            class:
-              "tiptap-mail-editor block min-h-[320px] w-full whitespace-pre-wrap break-words px-4 py-5 font-mono text-sm leading-6 text-[#191919] focus:outline-none",
-            "aria-labelledby": templateEditorLabelId,
-            "data-gramm": "false",
-            spellCheck: "false",
+    !isClient
+      ? undefined
+      : {
+          extensions: [
+            TwigDocument,
+            Text,
+            TwigCodeBlock,
+            History.configure({ depth: 500 }),
+            Placeholder.configure({
+              includeChildren: true,
+              placeholder: ({ node }) =>
+                node.type.name === "twigBlock"
+                  ? "Scrie sau lipește conținutul HTML/Twig al emailului."
+                  : "",
+              showOnlyCurrent: false,
+            }),
+          ],
+          content: createTwigEditorContent(templateContentRef.current ?? ""),
+          onUpdate: ({ editor }: { editor: Editor }) => {
+            const nextValue = getEditorPlainText(editor);
+            templateContentRef.current = nextValue;
+            setTemplateContent((prev) => (prev === nextValue ? prev : nextValue));
+          },
+          editorProps: {
+            attributes: {
+              class:
+                "tiptap-mail-editor block min-h-[320px] w-full whitespace-pre-wrap break-words px-4 py-5 font-mono text-sm leading-6 text-[#191919] focus:outline-none",
+              "aria-labelledby": templateEditorLabelId,
+              "data-gramm": "false",
+              spellCheck: "false",
+            },
           },
         },
-      };
-    },
     [isClient, templateEditorLabelId],
   );
 
