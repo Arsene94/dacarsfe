@@ -33,6 +33,7 @@ import {
   Gauge,
   Palette,
   Fuel,
+  Languages,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -41,6 +42,7 @@ type AdminSidebarSubItem = {
   href: string;
   icon: LucideIcon;
   requiredPermissions?: readonly string[];
+  superUserOnly?: boolean;
 };
 
 type AdminSidebarItem = {
@@ -49,6 +51,7 @@ type AdminSidebarItem = {
   href?: string;
   subItems?: readonly AdminSidebarSubItem[];
   requiredPermissions?: readonly string[];
+  superUserOnly?: boolean;
 };
 
 const ACTION_TOKENS = new Set([
@@ -287,10 +290,20 @@ const filterMenuItems = (
 ): AdminSidebarItem[] =>
   items
     .map((item) => {
+      if (item.superUserOnly && !user?.super_user) {
+        return null;
+      }
+
       if (item.subItems && item.subItems.length > 0) {
-        const allowedSubItems = item.subItems.filter((subItem) =>
-          hasAccess(user, subItem.requiredPermissions ?? item.requiredPermissions),
-        );
+        const allowedSubItems = item.subItems.filter((subItem) => {
+          if (subItem.superUserOnly && !user?.super_user) {
+            return false;
+          }
+          return hasAccess(
+            user,
+            subItem.requiredPermissions ?? item.requiredPermissions,
+          );
+        });
 
         if (allowedSubItems.length === 0) {
           if (item.href && hasAccess(user, item.requiredPermissions)) {
@@ -479,6 +492,12 @@ const menuItems: readonly AdminSidebarItem[] = [
     href: "/admin/mail-branding",
     icon: Mail,
     requiredPermissions: buildPermissionList("mail-branding", ["mailbranding", "mail"]),
+  },
+  {
+    name: "Conținut public",
+    href: "/admin/public-content/export",
+    icon: Languages,
+    superUserOnly: true,
   },
   {
     name: "Utilizatori",

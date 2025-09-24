@@ -2,44 +2,7 @@
 
 import { DollarSign, FileX, Zap, Clock } from "lucide-react";
 import { usePublicContentSection } from "@/context/PublicContentContext";
-
-const BENEFITS_COPY_FALLBACK = {
-  title: "De ce să alegi <span class=\"text-jade\">DaCars</span>?",
-  description:
-    "Serviciu de încredere, creat special pentru românii care călătoresc și au nevoie de o mașină la întoarcerea acasă.",
-  items: [
-    {
-      icon: "file",
-      title: "Fără birocrație",
-      description:
-        "Proces simplu și rapid, fără acte complicate sau așteptare lungă.",
-    },
-    {
-      icon: "clock",
-      title: "Disponibil 24/7",
-      description:
-        "Predare și ridicare non-stop la aeroport, oricând ai nevoie.",
-    },
-    {
-      icon: "zap",
-      title: "Flexibilitate maximă",
-      description:
-        "Modifici sau anulezi rezervarea fără taxe suplimentare.",
-    },
-    {
-      icon: "dollar",
-      title: "Fără taxe ascunse",
-      description:
-        "Preț transparent și clar de la început. Ce vezi, asta plătești.",
-    },
-  ],
-  stats: [
-    { value: "500+", label: "Clienți fericiți" },
-    { value: "24/7", label: "Disponibilitate" },
-    { value: "<5min", label: "Timp predare" },
-    { value: "0", label: "Taxe ascunse" },
-  ],
-} as const;
+import { BENEFITS_COPY_FALLBACK } from "@/lib/publicContent/defaults";
 
 type BenefitIcon = "file" | "clock" | "zap" | "dollar";
 

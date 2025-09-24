@@ -7,28 +7,7 @@ import { Menu, X } from "lucide-react";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { usePublicContentSection } from "@/context/PublicContentContext";
 import { Button } from "@/components/ui/button";
-
-const HEADER_COPY_FALLBACK = {
-  brandAria: "DaCars — închirieri auto rapide și oneste",
-  navigation: {
-    items: [
-      { label: "Acasă", href: "/", ariaLabel: "Acasă" },
-      { label: "Flotă", href: "/cars", ariaLabel: "Flotă" },
-      { label: "Oferte", href: "#oferte", ariaLabel: "Oferte" },
-      { label: "Rezervare", href: "/checkout", ariaLabel: "Rezervare" },
-      { label: "Contact", href: "#contact", ariaLabel: "Contact" },
-    ],
-  },
-  mobile: {
-    openLabel: "Deschide meniul",
-    closeLabel: "Închide meniul",
-  },
-  cta: {
-    label: "Rezervă acum",
-    ariaLabel: "Rezervă acum",
-    href: "/checkout",
-  },
-} as const;
+import { HEADER_COPY_FALLBACK } from "@/lib/publicContent/defaults";
 
 type NavItem = {
   label: string;

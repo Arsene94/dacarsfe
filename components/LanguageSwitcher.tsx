@@ -9,14 +9,14 @@ import {
 } from "@/lib/publicContent/config";
 import type { PublicLocale } from "@/types/public-content";
 
-const FALLBACK_SWITCHER_COPY = {
-  label: "Limba",
-  ariaLabel: "Schimbă limba",
-};
+import { LANGUAGE_SWITCHER_FALLBACK } from "@/lib/publicContent/defaults";
 
 const LanguageSwitcher = () => {
   const { locale, setLocale, isLoading } = usePublicContent();
-  const copy = usePublicContentSection("header.languageSwitcher", FALLBACK_SWITCHER_COPY);
+  const copy = usePublicContentSection(
+    "header.languageSwitcher",
+    LANGUAGE_SWITCHER_FALLBACK,
+  );
   const [isPending, startTransition] = useTransition();
 
   const options = useMemo(() => SUPPORTED_PUBLIC_LOCALES, []);
@@ -35,7 +35,7 @@ const LanguageSwitcher = () => {
     });
   };
 
-  const ariaLabel = copy.ariaLabel ?? copy.label ?? "Limba";
+  const ariaLabel = copy.ariaLabel ?? copy.label ?? LANGUAGE_SWITCHER_FALLBACK.label;
 
   return (
     <div className="min-w-[120px]">

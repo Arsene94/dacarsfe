@@ -3,53 +3,7 @@
 import { Car, Clock, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { usePublicContentSection } from "@/context/PublicContentContext";
-
-const FOOTER_COPY_FALLBACK = {
-  brand: {
-    title: "DaCars",
-    description:
-      "Mașini oneste pentru români onești. Predare în aeroport în sub 5 minute, fără taxe ascunse.",
-  },
-  navigation: {
-    title: "Linkuri Rapide",
-    items: [
-      { label: "Acasă", href: "/", ariaLabel: "Acasă" },
-      { label: "Flota Auto", href: "/cars", ariaLabel: "Flota Auto" },
-      { label: "Oferte Speciale", href: "#oferte", ariaLabel: "Oferte Speciale" },
-      { label: "Rezervare", href: "/checkout", ariaLabel: "Rezervare" },
-    ],
-  },
-  contact: {
-    title: "Contact",
-    items: [
-      { label: "+40 723 817 551", href: "tel:+40723817551", icon: "phone" },
-      { label: "contact@dacars.ro", href: "mailto:contact@dacars.ro", icon: "mail" },
-      {
-        label: "Aeroportul Henri Coandă, Otopeni",
-        href: "https://maps.app.goo.gl/gBDghMRHkRkNvztg6",
-        icon: "map",
-      },
-      { label: "Disponibil 24/7", icon: "clock" },
-    ],
-  },
-  schedule: {
-    title: "Program",
-    subtitle: "Luni - Duminică",
-    highlight: "24/7",
-    description: "Predare și ridicare non-stop la aeroport",
-  },
-  policies: {
-    items: [
-      { label: "Termeni și Condiții", href: "#", ariaLabel: "Termeni și Condiții" },
-      {
-        label: "Politica de Confidențialitate",
-        href: "#",
-        ariaLabel: "Politica de Confidențialitate",
-      },
-    ],
-  },
-  copyright: "© 2024 DaCars. Toate drepturile rezervate.",
-} as const;
+import { FOOTER_COPY_FALLBACK } from "@/lib/publicContent/defaults";
 
 type ContactIcon = "phone" | "mail" | "map" | "clock";
 

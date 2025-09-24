@@ -21,6 +21,7 @@ import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useBooking } from "@/context/BookingContext";
 import { usePublicContent } from "@/context/PublicContentContext";
+import { HERO_COPY_FALLBACK } from "@/lib/publicContent/defaults";
 import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 
@@ -29,53 +30,74 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const HeroSection = () => {
     const { t } = usePublicContent();
-    const heroBadge = t("hero.badge", "Te ținem aproape de casă");
-    const heroTitle = t(
-        "hero.title",
-        "Închiriere auto București - Otopeni",
+    const heroBadge = t("hero.badge", HERO_COPY_FALLBACK.badge);
+    const heroTitle = t("hero.title", HERO_COPY_FALLBACK.title);
+    const heroSubtitle = t("hero.subtitle", HERO_COPY_FALLBACK.subtitle);
+    const heroHighlight = t("hero.highlight", HERO_COPY_FALLBACK.highlight);
+    const metricFastTitle = t(
+        "hero.metrics.fast.title",
+        HERO_COPY_FALLBACK.metrics.fast.title,
     );
-    const heroSubtitle = t(
-        "hero.subtitle",
-        "Predare în aeroport în sub 5 minute.",
-    );
-    const heroHighlight = t("hero.highlight", "Fără taxe ascunse.");
-    const metricFastTitle = t("hero.metrics.fast.title", "Sub 5 min");
     const metricFastDescription = t(
         "hero.metrics.fast.description",
-        "Predare rapidă",
+        HERO_COPY_FALLBACK.metrics.fast.description,
     );
     const metricTransparentTitle = t(
         "hero.metrics.transparent.title",
-        "Fără taxe",
+        HERO_COPY_FALLBACK.metrics.transparent.title,
     );
     const metricTransparentDescription = t(
         "hero.metrics.transparent.description",
-        "Preț transparent",
+        HERO_COPY_FALLBACK.metrics.transparent.description,
     );
-    const metricAvailabilityTitle = t("hero.metrics.availability.title", "24/7");
+    const metricAvailabilityTitle = t(
+        "hero.metrics.availability.title",
+        HERO_COPY_FALLBACK.metrics.availability.title,
+    );
     const metricAvailabilityDescription = t(
         "hero.metrics.availability.description",
-        "Disponibil non-stop",
+        HERO_COPY_FALLBACK.metrics.availability.description,
     );
-    const startDateLabel = t("hero.form.startDate.label", "Data ridicare");
-    const endDateLabel = t("hero.form.endDate.label", "Data returnare");
-    const locationLabel = t("hero.form.location.label", "Locația");
+    const startDateLabel = t(
+        "hero.form.startDate.label",
+        HERO_COPY_FALLBACK.form.startDate.label,
+    );
+    const endDateLabel = t(
+        "hero.form.endDate.label",
+        HERO_COPY_FALLBACK.form.endDate.label,
+    );
+    const locationLabel = t(
+        "hero.form.location.label",
+        HERO_COPY_FALLBACK.form.location.label,
+    );
     const locationPlaceholder = t(
         "hero.form.location.placeholder",
-        "Alege locația",
+        HERO_COPY_FALLBACK.form.location.placeholder,
     );
     const locationOptionLabel = t(
         "hero.form.location.options.0.label",
-        "Aeroport Otopeni",
+        HERO_COPY_FALLBACK.form.location.options[0]?.label ?? "Aeroport Otopeni",
     );
-    const carTypeLabel = t("hero.form.carType.label", "Tip mașină");
+    const carTypeLabel = t(
+        "hero.form.carType.label",
+        HERO_COPY_FALLBACK.form.carType.label,
+    );
     const carTypeAllOption = t(
         "hero.form.carType.all",
-        "Toate tipurile",
+        HERO_COPY_FALLBACK.form.carType.all,
     );
-    const submitLabel = t("hero.form.submit.label", "Caută mașini");
-    const submitAria = t("hero.form.submit.aria", "Caută mașini");
-    const backgroundAlt = t("hero.background.alt", "Fundal aeroport");
+    const submitLabel = t(
+        "hero.form.submit.label",
+        HERO_COPY_FALLBACK.form.submit.label,
+    );
+    const submitAria = t(
+        "hero.form.submit.aria",
+        HERO_COPY_FALLBACK.form.submit.aria,
+    );
+    const backgroundAlt = t(
+        "hero.background.alt",
+        HERO_COPY_FALLBACK.background.alt,
+    );
 
     const [formData, setFormData] = useState({
         start_date: "",

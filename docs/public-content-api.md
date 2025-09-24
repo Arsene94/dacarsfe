@@ -175,6 +175,30 @@ Payload opțional:
 
 Publică ultima variantă de draft. Răspunsul trebuie să includă noua versiune (`status = "published"`, `version` actualizat).
 
+### Export batch din consola (super admin)
+
+- Frontend-ul expune utilitarul `/admin/public-content/export` pentru a extrage dintr-un foc toate textele publice disponibile în contextul curent.
+- Accesul este limitat la utilizatorii cu `super_user = true` (nu este suficient `manage_supers`).
+- Pagina afișează rezumatul secțiunilor active și oferă două acțiuni: `Copiază JSON` (clipboard) și `Descarcă fișier` (`dacars-public-content-<locale>.json`).
+- Structura exportată respectă schema de mai jos și poate fi folosită direct ca payload pentru `PUT /api/admin/public-content/{locale}` sau pentru popularea inițială a bazei de date.
+
+```json
+{
+  "locale": "ro",
+  "version": null,
+  "updated_at": null,
+  "sections": ["header", "hero", "benefits", "footer"],
+  "content": {
+    "header": { "brandAria": "DaCars — închirieri auto rapide și oneste", "navigation": { "items": [] } },
+    "hero": { "badge": "Te ținem aproape de casă", "title": "Închiriere auto București - Otopeni" },
+    "benefits": { "title": "De ce să alegi <span class=\"text-jade\">DaCars</span>?" },
+    "footer": { "brand": { "title": "DaCars" } }
+  }
+}
+```
+
+> Valorile din exemplu au fost scurtate pentru lizibilitate; în aplicație se exportă structura completă, identică cu fallback-urile locale sau cu răspunsul backend disponibil.
+
 ## Integrare în frontend
 
 - `PublicContentProvider` este inițializat în `app/layout.tsx` cu limba din cookie `dacars_locale` și fallback `ro`.
