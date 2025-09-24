@@ -6,7 +6,6 @@ import type { TwigModule, TwigTemplate } from "twig";
 import type { SyntaxNode } from "@lezer/common";
 import type { EditorState } from "@codemirror/state";
 import CodeMirror from "@uiw/react-codemirror";
-import "@uiw/react-codemirror/dist/codemirror.css";
 import { html } from "@codemirror/lang-html";
 import { bracketMatching, syntaxTree } from "@codemirror/language";
 import { RangeSetBuilder } from "@codemirror/state";
