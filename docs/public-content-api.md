@@ -1,0 +1,201 @@
+# Public Content API
+
+Acest document descrie contractul dintre frontend-ul Next.js și backend-ul Laravel pentru furnizarea textelor statice afișate în zona publică (landing, flotă, checkout, succes). Sistemul permite livrarea copy-ului în mai multe limbi, editabil din consola de admin, și este consumat de `PublicContentProvider` (`@/context/PublicContentContext`).
+
+## Flux public — obținerea copy-ului
+
+```
+GET /api/public/content
+```
+
+### Parametri query
+
+| Parametru | Tip | Implicit | Descriere |
+| --- | --- | --- | --- |
+| `locale` | string | `ro` | Codul limbii cerute (ex. `ro`, `en`). |
+| `fallback_locale` | string | – | Limbă alternativă folosită dacă pentru `locale` nu există conținut complet. |
+| `sections` | string / listă | – | Subset de secțiuni cerute (`header,hero,benefits`). Dacă lipsește se returnează întregul copy public. |
+| `version` | string | – | Identificatorul versiunii locale din cache-ul frontend-ului. Dacă este identic, backend-ul poate răspunde cu 304 / payload gol. |
+| `include_draft` | boolean | `false` | Forțează servirea versiunii draft (util pentru pre-vizualizare). |
+
+### Răspuns `200 OK`
+
+```json
+{
+  "locale": "ro",
+  "version": "2025-02-10T09:45:12Z",
+  "updated_at": "2025-02-10T09:45:12Z",
+  "sections": [
+    "header",
+    "hero",
+    "benefits"
+  ],
+  "content": {
+    "header": {
+      "brandAria": "DaCars — închirieri auto rapide și oneste",
+      "navigation": {
+        "items": [
+          { "label": "Acasă", "href": "/" },
+          { "label": "Flotă", "href": "/cars" },
+          { "label": "Oferte", "href": "#oferte" },
+          { "label": "Rezervare", "href": "/checkout" },
+          { "label": "Contact", "href": "#contact" }
+        ]
+      },
+      "mobile": {
+        "openLabel": "Deschide meniul",
+        "closeLabel": "Închide meniul"
+      },
+      "cta": {
+        "label": "Rezervă acum",
+        "ariaLabel": "Rezervă acum",
+        "href": "/checkout"
+      },
+      "languageSwitcher": {
+        "label": "Limba",
+        "ariaLabel": "Schimbă limba"
+      }
+    },
+    "hero": {
+      "badge": "Te ținem aproape de casă",
+      "title": "Închiriere auto București - Otopeni",
+      "subtitle": "Predare în aeroport în sub 5 minute.",
+      "highlight": "Fără taxe ascunse.",
+      "metrics": {
+        "fast": {
+          "title": "Sub 5 min",
+          "description": "Predare rapidă"
+        },
+        "transparent": {
+          "title": "Fără taxe",
+          "description": "Preț transparent"
+        },
+        "availability": {
+          "title": "24/7",
+          "description": "Disponibil non-stop"
+        }
+      },
+      "form": {
+        "startDate": { "label": "Data ridicare" },
+        "endDate": { "label": "Data returnare" },
+        "location": {
+          "label": "Locația",
+          "placeholder": "Alege locația",
+          "options": [
+            { "value": "otopeni", "label": "Aeroport Otopeni" }
+          ]
+        },
+        "carType": {
+          "label": "Tip mașină",
+          "all": "Toate tipurile"
+        },
+        "submit": {
+          "label": "Caută mașini",
+          "aria": "Caută mașini"
+        }
+      },
+      "background": {
+        "alt": "Fundal aeroport"
+      }
+    },
+    "benefits": {
+      "title": "De ce să alegi <span class=\"text-jade\">DaCars</span>?",
+      "description": "Serviciu de încredere pentru românii care se întorc acasă.",
+      "items": [
+        {
+          "icon": "file",
+          "title": "Fără birocrație",
+          "description": "Proces simplu și rapid."
+        },
+        {
+          "icon": "clock",
+          "title": "Disponibil 24/7",
+          "description": "Predare și ridicare non-stop la aeroport."
+        }
+      ],
+      "stats": [
+        { "value": "500+", "label": "Clienți fericiți" },
+        { "value": "24/7", "label": "Disponibilitate" }
+      ]
+    }
+  }
+}
+```
+
+> `content` este un obiect arbore ce urmează structura folosită de frontend. Cheile pot fi extinse; valorile necunoscute sunt ignorate. Lipsa unui câmp determină folosirea fallback-ului local din componentă.
+
+### Răspuns gol (304 / 204)
+
+Frontend-ul trimite `version`. Dacă backend-ul decide că versiunea nu s-a schimbat, poate răspunde cu `204 No Content` (fără body) sau `304 Not Modified` cu antet `ETag`. Furnizorul nu trebuie să trimită din nou `content`.
+
+## Flux admin — gestionare copy
+
+### `GET /api/admin/public-content/{locale}`
+
+Returnează structura completă (inclusiv câmpuri non-publice, meta, istoricul versiunilor). Frontend-ul admin folosește răspunsul pentru a popula formularul de editare.
+
+### `PUT /api/admin/public-content/{locale}`
+
+Payload minim:
+
+```json
+{
+  "locale": "ro",
+  "version": "2025-02-10T09:45:12Z",
+  "status": "draft",
+  "content": {
+    "hero": {
+      "title": "Închirieri auto rapide în București și Otopeni"
+    },
+    "footer": {
+      "brand": {
+        "title": "DaCars România"
+      }
+    }
+  }
+}
+```
+
+- `locale` — limba editată.
+- `version` — versiunea curentă cunoscută de client; backend-ul trebuie să respingă cu `409 Conflict` dacă există un draft mai nou.
+- `status` — `draft` / `published` (menține compatibilitatea cu toggle-urile din admin).
+- `content` — patch JSON cu secțiunile modificate. Backend-ul trebuie să fuzioneze cu structura existentă.
+
+Răspuns: structura completă a versiunii actualizate (`PublicContentResponse`).
+
+### `POST /api/admin/public-content/{locale}/publish`
+
+Payload opțional:
+
+```json
+{
+  "version": "2025-02-10T09:45:12Z"
+}
+```
+
+Publică ultima variantă de draft. Răspunsul trebuie să includă noua versiune (`status = "published"`, `version` actualizat).
+
+## Integrare în frontend
+
+- `PublicContentProvider` este inițializat în `app/layout.tsx` cu limba din cookie `dacars_locale` și fallback `ro`.
+- Componentele consumă copy folosind:
+  - `const { t } = usePublicContent();` pentru șiruri individuale (`t("hero.title", "Fallback")`).
+  - `usePublicContentSection("benefits", FALLBACK)` pentru structuri complexe (liste, obiecte).
+- La schimbarea limbii (`LanguageSwitcher`) se trimite cererea `GET /api/public/content?locale={nou}`. Dacă backend-ul răspunde cu nouă versiune, state-ul providerului este actualizat și componentele se re-randează cu textele noi.
+
+### Persistență client
+
+- Locale-ul curent este salvat în `localStorage` (`dacars:locale`) și cookie `dacars_locale` (1 an) pentru a fi preluat pe server.
+- Ultima versiune recepționată este reținută în context și trimisă ca `version` la cererile ulterioare pentru a evita transferul inutil de date.
+
+## Considerații backend
+
+- Backend-ul trebuie să livreze structura completă pentru `locale`; elementele lipsă cad pe fallback-ul din frontend.
+- Este recomandată validarea cheilor transmise în `content` (whitelist) pentru a preveni introducerea de noduri neașteptate.
+- Pentru scalabilitate, se poate implementa un mecanism de versionare bazat pe hash (ex. `version = sha256(content)`), folosind anteturi HTTP `ETag`/`If-None-Match`.
+- Admin-ul poate păstra un istoric al versiunilor pentru audit (ex. tabel `public_contents` cu `locale`, `status`, `content`, `version`, `published_at`).
+
+## Chei uzuale
+
+Secțiuni deja consumate de frontend (2025-02-10): `header`, `hero`, `benefits`, `footer`. Cheile trebuie păstrate stabile; adăugările noi se pot face sub același nod (ex. `header.navigation.secondary`).
+

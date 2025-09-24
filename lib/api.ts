@@ -1,6 +1,7 @@
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { mapCarSearchFilters } from "@/lib/mapFilters";
 import { toQuery } from "@/lib/qs";
+import { DEFAULT_PUBLIC_LOCALE, normalizePublicLocale } from "@/lib/publicContent/config";
 import type { WidgetActivityResponse } from "@/types/activity";
 import type { ActivityLog, ActivityLogListParams } from "@/types/activity-log";
 import { ensureUser } from "@/types/auth";
@@ -109,6 +110,12 @@ import type {
     WheelOfFortunePrizeWinner,
     WheelPrize,
 } from "@/types/wheel";
+import type {
+    PublicContentRequestParams,
+    PublicContentResponse,
+    PublicLocale,
+    UpdatePublicContentPayload,
+} from "@/types/public-content";
 
 type CategoryPriceCalendarPayload = Omit<
     CategoryPriceCalendar,
@@ -2365,6 +2372,117 @@ export class ApiClient {
         return this.request<ApiDeleteResponse>(`/dynamic-prices/${id}`, {
             method: 'DELETE',
         });
+    }
+
+
+    async getPublicContent(
+        params: PublicContentRequestParams = {},
+        options: { signal?: AbortSignal } = {},
+    ): Promise<PublicContentResponse> {
+        const searchParams = new URLSearchParams();
+        const localeCandidate =
+            typeof params.locale === 'string' && params.locale.trim().length > 0
+                ? params.locale.trim()
+                : DEFAULT_PUBLIC_LOCALE;
+        const locale = normalizePublicLocale(localeCandidate);
+        searchParams.append('locale', locale);
+
+        if (
+            typeof params.fallbackLocale === 'string' &&
+            params.fallbackLocale.trim().length > 0
+        ) {
+            searchParams.append('fallback_locale', params.fallbackLocale.trim());
+        }
+
+        if (typeof params.version === 'string' && params.version.trim().length > 0) {
+            searchParams.append('version', params.version.trim());
+        }
+
+        if (typeof params.previewToken === 'string' && params.previewToken.trim().length > 0) {
+            searchParams.append('preview_token', params.previewToken.trim());
+        }
+
+        if (params.includeDraft != null) {
+            searchParams.append('include_draft', params.includeDraft ? '1' : '0');
+        }
+
+        const sectionsSource = params.sections;
+        if (Array.isArray(sectionsSource)) {
+            const value = sectionsSource
+                .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+                .filter((entry) => entry.length > 0)
+                .join(',');
+            if (value.length > 0) {
+                searchParams.append('sections', value);
+            }
+        } else if (
+            typeof sectionsSource === 'string' &&
+            sectionsSource.trim().length > 0
+        ) {
+            searchParams.append('sections', sectionsSource.trim());
+        }
+
+        const query = searchParams.toString();
+        return this.request<PublicContentResponse>(
+            `/public/content${query ? `?${query}` : ''}`,
+            { signal: options.signal },
+        );
+    }
+
+    async getAdminPublicContent(locale: PublicLocale): Promise<PublicContentResponse> {
+        const normalized = normalizePublicLocale(locale);
+        const encodedLocale = encodeURIComponent(normalized);
+        return this.request<PublicContentResponse>(
+            `/admin/public-content/${encodedLocale}`,
+        );
+    }
+
+    async updateAdminPublicContent(
+        locale: PublicLocale,
+        payload: UpdatePublicContentPayload,
+    ): Promise<PublicContentResponse> {
+        const normalized = normalizePublicLocale(locale);
+        const encodedLocale = encodeURIComponent(normalized);
+        const { locale: payloadLocale, ...rest } = payload;
+        const normalizedPayloadLocale = normalizePublicLocale(
+            payloadLocale ?? normalized,
+        );
+
+        const body = sanitizePayload({
+            ...rest,
+            locale: normalizedPayloadLocale,
+        });
+
+        return this.request<PublicContentResponse>(
+            `/admin/public-content/${encodedLocale}`,
+            {
+                method: 'PUT',
+                body: JSON.stringify(body),
+            },
+        );
+    }
+
+    async publishAdminPublicContent(
+        locale: PublicLocale,
+        version?: string | null,
+    ): Promise<PublicContentResponse> {
+        const normalized = normalizePublicLocale(locale);
+        const encodedLocale = encodeURIComponent(normalized);
+        const payload: Record<string, string> = {};
+        if (typeof version === 'string' && version.trim().length > 0) {
+            payload.version = version.trim();
+        }
+
+        return this.request<PublicContentResponse>(
+            `/admin/public-content/${encodedLocale}/publish`,
+            {
+                method: 'POST',
+                body:
+                    Object.keys(payload).length > 0
+                        ? JSON.stringify(payload)
+                        : undefined,
+            },
+        );
     }
 
 }

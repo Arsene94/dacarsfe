@@ -2,12 +2,19 @@ import type { Metadata } from "next";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import PageTransition from "../components/PageTransition";
+import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { PublicContentProvider } from "@/context/PublicContentContext";
 import { DM_Sans, Poppins } from "next/font/google";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
+import {
+  DEFAULT_PUBLIC_LOCALE,
+  PUBLIC_LOCALE_COOKIE_NAME,
+  normalizePublicLocale,
+} from "@/lib/publicContent/config";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -50,9 +57,29 @@ export const metadata: Metadata = {
   },
 };
 
+const resolveInitialLocale = (): string => {
+  try {
+    const cookieStore = cookies();
+    const persisted = cookieStore.get(PUBLIC_LOCALE_COOKIE_NAME)?.value;
+    if (!persisted) {
+      return DEFAULT_PUBLIC_LOCALE;
+    }
+    try {
+      const decoded = decodeURIComponent(persisted);
+      return normalizePublicLocale(decoded);
+    } catch {
+      return normalizePublicLocale(persisted);
+    }
+  } catch {
+    return DEFAULT_PUBLIC_LOCALE;
+  }
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const initialLocale = resolveInitialLocale();
+
   return (
-    <html lang="ro" className={`${poppins.variable} ${dmSans.variable}`}>
+    <html lang={initialLocale} className={`${poppins.variable} ${dmSans.variable}`}>
       <head>
         <link
           rel="preload"
@@ -74,15 +101,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-screen bg-white">
-        <AuthProvider>
-          <BookingProvider>
-            <Header />
-            <main>
-              <PageTransition>{children}</PageTransition>
-            </main>
-            <Footer />
-          </BookingProvider>
-        </AuthProvider>
+        <PublicContentProvider initialLocale={initialLocale}>
+          <AuthProvider>
+            <BookingProvider>
+              <Header />
+              <main>
+                <PageTransition>{children}</PageTransition>
+              </main>
+              <Footer />
+            </BookingProvider>
+          </AuthProvider>
+        </PublicContentProvider>
       </body>
     </html>
   );

@@ -19,7 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import {useBooking} from "@/context/BookingContext";
+import { useBooking } from "@/context/BookingContext";
+import { usePublicContent } from "@/context/PublicContentContext";
 import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 
@@ -27,6 +28,55 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null;
 
 const HeroSection = () => {
+    const { t } = usePublicContent();
+    const heroBadge = t("hero.badge", "Te ținem aproape de casă");
+    const heroTitle = t(
+        "hero.title",
+        "Închiriere auto București - Otopeni",
+    );
+    const heroSubtitle = t(
+        "hero.subtitle",
+        "Predare în aeroport în sub 5 minute.",
+    );
+    const heroHighlight = t("hero.highlight", "Fără taxe ascunse.");
+    const metricFastTitle = t("hero.metrics.fast.title", "Sub 5 min");
+    const metricFastDescription = t(
+        "hero.metrics.fast.description",
+        "Predare rapidă",
+    );
+    const metricTransparentTitle = t(
+        "hero.metrics.transparent.title",
+        "Fără taxe",
+    );
+    const metricTransparentDescription = t(
+        "hero.metrics.transparent.description",
+        "Preț transparent",
+    );
+    const metricAvailabilityTitle = t("hero.metrics.availability.title", "24/7");
+    const metricAvailabilityDescription = t(
+        "hero.metrics.availability.description",
+        "Disponibil non-stop",
+    );
+    const startDateLabel = t("hero.form.startDate.label", "Data ridicare");
+    const endDateLabel = t("hero.form.endDate.label", "Data returnare");
+    const locationLabel = t("hero.form.location.label", "Locația");
+    const locationPlaceholder = t(
+        "hero.form.location.placeholder",
+        "Alege locația",
+    );
+    const locationOptionLabel = t(
+        "hero.form.location.options.0.label",
+        "Aeroport Otopeni",
+    );
+    const carTypeLabel = t("hero.form.carType.label", "Tip mașină");
+    const carTypeAllOption = t(
+        "hero.form.carType.all",
+        "Toate tipurile",
+    );
+    const submitLabel = t("hero.form.submit.label", "Caută mașini");
+    const submitAria = t("hero.form.submit.aria", "Caută mașini");
+    const backgroundAlt = t("hero.background.alt", "Fundal aeroport");
+
     const [formData, setFormData] = useState({
         start_date: "",
         end_date: "",
@@ -204,7 +254,7 @@ const HeroSection = () => {
                     />
                     <Image
                         src="/images/bg-hero-mobile.webp"
-                        alt="Fundal aeroport"
+                        alt={backgroundAlt}
                         fill
                         priority
                         fetchPriority="high"
@@ -222,19 +272,19 @@ const HeroSection = () => {
                         <div className="inline-flex items-center px-4 py-2 bg-jade/40 rounded-full mb-6">
                             <Star className="h-4 w-4 text-white mr-2" />
                             <span className="text-white font-dm-sans font-medium">
-                Te ținem aproape de casă
-              </span>
+                                {heroBadge}
+                            </span>
                         </div>
 
                         <h1 className="text-4xl lg:text-6xl font-poppins font-bold leading-tight mb-6">
-                            Închiriere auto București - Otopeni{" "}
+                            {heroTitle}{" "}
                         </h1>
 
                         <p className="text-xl lg:text-2xl font-dm-sans text-gray-200 mb-8 leading-relaxed">
-                            Predare în aeroport în sub 5 minute. <br />
+                            {heroSubtitle} <br />
                             <span className="text-jadeLight font-semibold">
-                Fără taxe ascunse.
-              </span>
+                                {heroHighlight}
+                            </span>
                         </p>
 
                         {/*<div className="hidden sm:flex flex-col sm:flex-row gap-4 mb-8">*/}
@@ -264,8 +314,8 @@ const HeroSection = () => {
                                     <Clock className="h-5 w-5 text-jade" aria-hidden="true" />
                                 </div>
                                 <div>
-                                    <p className="font-dm-sans font-semibold">Sub 5 min</p>
-                                    <p className="text-sm text-gray-300">Predare rapidă</p>
+                                    <p className="font-dm-sans font-semibold">{metricFastTitle}</p>
+                                    <p className="text-sm text-gray-300">{metricFastDescription}</p>
                                 </div>
                             </div>
 
@@ -274,8 +324,8 @@ const HeroSection = () => {
                                     <Shield className="h-5 w-5 text-jade" aria-hidden="true" />
                                 </div>
                                 <div>
-                                    <p className="font-dm-sans font-semibold">Fără taxe</p>
-                                    <p className="text-sm text-gray-300">Preț transparent</p>
+                                    <p className="font-dm-sans font-semibold">{metricTransparentTitle}</p>
+                                    <p className="text-sm text-gray-300">{metricTransparentDescription}</p>
                                 </div>
                             </div>
 
@@ -284,8 +334,8 @@ const HeroSection = () => {
                                     <Star className="h-5 w-5 text-jade" aria-hidden="true" />
                                 </div>
                                 <div>
-                                    <p className="font-dm-sans font-semibold">24/7</p>
-                                    <p className="text-sm text-gray-300">Disponibil non-stop</p>
+                                    <p className="font-dm-sans font-semibold">{metricAvailabilityTitle}</p>
+                                    <p className="text-sm text-gray-300">{metricAvailabilityDescription}</p>
                                 </div>
                             </div>
                         </div>
@@ -316,7 +366,7 @@ const HeroSection = () => {
                                 htmlFor="hero-pickup-date"
                                 className="text-sm text-white font-medium font-['DM_Sans']"
                             >
-                                Data ridicare
+                                {startDateLabel}
                             </Label>
                             <div className="relative">
                                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -344,7 +394,7 @@ const HeroSection = () => {
                                 htmlFor="hero-return-date"
                                 className="text-sm text-white font-medium font-['DM_Sans']"
                             >
-                                Data returnare
+                                {endDateLabel}
                             </Label>
                             <div className="relative">
                                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -372,7 +422,7 @@ const HeroSection = () => {
                                 htmlFor="hero-location"
                                 className="text-sm text-white font-medium font-['DM_Sans']"
                             >
-                                Locația
+                                {locationLabel}
                             </Label>
                             <div className="relative">
                                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -381,7 +431,7 @@ const HeroSection = () => {
                                     className={selectControlClass}
                                     value={formData.location}
                                     onValueChange={handleSelectChange("location")}
-                                    placeholder="Alege locația"
+                                    placeholder={locationPlaceholder}
                                     style={{
                                         minHeight: '3rem',
                                         maxHeight: '3rem',
@@ -389,7 +439,7 @@ const HeroSection = () => {
                                         lineHeight: '1.5'
                                     }}
                                 >
-                                    <option value="otopeni">Aeroport Otopeni</option>
+                                    <option value="otopeni">{locationOptionLabel}</option>
                                 </Select>
                             </div>
                         </div>
@@ -399,7 +449,7 @@ const HeroSection = () => {
                                 htmlFor="hero-car-type"
                                 className="text-sm text-white font-medium font-['DM_Sans']"
                             >
-                                Tip mașină
+                                {carTypeLabel}
                             </Label>
                             <div className="relative">
                                 <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -415,7 +465,7 @@ const HeroSection = () => {
                                         lineHeight: '1.5'
                                     }}
                                 >
-                                    <option value="">Toate tipurile</option>
+                                    <option value="">{carTypeAllOption}</option>
                                     {categories?.map((category) => {
                                         return (
                                             <option key={category.id} value={category.id}>
@@ -430,9 +480,9 @@ const HeroSection = () => {
                         <Button
                             type="submit"
                             className="px-6 py-3 self-end"
-                            aria-label="Caută mașini"
+                            aria-label={submitAria}
                         >
-                            Caută mașini
+                            {submitLabel}
                         </Button>
                     </form>
                 </div>
