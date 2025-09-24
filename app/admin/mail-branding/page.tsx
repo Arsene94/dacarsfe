@@ -3030,7 +3030,7 @@ const MailBrandingPage = () => {
                       livrarea doar pentru rezervări cu sau fără garanție.
                     </p>
                   </div>
-                  <div className="flex flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+                  <div className="flex flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-8">
                     <div className="flex flex-col gap-1 sm:min-w-[14rem]">
                       <Label
                         htmlFor={attachmentDepositSelectId}
