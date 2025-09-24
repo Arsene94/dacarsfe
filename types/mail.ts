@@ -68,6 +68,7 @@ export interface MailTemplateAttachment {
   size?: number | string | null;
   mime_type?: string | null;
   url?: string | null;
+  with_deposit?: boolean | number | string | null;
   [key: string]: unknown;
 }
 

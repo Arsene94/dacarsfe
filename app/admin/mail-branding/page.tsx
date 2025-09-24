@@ -61,6 +61,14 @@ type MailBrandingFormState = {
   colors: MailBrandingColors;
 };
 
+type AttachmentDepositFilter = "all" | "with" | "without";
+
+const ATTACHMENT_DEPOSIT_OPTIONS: Array<{ value: AttachmentDepositFilter; label: string }> = [
+  { value: "all", label: "Toate rezervările" },
+  { value: "with", label: "Doar rezervările cu garanție" },
+  { value: "without", label: "Doar rezervările fără garanție" },
+];
+
 const MOBILE_PREVIEW_WIDTH = 580;
 const PREVIEW_FRAME_OUTER_WIDTH = MOBILE_PREVIEW_WIDTH + 48;
 const PREVIEW_CARD_MAX_WIDTH = PREVIEW_FRAME_OUTER_WIDTH + 32;
@@ -1037,6 +1045,58 @@ const formatAttachmentSize = (
   return `${formatted} ${units[unitIndex]}`;
 };
 
+const parseAttachmentDepositFilter = (value: string): AttachmentDepositFilter => {
+  if (value === "with" || value === "without") {
+    return value;
+  }
+  return "all";
+};
+
+const mapAttachmentDepositFilterToPayload = (
+  filter: AttachmentDepositFilter,
+): boolean | null => {
+  if (filter === "with") return true;
+  if (filter === "without") return false;
+  return null;
+};
+
+const normalizeAttachmentDepositValue = (value: unknown): boolean | null => {
+  if (value === true || value === 1 || value === "1" || value === "true") {
+    return true;
+  }
+  if (value === false || value === 0 || value === "0" || value === "false") {
+    return false;
+  }
+  return null;
+};
+
+const getAttachmentDepositDisplay = (
+  value: unknown,
+): { label: string; className: string; tone: AttachmentDepositFilter } => {
+  const normalized = normalizeAttachmentDepositValue(value);
+  if (normalized === true) {
+    return {
+      label: "Trimis doar la rezervările cu garanție",
+      className:
+        "inline-flex items-center rounded-full border border-jade/20 bg-jade/10 px-2 py-0.5 text-xs font-medium text-jade",
+      tone: "with",
+    };
+  }
+  if (normalized === false) {
+    return {
+      label: "Trimis doar la rezervările fără garanție",
+      className:
+        "inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700",
+      tone: "without",
+    };
+  }
+  return {
+    label: "Trimis la toate rezervările",
+    className: "text-xs text-gray-500",
+    tone: "all",
+  };
+};
+
 const normalizeTwigPath = (input: string): string => {
   if (!input) return "";
   const bracketNormalized = input
@@ -1467,6 +1527,8 @@ const MailBrandingPage = () => {
   const [templateLoading, setTemplateLoading] = useState<boolean>(false);
   const [attachmentUploading, setAttachmentUploading] = useState<boolean>(false);
   const [attachmentDeleting, setAttachmentDeleting] = useState<string | null>(null);
+  const [attachmentDepositFilter, setAttachmentDepositFilter] =
+    useState<AttachmentDepositFilter>("all");
   const [variableSelectValue, setVariableSelectValue] = useState<string>("");
   const [functionSelectValue, setFunctionSelectValue] = useState<string>("");
   const [detectedVariables, setDetectedVariables] = useState<string[]>([]);
@@ -1483,6 +1545,7 @@ const MailBrandingPage = () => {
   const templateEditorLabelId = useId();
   const templateVariableSelectId = useId();
   const templateFunctionSelectId = useId();
+  const attachmentDepositSelectId = useId();
   const editorViewRef = useRef<EditorView | null>(null);
   const templateContentRef = useRef(templateContent);
   const [isClient, setIsClient] = useState(false);
@@ -2288,6 +2351,10 @@ const MailBrandingPage = () => {
     setFunctionSelectValue("");
   };
 
+  const handleAttachmentDepositFilterChange = (value: string) => {
+    setAttachmentDepositFilter(parseAttachmentDepositFilter(value));
+  };
+
   const handleAttachmentUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.target;
     const file = input.files?.[0] ?? null;
@@ -2298,8 +2365,13 @@ const MailBrandingPage = () => {
 
     setAttachmentUploading(true);
     setTemplateStatus(null);
+    const depositFlag = mapAttachmentDepositFilterToPayload(attachmentDepositFilter);
     apiClient
-      .uploadMailTemplateAttachment(selectedTemplateKey, file)
+      .uploadMailTemplateAttachment(
+        selectedTemplateKey,
+        file,
+        depositFlag === null ? undefined : { withDeposit: depositFlag },
+      )
       .then((response) => {
         const attachmentsFromResponse = Array.isArray(response?.data?.attachments)
           ? (response.data.attachments as MailTemplateAttachment[])
@@ -2950,35 +3022,59 @@ const MailBrandingPage = () => {
               </div>
 
               <div className="space-y-4 rounded-2xl border border-gray-200 p-4 sm:p-6">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-2">
                     <h3 className="text-base font-semibold text-berkeley">Atașamente</h3>
                     <p className="text-xs text-gray-500">
-                      Fișierele încărcate aici vor fi trimise împreună cu acest email.
+                      Fișierele încărcate aici vor fi trimise împreună cu acest email. Poți restricționa
+                      livrarea doar pentru rezervări cu sau fără garanție.
                     </p>
                   </div>
-                  <label
-                    className={`inline-flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm font-medium transition ${
-                      !selectedTemplateKey || templateLoading || attachmentUploading
-                        ? "cursor-not-allowed border-gray-300 text-gray-400"
-                        : "cursor-pointer border-jade text-jade hover:bg-jade/10"
-                    }`}
-                  >
-                    <input
-                      type="file"
-                      className="sr-only"
-                      onChange={handleAttachmentUpload}
-                      disabled={
+                  <div className="flex flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+                    <div className="flex flex-col gap-1 sm:min-w-[14rem]">
+                      <Label
+                        htmlFor={attachmentDepositSelectId}
+                        className="text-xs font-medium uppercase tracking-wide text-gray-500"
+                      >
+                        Livrare atașament
+                      </Label>
+                      <Select
+                        id={attachmentDepositSelectId}
+                        value={attachmentDepositFilter}
+                        onValueChange={handleAttachmentDepositFilterChange}
+                        disabled={!selectedTemplateKey || templateLoading}
+                        className="sm:w-60"
+                      >
+                        {ATTACHMENT_DEPOSIT_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    <label
+                      className={`inline-flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm font-medium transition ${
                         !selectedTemplateKey || templateLoading || attachmentUploading
-                      }
-                    />
-                    {attachmentUploading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                    ) : (
-                      <Plus className="h-4 w-4" aria-hidden="true" />
-                    )}
-                    {attachmentUploading ? "Se încarcă..." : "Adaugă fișier"}
-                  </label>
+                          ? "cursor-not-allowed border-gray-300 text-gray-400"
+                          : "cursor-pointer border-jade text-jade hover:bg-jade/10"
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        className="sr-only"
+                        onChange={handleAttachmentUpload}
+                        disabled={
+                          !selectedTemplateKey || templateLoading || attachmentUploading
+                        }
+                      />
+                      {attachmentUploading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <Plus className="h-4 w-4" aria-hidden="true" />
+                      )}
+                      {attachmentUploading ? "Se încarcă..." : "Adaugă fișier"}
+                    </label>
+                  </div>
                 </div>
                 <ul className="space-y-3">
                   {currentAttachments.length === 0 ? (
@@ -2989,6 +3085,7 @@ const MailBrandingPage = () => {
                     currentAttachments.map((attachment) => {
                       const name = getAttachmentDisplayName(attachment);
                       const sizeLabel = formatAttachmentSize(attachment.size);
+                      const depositDisplay = getAttachmentDepositDisplay(attachment?.with_deposit);
                       const uuid =
                         typeof attachment.uuid === "string" && attachment.uuid.length > 0
                           ? attachment.uuid
@@ -3013,9 +3110,15 @@ const MailBrandingPage = () => {
                                 {name}
                               </span>
                             )}
-                            {sizeLabel && (
-                              <p className="text-xs text-gray-500">{sizeLabel}</p>
-                            )}
+                            <div className="flex flex-wrap items-center gap-2">
+                              {sizeLabel && (
+                                <span className="text-xs text-gray-500">{sizeLabel}</span>
+                              )}
+                              {sizeLabel && depositDisplay.tone === "all" && (
+                                <span className="text-gray-300">•</span>
+                              )}
+                              <span className={depositDisplay.className}>{depositDisplay.label}</span>
+                            </div>
                           </div>
                           {typeof attachment.id === "string" && attachment.id.length > 0 && (
                             <Button
