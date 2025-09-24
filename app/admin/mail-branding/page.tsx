@@ -182,8 +182,10 @@ const htmlTagMatchingExtension = ViewPlugin.fromClass(
     }
 
     createDecorations(view: EditorView): DecorationSet {
-      const builder = new RangeSetBuilder<Decoration>();
-      const seen = new Set<string>();
+      const ranges = new Map<
+        string,
+        { from: number; to: number; decoration: Decoration; mismatch: boolean }
+      >();
 
       for (const range of view.state.selection.ranges) {
         if (!range.empty) continue;
@@ -195,18 +197,47 @@ const htmlTagMatchingExtension = ViewPlugin.fromClass(
         const { primary, partner } = match;
 
         const primaryKey = `${primary.from}-${primary.to}`;
-        if (!seen.has(primaryKey)) {
-          builder.add(primary.from, primary.to, decoration);
-          seen.add(primaryKey);
+        const existingPrimary = ranges.get(primaryKey);
+        if (!existingPrimary || (!existingPrimary.mismatch && match.mismatch)) {
+          ranges.set(primaryKey, {
+            from: primary.from,
+            to: primary.to,
+            decoration,
+            mismatch: match.mismatch,
+          });
         }
 
         if (partner) {
           const partnerKey = `${partner.from}-${partner.to}`;
-          if (!seen.has(partnerKey)) {
-            builder.add(partner.from, partner.to, decoration);
-            seen.add(partnerKey);
+          const existingPartner = ranges.get(partnerKey);
+          if (!existingPartner || (!existingPartner.mismatch && match.mismatch)) {
+            ranges.set(partnerKey, {
+              from: partner.from,
+              to: partner.to,
+              decoration,
+              mismatch: match.mismatch,
+            });
           }
         }
+      }
+
+      if (ranges.size === 0) {
+        return Decoration.none;
+      }
+
+      const builder = new RangeSetBuilder<Decoration>();
+      const sortedRanges = Array.from(ranges.values()).sort((a, b) => {
+        if (a.from !== b.from) {
+          return a.from - b.from;
+        }
+        if (a.mismatch !== b.mismatch) {
+          return a.mismatch ? -1 : 1;
+        }
+        return a.to - b.to;
+      });
+
+      for (const { from, to, decoration } of sortedRanges) {
+        builder.add(from, to, decoration);
       }
 
       return builder.finish();
