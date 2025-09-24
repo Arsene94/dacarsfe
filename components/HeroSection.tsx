@@ -328,7 +328,7 @@ const HeroSection = () => {
                                     onChange={handleInputChange}
                                     onClick={(e) => e.currentTarget.showPicker?.()}
                                     min={minstart_date}
-                                    className={`${dateTimeControlClass} appearance-none`}
+                                    className={`${dateTimeControlClass} appearance-none flex items-center`}
                                     style={{
                                         minHeight: '3rem',
                                         maxHeight: '3rem',
@@ -356,7 +356,7 @@ const HeroSection = () => {
                                     onChange={handleInputChange}
                                     onClick={(e) => e.currentTarget.showPicker?.()}
                                     min={minend_date}
-                                    className={`${dateTimeControlClass} appearance-none`}
+                                    className={`${dateTimeControlClass} appearance-none flex items-center`}
                                     style={{
                                         minHeight: '3rem',
                                         maxHeight: '3rem',
