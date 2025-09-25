@@ -64,8 +64,21 @@ const isPrimitive = (value: unknown): value is JsonPrimitive =>
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value);
 
-const getPrimitiveType = (value: JsonPrimitive): PrimitiveType =>
-    value === null ? "null" : typeof value;
+const getPrimitiveType = (value: JsonPrimitive): PrimitiveType => {
+    if (value === null) {
+        return "null";
+    }
+
+    if (typeof value === "string") {
+        return "string";
+    }
+
+    if (typeof value === "number") {
+        return "number";
+    }
+
+    return "boolean";
+};
 
 const toDisplayPath = (segments: PathSegment[]): string =>
     segments
