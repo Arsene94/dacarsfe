@@ -64,6 +64,9 @@ const LanguageSwitcher = (props: HTMLAttributes<HTMLDivElement>) => {
 
     const activeLabel = labels[locale] ?? locale.toUpperCase();
     const activeFlag = flagByLocale[locale] ?? "🌐";
+    const languageAriaLabel = t("header.languageSwitcher.aria", {
+        fallback: "Select language",
+    });
 
     return (
         <div
@@ -76,6 +79,7 @@ const LanguageSwitcher = (props: HTMLAttributes<HTMLDivElement>) => {
                 className="flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-1 text-sm font-medium text-berkeley shadow-sm transition hover:border-jade hover:text-jade focus:border-jade focus:outline-none"
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
+                aria-label={languageAriaLabel}
                 onClick={() => setIsOpen((prev) => !prev)}
             >
                 <span aria-hidden>{activeFlag}</span>
@@ -84,7 +88,7 @@ const LanguageSwitcher = (props: HTMLAttributes<HTMLDivElement>) => {
             {isOpen && otherLocales.length > 0 && (
                 <ul
                     role="listbox"
-                    aria-label={t("header.languageSwitcher.aria", { fallback: "Select language" })}
+                    aria-label={languageAriaLabel}
                     className="absolute right-0 z-20 mt-2 w-40 origin-top-right rounded-lg border border-gray-200 bg-white p-2 shadow-lg"
                 >
                     {otherLocales.map((item) => {
