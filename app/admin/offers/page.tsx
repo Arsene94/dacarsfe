@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { formatDate, toIsoStringFromInput, toLocalDatetimeInputValue } from "@/lib/datetime";
@@ -28,6 +29,70 @@ const iconOptions: Array<{ value: NonNullable<AdminOffer["icon"]> | ""; label: s
     { value: "users", label: "Grup clienți" },
     { value: "gift", label: "Cadou" },
     { value: "calendar", label: "Calendar" },
+];
+
+const backgroundClassOptions: Array<{
+    value: string;
+    label: string;
+    description: string;
+    previewTextClass: string;
+}> = [
+    {
+        value: "",
+        label: "Implicit (alb curat)",
+        description: "Ideal pentru oferte neutre și conținut bogat.",
+        previewTextClass: "text-slate-900",
+    },
+    {
+        value: "bg-berkeley-600",
+        label: "Berkeley solid",
+        description: "Fundal albastru intens pentru campanii premium.",
+        previewTextClass: "text-white",
+    },
+    {
+        value: "bg-gradient-to-br from-jade to-emerald-600",
+        label: "Gradient jade",
+        description: "Accentuează oferte verzi / eco cu un gradient dinamic.",
+        previewTextClass: "text-white",
+    },
+    {
+        value: "bg-slate-900",
+        label: "Slate întunecat",
+        description: "Contrast puternic pentru oferte limitate sau VIP.",
+        previewTextClass: "text-white",
+    },
+];
+
+const textClassOptions: Array<{
+    value: string;
+    label: string;
+    description: string;
+}> = [
+    {
+        value: "",
+        label: "Implicit (moștenire)",
+        description: "Folosește culoarea stabilită de componenta publică.",
+    },
+    {
+        value: "text-slate-900",
+        label: "Text închis",
+        description: "Contrast optim pe fundaluri deschise.",
+    },
+    {
+        value: "text-slate-700",
+        label: "Text mediu",
+        description: "Ton mai cald pentru fundaluri pastel.",
+    },
+    {
+        value: "text-white",
+        label: "Text alb",
+        description: "Se potrivește cu fundalurile puternic colorate.",
+    },
+    {
+        value: "text-amber-100",
+        label: "Text accent (chihlimbar)",
+        description: "Scoate în evidență mesajele pe fundaluri închise.",
+    },
 ];
 
 const collectStringValues = (raw: unknown): string[] => {
@@ -521,24 +586,92 @@ const OffersAdminPage = () => {
                                 ))}
                             </Select>
                         </div>
-                        <div>
-                            <Label htmlFor="offer-background">Clasă fundal</Label>
-                            <Input
-                                id="offer-background"
-                                value={backgroundClass}
-                                onChange={(event) => setBackgroundClass(event.target.value)}
-                                placeholder="Ex: bg-gradient-to-br from-jade to-emerald-600"
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="offer-text">Clasă text</Label>
-                            <Input
-                                id="offer-text"
-                                value={textClass}
-                                onChange={(event) => setTextClass(event.target.value)}
-                                placeholder="Ex: text-white"
-                            />
-                        </div>
+                        <fieldset>
+                            <legend className="text-sm font-semibold text-slate-900">Stil fundal</legend>
+                            <p className="mt-1 text-xs text-slate-500">
+                                Selectează rapid fundalul promoției. Poți reveni oricând la varianta implicită.
+                            </p>
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                {backgroundClassOptions.map((option) => {
+                                    const isSelected = backgroundClass === option.value;
+                                    return (
+                                        <button
+                                            key={option.value || "default"}
+                                            type="button"
+                                            onClick={() => setBackgroundClass(option.value)}
+                                            aria-pressed={isSelected}
+                                            className={cn(
+                                                "flex h-full flex-col rounded-lg border p-4 text-left transition",
+                                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berkeley-500 focus-visible:ring-offset-2",
+                                                isSelected
+                                                    ? "border-berkeley-500 ring-2 ring-berkeley-500"
+                                                    : "border-slate-200 hover:border-berkeley-400",
+                                            )}
+                                        >
+                                            <span className="text-sm font-semibold text-slate-900">{option.label}</span>
+                                            <span
+                                                className={cn(
+                                                    "mt-3 block rounded-md px-3 py-2 text-sm font-semibold shadow-sm",
+                                                    option.value ? option.value : "bg-white",
+                                                    option.previewTextClass,
+                                                )}
+                                            >
+                                                Oferta DaCars
+                                            </span>
+                                            <span className="mt-3 text-xs text-slate-600">{option.description}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {backgroundClass &&
+                                !backgroundClassOptions.some((option) => option.value === backgroundClass) && (
+                                    <p className="mt-2 text-xs text-amber-600">
+                                        Clasa personalizată „{backgroundClass}” va fi păstrată la salvare.
+                                    </p>
+                                )}
+                        </fieldset>
+                        <fieldset>
+                            <legend className="text-sm font-semibold text-slate-900">Stil text</legend>
+                            <p className="mt-1 text-xs text-slate-500">
+                                Ajustează culoarea mesajului pentru a avea lizibilitate excelentă pe fundalul ales.
+                            </p>
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                {textClassOptions.map((option) => {
+                                    const isSelected = textClass === option.value;
+                                    return (
+                                        <button
+                                            key={option.value || "default"}
+                                            type="button"
+                                            onClick={() => setTextClass(option.value)}
+                                            aria-pressed={isSelected}
+                                            className={cn(
+                                                "flex h-full flex-col rounded-lg border p-4 text-left transition",
+                                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berkeley-500 focus-visible:ring-offset-2",
+                                                isSelected
+                                                    ? "border-berkeley-500 ring-2 ring-berkeley-500"
+                                                    : "border-slate-200 hover:border-berkeley-400",
+                                            )}
+                                        >
+                                            <span className="text-sm font-semibold text-slate-900">{option.label}</span>
+                                            <span
+                                                className={cn(
+                                                    "mt-3 block rounded-md border border-dashed border-slate-200 bg-white px-3 py-2 text-sm font-medium",
+                                                    option.value || "text-slate-900",
+                                                )}
+                                            >
+                                                Oferta DaCars
+                                            </span>
+                                            <span className="mt-3 text-xs text-slate-600">{option.description}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {textClass && !textClassOptions.some((option) => option.value === textClass) && (
+                                <p className="mt-2 text-xs text-amber-600">
+                                    Clasa personalizată „{textClass}” va fi păstrată la salvare.
+                                </p>
+                            )}
+                        </fieldset>
                         <div>
                             <Label htmlFor="offer-cta-label">Text buton</Label>
                             <Input
