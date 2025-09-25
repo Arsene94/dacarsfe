@@ -1,6 +1,7 @@
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { mapCarSearchFilters } from "@/lib/mapFilters";
 import { toQuery } from "@/lib/qs";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 import type { WidgetActivityResponse } from "@/types/activity";
 import type { ActivityLog, ActivityLogListParams } from "@/types/activity-log";
 import { ensureUser } from "@/types/auth";
@@ -198,6 +199,7 @@ const appendOptionalLanguage = (basePath: string, language?: string | null): str
 export class ApiClient {
     private baseURL: string;
     private token: string | null = null;
+    private language: string | null = DEFAULT_LOCALE;
 
     constructor(baseURL: string) {
         this.baseURL = baseURL;
@@ -206,6 +208,39 @@ export class ApiClient {
         if (typeof window !== 'undefined') {
             this.token = localStorage.getItem('auth_token');
         }
+    }
+
+    setLanguage(language: string | null) {
+        if (typeof language === 'string') {
+            const trimmed = language.trim();
+            if (trimmed.length > 0) {
+                this.language = trimmed;
+                return;
+            }
+        }
+        this.language = DEFAULT_LOCALE;
+    }
+
+    getLanguage(): string | null {
+        return this.language;
+    }
+
+    private resolveLanguage(language?: string | null): string | null {
+        if (typeof language === 'string') {
+            const trimmed = language.trim();
+            if (trimmed.length > 0) {
+                return trimmed;
+            }
+        }
+
+        if (typeof this.language === 'string') {
+            const trimmed = this.language.trim();
+            if (trimmed.length > 0) {
+                return trimmed;
+            }
+        }
+
+        return null;
     }
 
     setToken(token: string) {
@@ -353,7 +388,7 @@ export class ApiClient {
             }
         });
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/cars`, language);
+        const basePath = appendOptionalLanguage(`/cars`, this.resolveLanguage(language));
         return this.request<ApiListResult<ApiCar>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -374,7 +409,7 @@ export class ApiClient {
         });
 
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/cars`, language);
+        const basePath = appendOptionalLanguage(`/cars`, this.resolveLanguage(language));
         return this.request<ApiListResult<ApiCar>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -387,7 +422,7 @@ export class ApiClient {
     ): Promise<ApiListResult<ApiCar>> {
         const mapped: CarFilterParams = mapCarSearchFilters(uiPayload);
         const query = toQuery(mapped);
-        const basePath = appendOptionalLanguage(`/cars`, language);
+        const basePath = appendOptionalLanguage(`/cars`, this.resolveLanguage(language));
         return this.request<ApiListResult<ApiCar>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -405,7 +440,7 @@ export class ApiClient {
             searchParams.set('include', includeValue);
         }
         const finalQuery = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/cars/${id}`, language);
+        const basePath = appendOptionalLanguage(`/cars/${id}`, this.resolveLanguage(language));
         return this.request<ApiItemResult<ApiCar>>(
             finalQuery.length > 0 ? `${basePath}?${finalQuery}` : basePath,
         );
@@ -417,7 +452,7 @@ export class ApiClient {
     ): Promise<CarAvailabilityResponse> {
         const { language, ...filters } = params;
         const query = toQuery(filters);
-        const basePath = appendOptionalLanguage(`/cars/${id}/availability`, language);
+        const basePath = appendOptionalLanguage(`/cars/${id}/availability`, this.resolveLanguage(language));
         return this.request<CarAvailabilityResponse>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -510,7 +545,7 @@ export class ApiClient {
         if (filters.search) searchParams.append('search', filters.search);
         if (filters.limit) searchParams.append('limit', filters.limit.toString());
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/car-makes`, language);
+        const basePath = appendOptionalLanguage(`/car-makes`, this.resolveLanguage(language));
         return this.request<ApiListResult<LookupRecord>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -520,7 +555,7 @@ export class ApiClient {
         id: number | string,
         language?: string,
     ): Promise<ApiItemResult<LookupRecord>> {
-        const basePath = appendOptionalLanguage(`/car-makes/${id}`, language);
+        const basePath = appendOptionalLanguage(`/car-makes/${id}`, this.resolveLanguage(language));
         return this.request<ApiItemResult<LookupRecord>>(basePath);
     }
 
@@ -583,7 +618,7 @@ export class ApiClient {
         if (filters.search) searchParams.append('search', filters.search);
         if (filters.limit) searchParams.append('limit', filters.limit.toString());
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/car-types`, language);
+        const basePath = appendOptionalLanguage(`/car-types`, this.resolveLanguage(language));
         return this.request<ApiListResult<LookupRecord>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -593,7 +628,7 @@ export class ApiClient {
         id: number | string,
         language?: string,
     ): Promise<ApiItemResult<LookupRecord>> {
-        const basePath = appendOptionalLanguage(`/car-types/${id}`, language);
+        const basePath = appendOptionalLanguage(`/car-types/${id}`, this.resolveLanguage(language));
         return this.request<ApiItemResult<LookupRecord>>(basePath);
     }
 
@@ -656,7 +691,7 @@ export class ApiClient {
         if (filters.search) searchParams.append('search', filters.search);
         if (filters.limit) searchParams.append('limit', filters.limit.toString());
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/car-transmissions`, language);
+        const basePath = appendOptionalLanguage(`/car-transmissions`, this.resolveLanguage(language));
         return this.request<ApiListResult<LookupRecord>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -666,7 +701,7 @@ export class ApiClient {
         id: number | string,
         language?: string,
     ): Promise<ApiItemResult<LookupRecord>> {
-        const basePath = appendOptionalLanguage(`/car-transmissions/${id}`, language);
+        const basePath = appendOptionalLanguage(`/car-transmissions/${id}`, this.resolveLanguage(language));
         return this.request<ApiItemResult<LookupRecord>>(basePath);
     }
 
@@ -729,7 +764,7 @@ export class ApiClient {
         if (filters.search) searchParams.append('search', filters.search);
         if (filters.limit) searchParams.append('limit', filters.limit.toString());
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/car-fuels`, language);
+        const basePath = appendOptionalLanguage(`/car-fuels`, this.resolveLanguage(language));
         return this.request<ApiListResult<LookupRecord>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -739,7 +774,7 @@ export class ApiClient {
         id: number | string,
         language?: string,
     ): Promise<ApiItemResult<LookupRecord>> {
-        const basePath = appendOptionalLanguage(`/car-fuels/${id}`, language);
+        const basePath = appendOptionalLanguage(`/car-fuels/${id}`, this.resolveLanguage(language));
         return this.request<ApiItemResult<LookupRecord>>(basePath);
     }
 
@@ -806,7 +841,7 @@ export class ApiClient {
             searchParams.append('limit', '100');
         }
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/car-categories`, language);
+        const basePath = appendOptionalLanguage(`/car-categories`, this.resolveLanguage(language));
         return this.request<ApiListResult<CarCategory>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -816,7 +851,7 @@ export class ApiClient {
         id: number | string,
         language?: string,
     ): Promise<ApiItemResult<CarCategory>> {
-        const basePath = appendOptionalLanguage(`/car-categories/${id}`, language);
+        const basePath = appendOptionalLanguage(`/car-categories/${id}`, this.resolveLanguage(language));
         return this.request<ApiItemResult<CarCategory>>(basePath);
     }
 
@@ -830,7 +865,7 @@ export class ApiClient {
         if (filters.search) searchParams.append('search', filters.search);
         if (filters.limit) searchParams.append('limit', filters.limit.toString());
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/car-colors`, language);
+        const basePath = appendOptionalLanguage(`/car-colors`, this.resolveLanguage(language));
         return this.request<ApiListResult<LookupRecord>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -840,7 +875,7 @@ export class ApiClient {
         id: number | string,
         language?: string,
     ): Promise<ApiItemResult<LookupRecord>> {
-        const basePath = appendOptionalLanguage(`/car-colors/${id}`, language);
+        const basePath = appendOptionalLanguage(`/car-colors/${id}`, this.resolveLanguage(language));
         return this.request<ApiItemResult<LookupRecord>>(basePath);
     }
 
@@ -1090,7 +1125,7 @@ export class ApiClient {
         const query = toQuery(mapped);
         const basePath = appendOptionalLanguage(
             `/cars/${params.car_id}/info-for-booking`,
-            language,
+            this.resolveLanguage(language),
         );
         const suffix = query ? `?${query}` : "";
         return this.request<CarAvailabilityResponse>(`${basePath}${suffix}`);
@@ -1127,7 +1162,7 @@ export class ApiClient {
             searchParams.append('include', filters.include.trim());
         }
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/services`, language);
+        const basePath = appendOptionalLanguage(`/services`, this.resolveLanguage(language));
         return this.request<ApiListResult<Service>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -1137,7 +1172,7 @@ export class ApiClient {
         id: number | string,
         language?: string,
     ): Promise<ApiItemResult<Service>> {
-        const basePath = appendOptionalLanguage(`/services/${id}`, language);
+        const basePath = appendOptionalLanguage(`/services/${id}`, this.resolveLanguage(language));
         return this.request<ApiItemResult<Service>>(basePath);
     }
 
@@ -1379,7 +1414,7 @@ export class ApiClient {
             searchParams.append('name_like', filters.name_like.trim());
         }
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/taxes`, language);
+        const basePath = appendOptionalLanguage(`/taxes`, this.resolveLanguage(language));
         return this.request<ApiListResult<Tax>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -1389,7 +1424,7 @@ export class ApiClient {
         id: number | string,
         language?: string,
     ): Promise<ApiItemResult<Tax>> {
-        const basePath = appendOptionalLanguage(`/taxes/${id}`, language);
+        const basePath = appendOptionalLanguage(`/taxes/${id}`, this.resolveLanguage(language));
         return this.request<ApiItemResult<Tax>>(basePath);
     }
 
@@ -1985,7 +2020,7 @@ export class ApiClient {
             searchParams.append('is_active', value);
         }
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/wheel-of-fortunes`, language);
+        const basePath = appendOptionalLanguage(`/wheel-of-fortunes`, this.resolveLanguage(language));
         return this.request<ApiListResult<WheelPrize>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -1996,7 +2031,7 @@ export class ApiClient {
         params: { include?: string | readonly string[]; language?: string } = {},
     ): Promise<ApiItemResult<WheelPrize>> {
         const { language, include } = params;
-        const basePath = appendOptionalLanguage(`/wheel-of-fortunes/${id}`, language);
+        const basePath = appendOptionalLanguage(`/wheel-of-fortunes/${id}`, this.resolveLanguage(language));
         const includeValue = resolveIncludeParam(include);
         if (!includeValue) {
             return this.request<ApiItemResult<WheelPrize>>(basePath);

@@ -10,6 +10,7 @@ import {
     type ReactNode,
 } from "react";
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE, LOCALE_STORAGE_KEY, type Locale } from "@/lib/i18n/config";
+import { apiClient } from "@/lib/api";
 import { isLocale } from "@/lib/i18n/utils";
 
 type LocaleContextValue = {
@@ -33,6 +34,10 @@ export const LocaleProvider = ({ children }: { children: ReactNode }) => {
             document.documentElement.lang = stored;
         }
     }, []);
+
+    useEffect(() => {
+        apiClient.setLanguage(locale);
+    }, [locale]);
 
     const handleSetLocale = useCallback((nextLocale: Locale) => {
         setLocaleState(nextLocale);
