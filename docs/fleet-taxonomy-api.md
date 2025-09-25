@@ -12,7 +12,7 @@ Shared conventions:
 | Method | URL | Description | Permission |
 | --- | --- | --- | --- |
 | GET | `/api/car-makes` | List makes (`NamedResource`). Supports `name_like`, `status`. | Public |
-| GET | `/api/car-makes/{id}` | Retrieve a make. | Public |
+| GET | `/api/car-makes/{id}/{lang?}` | Retrieve a make. | Public |
 | POST | `/api/car-makes` | Create a make. | `car_makes.create` |
 | PUT/PATCH | `/api/car-makes/{id}` | Update a make. | `car_makes.update` |
 | DELETE | `/api/car-makes/{id}` | Delete a make. | `car_makes.delete` |
@@ -43,8 +43,8 @@ Translation response:
 ## Car types
 | Method | URL | Description | Permission |
 | --- | --- | --- | --- |
-| GET | `/api/car-types` | List types; filter `name_like`, `status`. | Public |
-| GET | `/api/car-types/{id}` | Retrieve a type. | Public |
+| GET | `/api/car-types/{lang?}` | List types; filter `name_like`, `status`. | Public |
+| GET | `/api/car-types/{id}/{lang?}` | Retrieve a type. | Public |
 | POST | `/api/car-types` | Create. | `car_types.create` |
 | PUT/PATCH | `/api/car-types/{id}` | Update. | `car_types.update` |
 | DELETE | `/api/car-types/{id}` | Delete. | `car_types.delete` |
@@ -57,8 +57,8 @@ Translation response:
 ## Car transmissions
 | Method | URL | Description | Permission |
 | --- | --- | --- | --- |
-| GET | `/api/car-transmissions` | List transmissions; filter `name_like`, `status`. | Public |
-| GET | `/api/car-transmissions/{id}` | Retrieve a transmission. | Public |
+| GET | `/api/car-transmissions/{lang?}` | List transmissions; filter `name_like`, `status`. | Public |
+| GET | `/api/car-transmissions/{id}/{lang?}` | Retrieve a transmission. | Public |
 | POST | `/api/car-transmissions` | Create. | `car_transmissions.create` |
 | PUT/PATCH | `/api/car-transmissions/{id}` | Update. | `car_transmissions.update` |
 | DELETE | `/api/car-transmissions/{id}` | Delete. | `car_transmissions.delete` |
@@ -80,8 +80,8 @@ Example request:
 ## Car fuels
 | Method | URL | Description | Permission |
 | --- | --- | --- | --- |
-| GET | `/api/car-fuels` | List fuels; filter `name_like`, `status`. | Public |
-| GET | `/api/car-fuels/{id}` | Retrieve a fuel. | Public |
+| GET | `/api/car-fuels/{lang?}` | List fuels; filter `name_like`, `status`. | Public |
+| GET | `/api/car-fuels/{id}/{lang?}` | Retrieve a fuel. | Public |
 | POST | `/api/car-fuels` | Create. | `car_fuels.create` |
 | PUT/PATCH | `/api/car-fuels/{id}` | Update. | `car_fuels.update` |
 | DELETE | `/api/car-fuels/{id}` | Delete. | `car_fuels.delete` |
@@ -94,8 +94,8 @@ Example request:
 ## Car categories
 | Method | URL | Description | Permission |
 | --- | --- | --- | --- |
-| GET | `/api/car-categories` | List categories (`CategoryResource`). Filters: `status`, `name_like`, `parent_id`. | Public |
-| GET | `/api/car-categories/{id}` | Retrieve a category. | Public |
+| GET | `/api/car-categories/{lang?}` | List categories (`CategoryResource`). Filters: `status`, `name_like`, `parent_id`. | Public |
+| GET | `/api/car-categories/{id}/{lang?}` | Retrieve a category. | Public |
 | POST | `/api/car-categories` | Create category. | `car_categories.create` |
 | PUT/PATCH | `/api/car-categories/{id}` | Update. | `car_categories.update` |
 | DELETE | `/api/car-categories/{id}` | Delete. | `car_categories.delete` |
@@ -133,8 +133,8 @@ Translation example:
 ## Car colours
 | Method | URL | Description | Permission |
 | --- | --- | --- | --- |
-| GET | `/api/car-colors` | List colours (`name_like`, `status`). | Public |
-| GET | `/api/car-colors/{id}` | Retrieve a colour. | Public |
+| GET | `/api/car-colors/{lang?}` | List colours (`name_like`, `status`). | Public |
+| GET | `/api/car-colors/{id}/{lang?}` | Retrieve a colour. | Public |
 | POST | `/api/car-colors` | Create colour. | `car_colors.create` |
 | PUT/PATCH | `/api/car-colors/{id}` | Update colour. | `car_colors.update` |
 | DELETE | `/api/car-colors/{id}` | Delete colour. | `car_colors.delete` |

@@ -182,6 +182,19 @@ const resolveIncludeParam = (include?: string | readonly string[]): string | nul
     return null;
 };
 
+const appendOptionalLanguage = (basePath: string, language?: string | null): string => {
+    if (typeof language !== "string") {
+        return basePath;
+    }
+
+    const trimmed = language.trim();
+    if (trimmed.length === 0) {
+        return basePath;
+    }
+
+    return `${basePath}/${encodeURIComponent(trimmed)}`;
+};
+
 export class ApiClient {
     private baseURL: string;
     private token: string | null = null;
@@ -330,16 +343,19 @@ export class ApiClient {
         search?: string;
         start_date?: string;
         end_date?: string;
+        language?: string;
     } = {}): Promise<ApiListResult<ApiCar>> {
+        const { language, ...filters } = params;
         const searchParams = new URLSearchParams();
-        Object.entries(params).forEach(([key, value]) => {
+        Object.entries(filters).forEach(([key, value]) => {
             if (value !== undefined && value !== null) {
                 searchParams.append(key, value.toString());
             }
         });
         const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/cars`, language);
         return this.request<ApiListResult<ApiCar>>(
-            `/cars${query ? `?${query}` : ''}`,
+            query.length > 0 ? `${basePath}?${query}` : basePath,
         );
     }
 
@@ -347,24 +363,34 @@ export class ApiClient {
         limit?: number;
         page?: number;
         perPage?: number;
-    }): Promise<ApiListResult<ApiCar>> {
+        language?: string;
+    } = {}): Promise<ApiListResult<ApiCar>> {
+        const { language, ...filters } = params || {};
         const searchParams = new URLSearchParams();
-        Object.entries(params || {}).forEach(([key, value]) => {
+        Object.entries(filters).forEach(([key, value]) => {
             if (value !== undefined && value !== null) {
                 searchParams.append(key, value.toString());
             }
         });
 
+        const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/cars`, language);
         return this.request<ApiListResult<ApiCar>>(
-            `/cars?${searchParams.toString()}`,
+            query.length > 0 ? `${basePath}?${query}` : basePath,
         );
 
     }
 
-    async getCarsByDateCriteria(uiPayload: CarSearchUiPayload): Promise<ApiListResult<ApiCar>> {
+    async getCarsByDateCriteria(
+        uiPayload: CarSearchUiPayload,
+        language?: string,
+    ): Promise<ApiListResult<ApiCar>> {
         const mapped: CarFilterParams = mapCarSearchFilters(uiPayload);
         const query = toQuery(mapped);
-        return this.request<ApiListResult<ApiCar>>(`/cars?${query}`);
+        const basePath = appendOptionalLanguage(`/cars`, language);
+        return this.request<ApiListResult<ApiCar>>(
+            query.length > 0 ? `${basePath}?${query}` : basePath,
+        );
     }
 
     async createCar(payload: Record<string, unknown> | FormData): Promise<ApiItemResult<UnknownRecord>> {
@@ -444,18 +470,28 @@ export class ApiClient {
         });
     }
 
-    async getCarMakes(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
+    async getCarMakes(params: {
+        search?: string;
+        limit?: number;
+        language?: string;
+    } = {}): Promise<ApiListResult<LookupRecord>> {
+        const { language, ...filters } = params;
         const searchParams = new URLSearchParams();
-        if (params.search) searchParams.append('search', params.search);
-        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (filters.search) searchParams.append('search', filters.search);
+        if (filters.limit) searchParams.append('limit', filters.limit.toString());
         const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/car-makes`, language);
         return this.request<ApiListResult<LookupRecord>>(
-            `/car-makes${query ? `?${query}` : ''}`,
+            query.length > 0 ? `${basePath}?${query}` : basePath,
         );
     }
 
-    async getCarMake(id: number | string): Promise<ApiItemResult<LookupRecord>> {
-        return this.request<ApiItemResult<LookupRecord>>(`/car-makes/${id}`);
+    async getCarMake(
+        id: number | string,
+        language?: string,
+    ): Promise<ApiItemResult<LookupRecord>> {
+        const basePath = appendOptionalLanguage(`/car-makes/${id}`, language);
+        return this.request<ApiItemResult<LookupRecord>>(basePath);
     }
 
     async createCarMake(payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
@@ -507,18 +543,28 @@ export class ApiClient {
         });
     }
 
-    async getCarTypes(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
+    async getCarTypes(params: {
+        search?: string;
+        limit?: number;
+        language?: string;
+    } = {}): Promise<ApiListResult<LookupRecord>> {
+        const { language, ...filters } = params;
         const searchParams = new URLSearchParams();
-        if (params.search) searchParams.append('search', params.search);
-        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (filters.search) searchParams.append('search', filters.search);
+        if (filters.limit) searchParams.append('limit', filters.limit.toString());
         const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/car-types`, language);
         return this.request<ApiListResult<LookupRecord>>(
-            `/car-types${query ? `?${query}` : ''}`,
+            query.length > 0 ? `${basePath}?${query}` : basePath,
         );
     }
 
-    async getCarType(id: number | string): Promise<ApiItemResult<LookupRecord>> {
-        return this.request<ApiItemResult<LookupRecord>>(`/car-types/${id}`);
+    async getCarType(
+        id: number | string,
+        language?: string,
+    ): Promise<ApiItemResult<LookupRecord>> {
+        const basePath = appendOptionalLanguage(`/car-types/${id}`, language);
+        return this.request<ApiItemResult<LookupRecord>>(basePath);
     }
 
     async createCarType(payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
@@ -570,18 +616,28 @@ export class ApiClient {
         });
     }
 
-    async getCarTransmissions(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
+    async getCarTransmissions(params: {
+        search?: string;
+        limit?: number;
+        language?: string;
+    } = {}): Promise<ApiListResult<LookupRecord>> {
+        const { language, ...filters } = params;
         const searchParams = new URLSearchParams();
-        if (params.search) searchParams.append('search', params.search);
-        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (filters.search) searchParams.append('search', filters.search);
+        if (filters.limit) searchParams.append('limit', filters.limit.toString());
         const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/car-transmissions`, language);
         return this.request<ApiListResult<LookupRecord>>(
-            `/car-transmissions${query ? `?${query}` : ''}`,
+            query.length > 0 ? `${basePath}?${query}` : basePath,
         );
     }
 
-    async getCarTransmission(id: number | string): Promise<ApiItemResult<LookupRecord>> {
-        return this.request<ApiItemResult<LookupRecord>>(`/car-transmissions/${id}`);
+    async getCarTransmission(
+        id: number | string,
+        language?: string,
+    ): Promise<ApiItemResult<LookupRecord>> {
+        const basePath = appendOptionalLanguage(`/car-transmissions/${id}`, language);
+        return this.request<ApiItemResult<LookupRecord>>(basePath);
     }
 
     async createCarTransmission(payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
@@ -633,18 +689,28 @@ export class ApiClient {
         });
     }
 
-    async getCarFuels(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
+    async getCarFuels(params: {
+        search?: string;
+        limit?: number;
+        language?: string;
+    } = {}): Promise<ApiListResult<LookupRecord>> {
+        const { language, ...filters } = params;
         const searchParams = new URLSearchParams();
-        if (params.search) searchParams.append('search', params.search);
-        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (filters.search) searchParams.append('search', filters.search);
+        if (filters.limit) searchParams.append('limit', filters.limit.toString());
         const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/car-fuels`, language);
         return this.request<ApiListResult<LookupRecord>>(
-            `/car-fuels${query ? `?${query}` : ''}`,
+            query.length > 0 ? `${basePath}?${query}` : basePath,
         );
     }
 
-    async getCarFuel(id: number | string): Promise<ApiItemResult<LookupRecord>> {
-        return this.request<ApiItemResult<LookupRecord>>(`/car-fuels/${id}`);
+    async getCarFuel(
+        id: number | string,
+        language?: string,
+    ): Promise<ApiItemResult<LookupRecord>> {
+        const basePath = appendOptionalLanguage(`/car-fuels/${id}`, language);
+        return this.request<ApiItemResult<LookupRecord>>(basePath);
     }
 
     async createCarFuel(payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
@@ -696,36 +762,56 @@ export class ApiClient {
         });
     }
 
-    async getCarCategories(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<CarCategory>> {
+    async getCarCategories(params: {
+        search?: string;
+        limit?: number;
+        language?: string;
+    } = {}): Promise<ApiListResult<CarCategory>> {
+        const { language, ...filters } = params;
         const searchParams = new URLSearchParams();
-        if (params.search) searchParams.append('search', params.search);
-        if (params.limit || params.limit === 0) {
-            searchParams.append('limit', (params.limit ?? 0).toString());
+        if (filters.search) searchParams.append('search', filters.search);
+        if (filters.limit || filters.limit === 0) {
+            searchParams.append('limit', (filters.limit ?? 0).toString());
         } else {
             searchParams.append('limit', '100');
         }
         const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/car-categories`, language);
         return this.request<ApiListResult<CarCategory>>(
-            `/car-categories${query ? `?${query}` : ''}`,
+            query.length > 0 ? `${basePath}?${query}` : basePath,
         );
     }
 
-    async getCarCategory(id: number | string): Promise<ApiItemResult<CarCategory>> {
-        return this.request<ApiItemResult<CarCategory>>(`/car-categories/${id}`);
+    async getCarCategory(
+        id: number | string,
+        language?: string,
+    ): Promise<ApiItemResult<CarCategory>> {
+        const basePath = appendOptionalLanguage(`/car-categories/${id}`, language);
+        return this.request<ApiItemResult<CarCategory>>(basePath);
     }
 
-    async getCarColors(params: { search?: string; limit?: number } = {}): Promise<ApiListResult<LookupRecord>> {
+    async getCarColors(params: {
+        search?: string;
+        limit?: number;
+        language?: string;
+    } = {}): Promise<ApiListResult<LookupRecord>> {
+        const { language, ...filters } = params;
         const searchParams = new URLSearchParams();
-        if (params.search) searchParams.append('search', params.search);
-        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (filters.search) searchParams.append('search', filters.search);
+        if (filters.limit) searchParams.append('limit', filters.limit.toString());
         const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/car-colors`, language);
         return this.request<ApiListResult<LookupRecord>>(
-            `/car-colors${query ? `?${query}` : ''}`,
+            query.length > 0 ? `${basePath}?${query}` : basePath,
         );
     }
 
-    async getCarColor(id: number | string): Promise<ApiItemResult<LookupRecord>> {
-        return this.request<ApiItemResult<LookupRecord>>(`/car-colors/${id}`);
+    async getCarColor(
+        id: number | string,
+        language?: string,
+    ): Promise<ApiItemResult<LookupRecord>> {
+        const basePath = appendOptionalLanguage(`/car-colors/${id}`, language);
+        return this.request<ApiItemResult<LookupRecord>>(basePath);
     }
 
     async createCarColor(payload: Record<string, unknown>): Promise<ApiItemResult<LookupRecord>> {
@@ -968,47 +1054,61 @@ export class ApiClient {
 
     async getCarForBooking(
         params: CarSearchUiPayload & { car_id: number | string },
+        language?: string,
     ): Promise<CarAvailabilityResponse> {
         const mapped = mapCarSearchFilters(params);
         const query = toQuery(mapped);
-        const suffix = query ? `?${query}` : "";
-        return this.request<CarAvailabilityResponse>(
-            `/cars/${params.car_id}/info-for-booking${suffix}`,
+        const basePath = appendOptionalLanguage(
+            `/cars/${params.car_id}/info-for-booking`,
+            language,
         );
+        const suffix = query ? `?${query}` : "";
+        return this.request<CarAvailabilityResponse>(`${basePath}${suffix}`);
     }
 
-    async getServices(params: ServiceListParams = {}): Promise<ApiListResult<Service>> {
+    async getServices(
+        params: (ServiceListParams & { language?: string }) = {},
+    ): Promise<ApiListResult<Service>> {
+        const { language, ...rest } = params;
+        const filters = rest as ServiceListParams;
         const searchParams = new URLSearchParams();
-        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
-            searchParams.append('page', params.page.toString());
+        if (typeof filters.page === 'number' && Number.isFinite(filters.page)) {
+            searchParams.append('page', filters.page.toString());
         }
         const perPageCandidate =
-            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
-                ? params.perPage
-                : typeof (params as { per_page?: number }).per_page === 'number'
-                    ? (params as { per_page: number }).per_page
+            typeof filters.perPage === 'number' && Number.isFinite(filters.perPage)
+                ? filters.perPage
+                : typeof (filters as { per_page?: number }).per_page === 'number'
+                    ? (filters as { per_page: number }).per_page
                     : undefined;
         if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
             searchParams.append('per_page', perPageCandidate.toString());
         }
-        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
-            searchParams.append('limit', params.limit.toString());
+        if (typeof filters.limit === 'number' && Number.isFinite(filters.limit)) {
+            searchParams.append('limit', filters.limit.toString());
         }
-        if (typeof params.status === 'string' && params.status.trim().length > 0) {
-            searchParams.append('status', params.status.trim());
+        if (typeof filters.status === 'string' && filters.status.trim().length > 0) {
+            searchParams.append('status', filters.status.trim());
         }
-        if (typeof params.name_like === 'string' && params.name_like.trim().length > 0) {
-            searchParams.append('name_like', params.name_like.trim());
+        if (typeof filters.name_like === 'string' && filters.name_like.trim().length > 0) {
+            searchParams.append('name_like', filters.name_like.trim());
         }
-        if (typeof params.include === 'string' && params.include.trim().length > 0) {
-            searchParams.append('include', params.include.trim());
+        if (typeof filters.include === 'string' && filters.include.trim().length > 0) {
+            searchParams.append('include', filters.include.trim());
         }
         const query = searchParams.toString();
-        return this.request<ApiListResult<Service>>(`/services${query ? `?${query}` : ''}`);
+        const basePath = appendOptionalLanguage(`/services`, language);
+        return this.request<ApiListResult<Service>>(
+            query.length > 0 ? `${basePath}?${query}` : basePath,
+        );
     }
 
-    async getService(id: number | string): Promise<ApiItemResult<Service>> {
-        return this.request<ApiItemResult<Service>>(`/services/${id}`);
+    async getService(
+        id: number | string,
+        language?: string,
+    ): Promise<ApiItemResult<Service>> {
+        const basePath = appendOptionalLanguage(`/services/${id}`, language);
+        return this.request<ApiItemResult<Service>>(basePath);
     }
 
     async createService(payload: ServicePayload): Promise<ApiItemResult<Service>> {
@@ -1221,35 +1321,46 @@ export class ApiClient {
         });
     }
 
-    async getTaxes(params: TaxListParams = {}): Promise<ApiListResult<Tax>> {
+    async getTaxes(
+        params: (TaxListParams & { language?: string }) = {},
+    ): Promise<ApiListResult<Tax>> {
+        const { language, ...rest } = params;
+        const filters = rest as TaxListParams;
         const searchParams = new URLSearchParams();
-        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
-            searchParams.append('page', params.page.toString());
+        if (typeof filters.page === 'number' && Number.isFinite(filters.page)) {
+            searchParams.append('page', filters.page.toString());
         }
         const perPageCandidate =
-            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
-                ? params.perPage
-                : typeof (params as { per_page?: number }).per_page === 'number'
-                    ? (params as { per_page: number }).per_page
+            typeof filters.perPage === 'number' && Number.isFinite(filters.perPage)
+                ? filters.perPage
+                : typeof (filters as { per_page?: number }).per_page === 'number'
+                    ? (filters as { per_page: number }).per_page
                     : undefined;
         if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
             searchParams.append('per_page', perPageCandidate.toString());
         }
-        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
-            searchParams.append('limit', params.limit.toString());
+        if (typeof filters.limit === 'number' && Number.isFinite(filters.limit)) {
+            searchParams.append('limit', filters.limit.toString());
         }
-        if (typeof params.status === 'string' && params.status.trim().length > 0) {
-            searchParams.append('status', params.status.trim());
+        if (typeof filters.status === 'string' && filters.status.trim().length > 0) {
+            searchParams.append('status', filters.status.trim());
         }
-        if (typeof params.name_like === 'string' && params.name_like.trim().length > 0) {
-            searchParams.append('name_like', params.name_like.trim());
+        if (typeof filters.name_like === 'string' && filters.name_like.trim().length > 0) {
+            searchParams.append('name_like', filters.name_like.trim());
         }
         const query = searchParams.toString();
-        return this.request<ApiListResult<Tax>>(`/taxes${query ? `?${query}` : ''}`);
+        const basePath = appendOptionalLanguage(`/taxes`, language);
+        return this.request<ApiListResult<Tax>>(
+            query.length > 0 ? `${basePath}?${query}` : basePath,
+        );
     }
 
-    async getTax(id: number | string): Promise<ApiItemResult<Tax>> {
-        return this.request<ApiItemResult<Tax>>(`/taxes/${id}`);
+    async getTax(
+        id: number | string,
+        language?: string,
+    ): Promise<ApiItemResult<Tax>> {
+        const basePath = appendOptionalLanguage(`/taxes/${id}`, language);
+        return this.request<ApiItemResult<Tax>>(basePath);
     }
 
     async createTax(payload: TaxPayload): Promise<ApiItemResult<Tax>> {
@@ -1829,21 +1940,24 @@ export class ApiClient {
         per_page?: number;
         limit?: number;
         is_active?: boolean;
+        language?: string;
     } = {}): Promise<ApiListResult<WheelPrize>> {
+        const { language, ...filters } = params;
         const searchParams = new URLSearchParams();
-        if (params.page) searchParams.append('page', params.page.toString());
-        if (params.per_page) searchParams.append('per_page', params.per_page.toString());
-        if (params.limit) searchParams.append('limit', params.limit.toString());
-        if (typeof params.period_id !== 'undefined') {
-            searchParams.append('period_id', params.period_id.toString());
+        if (filters.page) searchParams.append('page', filters.page.toString());
+        if (filters.per_page) searchParams.append('per_page', filters.per_page.toString());
+        if (filters.limit) searchParams.append('limit', filters.limit.toString());
+        if (typeof filters.period_id !== 'undefined') {
+            searchParams.append('period_id', filters.period_id.toString());
         }
-        if (typeof params.is_active !== 'undefined') {
-            const value = params.is_active ? '1' : '0';
+        if (typeof filters.is_active !== 'undefined') {
+            const value = filters.is_active ? '1' : '0';
             searchParams.append('is_active', value);
         }
         const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/wheel-of-fortunes`, language);
         return this.request<ApiListResult<WheelPrize>>(
-            `/wheel-of-fortunes${query ? `?${query}` : ''}`,
+            query.length > 0 ? `${basePath}?${query}` : basePath,
         );
     }
 

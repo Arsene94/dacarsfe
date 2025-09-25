@@ -1,14 +1,14 @@
 # Cars API (public catalogue)
 
-Public endpoints that expose the rentable fleet. Results are powered by `CarResource`, include computed pricing, and support extensive filtering. All routes live under `/api/cars` and are publicly accessible unless stated otherwise.
+Public endpoints that expose the rentable fleet. Results are powered by `CarResource`, include computed pricing, and support extensive filtering. All routes live under `/api/cars/{lang?}` and are publicly accessible unless stated otherwise.
 
 ## Endpoint overview
 | Method | URL | Description |
 | --- | --- | --- |
-| GET | `/api/cars` | List cars with make, type, transmission, fuel, categories, optional colours and reviews. |
-| GET | `/api/cars/{id}` | Fetch a single car record; accepts the same pricing/date query parameters as the index. |
-| GET | `/api/cars/{id}/info-for-booking` | Car detail enriched with availability flag and computed totals for a requested window. |
-| GET | `/api/cars/{id}/availability` | Alias of `info-for-booking` returning only `available`? *(Not implemented; use `info-for-booking`)* |
+| GET | `/api/cars/{lang?}` | List cars with make, type, transmission, fuel, categories, optional colours and reviews. |
+| GET | `/api/cars/{id}/{lang?}` | Fetch a single car record; accepts the same pricing/date query parameters as the index. |
+| GET | `/api/cars/{id}/info-for-booking/{lang?}` | Car detail enriched with availability flag and computed totals for a requested window. |
+| GET | `/api/cars/{id}/availability/{lang?}` | Alias of `info-for-booking` returning only `available`? *(Not implemented; use `info-for-booking`)* |
 | POST | `/api/cars/{id}/view` | Optional hit endpoint to increment custom view counters (requires project-specific implementation). |
 
 > **Authentication:** none of these routes require a token. Rate limiting is only applied to the optional `POST /view` tracker (`throttle:120,1`).
@@ -29,7 +29,8 @@ Public endpoints that expose the rentable fleet. Results are powered by `CarReso
 
 ---
 
-## GET `/api/cars`
+## GET `/api/cars/{lang?}`
+Append the optional locale slug (`en`, `ro`, `de`, etc.) to retrieve copy already localised for that language. Omitting it keeps the legacy behaviour.
 Example response with implicit eager-loaded relations (`make`, `type`, `transmission`, `fuel`, `categories`) and computed pricing fields (`base_price`, `rental_rate`, `total_deposit`, `days`, etc.).
 
 ```json
@@ -105,7 +106,7 @@ Example response with implicit eager-loaded relations (`make`, `type`, `transmis
 
 ---
 
-## GET `/api/cars/{id}`
+## GET `/api/cars/{id}/{lang?}`
 Returns the same `CarResource` structure as the list item. Supply `start_date`/`end_date` (or `pickup`/`dropoff`) to compute price/availability for the requested window.
 
 ```json
@@ -133,12 +134,12 @@ Missing IDs trigger HTTP 404.
 
 ---
 
-## GET `/api/cars/{id}/info-for-booking`
+## GET `/api/cars/{id}/info-for-booking/{lang?}`
 Enhances the single-car view with a reliable availability flag. The controller checks overlapping bookings with `status = reserved`, honours exact datetimes, and still returns pricing metadata even when the car is unavailable.
 
 ### Request
 ```
-GET /api/cars/17/info-for-booking?start_date=2025-03-12T09:00&end_date=2025-03-18T09:00
+GET /api/cars/17/info-for-booking/ro?start_date=2025-03-12T09:00&end_date=2025-03-18T09:00
 ```
 
 ### Response
