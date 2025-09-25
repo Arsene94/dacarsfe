@@ -393,6 +393,36 @@ export class ApiClient {
         );
     }
 
+    async getCar(
+        id: number | string,
+        params: (CarFilterParams & { include?: string | readonly string[]; language?: string }) = {},
+    ): Promise<ApiItemResult<ApiCar>> {
+        const { language, include, ...filters } = params;
+        const query = toQuery(filters);
+        const searchParams = new URLSearchParams(query);
+        const includeValue = resolveIncludeParam(include);
+        if (includeValue) {
+            searchParams.set('include', includeValue);
+        }
+        const finalQuery = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/cars/${id}`, language);
+        return this.request<ApiItemResult<ApiCar>>(
+            finalQuery.length > 0 ? `${basePath}?${finalQuery}` : basePath,
+        );
+    }
+
+    async getCarAvailability(
+        id: number | string,
+        params: (CarFilterParams & { language?: string }) = {},
+    ): Promise<CarAvailabilityResponse> {
+        const { language, ...filters } = params;
+        const query = toQuery(filters);
+        const basePath = appendOptionalLanguage(`/cars/${id}/availability`, language);
+        return this.request<CarAvailabilityResponse>(
+            query.length > 0 ? `${basePath}?${query}` : basePath,
+        );
+    }
+
     async createCar(payload: Record<string, unknown> | FormData): Promise<ApiItemResult<UnknownRecord>> {
         if (typeof FormData !== 'undefined' && payload instanceof FormData) {
             return this.request<ApiItemResult<UnknownRecord>>(`/cars`, {
@@ -1959,6 +1989,20 @@ export class ApiClient {
         return this.request<ApiListResult<WheelPrize>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
+    }
+
+    async getWheelOfFortune(
+        id: number | string,
+        params: { include?: string | readonly string[]; language?: string } = {},
+    ): Promise<ApiItemResult<WheelPrize>> {
+        const { language, include } = params;
+        const basePath = appendOptionalLanguage(`/wheel-of-fortunes/${id}`, language);
+        const includeValue = resolveIncludeParam(include);
+        if (!includeValue) {
+            return this.request<ApiItemResult<WheelPrize>>(basePath);
+        }
+        const query = new URLSearchParams({ include: includeValue }).toString();
+        return this.request<ApiItemResult<WheelPrize>>(`${basePath}?${query}`);
     }
 
     async createWheelOfFortune(payload: {
