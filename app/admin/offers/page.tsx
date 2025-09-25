@@ -56,6 +56,18 @@ const backgroundClassOptions: Array<{
         previewTextClass: "text-white",
     },
     {
+        value: "bg-rose-600",
+        label: "Roșu intens",
+        description: "Creează sentimentul de urgență pentru promoțiile limitate.",
+        previewTextClass: "text-white",
+    },
+    {
+        value: "bg-gradient-to-br from-rose-500 via-red-500 to-orange-500",
+        label: "Gradient aprins",
+        description: "Atrage atenția cu un mix vibrant de roșu și portocaliu.",
+        previewTextClass: "text-white",
+    },
+    {
         value: "bg-slate-900",
         label: "Slate întunecat",
         description: "Contrast puternic pentru oferte limitate sau VIP.",
@@ -92,6 +104,16 @@ const textClassOptions: Array<{
         value: "text-amber-100",
         label: "Text accent (chihlimbar)",
         description: "Scoate în evidență mesajele pe fundaluri închise.",
+    },
+    {
+        value: "text-red-600",
+        label: "Text roșu intens",
+        description: "Potrivit pentru badge-uri de reducere și mesaje urgente.",
+    },
+    {
+        value: "text-rose-100",
+        label: "Text roșu deschis",
+        description: "Completează fundalurile închise cu un ton cald, feminin.",
     },
 ];
 
