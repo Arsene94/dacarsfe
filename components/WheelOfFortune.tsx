@@ -34,6 +34,7 @@ import type {
     WheelPrize,
     WheelOfFortuneProps,
 } from "@/types/wheel";
+import { useTranslations } from "@/lib/i18n/useTranslations";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null;
@@ -242,6 +243,90 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     const spinTimeoutRef = useRef<number | null>(null);
     const ipFetchRef = useRef(false);
 
+    const { messages, t } = useTranslations("home");
+    const wheelMessages = (messages.wheel ?? {}) as Record<string, unknown>;
+    const wheelPopup = (wheelMessages.popup ?? {}) as { title?: string; description?: string };
+    const wheelSection = (wheelMessages.section ?? {}) as { title?: string; description?: string };
+    const wheelForm = (wheelMessages.form ?? {}) as {
+        name?: { label?: string; placeholder?: string };
+        phone?: { label?: string; placeholder?: string };
+        consent?: string;
+    };
+    const wheelStoredPrize = (wheelMessages.storedPrize ?? {}) as {
+        title?: string;
+        prefix?: string;
+        suffix?: string;
+        noExpiry?: string;
+    };
+    const wheelErrors = (wheelMessages.errors ?? {}) as Record<string, string>;
+    const wheelButtons = (wheelMessages.buttons ?? {}) as Record<string, string>;
+    const wheelWinner = (wheelMessages.winner ?? {}) as Record<string, string>;
+    const wheelRegulation = (wheelMessages.regulation ?? {}) as {
+        title?: string;
+        items?: string[];
+    };
+    const wheelAssets = (wheelMessages.assets ?? {}) as { logoAlt?: string };
+    const activePeriodTemplate =
+        typeof wheelMessages.activePeriod === "string"
+            ? wheelMessages.activePeriod
+            : "Perioada activă: {{period}}. Completează datele tale, învârte roata și vezi ce premiu primești!";
+    const defaultPrompt =
+        typeof wheelMessages.defaultPrompt === "string"
+            ? wheelMessages.defaultPrompt
+            : "Completează datele tale, învârte roata și vezi ce premiu primești!";
+    const spinsLeftLabel = wheelMessages.spinsLeft ?? "Încercări rămase";
+    const spinButtonLabel = wheelButtons.spin ?? "Învârte Roata";
+    const spinningLabel = wheelButtons.spinning ?? "Se învârte...";
+    const activePrizeLabel = wheelButtons.activePrize ?? "Premiu activ";
+    const outOfSpinsLabel = wheelButtons.outOfSpins ?? "Încercări epuizate";
+    const resetLabel = wheelButtons.reset ?? "Resetează (Demo)";
+    const closeButtonLabel = wheelButtons.close ?? "Închide";
+    const tryAgainLabel = wheelButtons.tryAgain ?? "Încearcă din nou";
+    const retrySaveLabel = wheelButtons.retrySave ?? "Reîncearcă salvarea";
+    const continueLabel = wheelButtons.continue ?? "Continuă rezervarea";
+    const storedPrizeTitle = wheelStoredPrize.title ?? "Premiu activ din Roata Norocului";
+    const storedPrizePrefix = wheelStoredPrize.prefix ?? "Ai câștigat ";
+    const storedPrizeSuffix = wheelStoredPrize.suffix ??
+        ". Premiul este valabil până la {{expiry}} și îl poți folosi direct în pagina de checkout.";
+    const storedPrizeNoExpiry = wheelStoredPrize.noExpiry ?? "expirarea automată";
+    const regulationTitle = wheelRegulation.title ?? "Regulament rapid:";
+    const regulationItems =
+        wheelRegulation.items ?? [
+            "• O singură încercare per client valid.",
+            "• Premiul este valabil 30 de zile din momentul câștigului.",
+            "• Se aplică doar la rezervări noi efectuate pe DaCars.",
+            "• Nu se cumulează cu alte oferte sau reduceri.",
+        ];
+    const wheelLogoAlt = wheelAssets.logoAlt ?? t("wheel.assets.logoAlt", { fallback: "Siglă DaCars" });
+    const loadNoPeriodMessage = wheelErrors.loadNoPeriod ?? t("wheel.errors.loadNoPeriod", {
+        fallback: "Momentan nu există o perioadă activă pentru roata norocului.",
+    });
+    const loadNoPrizesMessage = wheelErrors.loadNoPrizes ?? t("wheel.errors.loadNoPrizes", {
+        fallback: "Momentan nu sunt premii disponibile pentru această perioadă.",
+    });
+    const loadFailedMessage = wheelErrors.loadFailed ?? t("wheel.errors.loadFailed", {
+        fallback: "Nu am putut încărca premiile. Te rugăm să încerci din nou mai târziu.",
+    });
+    const unavailableMessage = wheelErrors.unavailable ?? t("wheel.errors.unavailable", {
+        fallback: "Roata nu este disponibilă în acest moment.",
+    });
+    const activePrizeMessage = wheelErrors.activePrize ?? t("wheel.errors.activePrize", {
+        fallback:
+            "Ai deja un premiu activ câștigat la Roata Norocului. Îl poți folosi la checkout în următoarele 30 de zile.",
+    });
+    const nameRequiredMessage = wheelErrors.nameRequired ?? t("wheel.errors.nameRequired", {
+        fallback: "Introdu numele complet pentru a putea salva premiul.",
+    });
+    const phoneRequiredMessage = wheelErrors.phoneRequired ?? t("wheel.errors.phoneRequired", {
+        fallback: "Introdu un număr de telefon valid.",
+    });
+    const noPrizeMessage = wheelErrors.noPrize ?? t("wheel.errors.noPrize", {
+        fallback: "Nu am putut determina un premiu în acest moment. Încearcă din nou mai târziu.",
+    });
+    const saveFallbackMessage = wheelErrors.saveFallback ?? t("wheel.errors.saveFallback", {
+        fallback: "A apărut o eroare la salvarea premiului. Te rugăm să încerci din nou.",
+    });
+
     useEffect(() => {
         mountedRef.current = true;
         return () => {
@@ -336,7 +421,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 setActivePeriod(null);
                 setPrizes([]);
                 setAvailabilityStatus("unavailable");
-                setLoadError("Momentan nu există o perioadă activă pentru roata norocului.");
+                setLoadError(loadNoPeriodMessage);
                 return;
             }
 
@@ -356,7 +441,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
 
             if (prizeItems.length === 0) {
                 setAvailabilityStatus("unavailable");
-                setLoadError("Momentan nu sunt premii disponibile pentru această perioadă.");
+                setLoadError(loadNoPrizesMessage);
             } else {
                 setAvailabilityStatus("available");
             }
@@ -365,13 +450,13 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
             setPrizes([]);
             setActivePeriod(null);
             setAvailabilityStatus("unknown");
-            setLoadError("Nu am putut încărca premiile. Te rugăm să încerci din nou mai târziu.");
+            setLoadError(loadFailedMessage);
         } finally {
             if (mountedRef.current) {
                 setIsLoading(false);
             }
         }
-    }, []);
+    }, [loadFailedMessage, loadNoPeriodMessage, loadNoPrizesMessage]);
 
     useEffect(() => {
         fetchWheelData();
@@ -456,24 +541,22 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
             if (!mountedRef.current) return;
             setSaveState("error");
             setSaveError(
-                error instanceof Error
-                    ? error.message
-                    : "A apărut o eroare la salvarea premiului. Te rugăm să încerci din nou.",
+                error instanceof Error ? error.message : saveFallbackMessage,
             );
         }
-    }, [clientIp]);
+    }, [clientIp, saveFallbackMessage]);
 
     const handleSpin = () => {
         if (isSpinning || spinsLeft <= 0) return;
         if (isLoading) return;
         if (prizes.length === 0) {
-            setFormError("Roata nu este disponibilă în acest moment.");
+            setFormError(unavailableMessage);
             return;
         }
 
         if (hasStoredPrize) {
             setFormError(
-                "Ai deja un premiu activ câștigat la Roata Norocului. Îl poți folosi la checkout în următoarele 30 de zile.",
+                activePrizeMessage,
             );
             return;
         }
@@ -482,18 +565,24 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         const sanitizedPhone = customerPhone.trim();
 
         if (!sanitizedName) {
-            setFormError("Introdu numele complet pentru a putea salva premiul.");
+            setFormError(
+                nameRequiredMessage,
+            );
             return;
         }
 
         if (!sanitizedPhone) {
-            setFormError("Introdu un număr de telefon valid.");
+            setFormError(
+                phoneRequiredMessage,
+            );
             return;
         }
 
         const winningIndex = pickWeightedIndex();
         if (winningIndex < 0) {
-            setFormError("Nu am putut determina un premiu în acest moment. Încearcă din nou mai târziu.");
+            setFormError(
+                noPrizeMessage,
+            );
             return;
         }
 
@@ -593,7 +682,9 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                     </div>
 
                     <h3 className="mb-4 font-['Poppins'] text-2xl font-bold text-[#1A3661]">
-                        {selectedPrize.type === "try_again" ? "Mai încearcă!" : "Felicitări! 🎉"}
+                        {selectedPrize.type === "try_again"
+                            ? wheelWinner.tryAgainHeading ?? t("wheel.winner.tryAgainHeading", { fallback: "Mai încearcă!" })
+                            : wheelWinner.successHeading ?? t("wheel.winner.successHeading", { fallback: "Felicitări! 🎉" })}
                     </h3>
 
                     <div
@@ -604,20 +695,35 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                             <p className="mb-1 font-['Poppins'] text-2xl font-semibold">{selectedPrizeAmountLabel}</p>
                         )}
                         <p className="font-['DM Sans']">
-                            {selectedPrize.description || "Continuă procesul de rezervare pentru a afla mai multe detalii."}
+                            {selectedPrize.description ||
+                                wheelWinner.descriptionFallback ??
+                                    t("wheel.winner.descriptionFallback", {
+                                        fallback: "Continuă procesul de rezervare pentru a afla mai multe detalii.",
+                                    })}
                         </p>
                     </div>
 
                     <div className="space-y-4">
                         <p className="font-['DM Sans'] text-sm text-[#191919]/70">
                             {selectedPrize.type === "try_again"
-                                ? "Nu te descuraja! Ai primit o nouă șansă să câștigi un premiu și mai bun."
-                                : "Am înregistrat premiul tău și vei primi detalii prin SMS sau email în scurt timp."}
+                                ? wheelWinner.tryAgainMessage ??
+                                    t("wheel.winner.tryAgainMessage", {
+                                        fallback:
+                                            "Nu te descuraja! Ai primit o nouă șansă să câștigi un premiu și mai bun.",
+                                    })
+                                : wheelWinner.successMessage ??
+                                    t("wheel.winner.successMessage", {
+                                        fallback:
+                                            "Am înregistrat premiul tău și vei primi detalii prin SMS sau email în scurt timp.",
+                                    })}
                         </p>
 
                         {selectedPrize.type !== "try_again" && storedPrizeExpiryLabel && (
                             <p className="font-['DM Sans'] text-xs text-[#191919]/60">
-                                Premiul este valabil până la {storedPrizeExpiryLabel} și îl vei găsi salvat și în pagina de checkout.
+                                {(wheelWinner.expiry ??
+                                    t("wheel.winner.expiry", {
+                                        fallback: "Premiul este valabil până la {{expiry}} și îl vei găsi salvat și în pagina de checkout.",
+                                    })).replace("{{expiry}}", storedPrizeExpiryLabel)}
                             </p>
                         )}
 
@@ -625,26 +731,38 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                             <div className="space-y-3">
                                 {saveState === "saving" && (
                                     <div className="flex items-center justify-center gap-2 rounded-xl bg-jade/10 px-4 py-3 text-sm text-jade">
-                                        <Loader2 className="h-4 w-4 animate-spin" /> Salvăm premiul tău...
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        {wheelWinner.saving ??
+                                            t("wheel.winner.saving", { fallback: "Salvăm premiul tău..." })}
                                     </div>
                                 )}
                                 {saveState === "success" && (
                                     <div className="rounded-xl border border-jade/30 bg-white px-4 py-3 text-sm text-jade">
-                                        Premiul a fost salvat cu succes! Echipa DaCars îți va trimite toate detaliile curând.
+                                        {wheelWinner.saved ??
+                                            t("wheel.winner.saved", {
+                                                fallback:
+                                                    "Premiul a fost salvat cu succes! Echipa DaCars îți va trimite toate detaliile curând.",
+                                            })}
                                     </div>
                                 )}
                                 {saveState === "error" && (
                                     <div className="space-y-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                                         <div className="flex items-start gap-2">
                                             <AlertCircle className="mt-0.5 h-4 w-4" />
-                                            <p>{saveError ?? "Nu am putut salva premiul. Încearcă din nou."}</p>
+                                            <p>
+                                                {saveError ??
+                                                    wheelWinner.saveError ??
+                                                        t("wheel.winner.saveError", {
+                                                            fallback: "Nu am putut salva premiul. Încearcă din nou.",
+                                                        })}
+                                            </p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={handleRetrySave}
                                             className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700"
                                         >
-                                            Reîncearcă salvarea
+                                            {retrySaveLabel}
                                         </button>
                                     </div>
                                 )}
@@ -664,14 +782,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                                         }}
                                         className="flex-1 rounded-lg bg-[#1E7149] py-3 font-['DM Sans'] font-semibold text-white transition hover:bg-[#195C3B]"
                                     >
-                                        Încearcă din nou
+                                        {tryAgainLabel}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handleCloseModal}
                                         className="flex-1 rounded-lg border-2 border-gray-300 py-3 font-['DM Sans'] font-semibold text-[#191919] transition hover:bg-gray-50"
                                     >
-                                        Închide
+                                        {wheelWinner.close ?? closeButtonLabel}
                                     </button>
                                 </>
                             ) : (
@@ -681,14 +799,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                                         onClick={() => setShowModal(false)}
                                         className="flex-1 rounded-lg bg-[#1E7149] py-3 font-['DM Sans'] font-semibold text-white transition hover:bg-[#195C3B]"
                                     >
-                                        Continuă rezervarea
+                                        {continueLabel}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handleCloseModal}
                                         className="flex-1 rounded-lg border-2 border-gray-300 py-3 font-['DM Sans'] font-semibold text-[#191919] transition hover:bg-gray-50"
                                     >
-                                        Închide
+                                        {wheelWinner.close ?? closeButtonLabel}
                                     </button>
                                 </>
                             )}
@@ -769,7 +887,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         <div className="absolute left-1/2 top-1/2 z-10 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-[#1E7149] bg-white shadow-lg">
                             <Image
                                 src="/images/dacars-icon.svg"
-                                alt="Siglă DaCars"
+                                alt={wheelLogoAlt}
                                 width={32}
                                 height={32}
                                 className="h-8 w-8"
@@ -786,7 +904,12 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         {!isLoading && prizes.length === 0 && (
                             <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-white/80 text-center text-gray-600">
                                 <AlertCircle className="h-8 w-8 text-[#1A3661]" />
-                                <p>Roata nu este disponibilă momentan.</p>
+                                <p>
+                                    {wheelErrors.unavailable ??
+                                        t("wheel.errors.unavailable", {
+                                            fallback: "Roata nu este disponibilă momentan.",
+                                        })}
+                                </p>
                             </div>
                         )}
                     </div>
@@ -795,18 +918,21 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
 
             <div className="max-w-md text-center lg:text-left">
                 <h3 className="mb-6 font-['Poppins'] text-2xl font-bold text-white lg:text-3xl">
-                    Câștigă premii exclusive!
+                    {wheelWinner.title ?? t("wheel.winner.title", { fallback: "Câștigă premii exclusive!" })}
                 </h3>
                 <p className="mb-8 font-['DM Sans'] text-white/80 leading-relaxed">
                     {activePeriod
-                        ? `Perioada activă: ${activePeriod.name}. Completează datele tale, învârte roata și vezi ce premiu primești!`
-                        : "Completează datele tale, învârte roata și vezi ce premiu primești!"}
+                        ? t("wheel.activePeriod", {
+                              values: { period: activePeriod.name },
+                              fallback: activePeriodTemplate.replace("{{period}}", activePeriod.name),
+                          })
+                        : t("wheel.defaultPrompt", { fallback: defaultPrompt })}
                 </p>
 
                 <div className="mb-6 space-y-4">
                     <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
                         <p className="font-['DM Sans'] text-white">
-                            Încercări rămase: <span className="font-bold text-[#1E7149]">{spinsLeft}</span>
+                            {spinsLeftLabel}: <span className="font-bold text-[#1E7149]">{spinsLeft}</span>
                         </p>
                     </div>
 
@@ -814,7 +940,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         <div className="grid gap-4">
                             <div className="text-left">
                                 <label htmlFor="wheel-name" className="mb-1 block font-['DM Sans'] text-sm font-medium text-white/80">
-                                    Nume complet
+                                    {wheelForm.name?.label ?? "Nume complet"}
                                 </label>
                                 <input
                                     id="wheel-name"
@@ -823,13 +949,13 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                                         setCustomerName(event.target.value);
                                         if (formError) setFormError(null);
                                     }}
-                                    placeholder="Ex. Maria Popescu"
+                                    placeholder={wheelForm.name?.placeholder ?? "Ex. Maria Popescu"}
                                     className="w-full rounded-lg border border-transparent px-4 py-3 font-['DM Sans'] text-sm text-[#191919] shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#1E7149]"
                                 />
                             </div>
                             <div className="text-left">
                                 <label htmlFor="wheel-phone" className="mb-1 block font-['DM Sans'] text-sm font-medium text-white/80">
-                                    Telefon
+                                    {wheelForm.phone?.label ?? "Telefon"}
                                 </label>
                                 <input
                                     id="wheel-phone"
@@ -838,12 +964,13 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                                         setCustomerPhone(event.target.value);
                                         if (formError) setFormError(null);
                                     }}
-                                    placeholder="Ex. +40 712 345 678"
+                                    placeholder={wheelForm.phone?.placeholder ?? "Ex. +40 712 345 678"}
                                     className="w-full rounded-lg border border-transparent px-4 py-3 font-['DM Sans'] text-sm text-[#191919] shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#1E7149]"
                                 />
                             </div>
                             <p className="font-['DM Sans'] text-xs text-white/70">
-                                Datele sunt necesare pentru validarea premiului conform regulamentului DaCars.
+                                {wheelForm.consent ??
+                                    "Datele sunt necesare pentru validarea premiului conform regulamentului DaCars."}
                             </p>
                         </div>
                     </div>
@@ -853,17 +980,17 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                             <Gift className="mt-1 h-5 w-5 text-[#1E7149]" />
                             <div className="space-y-1">
                                 <p className="font-['Poppins'] text-sm font-semibold text-[#1A3661]">
-                                    Premiu activ din Roata Norocului
+                                    {storedPrizeTitle}
                                 </p>
                                 <p className="font-['DM Sans'] text-xs text-[#1A3661]/80">
-                                    Ai câștigat <span className="font-semibold text-[#1A3661]">{storedPrizeRecord.prize.title}</span>
-                                    {storedPrizeAmountLabel ? ` — ${storedPrizeAmountLabel}` : ""}. Premiul este valabil până la
-                                    {" "}
-                                    <span className="font-semibold text-[#1A3661]">
-                                        {storedPrizeExpiryLabel ?? "expirarea automată"}
-                                    </span>
-                                    {" "}
-                                    și îl poți folosi direct în pagina de checkout.
+                                    {storedPrizePrefix}
+                                    <span className="font-semibold text-[#1A3661]">{storedPrizeRecord.prize.title}</span>
+                                    {storedPrizeAmountLabel ? ` — ${storedPrizeAmountLabel}` : ""}
+                                    {storedPrizeSuffix
+                                        .replace(
+                                            "{{expiry}}",
+                                            storedPrizeExpiryLabel ?? storedPrizeNoExpiry,
+                                        )}
                                 </p>
                             </div>
                         </div>
@@ -896,19 +1023,19 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 >
                     {isSpinning ? (
                         <>
-                            <RotateCcw className="mr-3 h-6 w-6 animate-spin" /> Se învârte...
+                            <RotateCcw className="mr-3 h-6 w-6 animate-spin" /> {spinningLabel}
                         </>
                     ) : hasStoredPrize ? (
                         <>
-                            <Gift className="mr-3 h-6 w-6" /> Premiu activ
+                            <Gift className="mr-3 h-6 w-6" /> {activePrizeLabel}
                         </>
                     ) : spinsLeft <= 0 ? (
                         <>
-                            <Gift className="mr-3 h-6 w-6" /> Încercări epuizate
+                            <Gift className="mr-3 h-6 w-6" /> {outOfSpinsLabel}
                         </>
                     ) : (
                         <>
-                            <Gift className="mr-3 h-6 w-6" /> Învârte Roata
+                            <Gift className="mr-3 h-6 w-6" /> {spinButtonLabel}
                         </>
                     )}
                 </button>
@@ -919,17 +1046,16 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         onClick={resetSpins}
                         className="mx-auto flex items-center justify-center rounded-xl bg-white/20 px-6 py-3 font-['DM Sans'] font-semibold text-white transition hover:bg-white/30 lg:mx-0"
                     >
-                        <RotateCcw className="mr-2 h-5 w-5" /> Resetează (Demo)
+                        <RotateCcw className="mr-2 h-5 w-5" /> {resetLabel}
                     </button>
                 )}
 
                 <div className="mt-6 rounded-2xl bg-white/10 p-6 backdrop-blur-sm">
-                    <h4 className="mb-3 font-['Poppins'] text-lg font-semibold text-white">Regulament rapid:</h4>
+                    <h4 className="mb-3 font-['Poppins'] text-lg font-semibold text-white">{regulationTitle}</h4>
                     <ul className="space-y-2 font-['DM Sans'] text-sm text-white/80">
-                        <li>• O singură încercare per client valid.</li>
-                        <li>• Premiul este valabil 30 de zile din momentul câștigului.</li>
-                        <li>• Se aplică doar la rezervări noi efectuate pe DaCars.</li>
-                        <li>• Nu se cumulează cu alte oferte sau reduceri.</li>
+                        {regulationItems.map((item, index) => (
+                            <li key={`${item}-${index}`}>{item}</li>
+                        ))}
                     </ul>
                 </div>
             </div>
@@ -947,7 +1073,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                     <button
                         type="button"
                         onClick={handleClosePopup}
-                        aria-label="Închide popup"
+                        aria-label={closeButtonLabel}
                         className="absolute right-6 top-6 rounded-full bg-white/20 p-2 text-white transition hover:bg-white/30"
                     >
                         <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -959,12 +1085,16 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         <div className="mb-6 flex items-center justify-center gap-3">
                             <Sparkles className="h-8 w-8 text-[#1E7149]" />
                             <h2 className="font-['Poppins'] text-3xl font-bold text-white lg:text-4xl">
-                                Bun venit la DaCars!
+                                {wheelPopup.title ?? t("wheel.popup.title", { fallback: "Bun venit la DaCars!" })}
                             </h2>
                             <Sparkles className="h-8 w-8 text-[#1E7149]" />
                         </div>
                         <p className="mx-auto max-w-3xl font-['DM Sans'] text-xl text-white/80">
-                            Înainte să explorezi ofertele noastre, încearcă-ți norocul la Roata Norocului și câștigă beneficii exclusive!
+                            {wheelPopup.description ??
+                                t("wheel.popup.description", {
+                                    fallback:
+                                        "Înainte să explorezi ofertele noastre, încearcă-ți norocul la Roata Norocului și câștigă beneficii exclusive!",
+                                })}
                         </p>
                     </div>
 
@@ -982,12 +1112,16 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                     <div className="mb-6 flex items-center justify-center gap-3">
                         <Sparkles className="h-8 w-8 text-[#1E7149]" />
                         <h2 className="font-['Poppins'] text-3xl font-bold text-white lg:text-4xl">
-                            Roata Norocului DaCars
+                            {wheelSection.title ?? t("wheel.section.title", { fallback: "Roata Norocului DaCars" })}
                         </h2>
                         <Sparkles className="h-8 w-8 text-[#1E7149]" />
                     </div>
                     <p className="mx-auto max-w-3xl font-['DM Sans'] text-xl text-white/80">
-                        Încearcă-ți norocul și câștigă reduceri exclusive și beneficii speciale pentru următoarea ta rezervare!
+                        {wheelSection.description ??
+                            t("wheel.section.description", {
+                                fallback:
+                                    "Încearcă-ți norocul și câștigă reduceri exclusive și beneficii speciale pentru următoarea ta rezervare!",
+                            })}
                     </p>
                 </div>
 

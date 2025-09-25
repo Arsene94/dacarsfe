@@ -5,6 +5,7 @@ import PageTransition from "../components/PageTransition";
 import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { LocaleProvider } from "@/context/LocaleContext";
 import { DM_Sans, Poppins } from "next/font/google";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
@@ -74,15 +75,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-screen bg-white">
-        <AuthProvider>
-          <BookingProvider>
-            <Header />
-            <main>
-              <PageTransition>{children}</PageTransition>
-            </main>
-            <Footer />
-          </BookingProvider>
-        </AuthProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            <BookingProvider>
+              <Header />
+              <main>
+                <PageTransition>{children}</PageTransition>
+              </main>
+              <Footer />
+            </BookingProvider>
+          </AuthProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

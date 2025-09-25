@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "title": "Complete fleet of rental cars",
+    "description": "Explore the entire DaCars fleet and quickly filter the cars available for rent.",
+    "keywords": [
+      "car rental fleet",
+      "available cars Bucharest",
+      "rent a car without deposit",
+      "online car booking",
+      "DaCars car fleet"
+    ],
+    "openGraphTitle": "Complete fleet of rental cars | DaCars Rent a Car",
+    "breadcrumb": {
+      "home": "Home",
+      "fleet": "Car fleet"
+    }
+  },
+  "structuredData": {
+    "itemList": {
+      "name": "DaCars rental fleet",
+      "description": "All vehicles available for rent from DaCars, updated in real time.",
+      "currency": "EUR"
+    }
+  },
+  "fallbacks": {
+    "carName": "Vehicle",
+    "unknownValue": "—",
+    "category": "Category #{{id}}"
+  },
+  "labels": {
+    "passengers": "{{count}} passengers"
+  },
+  "header": {
+    "title": {
+      "main": "Our",
+      "highlight": "complete fleet"
+    },
+    "description": "Browse every available vehicle and choose the right one for your trip."
+  },
+  "search": {
+    "placeholder": "Search for a car...",
+    "ariaLabel": "Search for a car",
+    "sortAria": "Sort cars",
+    "sortOptions": {
+      "cheapest": "Lowest price first",
+      "mostExpensive": "Highest price first"
+    },
+    "filtersButton": "Filters",
+    "filtersAria": "Toggle filters"
+  },
+  "filters": {
+    "labels": {
+      "category": "Category",
+      "type": "Car type",
+      "transmission": "Transmission",
+      "fuel": "Fuel"
+    },
+    "allOption": "All",
+    "reset": "Reset filters",
+    "resetAria": "Reset filters",
+    "removeAria": "Remove filter {{filter}}"
+  },
+  "results": {
+    "label": "cars found"
+  },
+  "list": {
+    "empty": {
+      "title": "No cars found",
+      "description": "Try adjusting the filters or search for something else."
+    }
+  },
+  "card": {
+    "pricing": {
+      "noDepositLabel": "No deposit",
+      "withDepositLabel": "With deposit",
+      "perDay": "/day",
+      "daysTotal": "x {{days}} days ="
+    },
+    "actions": {
+      "reserveNoDeposit": "Book without deposit",
+      "reserveWithDeposit": "Book with deposit",
+      "reserveAria": "Book"
+    }
+  },
+  "cta": {
+    "title": "Can't find the right car?",
+    "description": "Get in touch and we'll help you find the perfect option for your trip.",
+    "primary": "Book now",
+    "secondary": "Contact us"
+  }
+}

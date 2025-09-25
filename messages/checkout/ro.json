@@ -1,0 +1,126 @@
+{
+  "metadata": {
+    "title": "Finalizează rezervarea",
+    "description": "Completează datele și opțiunile pentru a confirma rezervarea mașinii alese de la DaCars.",
+    "openGraphTitle": "Finalizează rezervarea ta | DaCars Rent a Car"
+  },
+  "fallbacks": {
+    "carName": "Autovehicul"
+  },
+  "hero": {
+    "title": "Rezervă-ți",
+    "highlight": "mașina",
+    "subtitle": "Completează formularul și te întâlnim la aeroport în sub 5 minute!"
+  },
+  "emptyState": {
+    "message": "Trebuie să completezi datele și să selectezi mașina."
+  },
+  "form": {
+    "personalInfo": {
+      "title": "Informații personale",
+      "labels": {
+        "name": "Nume *",
+        "email": "Email *",
+        "phone": "Telefon",
+        "flight": "Zbor (opțional)"
+      },
+      "placeholders": {
+        "name": "Introduceți numele complet",
+        "email": "nume@email.com",
+        "phone": "+40 722 123 456",
+        "flight": "Ex: RO123 sau Blue Air 456"
+      },
+      "searchPlaceholder": "Caută țară...",
+      "feedback": {
+        "noResults": "Nu s-au găsit țări",
+        "invalid": "Formatul numărului de telefon nu este valid pentru {{country}}",
+        "example": "Exemplu: {{prefix}} 722 123 456"
+      }
+    },
+    "discount": {
+      "title": "Cod de reducere",
+      "placeholder": "Ex: WHEEL10",
+      "remove": "Șterge cod",
+      "validate": "Validează",
+      "ariaLabel": "Validează codul",
+      "messages": {
+        "success": "Reducere aplicată!",
+        "error": "Eroare la validarea codului."
+      }
+    },
+    "services": {
+      "title": "Servicii Extra",
+      "empty": "Niciun serviciu disponibil"
+    },
+    "reservationDetails": {
+      "title": "Detalii rezervare",
+      "labels": {
+        "pickupDate": "Dată ridicare *",
+        "pickupTime": "Oră ridicare *",
+        "dropoffDate": "Dată returnare *",
+        "dropoffTime": "Oră returnare *"
+      },
+      "errors": {
+        "invalidDates": "Data de returnare trebuie să fie mai mare decât data de ridicare.",
+        "unavailable": "Mașina nu este disponibilă în perioada selectată."
+      }
+    },
+    "deposit": {
+      "title": "Garanție",
+      "without": "Fără garanție",
+      "with": "Cu garanție"
+    },
+    "submit": {
+      "label": "Finalizează rezervarea",
+      "processing": "Se procesează...",
+      "ariaLabel": "Finalizează rezervarea"
+    }
+  },
+  "wheelPrize": {
+    "title": "Premiu Roata Norocului",
+    "validUntil": "Valabil până la {{date}}.",
+    "validDefault": "Valabil 30 de zile de la momentul câștigării.",
+    "note": "Beneficiul va fi aplicat de echipa DaCars când finalizezi rezervarea.",
+    "savings": "Economisești {{amount}}€ la această rezervare.",
+    "amount": {
+      "percentage": "Reducere de {{amount}}%",
+      "fixed": "Discount de {{amount}} RON",
+      "extraDay": {
+        "one": "Bonus de {{amount}} zi",
+        "other": "Bonus de {{amount}} zile"
+      },
+      "other": "{{amount}}"
+    }
+  },
+  "summary": {
+    "title": "Rezumatul rezervării",
+    "car": "Mașină:",
+    "from": "De la:",
+    "to": "Până la:",
+    "location": "Locație:",
+    "locationName": "Aeroport Henri Coandă, Otopeni",
+    "overviewLabel": "Sumar:",
+    "days": {
+      "one": "{{count}} zi",
+      "other": "{{count}} zile"
+    },
+    "subtotal": "Subtotal:",
+    "servicesLabel": "Servicii:",
+    "wheelPrizeLabel": "Premiu Roata Norocului:",
+    "preDiscount": "Total înainte de reducere:",
+    "discount": "Reducere:",
+    "total": "Total:",
+    "deposit": "Garanție:",
+    "depositNote": "(+{{amount}}€ garanție)"
+  },
+  "footer": {
+    "disclaimer": "*Preț final, fără taxe ascunse",
+    "includesTitle": "Include:",
+    "includes": [
+      "✓ Predare în sub 5 minute",
+      "✓ Disponibilitate 24/7",
+      "✓ Fără taxe ascunse",
+      "✓ Modificare gratuită"
+    ]
+  }
+}

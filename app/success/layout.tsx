@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { buildMetadata } from "@/lib/seo/meta";
+import successMessagesRo from "@/messages/success/ro.json";
+
+type SuccessMessages = typeof successMessagesRo;
+
+const successMessages: SuccessMessages = successMessagesRo;
+const { metadata: successMetadataMessages } = successMessages;
 
 const successMetadata = buildMetadata({
-    title: "Rezervarea ta este confirmată",
-    description: "Vezi sumarul rezervării tale DaCars, detaliile de preluare și datele de contact ale echipei noastre.",
+    title: successMetadataMessages.title,
+    description: successMetadataMessages.description,
     path: "/success",
-    openGraphTitle: "Rezervarea ta este confirmată | DaCars Rent a Car",
+    openGraphTitle: successMetadataMessages.openGraphTitle,
     noIndex: true,
 });
 

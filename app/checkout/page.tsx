@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useEffect, useState, useRef, useMemo} from "react";
+import React, {useEffect, useState, useRef, useMemo, useCallback} from "react";
 import {useRouter} from "next/navigation";
 import {Calendar, Gift, Plane, User,} from "lucide-react";
 import {Label} from "@/components/ui/label";
@@ -9,7 +9,7 @@ import {useBooking} from "@/context/BookingContext";
 import { apiClient } from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
-import { describeWheelPrizeAmount, formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
+import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
 import {
     getStoredWheelPrize,
     isStoredWheelPrizeActive,
@@ -19,6 +19,10 @@ import {
 import {ApiCar, Car} from "@/types/car";
 import {ReservationFormData, Service, type DiscountValidationPayload} from "@/types/reservation";
 import {Button} from "@/components/ui/button";
+import { useTranslations } from "@/lib/i18n/useTranslations";
+import checkoutMessagesRo from "@/messages/checkout/ro.json";
+
+type CheckoutMessages = typeof checkoutMessagesRo;
 
 const STORAGE_BASE = "https://backend.dacars.ro/storage";
 
@@ -44,17 +48,6 @@ const parsePrice = (raw: unknown): number => {
     } catch {
         return 0;
     }
-};
-
-const priceFormatter = new Intl.NumberFormat("ro-RO", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-});
-
-const formatPrice = (value: number): string => {
-    if (!Number.isFinite(value)) return "0";
-    const normalized = Math.round(value * 100) / 100;
-    return priceFormatter.format(normalized);
 };
 
 const parseMaybeNumber = (value: unknown): number | null => {
@@ -155,7 +148,7 @@ const resolveReservationIdentifier = (record: unknown): string | null => {
     );
 };
 
-const mapApiCarToCar = (apiCar: ApiCar): Car => {
+const mapApiCarToCar = (apiCar: ApiCar, fallbackName: string): Car => {
     const extras = apiCar as Record<string, unknown>;
     const imageCandidates: Array<unknown> = [
         apiCar.image_preview,
@@ -230,7 +223,7 @@ const mapApiCarToCar = (apiCar: ApiCar): Car => {
         name:
             typeof apiCar.name === "string" && apiCar.name.trim().length > 0
                 ? apiCar.name
-                : "Autovehicul",
+                : fallbackName,
         type: typeName,
         typeId,
         image: toImageUrl((imageCandidate as string | null | undefined) ?? null),
@@ -272,6 +265,108 @@ const mapApiCarToCar = (apiCar: ApiCar): Car => {
 const ReservationPage = () => {
     const router = useRouter();
     const { booking, setBooking } = useBooking();
+    const { t, locale, messages } = useTranslations<CheckoutMessages>("checkout");
+
+    const fallbackCarName = useMemo(() => t("fallbacks.carName"), [t]);
+    const resolvedNumberLocale = locale === "ro" ? "ro-RO" : "en-US";
+    const resolvedDateLocale = locale === "ro" ? "ro-RO" : "en-GB";
+    const priceFormatter = useMemo(
+        () =>
+            new Intl.NumberFormat(resolvedNumberLocale, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+            }),
+        [resolvedNumberLocale],
+    );
+    const summaryDateFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(resolvedDateLocale, {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+            }),
+        [resolvedDateLocale],
+    );
+    const wheelPrizeDateFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(resolvedDateLocale, {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+            }),
+        [resolvedDateLocale],
+    );
+    const formatCurrency = useCallback(
+        (value: number) => {
+            if (!Number.isFinite(value)) return "0";
+            const normalized = Math.round(value * 100) / 100;
+            return priceFormatter.format(normalized);
+        },
+        [priceFormatter],
+    );
+    const formatSummaryDate = useCallback(
+        (value: string) => {
+            if (!value) return "";
+            const parsed = Date.parse(value);
+            if (Number.isNaN(parsed)) return value;
+            try {
+                return summaryDateFormatter.format(new Date(parsed));
+            } catch {
+                return new Date(parsed).toLocaleDateString(resolvedDateLocale);
+            }
+        },
+        [resolvedDateLocale, summaryDateFormatter],
+    );
+    const formatWheelPrizeDate = useCallback(
+        (value?: string | null) => {
+            if (!value) return null;
+            const parsed = Date.parse(value);
+            if (Number.isNaN(parsed)) return null;
+            try {
+                return wheelPrizeDateFormatter.format(new Date(parsed));
+            } catch {
+                return new Date(parsed).toLocaleDateString(resolvedDateLocale);
+            }
+        },
+        [resolvedDateLocale, wheelPrizeDateFormatter],
+    );
+    const mapApiCar = useCallback(
+        (car: ApiCar) => mapApiCarToCar(car, fallbackCarName),
+        [fallbackCarName],
+    );
+    const discountMessages = useMemo(
+        () => ({
+            success: t("form.discount.messages.success"),
+            error: t("form.discount.messages.error"),
+        }),
+        [t],
+    );
+    const phoneNoResultsLabel = useMemo(
+        () => t("form.personalInfo.feedback.noResults"),
+        [t],
+    );
+    const phoneInvalidMessage = useCallback(
+        (country: string) =>
+            t("form.personalInfo.feedback.invalid", {
+                values: { country },
+            }),
+        [t],
+    );
+    const phoneExampleLabel = useCallback(
+        (prefix: string) =>
+            t("form.personalInfo.feedback.example", {
+                values: { prefix },
+            }),
+        [t],
+    );
+    const includesList = messages.footer?.includes ?? [];
+    const getDayLabel = useCallback(
+        (count: number) =>
+            t(`summary.days.${count === 1 ? "one" : "other"}` as const, {
+                values: { count },
+            }),
+        [t],
+    );
 
     const storedDiscount =
         typeof window !== "undefined"
@@ -376,17 +471,19 @@ const ReservationPage = () => {
     }, []);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [availabilityError, setAvailabilityError] = useState<string | null>(null);
-    const [discountStatus, setDiscountStatus] = useState<{
+    type AvailabilityErrorKey = "invalidDates" | "unavailable";
+    const [availabilityErrorKey, setAvailabilityErrorKey] = useState<AvailabilityErrorKey | null>(null);
+    type DiscountStatus = {
         isValid: boolean;
-        message: string;
+        messageKey: "success" | "error";
         discount: string;
         discountCasco: string;
-    } | null>(
+    };
+    const [discountStatus, setDiscountStatus] = useState<DiscountStatus | null>(
         storedDiscount
             ? {
                 isValid: true,
-                message: "Reducere aplicată!",
+                messageKey: "success",
                 discount: String(storedDiscount.discount ?? "0"),
                 discountCasco: String(storedDiscount.discountCasco ?? "0"),
             }
@@ -414,13 +511,11 @@ const ReservationPage = () => {
                 const start = new Date(`${rental_start_date}T${rental_start_time || "00:00"}`);
                 const end = new Date(`${rental_end_date}T${rental_end_time || "00:00"}`);
                 if (end <= start) {
-                    setAvailabilityError(
-                        "Data de returnare trebuie să fie mai mare decât data de ridicare.",
-                    );
+                    setAvailabilityErrorKey("invalidDates");
                     return;
                 }
             }
-            setAvailabilityError(null);
+            setAvailabilityErrorKey(null);
         }
     };
 
@@ -457,9 +552,7 @@ const ReservationPage = () => {
             const end = `${formData.rental_end_date}T${formData.rental_end_time}`;
 
             if (new Date(end) <= new Date(start)) {
-                setAvailabilityError(
-                    "Data de returnare trebuie să fie mai mare decât data de ridicare.",
-                );
+                setAvailabilityErrorKey("invalidDates");
                 return;
             }
 
@@ -471,12 +564,10 @@ const ReservationPage = () => {
             const checkAvailability = await apiClient.checkCarAvailability(payload);
 
             if (checkAvailability.available === false) {
-                setAvailabilityError(
-                    "Mașina nu este disponibilă în perioada selectată.",
-                );
+                setAvailabilityErrorKey("unavailable");
                 return;
             }
-            setAvailabilityError(null);
+            setAvailabilityErrorKey(null);
             setBooking({
                 startDate: start,
                 endDate: end,
@@ -492,7 +583,7 @@ const ReservationPage = () => {
                 if (ignore) return;
                 const apiCar = extractFirstCar(info);
                 if (!apiCar) return;
-                const mapped = mapApiCarToCar(apiCar);
+                const mapped = mapApiCar(apiCar);
                 const resolvedCar: Car = {
                     ...mapped,
                     available:
@@ -533,10 +624,50 @@ const ReservationPage = () => {
     const selectedCar = booking.selectedCar;
 
     const hasWheelPrize = wheelPrizeRecord ? isStoredWheelPrizeActive(wheelPrizeRecord) : false;
-    const wheelPrizeAmountLabel = hasWheelPrize ? describeWheelPrizeAmount(wheelPrizeRecord?.prize) : null;
-    const wheelPrizeExpiryLabel = hasWheelPrize
-        ? formatWheelPrizeExpiry(wheelPrizeRecord?.expires_at)
-        : null;
+    const wheelPrizeAmountLabel = useMemo(() => {
+        if (!hasWheelPrize) return null;
+        const prize = wheelPrizeRecord?.prize ?? null;
+        const fallback = describeWheelPrizeAmount(prize);
+        if (!prize) return fallback;
+        const amount = parseMaybeNumber(prize.amount);
+        const type = typeof prize.type === "string" ? prize.type : "other";
+        if (type === "percentage_discount" && amount !== null) {
+            return t("wheelPrize.amount.percentage", {
+                values: { amount: priceFormatter.format(amount) },
+                fallback: fallback ?? undefined,
+            });
+        }
+        if ((type === "fixed_discount" || type === "voucher") && amount !== null) {
+            return t("wheelPrize.amount.fixed", {
+                values: { amount: priceFormatter.format(amount) },
+                fallback: fallback ?? undefined,
+            });
+        }
+        if (type === "extra_rental_day" && amount !== null) {
+            const normalized = Math.round(amount * 100) / 100;
+            const formatted = Number.isInteger(normalized)
+                ? String(normalized)
+                : priceFormatter.format(normalized);
+            const key = normalized === 1 ? "one" : "other";
+            return t(`wheelPrize.amount.extraDay.${key}` as const, {
+                values: { amount: formatted },
+                fallback: fallback ?? undefined,
+            });
+        }
+        if (amount !== null) {
+            return t("wheelPrize.amount.other", {
+                values: { amount: priceFormatter.format(amount) },
+                fallback: fallback ?? undefined,
+            });
+        }
+        return fallback ?? null;
+    }, [hasWheelPrize, priceFormatter, t, wheelPrizeRecord]);
+    const wheelPrizeExpiryLabel = useMemo(() => {
+        if (!hasWheelPrize) return null;
+        return formatWheelPrizeDate(
+            wheelPrizeRecord?.expires_at ?? wheelPrizeRecord?.expiration_date ?? null,
+        );
+    }, [formatWheelPrizeDate, hasWheelPrize, wheelPrizeRecord]);
 
     const baseTotal = useMemo(() => {
         const selectedCar = booking.selectedCar;
@@ -632,6 +763,19 @@ const ReservationPage = () => {
         perDayPrice,
         baseTotal,
     ]);
+    const wheelPrizeApplied = wheelPrizeDiscount > 0;
+    const wheelPrizeValidityMessage = useMemo(() => {
+        if (!hasWheelPrize) return null;
+        return wheelPrizeExpiryLabel
+            ? t("wheelPrize.validUntil", { values: { date: wheelPrizeExpiryLabel } })
+            : t("wheelPrize.validDefault");
+    }, [hasWheelPrize, t, wheelPrizeExpiryLabel]);
+    const wheelPrizeSavingsMessage = useMemo(() => {
+        if (!wheelPrizeApplied || wheelPrizeDiscount <= 0) return null;
+        return t("wheelPrize.savings", {
+            values: { amount: formatCurrency(wheelPrizeDiscount) },
+        });
+    }, [formatCurrency, t, wheelPrizeApplied, wheelPrizeDiscount]);
 
     const handleDiscountCodeValidation = async (
         force = false,
@@ -664,13 +808,13 @@ const ReservationPage = () => {
             if (data.valid === false) {
                 setDiscountStatus({
                     isValid: false,
-                    message: "Eroare la validarea codului.",
+                    messageKey: "error",
                     discount: "0",
                     discountCasco: "0",
                 });
             } else {
                 const discountCar = data.data
-                    ? mapApiCarToCar(data.data)
+                    ? mapApiCar(data.data)
                     : carForValidation;
                 setBooking({
                     startDate: booking?.startDate,
@@ -692,7 +836,7 @@ const ReservationPage = () => {
                 localStorage.setItem("originalCar", JSON.stringify(carForValidation));
                 setDiscountStatus({
                     isValid: true,
-                    message: "Reducere aplicată!",
+                    messageKey: "success",
                     discount: String(discountData.discount),
                     discountCasco: String(discountData.discountCasco),
                 });
@@ -700,7 +844,7 @@ const ReservationPage = () => {
         } catch (error) {
             setDiscountStatus({
                 isValid: false,
-                message: "Eroare la validarea codului.",
+                messageKey: "error",
                 discount: "0",
                 discountCasco: "0",
             });
@@ -756,14 +900,14 @@ const ReservationPage = () => {
         return (
             <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
                 <p className="text-xl font-dm-sans text-gray-600">
-                    Trebuie să completezi datele și să selectezi mașina.
+                    {t("emptyState.message")}
                 </p>
             </div>
         );
     }
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (availabilityError || !booking.startDate || !booking.endDate) return;
+        if (availabilityErrorKey || !booking.startDate || !booking.endDate) return;
         setIsSubmitting(true);
 
         const subTotal = baseTotal;
@@ -854,17 +998,16 @@ const ReservationPage = () => {
     const originalTotal = discountStatus?.isValid
         ? totalBeforeWheel + discountAmount
         : totalBeforeWheel;
-    const wheelPrizeApplied = wheelPrizeDiscount > 0;
 
     return (
         <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="text-center mb-12">
                     <h1 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
-                        Rezervă-ți <span className="text-jade">mașina</span>
+                        {t("hero.title")} <span className="text-jade">{t("hero.highlight")}</span>
                     </h1>
                     <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto">
-                        Completează formularul și te întâlnim la aeroport în sub 5 minute!
+                        {t("hero.subtitle")}
                     </p>
                 </div>
 
@@ -877,7 +1020,7 @@ const ReservationPage = () => {
                                 <div>
                                     <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">
                                         <User className="h-6 w-6 text-jade mr-3" />
-                                        Informații personale
+                                        {t("form.personalInfo.title")}
                                     </h3>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -886,7 +1029,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-name"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Nume *
+                                                {t("form.personalInfo.labels.name")}
                                             </Label>
                                             <input
                                                 id="reservation-name"
@@ -896,7 +1039,7 @@ const ReservationPage = () => {
                                                 onChange={handleInputChange}
                                                 required
                                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                                                placeholder="Introduceți numele complet"
+                                                placeholder={t("form.personalInfo.placeholders.name")}
                                             />
                                         </div>
 
@@ -905,7 +1048,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-email"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Email *
+                                                {t("form.personalInfo.labels.email")}
                                             </Label>
                                             <input
                                                 id="reservation-email"
@@ -915,7 +1058,7 @@ const ReservationPage = () => {
                                                 onChange={handleInputChange}
                                                 required
                                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                                                placeholder="nume@email.com"
+                                                placeholder={t("form.personalInfo.placeholders.email")}
                                             />
                                         </div>
 
@@ -925,7 +1068,12 @@ const ReservationPage = () => {
                                                 setFormData((prev) => ({ ...prev, customer_phone: val }))
                                             }
                                             required
-                                            placeholder="+40 722 123 456"
+                                            placeholder={t("form.personalInfo.placeholders.phone")}
+                                            label={t("form.personalInfo.labels.phone")}
+                                            searchPlaceholder={t("form.personalInfo.searchPlaceholder")}
+                                            noResultsLabel={phoneNoResultsLabel}
+                                            invalidFormatMessage={phoneInvalidMessage}
+                                            exampleLabel={phoneExampleLabel}
                                         />
                                       </div>
                                         <div className="mt-6">
@@ -934,7 +1082,7 @@ const ReservationPage = () => {
                                             className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                         >
                                             <Plane className="h-4 w-4 inline text-jade mr-1" />
-                                            Zbor (opțional)
+                                            {t("form.personalInfo.labels.flight")}
                                         </Label>
                                         <input
                                             id="reservation-flight"
@@ -943,7 +1091,7 @@ const ReservationPage = () => {
                                             value={formData.flight_number}
                                             onChange={handleInputChange}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
-                                            placeholder="Ex: RO123 sau Blue Air 456"
+                                            placeholder={t("form.personalInfo.placeholders.flight")}
                                         />
                                     </div>
 
@@ -954,7 +1102,7 @@ const ReservationPage = () => {
                                             className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                         >
                                             <Gift className="h-4 w-4 inline text-jade mr-1" />
-                                            Cod de reducere
+                                            {t("form.discount.title")}
                                         </Label>
                                         {discountStatus?.isValid ? (
                                             <div className="flex flex-col gap-2 md:flex-row md:items-center">
@@ -965,14 +1113,14 @@ const ReservationPage = () => {
                                                     value={formData.coupon_code}
                                                     disabled={true}
                                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 md:w-auto md:flex-1"
-                                                    placeholder="Ex: WHEEL10"
+                                                    placeholder={t("form.discount.placeholder")}
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={handleRemoveDiscountCode}
                                                     className="w-full px-4 py-3 bg-red-500 text-white font-dm-sans font-semibold rounded-lg hover:bg-red-600 transition-all duration-300 md:w-auto"
                                                 >
-                                                    Șterge cod
+                                                    {t("form.discount.remove")}
                                                 </button>
                                             </div>
                                         ) : (
@@ -984,7 +1132,7 @@ const ReservationPage = () => {
                                                     value={formData.coupon_code}
                                                     onChange={handleInputChange}
                                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 md:w-auto md:flex-1"
-                                                    placeholder="Ex: WHEEL10"
+                                                    placeholder={t("form.discount.placeholder")}
                                                 />
                                                 <Button
                                                     type="button"
@@ -993,12 +1141,12 @@ const ReservationPage = () => {
                                                         isValidatingCode || !formData.coupon_code.trim()
                                                     }
                                                     className="w-full px-4 py-3 bg-berkeley text-white font-dm-sans font-semibold rounded-lg hover:bg-berkeley/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 md:w-auto"
-                                                    aria-label="Validează codul"
+                                                    aria-label={t("form.discount.ariaLabel")}
                                                 >
                                                     {isValidatingCode ? (
                                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                                                     ) : (
-                                                        "Validează"
+                                                        t("form.discount.validate")
                                                     )}
                                                 </Button>
                                             </div>
@@ -1013,7 +1161,7 @@ const ReservationPage = () => {
                                                 }`}
                                             >
                                                 <p className="text-sm font-dm-sans font-semibold">
-                                                    {discountStatus.message}
+                                                    {discountMessages[discountStatus.messageKey]}
                                                 </p>
                                             </div>
                                         )}
@@ -1024,7 +1172,7 @@ const ReservationPage = () => {
                                 <div>
                                     <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">
                                         <Gift className="h-6 w-6 text-jade mr-3" />
-                                        Servicii Extra
+                                        {t("form.services.title")}
                                     </h3>
                                     <div className="space-y-4">
                                         {services.map((service) => (
@@ -1043,13 +1191,13 @@ const ReservationPage = () => {
                                                     htmlFor={`service-${service.id}`}
                                                     className="font-dm-sans text-gray-700 font-normal"
                                                 >
-                                                    {service.name} - {service.price}€
+                                                    {service.name} - {formatCurrency(service.price)}€
                                                 </Label>
                                             </div>
                                         ))}
                                         {services.length === 0 && (
                                             <p className="font-dm-sans text-gray-600">
-                                                Niciun serviciu disponibil
+                                                {t("form.services.empty")}
                                             </p>
                                         )}
                                     </div>
@@ -1059,7 +1207,7 @@ const ReservationPage = () => {
                                 <div>
                                     <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">
                                         <Calendar className="h-6 w-6 text-jade mr-3" />
-                                        Detalii rezervare
+                                        {t("form.reservationDetails.title")}
                                     </h3>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1068,7 +1216,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-pickup-date"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Dată ridicare *
+                                                {t("form.reservationDetails.labels.pickupDate")}
                                             </Label>
                                               <input
                                                   id="reservation-pickup-date"
@@ -1078,7 +1226,7 @@ const ReservationPage = () => {
                                                   onChange={handleInputChange}
                                                   required
                                                   min={new Date().toISOString().split("T")[0]}
-                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityError ? "border-red-500" : "border-gray-300"}`}
+                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityErrorKey ? "border-red-500" : "border-gray-300"}`}
                                               />
                                         </div>
 
@@ -1087,7 +1235,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-pickup-time"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Oră ridicare *
+                                                {t("form.reservationDetails.labels.pickupTime")}
                                             </Label>
                                               <input
                                                   id="reservation-pickup-time"
@@ -1096,7 +1244,7 @@ const ReservationPage = () => {
                                                   value={formData.rental_start_time}
                                                   onChange={handleInputChange}
                                                   required
-                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityError ? "border-red-500" : "border-gray-300"}`}
+                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityErrorKey ? "border-red-500" : "border-gray-300"}`}
                                                   />
                                         </div>
 
@@ -1105,7 +1253,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-dropoff-date"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Dată returnare *
+                                                {t("form.reservationDetails.labels.dropoffDate")}
                                             </Label>
                                               <input
                                                   id="reservation-dropoff-date"
@@ -1118,7 +1266,7 @@ const ReservationPage = () => {
                                                       formData.rental_start_date ||
                                                       new Date().toISOString().split("T")[0]
                                                   }
-                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityError ? "border-red-500" : "border-gray-300"}`}
+                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityErrorKey ? "border-red-500" : "border-gray-300"}`}
                                               />
                                         </div>
 
@@ -1127,7 +1275,7 @@ const ReservationPage = () => {
                                                 htmlFor="reservation-dropoff-time"
                                                 className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                             >
-                                                Oră returnare *
+                                                {t("form.reservationDetails.labels.dropoffTime")}
                                             </Label>
                                               <input
                                                   id="reservation-dropoff-time"
@@ -1136,12 +1284,12 @@ const ReservationPage = () => {
                                                   value={formData.rental_end_time}
                                                   onChange={handleInputChange}
                                                   required
-                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityError ? "border-red-500" : "border-gray-300"}`}
+                                                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300 ${availabilityErrorKey ? "border-red-500" : "border-gray-300"}`}
                                               />
                                         </div>
                                       </div>
-                                      {availabilityError && (
-                                          <p className="text-red-500 text-sm mt-2">{availabilityError}</p>
+                                      {availabilityErrorKey && (
+                                          <p className="text-red-500 text-sm mt-2">{t(`form.reservationDetails.errors.${availabilityErrorKey}`)}</p>
                                       )}
 
                                       <div className="mt-6">
@@ -1149,7 +1297,7 @@ const ReservationPage = () => {
                                           htmlFor="deposit-none"
                                           className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2"
                                         >
-                                          Garanție
+                                          {t("form.deposit.title")}
                                         </Label>
                                         <div className="flex items-center space-x-6">
                                           <div className="flex items-center space-x-2">
@@ -1165,7 +1313,7 @@ const ReservationPage = () => {
                                               htmlFor="deposit-none"
                                               className="font-dm-sans text-gray-700 font-normal"
                                             >
-                                              Fără garanție
+                                              {t("form.deposit.without")}
                                             </Label>
                                           </div>
                                           <div className="flex items-center space-x-2">
@@ -1181,7 +1329,7 @@ const ReservationPage = () => {
                                               htmlFor="deposit-yes"
                                               className="font-dm-sans text-gray-700 font-normal"
                                             >
-                                              Cu garanție
+                                              {t("form.deposit.with")}
                                             </Label>
                                           </div>
                                         </div>
@@ -1190,17 +1338,17 @@ const ReservationPage = () => {
 
                                 <button
                                     type="submit"
-                                    disabled={isSubmitting || !!availabilityError}
+                                    disabled={isSubmitting || !!availabilityErrorKey}
                                     className="w-full py-4 bg-jade text-white font-dm-sans font-semibold text-lg rounded-lg hover:bg-jade/90 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg flex items-center justify-center space-x-2"
-                                    aria-label="Finalizează rezervarea"
+                                    aria-label={t("form.submit.ariaLabel")}
                                 >
                                     {isSubmitting ? (
                                         <>
                                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                            <span>Se procesează...</span>
+                                            <span>{t("form.submit.processing")}</span>
                                         </>
                                     ) : (
-                                        <span>Finalizează rezervarea</span>
+                                        <span>{t("form.submit.label")}</span>
                                     )}
                                 </button>
                             </form>
@@ -1211,7 +1359,7 @@ const ReservationPage = () => {
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-2xl shadow-lg p-8 sticky top-24">
                             <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6">
-                                Rezumatul rezervării
+                                {t("summary.title")}
                             </h3>
 
                             {hasWheelPrize && wheelPrizeRecord && (
@@ -1220,21 +1368,18 @@ const ReservationPage = () => {
                                         <Gift className="mt-1 h-5 w-5 text-jade" />
                                         <div className="space-y-1">
                                             <p className="font-poppins text-sm font-semibold text-berkeley">
-                                                Premiu Roata Norocului
+                                                {t("wheelPrize.title")}
                                             </p>
                                             <p className="font-dm-sans text-sm text-gray-700">
                                                 {wheelPrizeRecord.prize.title}
                                                 {wheelPrizeAmountLabel ? ` — ${wheelPrizeAmountLabel}` : ""}
                                             </p>
                                             <p className="font-dm-sans text-xs text-gray-600">
-                                                {wheelPrizeExpiryLabel
-                                                    ? `Valabil până la ${wheelPrizeExpiryLabel}.`
-                                                    : "Valabil 30 de zile de la momentul câștigării."}
-                                                {" "}Beneficiul va fi aplicat de echipa DaCars când finalizezi rezervarea.
+                                                {wheelPrizeValidityMessage} {t("wheelPrize.note")}
                                             </p>
-                                            {wheelPrizeApplied && wheelPrizeDiscount > 0 && (
+                                            {wheelPrizeSavingsMessage && (
                                                 <p className="font-dm-sans text-xs font-semibold text-jade">
-                                                    Economisești {formatPrice(wheelPrizeDiscount)}€ la această rezervare.
+                                                    {wheelPrizeSavingsMessage}
                                                 </p>
                                             )}
                                         </div>
@@ -1245,7 +1390,7 @@ const ReservationPage = () => {
                             <div className="space-y-4 mb-6">
                                 {selectedCar && (
                                     <div className="flex justify-between items-center">
-                                        <span className="font-dm-sans text-gray-600">Mașină:</span>
+                                        <span className="font-dm-sans text-gray-600">{t("summary.car")}</span>
                                         <span className="font-dm-sans font-semibold text-berkeley">
                       {selectedCar.name.split(" - ")[0]}
                     </span>
@@ -1254,30 +1399,26 @@ const ReservationPage = () => {
 
                                 {formData.rental_start_date && (
                                     <div className="flex justify-between items-center">
-                                        <span className="font-dm-sans text-gray-600">De la:</span>
+                                        <span className="font-dm-sans text-gray-600">{t("summary.from")}</span>
                                         <span className="font-dm-sans font-semibold text-berkeley">
-                      {new Date(formData.rental_start_date).toLocaleDateString(
-                          "ro-RO",
-                      )} {formData.rental_start_time}
+                      {formatSummaryDate(formData.rental_start_date)} {formData.rental_start_time}
                     </span>
                                     </div>
                                 )}
 
                                 {formData.rental_end_date && (
                                     <div className="flex justify-between items-center">
-                                        <span className="font-dm-sans text-gray-600">Până la:</span>
+                                        <span className="font-dm-sans text-gray-600">{t("summary.to")}</span>
                                         <span className="font-dm-sans font-semibold text-berkeley">
-                      {new Date(formData.rental_end_date).toLocaleDateString(
-                          "ro-RO",
-                      )} {formData.rental_end_time}
+                      {formatSummaryDate(formData.rental_end_date)} {formData.rental_end_time}
                     </span>
                                     </div>
                                 )}
 
                                 <div className="flex justify-between items-center">
-                                    <span className="font-dm-sans text-gray-600">Locație:</span>
+                                    <span className="font-dm-sans text-gray-600">{t("summary.location")}</span>
                                     <span className="font-dm-sans font-semibold text-berkeley text-end">
-                    Aeroport Henri Coandă, Otopeni
+                    {t("summary.locationName")}
                   </span>
                                 </div>
                             </div>
@@ -1285,22 +1426,22 @@ const ReservationPage = () => {
                             <div className="border-t border-gray-200 pt-4">
                                 <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
-                    Sumar:
+                    {t("summary.overviewLabel")}
                   </span>
                                     <span className="font-poppins font-bold text-jade">
-                    {booking.withDeposit ? booking.selectedCar.rental_rate : booking.selectedCar.rental_rate_casco}€ x {booking.selectedCar.days} zile
+                    {(booking.withDeposit ? selectedCar?.rental_rate : selectedCar?.rental_rate_casco) ?? ""}€ x {getDayLabel(selectedCar?.days ?? rentalDays)}
                   </span>
                                 </div>
                                 <div className="flex justify-between items-center mb-2">
-                                    <span className="font-dm-sans text-gray-600">Subtotal:</span>
+                                    <span className="font-dm-sans text-gray-600">{t("summary.subtotal")}</span>
                                     <span className="font-dm-sans font-semibold text-berkeley">
-                                        {formatPrice(rentalSubtotal)}€
+                                        {formatCurrency(rentalSubtotal)}€
                                     </span>
                                 </div>
                                 {selectedServices.length > 0 && (
                                     <div className="mt-2">
                     <span className="font-poppins font-semibold text-berkeley">
-                      Servicii:
+                      {t("summary.servicesLabel")}
                     </span>
                                         <div className="mt-2 space-y-1">
                                             {selectedServices.map((service) => (
@@ -1312,7 +1453,7 @@ const ReservationPage = () => {
                             {service.name}
                           </span>
                                                     <span className="font-dm-sans font-semibold text-berkeley">
-                            {service.price}€
+                            {formatCurrency(service.price)}€
                           </span>
                                                 </div>
                                             ))}
@@ -1323,10 +1464,10 @@ const ReservationPage = () => {
                                 {wheelPrizeApplied && wheelPrizeDiscount > 0 && (
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="font-dm-sans text-jade">
-                                            Premiu Roata Norocului:
+                                            {t("summary.wheelPrizeLabel")}
                                         </span>
                                         <span className="font-dm-sans text-jade">
-                                            -{formatPrice(wheelPrizeDiscount)}€
+                                            -{formatCurrency(wheelPrizeDiscount)}€
                                         </span>
                                     </div>
                                 )}
@@ -1334,29 +1475,31 @@ const ReservationPage = () => {
                                     <>
                                         <div className="flex justify-between items-center mb-2">
                         <span className="font-dm-sans text-gray-600">
-                          Total înainte de reducere:
+                          {t("summary.preDiscount")}
                         </span>
                                             <span className="font-dm-sans text-gray-600">
-                                                {formatPrice(originalTotal)}€
+                                                {formatCurrency(originalTotal)}€
                         </span>
                                         </div>
                                         <div className="flex justify-between items-center mb-2">
-                                            <span className="font-dm-sans text-jade">Reducere:</span>
+                                            <span className="font-dm-sans text-jade">{t("summary.discount")}</span>
                                             <span className="font-dm-sans text-jade">
-                                                -{formatPrice(discountAmount)}€
+                                                -{formatCurrency(discountAmount)}€
                         </span>
                                         </div>
                                     </>
                                 )}
                                 <div className="flex justify-between items-center text-xl">
                   <span className="font-poppins font-semibold text-berkeley">
-                    Total:
+                    {t("summary.total")}
                   </span>
                                     <span className="font-poppins font-bold text-jade">
-                                        {formatPrice(total)}€
+                                        {formatCurrency(total)}€
                                         {booking.withDeposit && selectedCar && (
                                             <span className="text-xs font-dm-sans text-gray-600">
-                                                (+{selectedCar.deposit}€ garanție)
+                                                {t("summary.depositNote", {
+                                                    values: { amount: formatCurrency(selectedCar.deposit) },
+                                                })}
                                             </span>
                                         )}
                   </span>
@@ -1364,28 +1507,27 @@ const ReservationPage = () => {
                                 {booking.withDeposit && selectedCar && (
                                     <div className="flex justify-between items-center text-xl">
                         <span className="font-poppins font-semibold text-berkeley">
-                            Garanție:
+                            {t("form.deposit.title")}:
                         </span>
                                         <span className="font-poppins font-bold text-jade">
-                                            {selectedCar.deposit}€
+                                            {formatCurrency(selectedCar.deposit)}€
                                         </span>
                                     </div>
                                 )}
                                 <p className="text-sm text-gray-600 font-dm-sans mt-2">
-                                    *Preț final, fără taxe ascunse
+                                    {t("footer.disclaimer")}
                                 </p>
                             </div>
 
                             {/* Benefits reminder */}
                             <div className="mt-8 p-4 bg-jade/5 rounded-lg">
                                 <h4 className="font-poppins font-semibold text-berkeley mb-2">
-                                    Include:
+                                    {t("footer.includesTitle")}
                                 </h4>
                                 <ul className="text-sm font-dm-sans text-gray-600 space-y-1">
-                                    <li>✓ Predare în sub 5 minute</li>
-                                    <li>✓ Disponibilitate 24/7</li>
-                                    <li>✓ Fără taxe ascunse</li>
-                                    <li>✓ Modificare gratuită</li>
+                                    {includesList.map((item) => (
+                                        <li key={item}>{item}</li>
+                                    ))}
                                 </ul>
                             </div>
                         </div>

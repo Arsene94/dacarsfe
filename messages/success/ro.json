@@ -1,0 +1,106 @@
+{
+  "metadata": {
+    "title": "Rezervarea ta este confirmată",
+    "description": "Vezi sumarul rezervării tale DaCars, detaliile de preluare și datele de contact ale echipei noastre.",
+    "openGraphTitle": "Rezervarea ta este confirmată | DaCars Rent a Car"
+  },
+  "loading": "Se încarcă detaliile rezervării...",
+  "fallbacks": {
+    "guestName": "client DaCars"
+  },
+  "header": {
+    "title": {
+      "prefix": "Rezervarea este",
+      "highlight": "confirmată!"
+    },
+    "thanks": "Mulțumim, {{name}}! Mașina ta te așteaptă la aeroport.",
+    "tagline": "Ne vedem acasă!",
+    "reference": "Rezervarea {{id}}"
+  },
+  "wheelPrize": {
+    "title": "Premiu Roata Norocului",
+    "applied": "Ai folosit premiul {{title}}{{amount}}.",
+    "amountSuffix": " — {{amount}}",
+    "savings": "Economisești {{amount}}€ la această rezervare.",
+    "expiry": {
+      "withDate": "Premiul este valabil până la {{date}}.",
+      "fallback": "Premiul rămâne valabil 30 de zile de la momentul câștigării."
+    },
+    "amount": {
+      "percentage_discount": "Reducere de {{amount}}%",
+      "fixed_discount": "Discount de {{amount}} RON",
+      "extra_rental_day": {
+        "one": "Bonus de {{amount}} zi",
+        "other": "Bonus de {{amount}} zile"
+      },
+      "other": "{{amount}}"
+    }
+  },
+  "summary": {
+    "title": "Detaliile rezervării tale",
+    "car": {
+      "title": "Mașina ta"
+    },
+    "period": {
+      "title": "Perioada",
+      "pickupLabel": "Ridicare:",
+      "dropoffLabel": "Returnare:"
+    },
+    "location": {
+      "title": "Locația",
+      "options": {
+        "aeroport": "Aeroport Henri Coandă, Otopeni",
+        "city": "Centrul Bucureștiului",
+        "other": "Altă locație"
+      }
+    },
+    "pricing": {
+      "title": "Costul total",
+      "subtotalLabel": "Subtotal:",
+      "servicesLabel": "Servicii:",
+      "wheelPrizeLabel": "Premiu Roata Norocului:",
+      "discountLabel": "Reducere:",
+      "totalLabel": "Total:",
+      "note": "*Preț final, fără taxe ascunse"
+    },
+    "flight": {
+      "title": "Zborul tău"
+    }
+  },
+  "instructions": {
+    "title": "Ce urmează?",
+    "steps": [
+      {
+        "title": "La aterizare",
+        "description": "Sună-ne la numărul de telefon când ieși din terminal"
+      },
+      {
+        "title": "Te întâlnim",
+        "description": "Ajungem la tine în parcarea de scurtă durată în sub 5 minute"
+      },
+      {
+        "title": "Drum bun!",
+        "description": "Primești cheile și poți pleca acasă în siguranță"
+      }
+    ]
+  },
+  "contact": {
+    "title": "Contactează-ne oricând:",
+    "phone": "+40 722 123 456",
+    "ariaLabel": "Sună la {{phone}}",
+    "availability": "Disponibili 24/7 pentru urgențe"
+  },
+  "actions": {
+    "print": {
+      "label": "Printează detaliile",
+      "aria": "Printează detaliile rezervării"
+    },
+    "home": {
+      "label": "Înapoi Acasă",
+      "aria": "Înapoi Acasă"
+    }
+  },
+  "footer": {
+    "message": "Vei primi o confirmare prin email cu toate detaliile rezervării."
+  }
+}
