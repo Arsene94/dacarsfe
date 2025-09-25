@@ -425,7 +425,7 @@ const ReservationPage = () => {
 
         const fetchServices = async () => {
             try {
-                const res = await apiClient.getServices();
+                const res = await apiClient.getServices({ language: locale });
                 const mapped = extractList(res)
                     .map<Service | null>((entry) => {
                         if (!entry || typeof entry !== "object") return null;
@@ -601,11 +601,14 @@ const ReservationPage = () => {
                 selectedCar: booking.selectedCar,
             });
             try {
-                const info = await apiClient.getCarForBooking({
-                    car_id: booking.selectedCar.id,
-                    start_date: start,
-                    end_date: end,
-                });
+                const info = await apiClient.getCarForBooking(
+                    {
+                        car_id: booking.selectedCar.id,
+                        start_date: start,
+                        end_date: end,
+                    },
+                    locale,
+                );
                 if (ignore) return;
                 const apiCar = extractFirstCar(info);
                 if (!apiCar) return;
@@ -725,11 +728,14 @@ const ReservationPage = () => {
                     return;
                 }
 
-                const info = await apiClient.getCarForBooking({
-                    car_id: booking.selectedCar.id,
-                    start_date: start,
-                    end_date: end,
-                });
+                const info = await apiClient.getCarForBooking(
+                    {
+                        car_id: booking.selectedCar.id,
+                        start_date: start,
+                        end_date: end,
+                    },
+                    locale,
+                );
                 if (cancelled) {
                     return;
                 }

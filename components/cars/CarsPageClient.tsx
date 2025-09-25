@@ -14,7 +14,7 @@ import { extractList } from "@/lib/apiResponse";
 import { createVehicleItemListStructuredData } from "@/lib/seo/structuredData";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { useBooking } from "@/context/BookingContext";
-import { ApiCar, Car, CarCategory } from "@/types/car";
+import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 
 const siteUrl = siteMetadata.siteUrl;
@@ -227,7 +227,7 @@ const FleetPage = () => {
         setLoading(p => (currentPage === 1 ? true : p));
 
         // construim payload doar cu valori „reale”
-        const payload: Record<string, string | number | undefined> = {
+        const payload: CarSearchUiPayload = {
             start_date: startDate || undefined,
             end_date: endDate || undefined,
             car_type: carTypeParam || undefined,
@@ -245,7 +245,7 @@ const FleetPage = () => {
         if (searchTerm)                   payload.search = searchTerm;
 
         try {
-            const resp = await apiClient.getCarsByDateCriteria(payload);
+            const resp = await apiClient.getCarsByDateCriteria(payload, locale);
             const list = extractList(resp);
 
             const mapped = list.map(mapCar);
@@ -290,7 +290,18 @@ const FleetPage = () => {
             setLoading(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentPage, sortBy, filters, searchTerm, startDate, endDate, carTypeParam, location, mapCar]);
+    }, [
+        currentPage,
+        sortBy,
+        filters,
+        searchTerm,
+        startDate,
+        endDate,
+        carTypeParam,
+        location,
+        locale,
+        mapCar,
+    ]);
 
     // trigger fetch la montare + când se schimbă pagina
     useEffect(() => { fetchCars(); }, [fetchCars]);
@@ -305,7 +316,7 @@ const FleetPage = () => {
     useEffect(() => {
         (async () => {
             try {
-                const res = await apiClient.getCarCategories();
+                const res = await apiClient.getCarCategories({ language: locale });
                 const list = extractList(res);
                 let cat: CarCategory[] = [];
 
@@ -342,7 +353,7 @@ const FleetPage = () => {
                 console.error(e);
             }
         })();
-    }, [formatCategoryFallback]);
+    }, [formatCategoryFallback, locale]);
 
     // url sync cu filtrele
     useEffect(() => {

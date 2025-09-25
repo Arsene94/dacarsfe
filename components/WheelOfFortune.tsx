@@ -243,7 +243,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     const spinTimeoutRef = useRef<number | null>(null);
     const ipFetchRef = useRef(false);
 
-    const { messages, t } = useTranslations("home");
+    const { messages, t, locale } = useTranslations("home");
     const wheelMessages = (messages.wheel ?? {}) as Record<string, unknown>;
     const wheelPopup = (wheelMessages.popup ?? {}) as { title?: string; description?: string };
     const wheelSection = (wheelMessages.section ?? {}) as { title?: string; description?: string };
@@ -430,7 +430,11 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
 
             setActivePeriod(period);
 
-            const prizesResponse = await apiClient.getWheelOfFortunes({ period_id: period.id, limit: 100 });
+            const prizesResponse = await apiClient.getWheelOfFortunes({
+                period_id: period.id,
+                limit: 100,
+                language: locale,
+            });
             const prizeItems = extractArray(prizesResponse)
                 .map(mapPrize)
                 .filter((item): item is WheelPrize => item !== null)
@@ -459,7 +463,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 setIsLoading(false);
             }
         }
-    }, [loadFailedMessage, loadNoPeriodMessage, loadNoPrizesMessage]);
+    }, [loadFailedMessage, loadNoPeriodMessage, loadNoPrizesMessage, locale]);
 
     useEffect(() => {
         fetchWheelData();

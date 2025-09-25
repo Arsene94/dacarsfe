@@ -116,7 +116,7 @@ const HeroSection = () => {
         let cancelled = false;
 
         const getCategories = async () => {
-            const res = await apiClient.getCarCategories();
+            const res = await apiClient.getCarCategories({ language: locale });
             const list = extractList<Record<string, unknown>>(
                 res as ApiListResult<Record<string, unknown>>,
             );
