@@ -651,7 +651,8 @@ const ReservationPage = () => {
         }
         previousLocaleRef.current = locale;
 
-        if (!booking.selectedCar) {
+        const selectedCar = booking.selectedCar;
+        if (!selectedCar) {
             return;
         }
 
@@ -674,13 +675,13 @@ const ReservationPage = () => {
 
                     const payload: DiscountValidationPayload = {
                         code: couponCode,
-                        car_id: booking.selectedCar.id,
+                        car_id: selectedCar.id,
                         start_date: start,
                         end_date: end,
-                        price: booking.selectedCar.rental_rate ?? 0,
-                        price_casco: booking.selectedCar.rental_rate_casco ?? 0,
-                        total_price: booking.selectedCar.total_deposit ?? 0,
-                        total_price_casco: booking.selectedCar.total_without_deposit ?? 0,
+                        price: selectedCar.rental_rate ?? 0,
+                        price_casco: selectedCar.rental_rate_casco ?? 0,
+                        total_price: selectedCar.total_deposit ?? 0,
+                        total_price_casco: selectedCar.total_without_deposit ?? 0,
                     };
 
                     const data = await apiClient.validateDiscountCode(payload);
@@ -688,7 +689,7 @@ const ReservationPage = () => {
                         return;
                     }
 
-                    setOriginalCar(booking.selectedCar);
+                    setOriginalCar(selectedCar);
 
                     if (data.valid === false) {
                         setDiscountStatus({
@@ -700,7 +701,7 @@ const ReservationPage = () => {
                         return;
                     }
 
-                    const discountCar = data.data ? mapApiCar(data.data) : booking.selectedCar;
+                    const discountCar = data.data ? mapApiCar(data.data) : selectedCar;
                     setBooking({
                         startDate: start,
                         endDate: end,
@@ -718,7 +719,7 @@ const ReservationPage = () => {
                         discountCasco: coupon?.discount_casco ?? "0",
                     };
                     localStorage.setItem("discount", JSON.stringify(discountData));
-                    localStorage.setItem("originalCar", JSON.stringify(booking.selectedCar));
+                    localStorage.setItem("originalCar", JSON.stringify(selectedCar));
                     setDiscountStatus({
                         isValid: true,
                         messageKey: "success",
@@ -730,7 +731,7 @@ const ReservationPage = () => {
 
                 const info = await apiClient.getCarForBooking(
                     {
-                        car_id: booking.selectedCar.id,
+                        car_id: selectedCar.id,
                         start_date: start,
                         end_date: end,
                     },
