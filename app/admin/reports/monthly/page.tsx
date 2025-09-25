@@ -6,63 +6,58 @@ import {
   formatNumber,
   formatPercent,
 } from "@/components/admin/reports/formatters";
+import { getMonthlyReport } from "@/lib/reports/server";
 
-const monthlyRevenue = [
-  { label: "Oct", current: 198000, previous: 176500 },
-  { label: "Nov", current: 205400, previous: 182900 },
-  { label: "Dec", current: 228100, previous: 210800 },
-  { label: "Ian", current: 182000, previous: 165000 },
-  { label: "Feb", current: 195400, previous: 172500 },
-  { label: "Mar", current: 221300, previous: 204000 },
-];
+const DEFAULT_MONTH = "2025-03";
 
-const monthlyKpis = {
-  revenue: { current: 221300, previous: 195400 },
-  bookings: { current: 612, previous: 574 },
-  avgDailyRate: { current: 67, previous: 63 },
-  utilization: { current: 0.82, previous: 0.77 },
-};
+const capitalize = (value: string): string =>
+  value.length > 0 ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 
-const customerMix = [
-  { label: "Corporate", current: 38, previous: 34 },
-  { label: "B2C site", current: 44, previous: 46 },
-  { label: "OTA", current: 11, previous: 13 },
-  { label: "Parteneri locali", current: 7, previous: 7 },
-];
+export default async function MonthlyReportPage() {
+  const report = await getMonthlyReport({ month: DEFAULT_MONTH });
 
-const costStructure = [
-  { label: "Flotă & leasing", current: 42, previous: 44 },
-  { label: "Mentenanță", current: 18, previous: 19 },
-  { label: "Marketing", current: 16, previous: 14 },
-  { label: "Personal", current: 24, previous: 23 },
-];
-
-export default function MonthlyReportPage() {
   const revenueDelta = calculateVariation(
-    monthlyKpis.revenue.current,
-    monthlyKpis.revenue.previous,
+    report.financials.revenue.current,
+    report.financials.revenue.previous,
   );
-  const bookingDelta = calculateVariation(
-    monthlyKpis.bookings.current,
-    monthlyKpis.bookings.previous,
+  const profitDelta = calculateVariation(
+    report.financials.net_profit.current,
+    report.financials.net_profit.previous,
   );
-  const rateDelta = calculateVariation(
-    monthlyKpis.avgDailyRate.current,
-    monthlyKpis.avgDailyRate.previous,
+  const adrDelta = calculateVariation(
+    report.financials.avg_daily_rate.current,
+    report.financials.avg_daily_rate.previous,
   );
   const utilizationDelta = calculateVariation(
-    monthlyKpis.utilization.current,
-    monthlyKpis.utilization.previous,
+    report.financials.fleet_utilization.current,
+    report.financials.fleet_utilization.previous,
   );
+  const bookingsDelta = calculateVariation(
+    report.bookings.total.current,
+    report.bookings.total.previous,
+  );
+
+  const costStructureData = [
+    { label: "Flotă", ...report.cost_structure.fleet },
+    { label: "Operațiuni", ...report.cost_structure.operations },
+    { label: "Marketing", ...report.cost_structure.marketing },
+    { label: "Alte costuri", ...report.cost_structure.other },
+  ].map((item) => ({
+    label: item.label,
+    current: item.current,
+    previous: item.previous,
+  }));
 
   return (
     <div className="space-y-10 p-6 md:p-10">
       <header className="space-y-2">
         <p className="text-sm uppercase tracking-wide text-jade">Raport lunar</p>
-        <h1 className="text-3xl font-semibold text-slate-900">Martie 2025 – performanță și comparații</h1>
+        <h1 className="text-3xl font-semibold text-slate-900">
+          {report.period.label} – performanță și comparații
+        </h1>
         <p className="max-w-3xl text-base text-slate-600">
-          Analiza lunară centralizează veniturile, volumul rezervărilor și costurile operaționale. Datele sunt puse în context
-          prin raportarea la luna precedentă și la aceeași lună din 2024, pentru a evidenția trendurile reale.
+          Analiza lunară centralizează veniturile, volumul rezervărilor și costurile operaționale. Datele sunt
+          comparate cu {report.period.comparison.label} pentru a evidenția trendurile reale.
         </p>
       </header>
 
@@ -70,55 +65,55 @@ export default function MonthlyReportPage() {
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Venituri totale</h2>
           <p className="mt-3 text-3xl font-semibold text-slate-900">
-            {formatCurrency(monthlyKpis.revenue.current)}
+            {formatCurrency(report.financials.revenue.current)}
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Februarie 2025: {formatCurrency(monthlyKpis.revenue.previous)}
+            {report.period.comparison.label}: {formatCurrency(report.financials.revenue.previous)}
           </p>
           <span
             className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(revenueDelta.ratio)}`}
           >
-            {getDeltaLabel(revenueDelta.ratio)} vs luna precedentă
+            {getDeltaLabel(revenueDelta.ratio)} vs perioada comparată
           </span>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Rezervări confirmate</h2>
+          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Profit net</h2>
           <p className="mt-3 text-3xl font-semibold text-slate-900">
-            {formatNumber(monthlyKpis.bookings.current)}
+            {formatCurrency(report.financials.net_profit.current)}
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Februarie 2025: {formatNumber(monthlyKpis.bookings.previous)}
+            {report.period.comparison.label}: {formatCurrency(report.financials.net_profit.previous)}
           </p>
           <span
-            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(bookingDelta.ratio)}`}
+            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(profitDelta.ratio)}`}
           >
-            {getDeltaLabel(bookingDelta.ratio)} volum
+            {getDeltaLabel(profitDelta.ratio)} vs perioada comparată
           </span>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Tarif mediu zilnic</h2>
           <p className="mt-3 text-3xl font-semibold text-slate-900">
-            {formatCurrency(monthlyKpis.avgDailyRate.current)}
+            {formatCurrency(report.financials.avg_daily_rate.current)}
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Februarie 2025: {formatCurrency(monthlyKpis.avgDailyRate.previous)}
+            {report.period.comparison.label}: {formatCurrency(report.financials.avg_daily_rate.previous)}
           </p>
           <span
-            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(rateDelta.ratio)}`}
+            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(adrDelta.ratio)}`}
           >
-            {getDeltaLabel(rateDelta.ratio)} ADR
+            {getDeltaLabel(adrDelta.ratio)} ADR
           </span>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Grad de utilizare flotă</h2>
           <p className="mt-3 text-3xl font-semibold text-slate-900">
-            {formatPercent(monthlyKpis.utilization.current)}
+            {formatPercent(report.financials.fleet_utilization.current)}
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Februarie 2025: {formatPercent(monthlyKpis.utilization.previous)}
+            {report.period.comparison.label}: {formatPercent(report.financials.fleet_utilization.previous)}
           </p>
           <span
             className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(utilizationDelta.ratio)}`}
@@ -129,12 +124,16 @@ export default function MonthlyReportPage() {
       </section>
 
       <TrendBarChart
-        title="Evoluția veniturilor pe ultimele 6 luni"
-        description="Date comparate cu anul precedent pentru a urmări ritmul de creștere pe termen mediu."
-        data={monthlyRevenue}
+        title="Venituri și profit pe ultimele 6 luni"
+        description="Compară veniturile brute cu profitul net pentru a evalua sustenabilitatea creșterii."
+        data={report.six_month_trend.map((item) => ({
+          label: item.label,
+          current: item.revenue,
+          previous: item.profit,
+        }))}
         legend={[
-          { label: "Anul curent", colorClass: "bg-jade" },
-          { label: "Anul precedent", colorClass: "bg-berkeley/60" },
+          { label: "Venituri", colorClass: "bg-jade" },
+          { label: "Profit net", colorClass: "bg-berkeley/60" },
         ]}
         formatter={(value) => formatCurrency(value)}
       />
@@ -143,64 +142,61 @@ export default function MonthlyReportPage() {
         <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Mixul de clienți și impactul asupra veniturilor</h2>
           <p className="text-sm text-slate-600">
-            Segmentul corporate rămâne principalul driver de creștere (+{formatPercent(0.12)} YoY), beneficiind de contractele
-            semnate la final de 2024. Canalul direct B2C a rămas stabil, cu o ușoară scădere a rezervărilor prin OTA pe fondul
-            ajustării bugetelor de marketing.
+            Contractele corporate reprezintă {formatPercent(report.bookings.corporate_share.current)} din rezervări,
+            față de {formatPercent(report.bookings.corporate_share.previous)} în perioada comparată. Totalul
+            rezervărilor a ajuns la {formatNumber(report.bookings.total.current)} ({getDeltaLabel(bookingsDelta.ratio)} vs
+            {" "}
+            {report.period.comparison.label}).
           </p>
           <TrendBarChart
             title="Distribuția rezervărilor pe canale"
-            data={customerMix}
+            data={report.customer_mix.map((item) => ({
+              label: item.label,
+              current: item.current_percent,
+              previous: item.previous_percent,
+            }))}
             legend={[
-              { label: "% martie 2025", colorClass: "bg-jade" },
-              { label: "% februarie 2025", colorClass: "bg-berkeley/60" },
+              { label: `% ${report.period.label}`, colorClass: "bg-jade" },
+              { label: `% ${report.period.comparison.label}`, colorClass: "bg-berkeley/60" },
             ]}
             formatter={(value) => `${value}%`}
           />
         </div>
 
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Profit operațional</h2>
-          <p className="text-sm text-slate-600">
-            Marja operațională a ajuns la {formatPercent(0.27)}, în creștere cu {formatPercent(0.03)} față de februarie.
-            Economiile din mentenanță (−{formatPercent(0.01)}) și optimizarea flotei au compensat investițiile suplimentare în
-            marketing pentru campaniile de Paște.
-          </p>
-          <TrendBarChart
-            title="Structura costurilor"
-            data={costStructure}
-            legend={[
-              { label: "% martie 2025", colorClass: "bg-jade" },
-              { label: "% februarie 2025", colorClass: "bg-berkeley/60" },
-            ]}
-            formatter={(value) => `${value}%`}
-          />
+          <h2 className="text-lg font-semibold text-slate-900">Top orașe după rezervări</h2>
+          <ul className="space-y-3 text-sm text-slate-600">
+            {report.bookings.top_cities.map((city) => (
+              <li key={city.city} className="flex items-center justify-between">
+                <span className="font-medium text-slate-700">{city.city}</span>
+                <span>
+                  {formatNumber(city.current)}
+                  <span className="text-xs text-slate-500"> (vs {formatNumber(city.previous)})</span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Focus pe trenduri și acțiuni</h2>
-        <div className="mt-4 grid gap-6 lg:grid-cols-3">
-          <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800">
-            <p className="font-semibold">Segment SUV</p>
-            <p className="mt-1">
-              Tariful mediu a crescut la {formatCurrency(89)} (+{formatPercent(0.09)} vs 2024). Recomandare: consolidează flota
-              cu încă 5 unități înainte de sezonul estival.
-            </p>
-          </div>
-          <div className="rounded-xl bg-blue-50 p-4 text-sm text-blue-800">
-            <p className="font-semibold">Loyalty & upsell</p>
-            <p className="mt-1">
-              {formatNumber(142)} rezervări au inclus upgrade-uri (asigurări, navigație), generând {formatCurrency(18400)} venit
-              incremental. Propune pachete similare pentru clienții corporate noi.
-            </p>
-          </div>
-          <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
-            <p className="font-semibold">Riscuri și atenționări</p>
-            <p className="mt-1">
-              Rata incidentelor tehnice rămâne {formatPercent(0.032)}. Pentru a evita indisponibilitatea în aprilie, programează
-              mentenanța preventivă pentru cele 7 vehicule identificate în rapoartele service.
-            </p>
-          </div>
+      <section className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <TrendBarChart
+          title="Structura costurilor"
+          data={costStructureData}
+          legend={[
+            { label: `${capitalize(report.period.label)} – cost curent`, colorClass: "bg-jade" },
+            { label: `${capitalize(report.period.comparison.label)} – cost comparat`, colorClass: "bg-berkeley/60" },
+          ]}
+          formatter={(value) => formatCurrency(value)}
+        />
+
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Focus pe acțiuni și riscuri</h2>
+          <ul className="list-disc space-y-2 pl-6 text-sm text-slate-600">
+            {report.focus_areas.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
         </div>
       </section>
     </div>

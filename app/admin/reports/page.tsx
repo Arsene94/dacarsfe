@@ -2,54 +2,51 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { TrendBarChart } from "@/components/admin/reports/charts";
 import { getDeltaLabel, getDeltaTone } from "@/components/admin/reports/delta";
-import { calculateVariation, formatCurrency, formatPercent, formatNumber } from "@/components/admin/reports/formatters";
+import {
+  calculateVariation,
+  formatCurrency,
+  formatNumber,
+  formatPercent,
+} from "@/components/admin/reports/formatters";
+import { getReportsOverview } from "@/lib/reports/server";
 
-const weeklyRevenue = {
-  current: 48200,
-  previous: 44100,
+const dayFormatter = new Intl.DateTimeFormat("ro-RO", { day: "numeric" });
+const monthFormatter = new Intl.DateTimeFormat("ro-RO", { month: "long" });
+const yearFormatter = new Intl.DateTimeFormat("ro-RO", { year: "numeric" });
+
+const capitalize = (value: string): string =>
+  value.length > 0 ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+
+const formatWeekRange = (start: string, end: string): string => {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return `${start} – ${end}`;
+  }
+
+  const startDay = dayFormatter.format(startDate);
+  const endDay = dayFormatter.format(endDate);
+  const startMonth = capitalize(monthFormatter.format(startDate));
+  const endMonth = capitalize(monthFormatter.format(endDate));
+  const startYear = yearFormatter.format(startDate);
+  const endYear = yearFormatter.format(endDate);
+
+  if (startMonth === endMonth && startYear === endYear) {
+    return `${startDay}–${endDay} ${endMonth} ${endYear}`;
+  }
+  return `${startDay} ${startMonth} ${startYear} – ${endDay} ${endMonth} ${endYear}`;
 };
 
-const reservationSummary = {
-  current: 138,
-  previous: 124,
-};
+export default async function ReportsOverviewPage() {
+  const overview = await getReportsOverview();
+  const { week, quarter, links } = overview;
 
-const fleetUtilization = {
-  current: 0.78,
-  previous: 0.74,
-};
-
-const overviewChart = [
-  { label: "Ianuarie", current: 182000, previous: 165000 },
-  { label: "Februarie", current: 195400, previous: 172500 },
-  { label: "Martie", current: 221300, previous: 204000 },
-];
-
-const detailedLinks = [
-  {
-    title: "Raport săptămânal",
-    description:
-      "Vânzări pe zile, grad de ocupare pe segmente și performanța canalelor de achiziție pentru ultimele 7 zile.",
-    href: "/admin/reports/weekly",
-  },
-  {
-    title: "Raport lunar",
-    description:
-      "Indicatori financiari, mixul rezervărilor și analiza diferențelor față de luna precedentă și anul trecut.",
-    href: "/admin/reports/monthly",
-  },
-  {
-    title: "Raport trimestrial",
-    description:
-      "Evoluția veniturilor, profitabilitate operațională și trenduri pe categorii de vehicule în ultimele 3 luni.",
-    href: "/admin/reports/quarterly",
-  },
-];
-
-export default function ReportsOverviewPage() {
-  const revenueDelta = calculateVariation(weeklyRevenue.current, weeklyRevenue.previous);
-  const bookingDelta = calculateVariation(reservationSummary.current, reservationSummary.previous);
-  const utilizationDelta = calculateVariation(fleetUtilization.current, fleetUtilization.previous);
+  const revenueDelta = calculateVariation(week.revenue.current, week.revenue.previous);
+  const bookingDelta = calculateVariation(week.bookings.current, week.bookings.previous);
+  const utilizationDelta = calculateVariation(
+    week.fleet_utilization.current,
+    week.fleet_utilization.previous,
+  );
 
   return (
     <div className="space-y-10 p-6 md:p-10">
@@ -57,8 +54,10 @@ export default function ReportsOverviewPage() {
         <p className="text-sm uppercase tracking-wide text-jade">Analytics & insight</p>
         <h1 className="text-3xl font-semibold text-slate-900">Rapoarte de performanță DaCars</h1>
         <p className="max-w-3xl text-base text-slate-600">
-          Monitorizează rapid sănătatea afacerii folosind rezumatele de mai jos și intră în detalii pe rapoartele dedicate.
-          Datele sunt agregate automat din rezervări, facturare și managementul flotei.
+          Monitorizează rapid sănătatea afacerii folosind rezumatele de mai jos și intră în detalii pe
+          rapoartele dedicate. Datele provin din API-ul administrativ și sunt actualizate pentru intervalul
+          {" "}
+          {formatWeekRange(week.start, week.end)}.
         </p>
       </header>
 
@@ -67,68 +66,79 @@ export default function ReportsOverviewPage() {
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
             Încasări săptămâna curentă
           </h2>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{formatCurrency(weeklyRevenue.current)}</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{formatCurrency(week.revenue.current)}</p>
           <p className="mt-2 text-sm text-slate-600">
-            Săptămâna trecută: {formatCurrency(weeklyRevenue.previous)}
+            Interval precedent: {formatCurrency(week.revenue.previous)}
           </p>
-          <p className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(revenueDelta.ratio)}`}>
-            {getDeltaLabel(revenueDelta.ratio)} vs săptămâna trecută
+          <p
+            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(revenueDelta.ratio)}`}
+          >
+            {getDeltaLabel(revenueDelta.ratio)} vs perioada comparată
           </p>
           <p className="mt-4 text-sm text-slate-600">
-            Vârful de încasări a fost miercuri (12.800 €), datorită rezervărilor corporate și a promoției city-break.
+            Creșterea săptămânală este susținută de mixul de canale directe și corporate, care generează peste
+            80% din încasări.
           </p>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Rezervări confirmate</h2>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{formatNumber(reservationSummary.current)}</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{formatNumber(week.bookings.current)}</p>
           <p className="mt-2 text-sm text-slate-600">
-            Săptămâna trecută: {formatNumber(reservationSummary.previous)}
+            Perioada comparată: {formatNumber(week.bookings.previous)}
           </p>
-          <p className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(bookingDelta.ratio)}`}>
+          <p
+            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(bookingDelta.ratio)}`}
+          >
             {getDeltaLabel(bookingDelta.ratio)} volum de rezervări
           </p>
           <p className="mt-4 text-sm text-slate-600">
-            Conversia formularelor din site a urcat la 5,4%, cu 38% dintre rezervări venind din campaniile de remarketing.
+            Valorile includ toate rezervările confirmate și reflectă trendurile pe canale de distribuție și segmente
+            de clienți.
           </p>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Grad de utilizare flotă</h2>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{formatPercent(fleetUtilization.current)}</p>
-          <p className="mt-2 text-sm text-slate-600">
-            Săptămâna trecută: {formatPercent(fleetUtilization.previous)}
+          <p className="mt-3 text-3xl font-semibold text-slate-900">
+            {formatPercent(week.fleet_utilization.current)}
           </p>
-          <p className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(utilizationDelta.ratio)}`}>
+          <p className="mt-2 text-sm text-slate-600">
+            Perioada comparată: {formatPercent(week.fleet_utilization.previous)}
+          </p>
+          <p
+            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(utilizationDelta.ratio)}`}
+          >
             {getDeltaLabel(utilizationDelta.ratio)} rată de ocupare
           </p>
           <p className="mt-4 text-sm text-slate-600">
-            Clasa SUV a avut cea mai mare cerere (+14% față de săptămâna trecută), în timp ce segmentele economy au rămas stabile.
+            Rata de utilizare include vehicule active și cele aflate în mentenanță, oferind o imagine completă asupra
+            capacității operaționale.
           </p>
         </article>
       </section>
 
       <TrendBarChart
-        title="Evoluția încasărilor din primul trimestru"
-        description="Comparație între anul curent și anul trecut, consolidată la nivel lunar."
-        data={overviewChart}
+        title={`Evoluția încasărilor pentru ${quarter.code}`}
+        description={`Comparație între ${quarter.code} și ${quarter.comparison_code}, agregată la nivel lunar.`}
+        data={quarter.chart}
         legend={[
           {
-            label: "An curent",
+            label: quarter.code,
             colorClass: "bg-jade",
             description: "Sume facturate și încasate efectiv",
           },
           {
-            label: "An precedent",
+            label: quarter.comparison_code,
             colorClass: "bg-berkeley/60",
-            description: "Valori pentru aceeași perioadă din 2024",
+            description: "Valori pentru perioada de comparație",
           },
         ]}
         formatter={(value) => formatCurrency(value)}
       />
 
       <section className="grid gap-6 lg:grid-cols-3">
-        {detailedLinks.map((item) => (
+        {links.map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -136,7 +146,10 @@ export default function ReportsOverviewPage() {
           >
             <div>
               <h3 className="text-xl font-semibold text-slate-900">{item.title}</h3>
-              <p className="mt-3 text-sm text-slate-600">{item.description}</p>
+              <p className="mt-3 text-sm text-slate-600">
+                Explorează indicatorii detaliați pentru perioada selectată și descoperă insight-uri operaționale
+                dedicate.
+              </p>
             </div>
             <span className="mt-6 inline-flex items-center text-sm font-semibold text-jade group-hover:gap-2">
               Deschide raportul

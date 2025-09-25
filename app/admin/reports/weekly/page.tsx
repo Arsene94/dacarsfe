@@ -6,65 +6,73 @@ import {
   formatNumber,
   formatPercent,
 } from "@/components/admin/reports/formatters";
+import { getWeeklyReport } from "@/lib/reports/server";
 
-const dailyRevenue = [
-  { label: "L", current: 6200, previous: 5800 },
-  { label: "Ma", current: 6700, previous: 6120 },
-  { label: "Mi", current: 8200, previous: 7050 },
-  { label: "J", current: 7600, previous: 6980 },
-  { label: "V", current: 7200, previous: 6890 },
-  { label: "S", current: 9300, previous: 8450 },
-  { label: "D", current: 7200, previous: 6810 },
-];
+const DEFAULT_WEEK_START = "2025-03-10";
 
-const channelMix = [
-  { label: "Direct", current: 54, previous: 49 },
-  { label: "Corporate", current: 26, previous: 24 },
-  { label: "OTA", current: 12, previous: 16 },
-  { label: "Agenții", current: 8, previous: 11 },
-];
+const dayFormatter = new Intl.DateTimeFormat("ro-RO", { day: "numeric" });
+const monthFormatter = new Intl.DateTimeFormat("ro-RO", { month: "long" });
+const yearFormatter = new Intl.DateTimeFormat("ro-RO", { year: "numeric" });
 
-const occupancyBySegment = [
-  { label: "Economy", current: 0.74, previous: 0.71 },
-  { label: "Compact", current: 0.79, previous: 0.75 },
-  { label: "SUV", current: 0.88, previous: 0.77 },
-  { label: "Premium", current: 0.65, previous: 0.62 },
-];
+const capitalize = (value: string): string =>
+  value.length > 0 ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 
-const weeklyTotals = {
-  revenue: { current: 48200, previous: 44100 },
-  bookings: { current: 138, previous: 124 },
-  cancellations: { current: 11, previous: 15 },
-  averageDuration: { current: 4.2, previous: 3.9 },
+const formatRange = (start: string, end: string): string => {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return `${start} – ${end}`;
+  }
+
+  const sameMonth =
+    monthFormatter.format(startDate) === monthFormatter.format(endDate) &&
+    yearFormatter.format(startDate) === yearFormatter.format(endDate);
+
+  const startLabel = `${dayFormatter.format(startDate)} ${capitalize(monthFormatter.format(startDate))} ${yearFormatter.format(startDate)}`;
+  const endLabel = `${dayFormatter.format(endDate)} ${capitalize(monthFormatter.format(endDate))} ${yearFormatter.format(endDate)}`;
+
+  if (sameMonth) {
+    return `${dayFormatter.format(startDate)}–${dayFormatter.format(endDate)} ${capitalize(monthFormatter.format(endDate))} ${yearFormatter.format(endDate)}`;
+  }
+  return `${startLabel} – ${endLabel}`;
 };
 
-const cancellationRate = calculateVariation(
-  weeklyTotals.cancellations.current,
-  weeklyTotals.cancellations.previous,
-);
+export default async function WeeklyReportPage() {
+  const report = await getWeeklyReport({ start_date: DEFAULT_WEEK_START });
+  const otaChannel = report.channel_mix.find((entry) => entry.label === "OTA");
+  const otaChange = otaChannel
+    ? otaChannel.current_percent - otaChannel.previous_percent
+    : 0;
+  const otaDirection = otaChange >= 0 ? "urcă" : "coboară";
+  const otaMagnitude = Math.abs(otaChange);
 
-export default function WeeklyReportPage() {
   const revenueDelta = calculateVariation(
-    weeklyTotals.revenue.current,
-    weeklyTotals.revenue.previous,
+    report.totals.revenue.current,
+    report.totals.revenue.previous,
   );
   const bookingsDelta = calculateVariation(
-    weeklyTotals.bookings.current,
-    weeklyTotals.bookings.previous,
+    report.totals.bookings.current,
+    report.totals.bookings.previous,
   );
   const durationDelta = calculateVariation(
-    weeklyTotals.averageDuration.current,
-    weeklyTotals.averageDuration.previous,
+    report.totals.average_duration_days.current,
+    report.totals.average_duration_days.previous,
+  );
+  const cancellationDelta = calculateVariation(
+    report.totals.cancellations.current,
+    report.totals.cancellations.previous,
   );
 
   return (
     <div className="space-y-10 p-6 md:p-10">
       <header className="space-y-2">
         <p className="text-sm uppercase tracking-wide text-jade">Raport săptămânal</p>
-        <h1 className="text-3xl font-semibold text-slate-900">Sinteză 10 - 16 martie 2025</h1>
+        <h1 className="text-3xl font-semibold text-slate-900">
+          Sinteză {formatRange(report.period.start, report.period.end)}
+        </h1>
         <p className="max-w-3xl text-base text-slate-600">
-          Rezumatul reunește dinamica rezervărilor, încasările și gradul de utilizare al flotei pentru ultimele 7 zile,
-          comparat cu săptămâna anterioară și cu trendul mediu din același interval al anului trecut.
+          Rezumatul reunește dinamica rezervărilor, încasările și gradul de utilizare al flotei pentru
+          ultimele 7 zile, comparat cu intervalul {formatRange(report.period.comparison_start, report.period.comparison_end)}.
         </p>
       </header>
 
@@ -72,25 +80,25 @@ export default function WeeklyReportPage() {
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Total încasări</h2>
           <p className="mt-3 text-3xl font-semibold text-slate-900">
-            {formatCurrency(weeklyTotals.revenue.current)}
+            {formatCurrency(report.totals.revenue.current)}
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Săptămâna trecută: {formatCurrency(weeklyTotals.revenue.previous)}
+            Perioada comparată: {formatCurrency(report.totals.revenue.previous)}
           </p>
           <span
             className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(revenueDelta.ratio)}`}
           >
-            {getDeltaLabel(revenueDelta.ratio)} vs săptămâna trecută
+            {getDeltaLabel(revenueDelta.ratio)} vs perioada de referință
           </span>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Rezervări confirmate</h2>
           <p className="mt-3 text-3xl font-semibold text-slate-900">
-            {formatNumber(weeklyTotals.bookings.current)}
+            {formatNumber(report.totals.bookings.current)}
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Față de săpt. trecută: {formatNumber(weeklyTotals.bookings.previous)}
+            Perioada comparată: {formatNumber(report.totals.bookings.previous)}
           </p>
           <span
             className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(bookingsDelta.ratio)}`}
@@ -100,12 +108,12 @@ export default function WeeklyReportPage() {
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Durata medie a rezervărilor</h2>
+          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Durata medie</h2>
           <p className="mt-3 text-3xl font-semibold text-slate-900">
-            {weeklyTotals.averageDuration.current.toFixed(1)} zile
+            {report.totals.average_duration_days.current.toFixed(1)} zile
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Săptămâna trecută: {weeklyTotals.averageDuration.previous.toFixed(1)} zile
+            Perioada comparată: {report.totals.average_duration_days.previous.toFixed(1)} zile
           </p>
           <span
             className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(durationDelta.ratio)}`}
@@ -116,23 +124,24 @@ export default function WeeklyReportPage() {
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Anul precedent</h2>
-          <p className="mt-3 text-lg font-semibold text-slate-900">+{formatPercent(0.11)} venituri YoY</p>
-          <p className="mt-2 text-sm text-slate-600">
-            vs aceeași săptămână din 2024 ({formatCurrency(43500)} încasări, 117 rezervări confirmate).
+          <p className="mt-3 text-lg font-semibold text-slate-900">
+            {formatPercent(report.totals.yoy.revenue_ratio)} venituri YoY
           </p>
-          <p className="mt-4 text-sm text-slate-600">
-            Creșterea provine din mixul corporate (+18% YoY) și tarife medii mai mari pe segmentul SUV.
+          <p className="mt-2 text-sm text-slate-600">
+            {formatNumber(report.totals.yoy.bookings_current)} rezervări în prezent vs
+            {" "}
+            {formatNumber(report.totals.yoy.bookings_previous)} în același interval din anul trecut.
           </p>
         </article>
       </section>
 
       <TrendBarChart
         title="Încasări zilnice"
-        description="Valorile includ toate încasările confirmate până la închiderea zilei, comparativ cu săptămâna anterioară."
-        data={dailyRevenue}
+        description="Valorile includ toate încasările confirmate până la închiderea zilei, comparativ cu perioada de referință."
+        data={report.daily_revenue}
         legend={[
           { label: "Săptămâna curentă", colorClass: "bg-jade" },
-          { label: "Săptămâna trecută", colorClass: "bg-berkeley/60" },
+          { label: "Perioada comparată", colorClass: "bg-berkeley/60" },
         ]}
         formatter={(value) => formatCurrency(value)}
       />
@@ -141,16 +150,19 @@ export default function WeeklyReportPage() {
         <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Analiza rezervărilor și a canalelor</h2>
           <p className="text-sm text-slate-600">
-            Canalul direct a generat {formatPercent(0.54)} din rezervări, cu un tarif mediu de 68 €/zi. Partenerii corporate au
-            adus {formatNumber(36)} rezervări, iar OTA-urile au scăzut față de săptămâna trecută din cauza reducerii bugetelor de
-            marketing.
+            Canalul direct și partenerii corporate însumează peste 80% din rezervări în această săptămână, în timp ce
+            OTA-urile {otaDirection} cu {otaMagnitude.toFixed(1)} pp față de perioada comparată.
           </p>
           <TrendBarChart
             title="Mixul de rezervări"
-            data={channelMix}
+            data={report.channel_mix.map((item) => ({
+              label: item.label,
+              current: item.current_percent,
+              previous: item.previous_percent,
+            }))}
             legend={[
               { label: "% săptămâna curentă", colorClass: "bg-jade" },
-              { label: "% săptămâna trecută", colorClass: "bg-berkeley/60" },
+              { label: "% perioada comparată", colorClass: "bg-berkeley/60" },
             ]}
             formatter={(value) => `${value}%`}
           />
@@ -161,15 +173,18 @@ export default function WeeklyReportPage() {
           <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
             <p className="font-semibold">Rata anulărilor</p>
             <p className="mt-1">
-              {formatNumber(weeklyTotals.cancellations.current)} anulări ({formatPercent(weeklyTotals.cancellations.current / weeklyTotals.bookings.current)} din rezervări confirmate)
-              – {getDeltaLabel(cancellationRate.ratio)} față de săptămâna trecută.
+              {formatNumber(report.totals.cancellations.current)} anulări ({
+                formatPercent(report.risk_indicators.cancellation_rate)
+              }
+              ) – {getDeltaLabel(cancellationDelta.ratio)} față de perioada comparată.
             </p>
           </div>
           <div className="rounded-xl bg-red-50 p-4 text-sm text-red-800">
             <p className="font-semibold">Întârzieri la returnare</p>
             <p className="mt-1">
-              {formatNumber(6)} contracte au depășit termenul de predare cu peste 3 ore. Echipa operațională a aplicat penalități
-              în valoare de {formatCurrency(720)}, deja facturate.
+              {formatNumber(report.risk_indicators.late_returns_count)} contracte întârziate, cu penalități de
+              {" "}
+              {formatCurrency(report.risk_indicators.late_returns_value)} deja facturate.
             </p>
           </div>
         </div>
@@ -178,14 +193,14 @@ export default function WeeklyReportPage() {
       <TrendBarChart
         title="Gradul de utilizare pe segmente"
         description="Raportat la numărul de vehicule active pe fiecare clasă, inclusiv cele în service."
-        data={occupancyBySegment.map((item) => ({
+        data={report.occupancy_by_segment.map((item) => ({
           label: item.label,
           current: Math.round(item.current * 100),
           previous: Math.round(item.previous * 100),
         }))}
         legend={[
           { label: "Săptămâna curentă", colorClass: "bg-jade" },
-          { label: "Săptămâna trecută", colorClass: "bg-berkeley/60" },
+          { label: "Perioada comparată", colorClass: "bg-berkeley/60" },
         ]}
         formatter={(value) => `${value}%`}
       />
@@ -193,17 +208,9 @@ export default function WeeklyReportPage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">Acțiuni recomandate</h2>
         <ul className="mt-4 list-disc space-y-2 pl-6 text-sm text-slate-600">
-          <li>
-            Activează o campanie flash pentru segmentul economy în weekend pentru a reduce stocul disponibil (42 de mașini
-            neînchiriate în medie).
-          </li>
-          <li>
-            Propune partenerilor corporate un upgrade către SUV în lunile următoare – disponibilitate ridicată și tarif mai mare
-            cu 18% față de economy.
-          </li>
-          <li>
-            Continuă optimizarea paginilor de destinație: conversia din trafic organic a crescut la {formatPercent(0.064)}.
-          </li>
+          {report.recommendations.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
         </ul>
       </section>
     </div>

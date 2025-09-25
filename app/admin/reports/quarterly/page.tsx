@@ -3,153 +3,116 @@ import { getDeltaLabel, getDeltaTone } from "@/components/admin/reports/delta";
 import {
   calculateVariation,
   formatCurrency,
-  formatNumber,
   formatPercent,
 } from "@/components/admin/reports/formatters";
+import { getQuarterlyReport } from "@/lib/reports/server";
 
-const quarterlyRevenue = [
-  { label: "Q2 '24", current: 566000, previous: 498000 },
-  { label: "Q3 '24", current: 612400, previous: 542300 },
-  { label: "Q4 '24", current: 648900, previous: 583100 },
-  { label: "Q1 '25", current: 598700, previous: 532400 },
-];
+const DEFAULT_QUARTER = "2025-Q1";
 
-const segmentProfit = [
-  { label: "Economy", current: 18, previous: 16 },
-  { label: "Compact", current: 26, previous: 22 },
-  { label: "SUV", current: 34, previous: 28 },
-  { label: "Premium", current: 22, previous: 20 },
-];
+export default async function QuarterlyReportPage() {
+  const report = await getQuarterlyReport({ quarter: DEFAULT_QUARTER });
 
-const operationalCosts = [
-  { label: "Flotă", current: 41, previous: 42 },
-  { label: "Mentenanță", current: 17, previous: 18 },
-  { label: "Marketing", current: 15, previous: 13 },
-  { label: "Personal", current: 19, previous: 19 },
-  { label: "Altele", current: 8, previous: 8 },
-];
-
-const quarterTotals = {
-  revenue: 598700,
-  revenuePrevQuarter: 648900,
-  revenuePrevYear: 532400,
-  bookings: 1896,
-  bookingsPrevQuarter: 1752,
-  bookingsPrevYear: 1640,
-  profitMargin: 0.29,
-  profitPrevQuarter: 0.27,
-  profitPrevYear: 0.24,
-  adr: 68,
-  adrPrevQuarter: 66,
-  adrPrevYear: 62,
-};
-
-const fleetAvailability = [
-  { label: "Q1 2024", current: 0.74 },
-  { label: "Q2 2024", current: 0.79 },
-  { label: "Q3 2024", current: 0.81 },
-  { label: "Q4 2024", current: 0.83 },
-  { label: "Q1 2025", current: 0.86 },
-];
-
-export default function QuarterlyReportPage() {
-  const revenueQoq = calculateVariation(
-    quarterTotals.revenue,
-    quarterTotals.revenuePrevQuarter,
+  const revenueDelta = calculateVariation(
+    report.kpi.revenue.current,
+    report.kpi.revenue.previous,
   );
-  const revenueYoy = calculateVariation(
-    quarterTotals.revenue,
-    quarterTotals.revenuePrevYear,
+  const profitDelta = calculateVariation(
+    report.kpi.net_profit.current,
+    report.kpi.net_profit.previous,
   );
-  const bookingsYoy = calculateVariation(
-    quarterTotals.bookings,
-    quarterTotals.bookingsPrevYear,
+  const ebitdaDelta = calculateVariation(
+    report.kpi.ebitda_margin.current,
+    report.kpi.ebitda_margin.previous,
   );
-  const profitYoy = calculateVariation(
-    quarterTotals.profitMargin,
-    quarterTotals.profitPrevYear,
+  const utilizationDelta = calculateVariation(
+    report.kpi.fleet_utilization.current,
+    report.kpi.fleet_utilization.previous,
   );
 
   return (
     <div className="space-y-10 p-6 md:p-10">
       <header className="space-y-2">
         <p className="text-sm uppercase tracking-wide text-jade">Raport trimestrial</p>
-        <h1 className="text-3xl font-semibold text-slate-900">Q1 2025 – performanță consolidată</h1>
+        <h1 className="text-3xl font-semibold text-slate-900">
+          {report.period.label} – performanță consolidată
+        </h1>
         <p className="max-w-3xl text-base text-slate-600">
-          Raportul trimestrial pune în perspectivă evoluția business-ului DaCars. Analiza cuprinde comparații față de trimestrul
-          anterior și față de același trimestru al anului trecut, pentru a identifica trendurile sustenabile și zonele care
-          necesită intervenție.
+          Raportul trimestrial pune în perspectivă evoluția business-ului DaCars. Analiza include comparații cu
+          {" "}
+          {report.period.comparison.label} pentru a identifica trendurile sustenabile și zonele care necesită
+          intervenție.
         </p>
       </header>
 
       <section className="grid gap-6 lg:grid-cols-4">
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Venituri totale Q1</h2>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{formatCurrency(quarterTotals.revenue)}</p>
+          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Venituri totale</h2>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">
+            {formatCurrency(report.kpi.revenue.current)}
+          </p>
           <p className="mt-2 text-sm text-slate-600">
-            Q4 2024: {formatCurrency(quarterTotals.revenuePrevQuarter)}
+            {report.period.comparison.label}: {formatCurrency(report.kpi.revenue.previous)}
           </p>
           <span
-            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(revenueQoq.ratio)}`}
+            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(revenueDelta.ratio)}`}
           >
-            {getDeltaLabel(revenueQoq.ratio)} vs trimestrul anterior
+            {getDeltaLabel(revenueDelta.ratio)} vs perioada comparată
           </span>
-          <p className="mt-4 text-xs text-slate-500">
-            {getDeltaLabel(revenueYoy.ratio)} față de Q1 2024 ({formatCurrency(quarterTotals.revenuePrevYear)}).
-          </p>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Rezervări finalizate</h2>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{formatNumber(quarterTotals.bookings)}</p>
+          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Profit net</h2>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">
+            {formatCurrency(report.kpi.net_profit.current)}
+          </p>
           <p className="mt-2 text-sm text-slate-600">
-            Q1 2024: {formatNumber(quarterTotals.bookingsPrevYear)}
+            {report.period.comparison.label}: {formatCurrency(report.kpi.net_profit.previous)}
           </p>
           <span
-            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(bookingsYoy.ratio)}`}
+            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(profitDelta.ratio)}`}
           >
-            {getDeltaLabel(bookingsYoy.ratio)} YoY
+            {getDeltaLabel(profitDelta.ratio)} vs perioada comparată
           </span>
-          <p className="mt-4 text-xs text-slate-500">
-            Q4 2024: {formatNumber(quarterTotals.bookingsPrevQuarter)} rezervări.
-          </p>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Marjă operațională</h2>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{formatPercent(quarterTotals.profitMargin)}</p>
+          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Marjă EBITDA</h2>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">
+            {formatPercent(report.kpi.ebitda_margin.current)}
+          </p>
           <p className="mt-2 text-sm text-slate-600">
-            Q1 2024: {formatPercent(quarterTotals.profitPrevYear)}
+            {report.period.comparison.label}: {formatPercent(report.kpi.ebitda_margin.previous)}
           </p>
           <span
-            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(profitYoy.ratio)}`}
+            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(ebitdaDelta.ratio)}`}
           >
-            {getDeltaLabel(profitYoy.ratio)} YoY
+            {getDeltaLabel(ebitdaDelta.ratio)} vs perioada comparată
           </span>
-          <p className="mt-4 text-xs text-slate-500">
-            Q4 2024: {formatPercent(quarterTotals.profitPrevQuarter)} marjă.
-          </p>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">ADR trimestrial</h2>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{formatCurrency(quarterTotals.adr)}</p>
+          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Utilizare flotă</h2>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">
+            {formatPercent(report.kpi.fleet_utilization.current)}
+          </p>
           <p className="mt-2 text-sm text-slate-600">
-            Q1 2024: {formatCurrency(quarterTotals.adrPrevYear)}
+            {report.period.comparison.label}: {formatPercent(report.kpi.fleet_utilization.previous)}
           </p>
-          <p className="mt-4 text-xs text-slate-500">
-            vs trimestrul anterior: {formatCurrency(quarterTotals.adrPrevQuarter)}.
-          </p>
+          <span
+            className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${getDeltaTone(utilizationDelta.ratio)}`}
+          >
+            {getDeltaLabel(utilizationDelta.ratio)} vs perioada comparată
+          </span>
         </article>
       </section>
 
       <TrendBarChart
-        title="Venituri trimestriale"
-        description="Comparație între ultimii 4 ani fiscali și performanța actuală a trimestrului curent."
-        data={quarterlyRevenue}
+        title={`Venituri lunare – ${report.period.label}`}
+        description={`Comparație lunară între ${report.period.label} și ${report.period.comparison.label}.`}
+        data={report.quarterly_revenue}
         legend={[
-          { label: "2024-2025", colorClass: "bg-jade" },
-          { label: "2023-2024", colorClass: "bg-berkeley/60" },
+          { label: report.period.label, colorClass: "bg-jade" },
+          { label: report.period.comparison.label, colorClass: "bg-berkeley/60" },
         ]}
         formatter={(value) => formatCurrency(value)}
       />
@@ -158,76 +121,50 @@ export default function QuarterlyReportPage() {
         <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Profitabilitate pe segmente</h2>
           <p className="text-sm text-slate-600">
-            Segmentul SUV reprezintă {formatPercent(0.34)} din profitul operațional, fiind susținut de cererea corporate și de
-            tarifele dinamice aplicate în lunile ianuarie-martie. Segmentul premium își revine ușor datorită turismului de city
-            break.
+            Segmentul SUV generează {formatCurrency(report.profit_by_segment.find((item) => item.segment === "SUV")?.current ?? 0)}
+            {" "}
+            și conduce creșterea profitului trimestrial, urmat de segmentele compact și economy.
           </p>
           <TrendBarChart
             title="Contribuție la profit"
-            data={segmentProfit}
+            data={report.profit_by_segment.map((item) => ({
+              label: item.segment,
+              current: item.current,
+              previous: item.previous,
+            }))}
             legend={[
-              { label: "% Q1 2025", colorClass: "bg-jade" },
-              { label: "% Q1 2024", colorClass: "bg-berkeley/60" },
+              { label: report.period.label, colorClass: "bg-jade" },
+              { label: report.period.comparison.label, colorClass: "bg-berkeley/60" },
             ]}
-            formatter={(value) => `${value}%`}
+            formatter={(value) => formatCurrency(value)}
           />
         </div>
 
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Structura costurilor</h2>
-          <p className="text-sm text-slate-600">
-            Costurile de mentenanță au scăzut cu {formatPercent(0.06)} față de trimestrul precedent, în timp ce investițiile în
-            marketing au crescut pentru lansarea campaniilor de Paște. Controlul costurilor cu flota rămâne esențial pentru
-            menținerea marjei.
-          </p>
+          <h2 className="text-lg font-semibold text-slate-900">Disponibilitatea flotei</h2>
           <TrendBarChart
-            title="Distribuția costurilor"
-            data={operationalCosts}
+            title="Structură flotă activă"
+            data={report.fleet_availability.map((item) => ({
+              label: item.label,
+              current: item.current_percent,
+              previous: item.previous_percent,
+            }))}
             legend={[
-              { label: "% Q1 2025", colorClass: "bg-jade" },
-              { label: "% Q4 2024", colorClass: "bg-berkeley/60" },
+              { label: report.period.label, colorClass: "bg-jade" },
+              { label: report.period.comparison.label, colorClass: "bg-berkeley/60" },
             ]}
             formatter={(value) => `${value}%`}
           />
         </div>
       </section>
 
-      <TrendBarChart
-        title="Disponibilitatea flotei"
-        description="Măsurată ca grad mediu de utilizare pe ultimele 5 trimestre."
-        data={fleetAvailability.map((item) => ({
-          label: item.label,
-          current: Math.round(item.current * 100),
-        }))}
-        legend={[{ label: "Grad de utilizare", colorClass: "bg-jade" }]}
-        formatter={(value) => `${value}%`}
-      />
-
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Perspective și recomandări</h2>
-        <div className="mt-4 grid gap-6 lg:grid-cols-3">
-          <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800">
-            <p className="font-semibold">Extinderea flotei electrice</p>
-            <p className="mt-1">
-              Cererea pentru vehicule electrice a crescut cu {formatPercent(0.21)} YoY, însă disponibilitatea este limitată (12
-              unități). Recomandare: achiziția a încă 8 vehicule până la final de Q2.
-            </p>
-          </div>
-          <div className="rounded-xl bg-blue-50 p-4 text-sm text-blue-800">
-            <p className="font-semibold">Corporate retention</p>
-            <p className="mt-1">
-              {formatNumber(42)} contracte corporate expiră în Q2. Inițiază renegocierea pachetelor cu propuneri de upgrade și
-              discount pentru volum pentru a susține creșterea YoY.
-            </p>
-          </div>
-          <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
-            <p className="font-semibold">Riscuri</p>
-            <p className="mt-1">
-              Indisponibilitatea temporară a 9 vehicule premium poate afecta vânzările de weekend. Planifică rotația flotei și
-              renegociază termenii cu service-urile partenere pentru a reduce timpul de staționare.
-            </p>
-          </div>
-        </div>
+        <h2 className="text-lg font-semibold text-slate-900">Insight-uri strategice</h2>
+        <ul className="mt-4 list-disc space-y-2 pl-6 text-sm text-slate-600">
+          {report.strategic_insights.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
       </section>
     </div>
   );
