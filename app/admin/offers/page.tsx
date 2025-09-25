@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BadgePercent, Calendar, Edit, Plus } from "lucide-react";
+import { BadgePercent, Calendar, Edit, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/table";
 import { Popup } from "@/components/ui/popup";
@@ -10,12 +10,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import {
+    formatOfferBenefitTitle,
+    getOfferBenefitDefinition,
+    normalizeOfferBenefits,
+    offerBenefitDefinitions,
+} from "@/lib/offerBenefits";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { formatDate, toIsoStringFromInput, toLocalDatetimeInputValue } from "@/lib/datetime";
 import type { Column } from "@/types/ui";
 import type { AdminOffer } from "@/types/admin";
-import type { OfferPayload } from "@/types/offer";
+import type { OfferBenefit, OfferBenefitType, OfferPayload } from "@/types/offer";
 
 const statusOptions: Array<{ value: AdminOffer["status"] | ""; label: string }> = [
     { value: "draft", label: "Draft" },
@@ -116,6 +122,43 @@ const textClassOptions: Array<{
         description: "Completează fundalurile închise cu un ton cald, feminin.",
     },
 ];
+
+type BenefitFormEntry = {
+    id: string;
+    type: OfferBenefitType;
+    value: string;
+};
+
+const defaultBenefitType = offerBenefitDefinitions[0]?.type ?? "percentage_discount";
+
+const generateBenefitId = () =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+
+const createBenefitFormEntry = (input?: Partial<BenefitFormEntry>): BenefitFormEntry => ({
+    id: input?.id ?? generateBenefitId(),
+    type: input?.type ?? defaultBenefitType,
+    value: input?.value ?? "",
+});
+
+const mapBenefitsToFormEntries = (items: OfferBenefit[] | undefined | null): BenefitFormEntry[] => {
+    if (!items || items.length === 0) {
+        return [];
+    }
+
+    return items.map((benefit) =>
+        createBenefitFormEntry({
+            type: benefit.type ?? defaultBenefitType,
+            value:
+                typeof benefit.value === "number"
+                    ? String(benefit.value)
+                    : typeof benefit.value === "string"
+                        ? benefit.value
+                        : "",
+        }),
+    );
+};
 
 const collectStringValues = (raw: unknown): string[] => {
     if (raw == null) {
@@ -239,7 +282,24 @@ const normalizeOffer = (raw: unknown): AdminOffer | null => {
                 ? (source as { discountLabel: string }).discountLabel
                 : null;
 
-    const features = collectStringValues(source.features ?? (source as { benefits?: unknown }).benefits);
+    const features = collectStringValues(
+        source.features ??
+            (source as { feature_list?: unknown }).feature_list ??
+            (source as { perks?: unknown }).perks ??
+            (source as { highlights?: unknown }).highlights,
+    );
+
+    const normalizedBenefits = normalizeOfferBenefits(
+        source.benefits ??
+            (source as { offer_benefits?: unknown }).offer_benefits ??
+            (source as { benefits_list?: unknown }).benefits_list,
+        features,
+    );
+
+    const normalizedFeatures =
+        features.length > 0
+            ? features
+            : normalizedBenefits.map((benefit) => formatOfferBenefitTitle(benefit)).filter((entry) => entry.length > 0);
 
     return {
         id,
@@ -251,7 +311,8 @@ const normalizeOffer = (raw: unknown): AdminOffer | null => {
         description,
         discount_label: discountLabel,
         badge: typeof source.badge === "string" ? source.badge : null,
-        features,
+        features: normalizedFeatures,
+        benefits: normalizedBenefits,
         icon: parseIcon(source.icon ?? (source as { icon_name?: unknown }).icon_name),
         background_class: parseClassName(source.background_class ?? (source as { backgroundClass?: unknown }).backgroundClass),
         text_class: parseClassName(source.text_class ?? (source as { textClass?: unknown }).textClass),
@@ -310,7 +371,7 @@ const OffersAdminPage = () => {
     const [title, setTitle] = useState("");
     const [discountLabel, setDiscountLabel] = useState("");
     const [description, setDescription] = useState("");
-    const [featuresInput, setFeaturesInput] = useState("");
+    const [benefits, setBenefits] = useState<BenefitFormEntry[]>([]);
     const [icon, setIcon] = useState<AdminOffer["icon"] | "">("heart");
     const [backgroundClass, setBackgroundClass] = useState("");
     const [textClass, setTextClass] = useState("");
@@ -350,7 +411,7 @@ const OffersAdminPage = () => {
         setTitle("");
         setDiscountLabel("");
         setDescription("");
-        setFeaturesInput("");
+        setBenefits([]);
         setIcon("heart");
         setBackgroundClass("");
         setTextClass("");
@@ -365,6 +426,7 @@ const OffersAdminPage = () => {
 
     const openAddModal = () => {
         resetForm();
+        setBenefits([createBenefitFormEntry()]);
         setIsModalOpen(true);
     };
 
@@ -373,7 +435,8 @@ const OffersAdminPage = () => {
         setTitle(offer.title ?? "");
         setDiscountLabel(offer.discount_label ?? "");
         setDescription(offer.description ?? "");
-        setFeaturesInput((offer.features ?? []).join("\n"));
+        const mappedBenefits = mapBenefitsToFormEntries(offer.benefits ?? null);
+        setBenefits(mappedBenefits.length > 0 ? mappedBenefits : [createBenefitFormEntry()]);
         setIcon(offer.icon ?? "");
         setBackgroundClass(offer.background_class ?? "");
         setTextClass(offer.text_class ?? "");
@@ -392,6 +455,35 @@ const OffersAdminPage = () => {
         setFormError(null);
     };
 
+    const addBenefit = () => {
+        setBenefits((current) => [...current, createBenefitFormEntry()]);
+    };
+
+    const updateBenefit = (id: string, patch: Partial<Omit<BenefitFormEntry, "id">>) => {
+        setBenefits((current) =>
+            current.map((entry) => (entry.id === id ? { ...entry, ...patch, value: patch.value ?? entry.value } : entry)),
+        );
+    };
+
+    const handleBenefitTypeChange = (id: string, nextType: OfferBenefitType) => {
+        const definition = getOfferBenefitDefinition(nextType);
+        setBenefits((current) =>
+            current.map((entry) =>
+                entry.id === id
+                    ? {
+                          ...entry,
+                          type: nextType,
+                          value: definition?.requiresValue ? entry.value : "",
+                      }
+                    : entry,
+            ),
+        );
+    };
+
+    const removeBenefit = (id: string) => {
+        setBenefits((current) => current.filter((entry) => entry.id !== id));
+    };
+
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (isSaving) {
@@ -405,7 +497,43 @@ const OffersAdminPage = () => {
         }
 
         const selectedStatus = status && status.toString().trim().length > 0 ? (status as AdminOffer["status"]) : undefined;
-        const features = collectStringValues(featuresInput);
+
+        let missingValueLabel: string | null = null;
+        const normalizedBenefits: OfferBenefit[] = benefits
+            .map((benefit) => {
+                const definition = getOfferBenefitDefinition(benefit.type);
+                const trimmedValue = benefit.value.trim();
+
+                if (definition?.requiresValue && trimmedValue.length === 0) {
+                    missingValueLabel = definition.label;
+                }
+
+                return {
+                    type: benefit.type,
+                    value: trimmedValue.length > 0 ? trimmedValue : null,
+                } satisfies OfferBenefit;
+            })
+            .filter((benefit) => {
+                const definition = getOfferBenefitDefinition(benefit.type);
+                if (!definition) {
+                    return benefit.value !== null && benefit.value !== undefined;
+                }
+                if (definition.requiresValue) {
+                    return benefit.value !== null && benefit.value !== undefined;
+                }
+                return true;
+            });
+
+        if (missingValueLabel) {
+            setFormError(`Completează valoarea pentru beneficiul „${missingValueLabel}”.`);
+            return;
+        }
+
+        const benefitTitles = normalizedBenefits
+            .map((benefit) => formatOfferBenefitTitle(benefit))
+            .map((title) => title.trim())
+            .filter((title) => title.length > 0);
+
         const startsAtIso = toIsoStringFromInput(startsAt);
         const endsAtIso = toIsoStringFromInput(endsAt);
 
@@ -413,7 +541,8 @@ const OffersAdminPage = () => {
             title: trimmedTitle,
             discount_label: discountLabel.trim() ? discountLabel.trim() : null,
             description: description.trim() ? description.trim() : null,
-            features: features.length > 0 ? features : [],
+            features: benefitTitles,
+            benefits: normalizedBenefits,
             icon: icon && icon.toString().length > 0 ? (icon as NonNullable<AdminOffer["icon"]>) : null,
             background_class: backgroundClass.trim() ? backgroundClass.trim() : null,
             text_class: textClass.trim() ? textClass.trim() : null,
@@ -518,16 +647,23 @@ const OffersAdminPage = () => {
                     renderRowDetails={(offer) => (
                         <div className="space-y-3 text-sm text-gray-700">
                             {offer.description && <p>{offer.description}</p>}
-                            {offer.features && offer.features.length > 0 && (
-                                <div>
-                                    <p className="font-medium">Beneficii incluse:</p>
-                                    <ul className="mt-1 list-disc space-y-1 pl-5">
-                                        {offer.features.map((feature, index) => (
-                                            <li key={`${offer.id}-feature-${index}`}>{feature}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
+                            {(() => {
+                                const benefitTitles = (offer.benefits ?? [])
+                                    .map((benefit) => formatOfferBenefitTitle(benefit))
+                                    .map((title) => title.trim())
+                                    .filter((title) => title.length > 0);
+                                const fallback = benefitTitles.length > 0 ? benefitTitles : offer.features ?? [];
+                                return fallback.length > 0 ? (
+                                    <div>
+                                        <p className="font-medium">Beneficii incluse:</p>
+                                        <ul className="mt-1 list-disc space-y-1 pl-5">
+                                            {fallback.map((feature, index) => (
+                                                <li key={`${offer.id}-benefit-${index}`}>{feature}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ) : null;
+                            })()}
                             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
                                 {offer.primary_cta_label && (
                                     <span className="inline-flex items-center gap-1">
@@ -608,92 +744,94 @@ const OffersAdminPage = () => {
                                 ))}
                             </Select>
                         </div>
-                        <fieldset>
-                            <legend className="text-sm font-semibold text-slate-900">Stil fundal</legend>
-                            <p className="mt-1 text-xs text-slate-500">
-                                Selectează rapid fundalul promoției. Poți reveni oricând la varianta implicită.
-                            </p>
-                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                {backgroundClassOptions.map((option) => {
-                                    const isSelected = backgroundClass === option.value;
-                                    return (
-                                        <button
-                                            key={option.value || "default"}
-                                            type="button"
-                                            onClick={() => setBackgroundClass(option.value)}
-                                            aria-pressed={isSelected}
-                                            className={cn(
-                                                "flex h-full flex-col rounded-lg border p-4 text-left transition",
-                                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berkeley-500 focus-visible:ring-offset-2",
-                                                isSelected
-                                                    ? "border-berkeley-500 ring-2 ring-berkeley-500"
-                                                    : "border-slate-200 hover:border-berkeley-400",
-                                            )}
-                                        >
-                                            <span className="text-sm font-semibold text-slate-900">{option.label}</span>
-                                            <span
+                        <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
+                            <fieldset className="h-full">
+                                <legend className="text-sm font-semibold text-slate-900">Stil fundal</legend>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    Selectează rapid fundalul promoției. Poți reveni oricând la varianta implicită.
+                                </p>
+                                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                    {backgroundClassOptions.map((option) => {
+                                        const isSelected = backgroundClass === option.value;
+                                        return (
+                                            <button
+                                                key={option.value || "default"}
+                                                type="button"
+                                                onClick={() => setBackgroundClass(option.value)}
+                                                aria-pressed={isSelected}
                                                 className={cn(
-                                                    "mt-3 block rounded-md px-3 py-2 text-sm font-semibold shadow-sm",
-                                                    option.value ? option.value : "bg-white",
-                                                    option.previewTextClass,
+                                                    "flex h-full flex-col rounded-lg border p-4 text-left transition",
+                                                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berkeley-500 focus-visible:ring-offset-2",
+                                                    isSelected
+                                                        ? "border-berkeley-500 ring-2 ring-berkeley-500"
+                                                        : "border-slate-200 hover:border-berkeley-400",
                                                 )}
                                             >
-                                                Oferta DaCars
-                                            </span>
-                                            <span className="mt-3 text-xs text-slate-600">{option.description}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            {backgroundClass &&
-                                !backgroundClassOptions.some((option) => option.value === backgroundClass) && (
+                                                <span className="text-sm font-semibold text-slate-900">{option.label}</span>
+                                                <span
+                                                    className={cn(
+                                                        "mt-3 block rounded-md px-3 py-2 text-sm font-semibold shadow-sm",
+                                                        option.value ? option.value : "bg-white",
+                                                        option.previewTextClass,
+                                                    )}
+                                                >
+                                                    Transfer gratuit
+                                                </span>
+                                                <span className="mt-3 text-xs text-slate-600">{option.description}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {backgroundClass &&
+                                    !backgroundClassOptions.some((option) => option.value === backgroundClass) && (
+                                        <p className="mt-2 text-xs text-amber-600">
+                                            Clasa personalizată „{backgroundClass}” va fi păstrată la salvare.
+                                        </p>
+                                    )}
+                            </fieldset>
+                            <fieldset className="h-full">
+                                <legend className="text-sm font-semibold text-slate-900">Stil text</legend>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    Ajustează culoarea mesajului pentru a avea lizibilitate excelentă pe fundalul ales.
+                                </p>
+                                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                    {textClassOptions.map((option) => {
+                                        const isSelected = textClass === option.value;
+                                        return (
+                                            <button
+                                                key={option.value || "default"}
+                                                type="button"
+                                                onClick={() => setTextClass(option.value)}
+                                                aria-pressed={isSelected}
+                                                className={cn(
+                                                    "flex h-full flex-col rounded-lg border p-4 text-left transition",
+                                                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berkeley-500 focus-visible:ring-offset-2",
+                                                    isSelected
+                                                        ? "border-berkeley-500 ring-2 ring-berkeley-500"
+                                                        : "border-slate-200 hover:border-berkeley-400",
+                                                )}
+                                            >
+                                                <span className="text-sm font-semibold text-slate-900">{option.label}</span>
+                                                <span
+                                                    className={cn(
+                                                        "mt-3 block rounded-md border border-dashed border-slate-200 bg-white px-3 py-2 text-sm font-medium",
+                                                        option.value || "text-slate-900",
+                                                    )}
+                                                >
+                                                    Oferta DaCars
+                                                </span>
+                                                <span className="mt-3 text-xs text-slate-600">{option.description}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {textClass && !textClassOptions.some((option) => option.value === textClass) && (
                                     <p className="mt-2 text-xs text-amber-600">
-                                        Clasa personalizată „{backgroundClass}” va fi păstrată la salvare.
+                                        Clasa personalizată „{textClass}” va fi păstrată la salvare.
                                     </p>
                                 )}
-                        </fieldset>
-                        <fieldset>
-                            <legend className="text-sm font-semibold text-slate-900">Stil text</legend>
-                            <p className="mt-1 text-xs text-slate-500">
-                                Ajustează culoarea mesajului pentru a avea lizibilitate excelentă pe fundalul ales.
-                            </p>
-                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                {textClassOptions.map((option) => {
-                                    const isSelected = textClass === option.value;
-                                    return (
-                                        <button
-                                            key={option.value || "default"}
-                                            type="button"
-                                            onClick={() => setTextClass(option.value)}
-                                            aria-pressed={isSelected}
-                                            className={cn(
-                                                "flex h-full flex-col rounded-lg border p-4 text-left transition",
-                                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berkeley-500 focus-visible:ring-offset-2",
-                                                isSelected
-                                                    ? "border-berkeley-500 ring-2 ring-berkeley-500"
-                                                    : "border-slate-200 hover:border-berkeley-400",
-                                            )}
-                                        >
-                                            <span className="text-sm font-semibold text-slate-900">{option.label}</span>
-                                            <span
-                                                className={cn(
-                                                    "mt-3 block rounded-md border border-dashed border-slate-200 bg-white px-3 py-2 text-sm font-medium",
-                                                    option.value || "text-slate-900",
-                                                )}
-                                            >
-                                                Oferta DaCars
-                                            </span>
-                                            <span className="mt-3 text-xs text-slate-600">{option.description}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            {textClass && !textClassOptions.some((option) => option.value === textClass) && (
-                                <p className="mt-2 text-xs text-amber-600">
-                                    Clasa personalizată „{textClass}” va fi păstrată la salvare.
-                                </p>
-                            )}
-                        </fieldset>
+                            </fieldset>
+                        </div>
                         <div>
                             <Label htmlFor="offer-cta-label">Text buton</Label>
                             <Input
@@ -740,15 +878,86 @@ const OffersAdminPage = () => {
                                 placeholder="Detalii despre condițiile promoției"
                             />
                         </div>
-                        <div className="md:col-span-2">
-                            <Label htmlFor="offer-features">Beneficii (unul pe linie)</Label>
-                            <Textarea
-                                id="offer-features"
-                                value={featuresInput}
-                                onChange={(event) => setFeaturesInput(event.target.value)}
-                                rows={4}
-                                placeholder={"Transfer gratuit\nKilometraj nelimitat"}
-                            />
+                        <div className="md:col-span-2 space-y-4">
+                            <div>
+                                <span className="text-sm font-semibold text-slate-900">Beneficii</span>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    Alege tipul de beneficiu din listă și completează valoarea doar atunci când este necesară.
+                                </p>
+                            </div>
+                            <div className="space-y-3">
+                                {benefits.map((benefit, index) => {
+                                    const definition = getOfferBenefitDefinition(benefit.type);
+                                    const preview = formatOfferBenefitTitle({ type: benefit.type, value: benefit.value });
+                                    return (
+                                        <div key={benefit.id} className="space-y-3 rounded-lg border border-slate-200 p-4">
+                                            <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+                                                <div className="md:flex-1">
+                                                    <Label htmlFor={`benefit-type-${benefit.id}`}>Tip beneficiu</Label>
+                                                    <Select
+                                                        id={`benefit-type-${benefit.id}`}
+                                                        value={benefit.type}
+                                                        onChange={(event) =>
+                                                            handleBenefitTypeChange(
+                                                                benefit.id,
+                                                                event.target.value as OfferBenefitType,
+                                                            )
+                                                        }
+                                                    >
+                                                        {offerBenefitDefinitions.map((option) => (
+                                                            <option key={option.type} value={option.type}>
+                                                                {option.label}
+                                                            </option>
+                                                        ))}
+                                                    </Select>
+                                                </div>
+                                                <div className="md:flex-1">
+                                                    <Label htmlFor={`benefit-value-${benefit.id}`}>
+                                                        {definition?.valueLabel ?? "Valoare"}
+                                                    </Label>
+                                                    <Input
+                                                        id={`benefit-value-${benefit.id}`}
+                                                        value={benefit.value}
+                                                        onChange={(event) => updateBenefit(benefit.id, { value: event.target.value })}
+                                                        placeholder={
+                                                            definition?.valuePlaceholder ??
+                                                            (definition?.requiresValue ? "" : "Opțional")
+                                                        }
+                                                        aria-required={definition?.requiresValue ?? false}
+                                                        required={definition?.requiresValue ?? false}
+                                                    />
+                                                    {definition?.valueHelper && (
+                                                        <p className="mt-1 text-xs text-slate-500">{definition.valueHelper}</p>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeBenefit(benefit.id)}
+                                                    className="inline-flex h-9 w-9 items-center justify-center self-start rounded-md text-slate-400 transition hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berkeley-500 focus-visible:ring-offset-2"
+                                                    aria-label={`Elimină beneficiul ${index + 1}`}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                            {definition?.description && (
+                                                <p className="text-xs text-slate-500">{definition.description}</p>
+                                            )}
+                                            <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700">
+                                                <span>Previzualizare</span>
+                                                <span>{preview || "—"}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {benefits.length === 0 && (
+                                    <div className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+                                        Nu ai adăugat încă beneficii. Folosește butonul de mai jos.
+                                    </div>
+                                )}
+                            </div>
+                            <Button type="button" variant="outline" onClick={addBenefit} className="w-full sm:w-auto">
+                                + Adaugă beneficiu
+                            </Button>
                         </div>
                     </div>
 

@@ -28,9 +28,18 @@ Gestionarea ofertelor promoționale din platforma DaCars. Endpoint-urile suport�
       "slug": "weekend-fara-garantie",
       "description": "Ridici mașina vineri și o returnezi luni fără depozit.",
       "discount_label": "-20% față de tariful standard",
+      "benefits": [
+        {
+          "type": "percentage_discount",
+          "value": "20%"
+        },
+        {
+          "type": "extra_driver"
+        }
+      ],
       "features": [
-        "Asigurare inclusă",
-        "Șofer adițional gratuit"
+        "20% Reducere procentuală",
+        "Șofer adițional inclus"
       ],
       "icon": "heart",
       "background_class": "bg-gradient-to-br from-jade to-emerald-600",
@@ -59,9 +68,19 @@ Creează o ofertă. Câmpurile sunt opționale, exceptând `title`.
   "slug": "early-booking",
   "description": "Rezervări confirmate cu minim 30 de zile înainte primesc reducere.",
   "discount_label": "Economisești 15%",
+  "benefits": [
+    {
+      "type": "percentage_discount",
+      "value": "15%"
+    },
+    {
+      "type": "free_days",
+      "value": "1"
+    }
+  ],
   "features": [
-    "Anulare gratuită",
-    "Upgrade disponibil în funcție de stoc"
+    "15% Reducere procentuală",
+    "1 Zile gratuite"
   ],
   "icon": "calendar",
   "background_class": "bg-berkeley",
@@ -100,7 +119,16 @@ Actualizează parțial oferta. Toate câmpurile devin `sometimes` la nivel de va
   "description": "Rezervările confirmate cu minim 21 de zile primesc în continuare reducere.",
   "status": "published",
   "primary_cta_label": "Profită de reducere",
-  "features": ["Anulare gratuită", "Kilometraj nelimitat"]
+  "benefits": [
+    {
+      "type": "percentage_discount",
+      "value": "15%"
+    },
+    {
+      "type": "deposit_waiver",
+      "value": "0 lei"
+    }
+  ]
 }
 ```
 
@@ -111,9 +139,19 @@ Actualizează parțial oferta. Toate câmpurile devin `sometimes` la nivel de va
     "id": 18,
     "title": "Early booking -15%",
     "status": "published",
+    "benefits": [
+      {
+        "type": "percentage_discount",
+        "value": "15%"
+      },
+      {
+        "type": "deposit_waiver",
+        "value": "0 lei"
+      }
+    ],
     "features": [
-      "Anulare gratuită",
-      "Kilometraj nelimitat"
+      "15% Reducere procentuală",
+      "0 lei Garanție eliminată"
     ],
     "updated_at": "2025-05-20T09:05:00+03:00"
   }
@@ -124,3 +162,24 @@ Actualizează parțial oferta. Toate câmpurile devin `sometimes` la nivel de va
 
 ## DELETE `/api/offers/{id}`
 Returnează `{ "deleted": true }` la succes. Pentru interfața publică folosiți `status` în locul ștergerii pentru a arhiva ofertele expirate.
+
+### Structura câmpului `benefits`
+
+`benefits` este o listă de obiecte care descriu avantajele comunicate clientului și logica de calcul din backend. Fiecare element acceptă:
+
+- `type` *(obligatoriu)* – identificatorul beneficiului, conform tabelului de mai jos.
+- `value` *(opțional)* – valoarea folosită în calcule sau textul afișat. Pentru tipurile marcate ca obligatorii, completați acest câmp.
+
+Pe interfața publică titlul rezultat concatenează valoarea (dacă există) cu eticheta beneficiului, ex. `{ "type": "percentage_discount", "value": "20%" }` → `20% Reducere procentuală`.
+
+| Tip (`type`) | Când se folosește | Implementare backend recomandată | Calcul / logică |
+| --- | --- | --- | --- |
+| `percentage_discount` | Promoții procentuale (ex. Early booking -15%). | Aplică un procent din tariful de bază înainte de alte reduceri. | `preț_final = preț_bază - (preț_bază * procent / 100)`; procentul provine din `value` (poate include simbolul `%`). |
+| `fixed_discount` | Reduceri cu sumă fixă. | Scade suma din total și plafonează minimul la 0. | `preț_final = max(preț_bază - valoare_fixă, 0)`; `value` este suma (ex. „150 lei”). |
+| `free_days` | Campanii „x zile gratuite”. | Marchează zilele gratuite cu preț 0 și redistribuie reducerea pe restul perioadei. | `discount_total = număr_zile_gratuite * tarif_zilnic_mediu`; `value` reprezintă numărul de zile. |
+| `deposit_waiver` | Eliminarea sau reducerea garanției. | Setează depozitul la 0 sau la valoarea specificată în `value`. | Dacă `value` este prezent, folosește acea sumă; altfel depozit 0. |
+| `extra_driver` | Șofer adițional inclus. | Marchează serviciul „driver extra” ca gratuit în rezervare. | Fără calcul suplimentar; `value` este opțional. |
+| `airport_transfer` | Transfer aeroport–hotel inclus. | Include serviciul de transfer în ofertă cu tarif 0. | Nu necesită `value`; afișarea este mesaj static. |
+| `custom` | Mesaje personalizate (ex. „Asigurare completă cadou”). | Folosește `value` ca text informativ, fără calcul automat. | `value` este obligatoriu și se afișează ca atare. |
+
+> **Notă:** Pentru compatibilitate, câmpul `features` poate fi transmis în continuare. Dacă `benefits` lipsește, sistemul derivă automat lista de features din beneficiile salvate.
