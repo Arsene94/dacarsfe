@@ -6,7 +6,6 @@ import { Calendar, Gift, Heart, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
-import { formatOfferBenefitTitle, normalizeOfferBenefits } from "@/lib/offerBenefits";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { Offer } from "@/types/offer";
 
@@ -121,20 +120,20 @@ const mapOfferToCard = (entry: Offer | Record<string, unknown>): OfferCard | nul
         title,
         description,
         discount,
-        features: normalizeOfferBenefits(
-            source.benefits ??
-                (source as { offer_benefits?: unknown }).offer_benefits ??
-                (source as { benefits_list?: unknown }).benefits_list,
-            collectStringValues(
+        features: (() => {
+            const benefits = collectStringValues(
+                source.benefits ??
+                    (source as { offer_benefits?: unknown }).offer_benefits ??
+                    (source as { benefits_list?: unknown }).benefits_list,
+            );
+            const fallback = collectStringValues(
                 source.features ??
                     (source as { feature_list?: unknown }).feature_list ??
                     (source as { perks?: unknown }).perks ??
                     (source as { highlights?: unknown }).highlights,
-            ),
-        )
-            .map((benefit) => formatOfferBenefitTitle(benefit))
-            .map((title) => title.trim())
-            .filter((title) => title.length > 0),
+            );
+            return benefits.length > 0 ? benefits : fallback;
+        })(),
         color: color ?? undefined,
         textColor: textColor ?? undefined,
         icon: resolveIconKey(source.icon ?? (source as { icon_name?: unknown }).icon_name),

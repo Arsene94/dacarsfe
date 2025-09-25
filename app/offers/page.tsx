@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { Calendar, Gift, Heart, Sparkles, Users } from "lucide-react";
 import { ApiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
-import { formatOfferBenefitTitle, normalizeOfferBenefits } from "@/lib/offerBenefits";
 import { buildMetadata } from "@/lib/seo/meta";
 import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
 import { createBreadcrumbStructuredData } from "@/lib/seo/structuredData";
@@ -145,20 +144,20 @@ const normalizeOffer = (entry: Offer | Record<string, unknown>): PublicOffer | n
     title,
     description: description ?? undefined,
     discount: discount ?? undefined,
-    features: normalizeOfferBenefits(
-      source.benefits ??
-        (source as { offer_benefits?: unknown }).offer_benefits ??
-        (source as { benefits_list?: unknown }).benefits_list,
-      collectStringValues(
+    features: (() => {
+      const benefits = collectStringValues(
+        source.benefits ??
+          (source as { offer_benefits?: unknown }).offer_benefits ??
+          (source as { benefits_list?: unknown }).benefits_list,
+      );
+      const fallback = collectStringValues(
         source.features ??
           (source as { feature_list?: unknown }).feature_list ??
           (source as { perks?: unknown }).perks ??
           (source as { highlights?: unknown }).highlights,
-      ),
-    )
-      .map((benefit) => formatOfferBenefitTitle(benefit))
-      .map((title) => title.trim())
-      .filter((title) => title.length > 0),
+      );
+      return benefits.length > 0 ? benefits : fallback;
+    })(),
     backgroundClass: backgroundClass ?? undefined,
     textClass: textClass ?? undefined,
     icon: resolveIcon(source.icon ?? (source as { icon_name?: unknown }).icon_name),

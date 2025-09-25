@@ -29,17 +29,12 @@ Gestionarea ofertelor promoționale din platforma DaCars. Endpoint-urile suport�
       "description": "Ridici mașina vineri și o returnezi luni fără depozit.",
       "discount_label": "-20% față de tariful standard",
       "benefits": [
-        {
-          "type": "percentage_discount",
-          "value": "20%"
-        },
-        {
-          "type": "extra_driver"
-        }
+        "20% reducere față de tariful standard",
+        "Șofer adițional inclus"
       ],
       "features": [
-        "20% Reducere procentuală",
-        "Șofer adițional inclus"
+        "Ridicare flexibilă în weekend",
+        "Asistență rutieră 24/7"
       ],
       "icon": "heart",
       "background_class": "bg-gradient-to-br from-jade to-emerald-600",
@@ -69,18 +64,12 @@ Creează o ofertă. Câmpurile sunt opționale, exceptând `title`.
   "description": "Rezervări confirmate cu minim 30 de zile înainte primesc reducere.",
   "discount_label": "Economisești 15%",
   "benefits": [
-    {
-      "type": "percentage_discount",
-      "value": "15%"
-    },
-    {
-      "type": "free_days",
-      "value": "1"
-    }
+    "15% reducere pentru rezervări anticipate",
+    "1 zi gratuită pentru perioade de minim 5 zile"
   ],
   "features": [
-    "15% Reducere procentuală",
-    "1 Zile gratuite"
+    "Preluare din aeroport inclusă",
+    "Asigurare completă cadou"
   ],
   "icon": "calendar",
   "background_class": "bg-berkeley",
@@ -120,14 +109,8 @@ Actualizează parțial oferta. Toate câmpurile devin `sometimes` la nivel de va
   "status": "published",
   "primary_cta_label": "Profită de reducere",
   "benefits": [
-    {
-      "type": "percentage_discount",
-      "value": "15%"
-    },
-    {
-      "type": "deposit_waiver",
-      "value": "0 lei"
-    }
+    "Reducere 15% aplicată automat",
+    "Garanție eliminată pe perioada promoției"
   ]
 }
 ```
@@ -140,18 +123,11 @@ Actualizează parțial oferta. Toate câmpurile devin `sometimes` la nivel de va
     "title": "Early booking -15%",
     "status": "published",
     "benefits": [
-      {
-        "type": "percentage_discount",
-        "value": "15%"
-      },
-      {
-        "type": "deposit_waiver",
-        "value": "0 lei"
-      }
+      "Reducere 15% aplicată automat",
+      "Garanție eliminată pe perioada promoției"
     ],
     "features": [
-      "15% Reducere procentuală",
-      "0 lei Garanție eliminată"
+      "Suport dedicat pentru clienți corporate"
     ],
     "updated_at": "2025-05-20T09:05:00+03:00"
   }
@@ -165,21 +141,9 @@ Returnează `{ "deleted": true }` la succes. Pentru interfața publică folosiț
 
 ### Structura câmpului `benefits`
 
-`benefits` este o listă de obiecte care descriu avantajele comunicate clientului și logica de calcul din backend. Fiecare element acceptă:
+`benefits` este acum o listă simplă de string-uri (maxim 255 caractere recomandat) care descriu avantajele comunicate clienților.
+Valorile sunt afișate ca atare în interfață, în ordinea în care sunt trimise. Backend-ul poate interpreta fiecare intrare pentru a
+declanșa logica necesară (ex. `"Reducere 15%"`, `"Șofer adițional inclus"`).
 
-- `type` *(obligatoriu)* – identificatorul beneficiului, conform tabelului de mai jos.
-- `value` *(opțional)* – valoarea folosită în calcule sau textul afișat. Pentru tipurile marcate ca obligatorii, completați acest câmp.
-
-Pe interfața publică titlul rezultat concatenează valoarea (dacă există) cu eticheta beneficiului, ex. `{ "type": "percentage_discount", "value": "20%" }` → `20% Reducere procentuală`.
-
-| Tip (`type`) | Când se folosește | Implementare backend recomandată | Calcul / logică |
-| --- | --- | --- | --- |
-| `percentage_discount` | Promoții procentuale (ex. Early booking -15%). | Aplică un procent din tariful de bază înainte de alte reduceri. | `preț_final = preț_bază - (preț_bază * procent / 100)`; procentul provine din `value` (poate include simbolul `%`). |
-| `fixed_discount` | Reduceri cu sumă fixă. | Scade suma din total și plafonează minimul la 0. | `preț_final = max(preț_bază - valoare_fixă, 0)`; `value` este suma (ex. „150 lei”). |
-| `free_days` | Campanii „x zile gratuite”. | Marchează zilele gratuite cu preț 0 și redistribuie reducerea pe restul perioadei. | `discount_total = număr_zile_gratuite * tarif_zilnic_mediu`; `value` reprezintă numărul de zile. |
-| `deposit_waiver` | Eliminarea sau reducerea garanției. | Setează depozitul la 0 sau la valoarea specificată în `value`. | Dacă `value` este prezent, folosește acea sumă; altfel depozit 0. |
-| `extra_driver` | Șofer adițional inclus. | Marchează serviciul „driver extra” ca gratuit în rezervare. | Fără calcul suplimentar; `value` este opțional. |
-| `airport_transfer` | Transfer aeroport–hotel inclus. | Include serviciul de transfer în ofertă cu tarif 0. | Nu necesită `value`; afișarea este mesaj static. |
-| `custom` | Mesaje personalizate (ex. „Asigurare completă cadou”). | Folosește `value` ca text informativ, fără calcul automat. | `value` este obligatoriu și se afișează ca atare. |
-
-> **Notă:** Pentru compatibilitate, câmpul `features` poate fi transmis în continuare. Dacă `benefits` lipsește, sistemul derivă automat lista de features din beneficiile salvate.
+> **Notă:** Pentru compatibilitate, câmpul `features` poate fi transmis în continuare. Dacă `benefits` lipsește, UI-ul public folosește
+lista din `features`.

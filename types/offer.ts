@@ -4,21 +4,6 @@ export type OfferStatus = "draft" | "scheduled" | "published" | "archived" | (st
 
 export type OfferIcon = "heart" | "users" | "gift" | "calendar" | (string & {});
 
-export type OfferBenefitType =
-    | "percentage_discount"
-    | "fixed_discount"
-    | "free_days"
-    | "deposit_waiver"
-    | "extra_driver"
-    | "airport_transfer"
-    | "custom"
-    | (string & {});
-
-export interface OfferBenefit extends UnknownRecord {
-    type: OfferBenefitType;
-    value?: string | number | null;
-}
-
 export interface Offer extends UnknownRecord {
     id: number;
     title: string;
@@ -27,7 +12,7 @@ export interface Offer extends UnknownRecord {
     discount_label?: string | null;
     badge?: string | null;
     features?: string[] | null;
-    benefits?: OfferBenefit[] | null;
+    benefits?: string[] | null;
     icon?: OfferIcon | null;
     background_class?: string | null;
     text_class?: string | null;
@@ -47,7 +32,7 @@ export type OfferPayload = Partial<{
     discount_label: string | null;
     badge: string | null;
     features: string[] | string | null;
-    benefits: OfferBenefit[] | null;
+    benefits: string[] | string | null;
     icon: OfferIcon | null;
     background_class: string | null;
     text_class: string | null;

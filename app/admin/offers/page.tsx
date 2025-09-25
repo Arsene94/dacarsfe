@@ -10,18 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import {
-    formatOfferBenefitTitle,
-    getOfferBenefitDefinition,
-    normalizeOfferBenefits,
-    offerBenefitDefinitions,
-} from "@/lib/offerBenefits";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { formatDate, toIsoStringFromInput, toLocalDatetimeInputValue } from "@/lib/datetime";
 import type { Column } from "@/types/ui";
 import type { AdminOffer } from "@/types/admin";
-import type { OfferBenefit, OfferBenefitType, OfferPayload } from "@/types/offer";
+import type { OfferPayload } from "@/types/offer";
 
 const statusOptions: Array<{ value: AdminOffer["status"] | ""; label: string }> = [
     { value: "draft", label: "Draft" },
@@ -131,11 +125,8 @@ const textClassOptions: Array<{
 
 type BenefitFormEntry = {
     id: string;
-    type: OfferBenefitType;
     value: string;
 };
-
-const defaultBenefitType = offerBenefitDefinitions[0]?.type ?? "percentage_discount";
 
 const generateBenefitId = () =>
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -144,26 +135,16 @@ const generateBenefitId = () =>
 
 const createBenefitFormEntry = (input?: Partial<BenefitFormEntry>): BenefitFormEntry => ({
     id: input?.id ?? generateBenefitId(),
-    type: input?.type ?? defaultBenefitType,
     value: input?.value ?? "",
 });
 
-const mapBenefitsToFormEntries = (items: OfferBenefit[] | undefined | null): BenefitFormEntry[] => {
-    if (!items || items.length === 0) {
+const mapBenefitsToFormEntries = (items: unknown): BenefitFormEntry[] => {
+    const values = collectStringValues(items);
+    if (values.length === 0) {
         return [];
     }
 
-    return items.map((benefit) =>
-        createBenefitFormEntry({
-            type: benefit.type ?? defaultBenefitType,
-            value:
-                typeof benefit.value === "number"
-                    ? String(benefit.value)
-                    : typeof benefit.value === "string"
-                        ? benefit.value
-                        : "",
-        }),
-    );
+    return values.map((value) => createBenefitFormEntry({ value }));
 };
 
 const collectStringValues = (raw: unknown): string[] => {
@@ -295,17 +276,13 @@ const normalizeOffer = (raw: unknown): AdminOffer | null => {
             (source as { highlights?: unknown }).highlights,
     );
 
-    const normalizedBenefits = normalizeOfferBenefits(
+    const benefits = collectStringValues(
         source.benefits ??
             (source as { offer_benefits?: unknown }).offer_benefits ??
             (source as { benefits_list?: unknown }).benefits_list,
-        features,
     );
 
-    const normalizedFeatures =
-        features.length > 0
-            ? features
-            : normalizedBenefits.map((benefit) => formatOfferBenefitTitle(benefit)).filter((entry) => entry.length > 0);
+    const normalizedFeatures = features.length > 0 ? features : benefits;
 
     return {
         id,
@@ -318,7 +295,7 @@ const normalizeOffer = (raw: unknown): AdminOffer | null => {
         discount_label: discountLabel,
         badge: typeof source.badge === "string" ? source.badge : null,
         features: normalizedFeatures,
-        benefits: normalizedBenefits,
+        benefits,
         icon: parseIcon(source.icon ?? (source as { icon_name?: unknown }).icon_name),
         background_class: parseClassName(source.background_class ?? (source as { backgroundClass?: unknown }).backgroundClass),
         text_class: parseClassName(source.text_class ?? (source as { textClass?: unknown }).textClass),
@@ -377,7 +354,7 @@ const OffersAdminPage = () => {
     const [title, setTitle] = useState("");
     const [discountLabel, setDiscountLabel] = useState("");
     const [description, setDescription] = useState("");
-    const [benefits, setBenefits] = useState<BenefitFormEntry[]>([]);
+    const [benefits, setBenefits] = useState<BenefitFormEntry[]>(() => [createBenefitFormEntry()]);
     const [icon, setIcon] = useState<AdminOffer["icon"] | "">("heart");
     const [backgroundClass, setBackgroundClass] = useState("");
     const [textClass, setTextClass] = useState("");
@@ -417,7 +394,7 @@ const OffersAdminPage = () => {
         setTitle("");
         setDiscountLabel("");
         setDescription("");
-        setBenefits([]);
+        setBenefits([createBenefitFormEntry()]);
         setIcon("heart");
         setBackgroundClass("");
         setTextClass("");
@@ -441,7 +418,7 @@ const OffersAdminPage = () => {
         setTitle(offer.title ?? "");
         setDiscountLabel(offer.discount_label ?? "");
         setDescription(offer.description ?? "");
-        const mappedBenefits = mapBenefitsToFormEntries(offer.benefits ?? null);
+        const mappedBenefits = mapBenefitsToFormEntries(offer.benefits ?? offer.features ?? null);
         setBenefits(mappedBenefits.length > 0 ? mappedBenefits : [createBenefitFormEntry()]);
         setIcon(offer.icon ?? "");
         setBackgroundClass(offer.background_class ?? "");
@@ -465,29 +442,15 @@ const OffersAdminPage = () => {
         setBenefits((current) => [...current, createBenefitFormEntry()]);
     };
 
-    const updateBenefit = (id: string, patch: Partial<Omit<BenefitFormEntry, "id">>) => {
-        setBenefits((current) =>
-            current.map((entry) => (entry.id === id ? { ...entry, ...patch, value: patch.value ?? entry.value } : entry)),
-        );
-    };
-
-    const handleBenefitTypeChange = (id: string, nextType: OfferBenefitType) => {
-        const definition = getOfferBenefitDefinition(nextType);
-        setBenefits((current) =>
-            current.map((entry) =>
-                entry.id === id
-                    ? {
-                          ...entry,
-                          type: nextType,
-                          value: definition?.requiresValue ? entry.value : "",
-                      }
-                    : entry,
-            ),
-        );
+    const updateBenefit = (id: string, value: string) => {
+        setBenefits((current) => current.map((entry) => (entry.id === id ? { ...entry, value } : entry)));
     };
 
     const removeBenefit = (id: string) => {
-        setBenefits((current) => current.filter((entry) => entry.id !== id));
+        setBenefits((current) => {
+            const next = current.filter((entry) => entry.id !== id);
+            return next.length > 0 ? next : [createBenefitFormEntry()];
+        });
     };
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -504,41 +467,9 @@ const OffersAdminPage = () => {
 
         const selectedStatus = status && status.toString().trim().length > 0 ? (status as AdminOffer["status"]) : undefined;
 
-        let missingValueLabel: string | null = null;
-        const normalizedBenefits: OfferBenefit[] = benefits
-            .map((benefit) => {
-                const definition = getOfferBenefitDefinition(benefit.type);
-                const trimmedValue = benefit.value.trim();
-
-                if (definition?.requiresValue && trimmedValue.length === 0) {
-                    missingValueLabel = definition.label;
-                }
-
-                return {
-                    type: benefit.type,
-                    value: trimmedValue.length > 0 ? trimmedValue : null,
-                } satisfies OfferBenefit;
-            })
-            .filter((benefit) => {
-                const definition = getOfferBenefitDefinition(benefit.type);
-                if (!definition) {
-                    return benefit.value !== null && benefit.value !== undefined;
-                }
-                if (definition.requiresValue) {
-                    return benefit.value !== null && benefit.value !== undefined;
-                }
-                return true;
-            });
-
-        if (missingValueLabel) {
-            setFormError(`Completează valoarea pentru beneficiul „${missingValueLabel}”.`);
-            return;
-        }
-
-        const benefitTitles = normalizedBenefits
-            .map((benefit) => formatOfferBenefitTitle(benefit))
-            .map((title) => title.trim())
-            .filter((title) => title.length > 0);
+        const normalizedBenefits = benefits
+            .map((benefit) => benefit.value.trim())
+            .filter((value) => value.length > 0);
 
         const startsAtIso = toIsoStringFromInput(startsAt);
         const endsAtIso = toIsoStringFromInput(endsAt);
@@ -547,7 +478,7 @@ const OffersAdminPage = () => {
             title: trimmedTitle,
             discount_label: discountLabel.trim() ? discountLabel.trim() : null,
             description: description.trim() ? description.trim() : null,
-            features: benefitTitles,
+            features: normalizedBenefits,
             benefits: normalizedBenefits,
             icon: icon && icon.toString().length > 0 ? (icon as NonNullable<AdminOffer["icon"]>) : null,
             background_class: backgroundClass.trim() ? backgroundClass.trim() : null,
@@ -654,10 +585,7 @@ const OffersAdminPage = () => {
                         <div className="space-y-3 text-sm text-gray-700">
                             {offer.description && <p>{offer.description}</p>}
                             {(() => {
-                                const benefitTitles = (offer.benefits ?? [])
-                                    .map((benefit) => formatOfferBenefitTitle(benefit))
-                                    .map((title) => title.trim())
-                                    .filter((title) => title.length > 0);
+                                const benefitTitles = collectStringValues(offer.benefits ?? []);
                                 const fallback = benefitTitles.length > 0 ? benefitTitles : offer.features ?? [];
                                 return fallback.length > 0 ? (
                                     <div>
@@ -712,13 +640,17 @@ const OffersAdminPage = () => {
                             />
                         </div>
                         <div>
-                            <Label htmlFor="offer-discount">Beneficiu</Label>
+                            <Label htmlFor="offer-discount">Text discount (badge)</Label>
                             <Input
                                 id="offer-discount"
                                 value={discountLabel}
                                 onChange={(event) => setDiscountLabel(event.target.value)}
                                 placeholder="Ex: -20% la rezervare"
                             />
+                            <p className="mt-1 text-xs text-slate-500">
+                                Acest text se afișează pe cardul promoției. Logica backend pentru beneficii se bazează pe lista de
+                                mai jos.
+                            </p>
                         </div>
                         <div>
                             <Label htmlFor="offer-status">Status</Label>
@@ -888,78 +820,36 @@ const OffersAdminPage = () => {
                             <div>
                                 <span className="text-sm font-semibold text-slate-900">Beneficii</span>
                                 <p className="mt-1 text-xs text-slate-500">
-                                    Alege tipul de beneficiu din listă și completează valoarea doar atunci când este necesară.
+                                    Introdu fiecare beneficiu exact cum vrei să apară în listă. Poți lăsa câmpurile necompletate
+                                    dacă nu sunt necesare.
                                 </p>
                             </div>
                             <div className="space-y-3">
-                                {benefits.map((benefit, index) => {
-                                    const definition = getOfferBenefitDefinition(benefit.type);
-                                    const preview = formatOfferBenefitTitle({ type: benefit.type, value: benefit.value });
-                                    return (
-                                        <div key={benefit.id} className="space-y-3 rounded-lg border border-slate-200 p-4">
-                                            <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
-                                                <div className="md:flex-1">
-                                                    <Label htmlFor={`benefit-type-${benefit.id}`}>Tip beneficiu</Label>
-                                                    <Select
-                                                        id={`benefit-type-${benefit.id}`}
-                                                        value={benefit.type}
-                                                        onChange={(event) =>
-                                                            handleBenefitTypeChange(
-                                                                benefit.id,
-                                                                event.target.value as OfferBenefitType,
-                                                            )
-                                                        }
-                                                    >
-                                                        {offerBenefitDefinitions.map((option) => (
-                                                            <option key={option.type} value={option.type}>
-                                                                {option.label}
-                                                            </option>
-                                                        ))}
-                                                    </Select>
-                                                </div>
-                                                <div className="md:flex-1">
-                                                    <Label htmlFor={`benefit-value-${benefit.id}`}>
-                                                        {definition?.valueLabel ?? "Valoare"}
-                                                    </Label>
-                                                    <Input
-                                                        id={`benefit-value-${benefit.id}`}
-                                                        value={benefit.value}
-                                                        onChange={(event) => updateBenefit(benefit.id, { value: event.target.value })}
-                                                        placeholder={
-                                                            definition?.valuePlaceholder ??
-                                                            (definition?.requiresValue ? "" : "Opțional")
-                                                        }
-                                                        aria-required={definition?.requiresValue ?? false}
-                                                        required={definition?.requiresValue ?? false}
-                                                    />
-                                                    {definition?.valueHelper && (
-                                                        <p className="mt-1 text-xs text-slate-500">{definition.valueHelper}</p>
-                                                    )}
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeBenefit(benefit.id)}
-                                                    className="inline-flex h-9 w-9 items-center justify-center self-start rounded-md text-slate-400 transition hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berkeley-500 focus-visible:ring-offset-2"
-                                                    aria-label={`Elimină beneficiul ${index + 1}`}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                {benefits.map((benefit, index) => (
+                                    <div key={benefit.id} className="space-y-3 rounded-lg border border-slate-200 p-4">
+                                        <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+                                            <div className="md:flex-1">
+                                                <Label htmlFor={`benefit-value-${benefit.id}`}>
+                                                    Beneficiu {index + 1}
+                                                </Label>
+                                                <Input
+                                                    id={`benefit-value-${benefit.id}`}
+                                                    value={benefit.value}
+                                                    onChange={(event) => updateBenefit(benefit.id, event.target.value)}
+                                                    placeholder="Ex: Transfer gratuit aeroport"
+                                                />
                                             </div>
-                                            {definition?.description && (
-                                                <p className="text-xs text-slate-500">{definition.description}</p>
-                                            )}
-                                            <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700">
-                                                <span>Previzualizare</span>
-                                                <span>{preview || "—"}</span>
-                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeBenefit(benefit.id)}
+                                                className="inline-flex h-9 w-9 items-center justify-center self-start rounded-md text-slate-400 transition hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berkeley-500 focus-visible:ring-offset-2"
+                                                aria-label={`Elimină beneficiul ${index + 1}`}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
                                         </div>
-                                    );
-                                })}
-                                {benefits.length === 0 && (
-                                    <div className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-500">
-                                        Nu ai adăugat încă beneficii. Folosește butonul de mai jos.
                                     </div>
-                                )}
+                                ))}
                             </div>
                             <Button type="button" variant="outline" onClick={addBenefit} className="w-full sm:w-auto">
                                 + Adaugă beneficiu
