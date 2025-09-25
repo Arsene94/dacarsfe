@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Calendar, Gift, Heart, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatOfferBadge } from "@/lib/offers";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { useTranslations } from "@/lib/i18n/useTranslations";
-import type { Offer } from "@/types/offer";
+import type { Offer, OfferKind } from "@/types/offer";
 
 type OfferCard = {
     title?: string;
@@ -104,9 +105,18 @@ const mapOfferToCard = (entry: Offer | Record<string, unknown>): OfferCard | nul
     }
 
     const description = parseOptionalString(source.description);
-    const discount = parseOptionalString(
-        source.discount_label ?? (source as { discountLabel?: unknown }).discountLabel ?? (source as { badge?: unknown }).badge,
+    const offerType = parseOptionalString(
+        source.offer_type ?? (source as { offerType?: unknown }).offerType,
+    ) as OfferKind | undefined;
+    const offerValue = parseOptionalString(
+        source.offer_value ?? (source as { offerValue?: unknown }).offerValue,
     );
+    const discount =
+        parseOptionalString(
+            source.discount_label ??
+                (source as { discountLabel?: unknown }).discountLabel ??
+                (source as { badge?: unknown }).badge,
+        ) ?? formatOfferBadge(offerType ?? null, offerValue ?? null) ?? undefined;
     const color = parseOptionalString(source.background_class ?? (source as { backgroundClass?: unknown }).backgroundClass);
     const textColor = parseOptionalString(source.text_class ?? (source as { textClass?: unknown }).textClass);
     const ctaLabel = parseOptionalString(

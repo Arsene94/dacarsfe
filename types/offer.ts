@@ -2,6 +2,14 @@ import type { UnknownRecord } from "@/types/api";
 
 export type OfferStatus = "draft" | "scheduled" | "published" | "archived" | (string & {});
 
+export type OfferKind =
+    | "percentage_discount"
+    | "fixed_discount"
+    | "free_day_bonus"
+    | "free_service_upgrade"
+    | "deposit_waiver"
+    | (string & {});
+
 export type OfferIcon = "heart" | "users" | "gift" | "calendar" | (string & {});
 
 export interface Offer extends UnknownRecord {
@@ -11,6 +19,8 @@ export interface Offer extends UnknownRecord {
     description?: string | null;
     discount_label?: string | null;
     badge?: string | null;
+    offer_type?: OfferKind | null;
+    offer_value?: string | null;
     features?: string[] | null;
     benefits?: string[] | null;
     icon?: OfferIcon | null;
@@ -31,6 +41,8 @@ export type OfferPayload = Partial<{
     description: string | null;
     discount_label: string | null;
     badge: string | null;
+    offer_type: OfferKind | null;
+    offer_value: string | null;
     features: string[] | string | null;
     benefits: string[] | string | null;
     icon: OfferIcon | null;

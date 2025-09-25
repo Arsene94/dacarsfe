@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Calendar, Gift, Heart, Sparkles, Users } from "lucide-react";
 import { ApiClient } from "@/lib/api";
+import { formatOfferBadge } from "@/lib/offers";
 import { extractList } from "@/lib/apiResponse";
 import { buildMetadata } from "@/lib/seo/meta";
 import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
@@ -9,7 +10,7 @@ import { createBreadcrumbStructuredData } from "@/lib/seo/structuredData";
 import { formatDate } from "@/lib/datetime";
 import { Button } from "@/components/ui/button";
 import JsonLd from "@/components/seo/JsonLd";
-import type { Offer } from "@/types/offer";
+import type { Offer, OfferKind } from "@/types/offer";
 
 const PAGE_TITLE = "Oferte speciale DaCars";
 const PAGE_DESCRIPTION =
@@ -126,9 +127,18 @@ const normalizeOffer = (entry: Offer | Record<string, unknown>): PublicOffer | n
   }
 
   const description = parseOptionalString(source.description);
-  const discount = parseOptionalString(
-    source.discount_label ?? (source as { discountLabel?: unknown }).discountLabel ?? (source as { badge?: unknown }).badge,
+  const offerType = parseOptionalString(
+    source.offer_type ?? (source as { offerType?: unknown }).offerType,
+  ) as OfferKind | undefined;
+  const offerValue = parseOptionalString(
+    source.offer_value ?? (source as { offerValue?: unknown }).offerValue,
   );
+  const discount =
+    parseOptionalString(
+      source.discount_label ??
+        (source as { discountLabel?: unknown }).discountLabel ??
+        (source as { badge?: unknown }).badge,
+    ) ?? formatOfferBadge(offerType ?? null, offerValue ?? null) ?? undefined;
   const backgroundClass = parseOptionalString(
     source.background_class ?? (source as { backgroundClass?: unknown }).backgroundClass,
   );

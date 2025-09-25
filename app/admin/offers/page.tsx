@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BadgePercent, Calendar, Edit, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/table";
@@ -10,12 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { OFFER_TYPE_OPTIONS, formatOfferBadge, getOfferTypeOption } from "@/lib/offers";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { formatDate, toIsoStringFromInput, toLocalDatetimeInputValue } from "@/lib/datetime";
 import type { Column } from "@/types/ui";
 import type { AdminOffer } from "@/types/admin";
-import type { OfferPayload } from "@/types/offer";
+import type { OfferKind, OfferPayload } from "@/types/offer";
 
 const statusOptions: Array<{ value: AdminOffer["status"] | ""; label: string }> = [
     { value: "draft", label: "Draft" },
@@ -219,6 +220,14 @@ const parseStatus = (value: unknown): AdminOffer["status"] => {
     }
 };
 
+const parseOfferType = (value: unknown): OfferKind | undefined => {
+    const candidate = parseOptionalString(value);
+    if (!candidate) {
+        return undefined;
+    }
+    return candidate as OfferKind;
+};
+
 const parseDate = (value: unknown): string | undefined => {
     if (value == null) {
         return undefined;
@@ -294,6 +303,8 @@ const normalizeOffer = (raw: unknown): AdminOffer | null => {
                 : `oferta-${id}`,
         description,
         discount_label: discountLabel,
+        offer_type: parseOfferType(source.offer_type ?? (source as { offerType?: unknown }).offerType),
+        offer_value: parseOptionalString(source.offer_value ?? (source as { offerValue?: unknown }).offerValue),
         badge: typeof source.badge === "string" ? source.badge : null,
         features: normalizedFeatures,
         benefits: normalizedBenefits,
@@ -355,6 +366,8 @@ const OffersAdminPage = () => {
     const [title, setTitle] = useState("");
     const [discountLabel, setDiscountLabel] = useState("");
     const [description, setDescription] = useState("");
+    const [offerType, setOfferType] = useState<OfferKind | "">("");
+    const [offerValue, setOfferValue] = useState("");
     const [benefits, setBenefits] = useState<BenefitFormEntry[]>(() => [createBenefitFormEntry()]);
     const [icon, setIcon] = useState<AdminOffer["icon"] | "">("heart");
     const [backgroundClass, setBackgroundClass] = useState("");
@@ -365,6 +378,13 @@ const OffersAdminPage = () => {
     const [startsAt, setStartsAt] = useState("");
     const [endsAt, setEndsAt] = useState("");
     const [formError, setFormError] = useState<string | null>(null);
+
+    const discountAutofillRef = useRef(false);
+
+    const selectedOfferType = useMemo(
+        () => getOfferTypeOption(offerType ? (offerType as OfferKind) : null),
+        [offerType],
+    );
 
     const loadOffers = useCallback(async () => {
         setIsLoading(true);
@@ -391,10 +411,22 @@ const OffersAdminPage = () => {
         loadOffers();
     }, [loadOffers]);
 
+    useEffect(() => {
+        if (!discountAutofillRef.current) {
+            return;
+        }
+        const computed = formatOfferBadge(offerType ? (offerType as OfferKind) : null, offerValue);
+        if (computed && computed !== discountLabel) {
+            setDiscountLabel(computed);
+        }
+    }, [offerType, offerValue, discountLabel]);
+
     const resetForm = () => {
         setTitle("");
         setDiscountLabel("");
         setDescription("");
+        setOfferType("");
+        setOfferValue("");
         setBenefits([createBenefitFormEntry()]);
         setIcon("heart");
         setBackgroundClass("");
@@ -406,6 +438,7 @@ const OffersAdminPage = () => {
         setEndsAt("");
         setFormError(null);
         setEditingOffer(null);
+        discountAutofillRef.current = false;
     };
 
     const openAddModal = () => {
@@ -415,10 +448,13 @@ const OffersAdminPage = () => {
     };
 
     const openEditModal = (offer: AdminOffer) => {
+        discountAutofillRef.current = false;
         setEditingOffer(offer);
         setTitle(offer.title ?? "");
         setDiscountLabel(offer.discount_label ?? "");
         setDescription(offer.description ?? "");
+        setOfferType(offer.offer_type ?? "");
+        setOfferValue(offer.offer_value ?? "");
         const benefitSource = (offer.benefits?.length ?? 0) > 0 ? offer.benefits : offer.features;
         const mappedBenefits = mapBenefitsToFormEntries(benefitSource ?? null);
         setBenefits(mappedBenefits.length > 0 ? mappedBenefits : [createBenefitFormEntry()]);
@@ -438,6 +474,7 @@ const OffersAdminPage = () => {
         setIsModalOpen(false);
         setIsSaving(false);
         setFormError(null);
+        discountAutofillRef.current = false;
     };
 
     const addBenefit = () => {
@@ -469,6 +506,15 @@ const OffersAdminPage = () => {
 
         const selectedStatus = status && status.toString().trim().length > 0 ? (status as AdminOffer["status"]) : undefined;
 
+        const resolvedOfferType = offerType && offerType.toString().trim().length > 0 ? (offerType as OfferKind) : undefined;
+        const trimmedOfferValue = offerValue.trim();
+        const offerTypeOption = resolvedOfferType ? getOfferTypeOption(resolvedOfferType) : undefined;
+
+        if (offerTypeOption?.requiresValue && trimmedOfferValue.length === 0) {
+            setFormError("Completează valoarea pentru tipul de ofertă selectat.");
+            return;
+        }
+
         const normalizedBenefits = benefits
             .map((benefit) => benefit.value.trim())
             .filter((value) => value.length > 0);
@@ -476,10 +522,16 @@ const OffersAdminPage = () => {
         const startsAtIso = toIsoStringFromInput(startsAt);
         const endsAtIso = toIsoStringFromInput(endsAt);
 
+        const computedDiscount = formatOfferBadge(resolvedOfferType ?? null, trimmedOfferValue);
+        const trimmedDiscount = discountLabel.trim();
+        const effectiveDiscountLabel = trimmedDiscount.length > 0 ? trimmedDiscount : computedDiscount ?? null;
+
         const payload: OfferPayload = {
             title: trimmedTitle,
-            discount_label: discountLabel.trim() ? discountLabel.trim() : null,
+            discount_label: effectiveDiscountLabel,
             description: description.trim() ? description.trim() : null,
+            offer_type: resolvedOfferType ?? null,
+            offer_value: trimmedOfferValue.length > 0 ? trimmedOfferValue : null,
             features: normalizedBenefits,
             benefits: normalizedBenefits,
             icon: icon && icon.toString().length > 0 ? (icon as NonNullable<AdminOffer["icon"]>) : null,
@@ -650,8 +702,46 @@ const OffersAdminPage = () => {
                                 placeholder="Ex: -20% la rezervare"
                             />
                             <p className="mt-1 text-xs text-slate-500">
-                                Acest text se afișează pe cardul promoției. Logica backend pentru beneficii se bazează pe lista de
-                                mai jos.
+                                Acest text se afișează pe cardul promoției. Dacă îl lași gol, îl completăm automat din tipul și
+                                valoarea selectate.
+                            </p>
+                        </div>
+                        <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
+                            <div>
+                                <Label htmlFor="offer-type">Tip ofertă</Label>
+                                <Select
+                                    id="offer-type"
+                                    value={offerType}
+                                    onChange={(event) => {
+                                        discountAutofillRef.current = true;
+                                        const nextValue = event.target.value as OfferKind | "";
+                                        setOfferType(nextValue);
+                                    }}
+                                >
+                                    <option value="">Selectează tipul de ofertă</option>
+                                    {OFFER_TYPE_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </div>
+                            <div>
+                                <Label htmlFor="offer-value">Valoare (opțional)</Label>
+                                <Input
+                                    id="offer-value"
+                                    value={offerValue}
+                                    onChange={(event) => {
+                                        discountAutofillRef.current = true;
+                                        setOfferValue(event.target.value);
+                                    }}
+                                    placeholder={selectedOfferType?.valuePlaceholder ?? "Ex: 20"}
+                                />
+                            </div>
+                            <p className="md:col-span-2 text-xs text-slate-500">
+                                {selectedOfferType
+                                    ? `${selectedOfferType.description} ${selectedOfferType.requiresValue ? "Valoarea este obligatorie pentru acest tip." : "Valoarea este opțională, dar ajută la afișarea badge-ului și logica backend."}`
+                                    : "Alege un tip de ofertă pentru a vedea cum este calculată promoția și ce parametri sunt trimiși către backend."}
                             </p>
                         </div>
                         <div>

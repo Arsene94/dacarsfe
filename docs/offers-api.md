@@ -28,6 +28,8 @@ Gestionarea ofertelor promoționale din platforma DaCars. Endpoint-urile suport�
       "slug": "weekend-fara-garantie",
       "description": "Ridici mașina vineri și o returnezi luni fără depozit.",
       "discount_label": "-20% față de tariful standard",
+      "offer_type": "percentage_discount",
+      "offer_value": "20",
       "benefits": [
         "20% reducere față de tariful standard",
         "Șofer adițional inclus"
@@ -63,6 +65,8 @@ Creează o ofertă. Câmpurile sunt opționale, exceptând `title`.
   "slug": "early-booking",
   "description": "Rezervări confirmate cu minim 30 de zile înainte primesc reducere.",
   "discount_label": "Economisești 15%",
+  "offer_type": "percentage_discount",
+  "offer_value": "15",
   "benefits": [
     "15% reducere pentru rezervări anticipate",
     "1 zi gratuită pentru perioade de minim 5 zile"
@@ -97,6 +101,25 @@ Creează o ofertă. Câmpurile sunt opționale, exceptând `title`.
 }
 ```
 
+### Câmpuri dedicate tipului de ofertă
+
+- `offer_type` – codul promoției, stabilit din lista de mai jos. Determină logica backend care se aplică asupra rezervării.
+- `offer_value` – valoare asociată tipului. Pentru reduceri procentuale folosiți un număr fără semn (`20` înseamnă 20%). Pentru
+  sume fixe includeți moneda (`50 lei`). Pentru tipurile fără valoare o puteți omite.
+
+Badge-ul afișat în UI poate fi transmis manual (`discount_label`), însă adminul îl autocompletează din `offer_type` +
+`offer_value` dacă textul lipsește.
+
+### Tipuri de ofertă suportate
+
+| Cod (`offer_type`) | Ce afișăm în admin | Implementare backend | Calcul recomandat | Exemplu badge (cu `offer_value`) |
+| --- | --- | --- | --- | --- |
+| `percentage_discount` | Reducere procentuală | aplicați procentul asupra tarifului de bază înainte de taxe/extra servicii. | `total_final = total_initial * (1 - value/100)` (valorile procentuale sunt transmise fără semn). | `offer_value = "20"` → `-20% reducere` |
+| `fixed_discount` | Reducere valorică | scădeți o sumă fixă din totalul rezervării (convertiți în moneda comenzii). | extrageți componenta numerică din `offer_value` și scădeți-o din total; nu coborâți sub 0. | `offer_value = "50 lei"` → `-50 lei reducere` |
+| `free_day_bonus` | Zile gratuite | oferiți zile suplimentare fără cost (ex: 1 zi cadou la minim 3 plătite). | `days_plătite = max(0, days_totale - value)` și recalculați totalul pe baza noilor zile facturate. | `offer_value = "1 zi"` → `+1 zi gratuite` |
+| `free_service_upgrade` | Upgrade gratuit | includeți un serviciu premium (asigurare, scaun copil, upgrade categorie) la cost zero. | marcați serviciul ca inclus în comandă și setați valoarea lui la 0; puteți identifica serviciul din `offer_value`. | `offer_value = "Asigurare completă"` → `Asigurare completă gratuit` |
+| `deposit_waiver` | Fără depozit | eliminați blocarea garanției/depozitului standard. | setați depozitul rezervării la 0 și nu solicitați autorizare pe card. | (fără valoare) → `Fără depozit` |
+
 ---
 
 ## PUT `/api/offers/{id}`
@@ -108,6 +131,7 @@ Actualizează parțial oferta. Toate câmpurile devin `sometimes` la nivel de va
   "description": "Rezervările confirmate cu minim 21 de zile primesc în continuare reducere.",
   "status": "published",
   "primary_cta_label": "Profită de reducere",
+  "offer_type": "deposit_waiver",
   "benefits": [
     "Reducere 15% aplicată automat",
     "Garanție eliminată pe perioada promoției"
@@ -144,6 +168,8 @@ Returnează `{ "deleted": true }` la succes. Pentru interfața publică folosiț
 `benefits` este acum o listă simplă de string-uri (maxim 255 caractere recomandat) care descriu avantajele comunicate clienților.
 Valorile sunt afișate ca atare în interfață, în ordinea în care sunt trimise. Backend-ul poate interpreta fiecare intrare pentru a
 declanșa logica necesară (ex. `"Reducere 15%"`, `"Șofer adițional inclus"`).
+
+Pentru aplicarea automată a promoției folosiți combinația `offer_type` + `offer_value`, conform tabelului de mai sus.
 
 > **Notă:** Pentru compatibilitate, câmpul `features` poate fi transmis în continuare. Dacă `benefits` lipsește, UI-ul public folosește
 lista din `features`.
