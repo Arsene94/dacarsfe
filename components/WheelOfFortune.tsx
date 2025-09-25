@@ -695,11 +695,10 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                             <p className="mb-1 font-['Poppins'] text-2xl font-semibold">{selectedPrizeAmountLabel}</p>
                         )}
                         <p className="font-['DM Sans']">
-                            {selectedPrize.description ||
-                                wheelWinner.descriptionFallback ??
-                                    t("wheel.winner.descriptionFallback", {
-                                        fallback: "Continuă procesul de rezervare pentru a afla mai multe detalii.",
-                                    })}
+                            {(selectedPrize.description || wheelWinner.descriptionFallback) ??
+                                t("wheel.winner.descriptionFallback", {
+                                    fallback: "Continuă procesul de rezervare pentru a afla mai multe detalii.",
+                                })}
                         </p>
                     </div>
 
