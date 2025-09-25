@@ -236,17 +236,42 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
   "coupon_code": "SPRING15",
   "coupon_type": "percent",
   "total_services": 12,
-  "service_ids": [1, 3],
+  "sub_total": 216,
+  "total_before_wheel_prize": 231,
   "wheel_prize_discount": 20,
+  "total": 211,
+  "service_ids": [1, 3],
   "wheel_of_fortune_prize_id": 4,
   "wheel_prize": {
     "prize_id": 4,
     "wheel_of_fortune_id": 2,
     "discount_value": 20
   },
+  "applied_offers": [
+    {
+      "id": 12,
+      "title": "Weekend fără garanție",
+      "offer_type": "percentage_discount",
+      "offer_value": "20",
+      "discount_label": "-20% reducere"
+    }
+  ],
   "note": "Predare la terminal Plecări"
 }
 ```
+
+### Detalierea câmpurilor de prețuri din checkout
+
+- `sub_total` – totalul de bază pentru mașină (cu sau fără depozit, în funcție de `with_deposit`) înainte de servicii și oferte.
+- `total_services` – suma serviciilor extra selectate în formular.
+- `total_before_wheel_prize` – valoarea estimată în UI înainte de aplicarea premiului din roata norocului (`sub_total + total_services`).
+- `wheel_prize_discount` – reducerea calculată pe frontend pentru premiul activ. Backend-ul trebuie să o verifice înainte de a o accepta.
+- `total` – totalul afișat în checkout după cupoane și premiul roții, dar **înainte** de procesarea ofertelor aplicate din `applied_offers`.
+- `applied_offers` – lista de promoții selectate în prealabil (structura este identică cu documentația din [Offers API](./offers-api.md#aplicarea-ofertelor-în-checkout)).
+
+> Backend-ul trebuie să recalculeze aceste valori folosind propriile servicii (tarife de bază, cupoane, roata norocului și logica de ofertă) pentru a preveni manipularea datelor și pentru a aplica cumulările admise. Frontend-ul transmite aceste câmpuri pentru transparență și pentru a afișa estimări corecte în UI.
+
+> În răspuns, valorile `total`, `sub_total`, `total_services` și `total_before_wheel_prize` trebuie să reflecte rezultatul final după ce engine-ul backend aplică fiecare ofertă din `applied_offers` conform regulilor descrise în Offers API; acestea pot diferi față de cifrele primite în request.
 
 ### Success response (HTTP 201)
 `BookingResource` payload plus an informational message:
@@ -294,7 +319,16 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
       "amount": 20,
       "description": "Voucher aplicat automat la rezervare.",
       "discount_value": 20
-    }
+    },
+    "applied_offers": [
+      {
+        "id": 12,
+        "title": "Weekend fără garanție",
+        "offer_type": "percentage_discount",
+        "offer_value": "20",
+        "discount_label": "-20% reducere"
+      }
+    ]
   },
   "message": "Booking created"
 }

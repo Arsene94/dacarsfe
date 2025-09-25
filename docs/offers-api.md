@@ -161,6 +161,8 @@ La trimiterea formularului frontend-ul include un câmp opțional `applied_offer
 
 Backend-ul poate utiliza această listă pentru a aplica logica descrisă în tabelul de mai sus (inclusiv cumularea ofertelor acolo unde este permisă). Dacă lista este goală, cheia lipsește din request.
 
+> Pentru descrierea completă a câmpurilor de preț trimise alături de ofertă consultați secțiunea „Detalierea câmpurilor de prețuri din checkout” din [Bookings API](./bookings-api.md#detalierea-câmpurilor-de-prețuri-din-checkout). Backend-ul trebuie să ajusteze `total` și valorile auxiliare după ce aplică fiecare promoție.
+
 ---
 
 ## PUT `/api/offers/{id}`
