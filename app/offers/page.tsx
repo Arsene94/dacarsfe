@@ -256,7 +256,8 @@ const OffersPage = async () => {
               return (
                 <article
                   key={`${offer.title}-${index}`}
-                  className={`${offer.backgroundClass ?? "bg-white"} ${offer.textClass ?? "text-berkeley"} relative overflow-hidden rounded-3xl p-8 shadow-lg transition-transform hover:-translate-y-1`}
+                  className={`group transform hover:scale-105 transition-all duration-300 animate-slide-up ${offer.backgroundClass ?? "bg-white"} ${offer.textClass ?? "text-berkeley"} relative overflow-hidden rounded-3xl p-8 shadow-lg hover:-translate-y-1`}
+                  style={{ animationDelay: "0s" }}
                 >
                   <div className="absolute inset-0 bg-black/5 mix-blend-multiply" aria-hidden="true" />
                   <div className="relative z-10 space-y-6">
