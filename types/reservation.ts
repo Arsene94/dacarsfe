@@ -99,7 +99,6 @@ export interface ReservationPayload extends ReservationFormData {
   price_per_day: number;
   total_services?: number;
   coupon_amount?: number;
-  coupon_code?: string;
   coupon_type?: string | null;
   offers_discount?: number;
   deposit_waived?: boolean;
@@ -172,6 +171,9 @@ export interface QuotePriceResponse {
   sub_total_casco?: number;
   total: number;
   total_casco?: number;
+  days?: number;
+  rental_rate?: number;
+  rental_rate_casco?: number;
   discount?: number;
   coupon_amount?: number;
   coupon_code?: string | null;

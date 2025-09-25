@@ -22,6 +22,19 @@ const LOCALE_TO_INTL: Record<Locale, string> = {
     it: "it-IT",
 };
 
+const parseMaybeNumber = (value: unknown): number | null => {
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+        const normalized = Number(trimmed.replace(/,/g, "."));
+        return Number.isFinite(normalized) ? normalized : null;
+    }
+    return null;
+};
+
 const SuccessPage = () => {
     const [reservationData, setReservationData] = useState<ReservationPayload | null>(null);
     const { locale, messages, t } = useTranslations<SuccessMessages>("success");
@@ -88,27 +101,42 @@ const SuccessPage = () => {
     }, []);
 
     const wheelPrize = reservationData?.wheel_prize ?? null;
-    const wheelPrizeDiscount = reservationData?.wheel_prize_discount ?? wheelPrize?.discount_value ?? 0;
+    const wheelPrizeDiscountRaw = reservationData?.wheel_prize_discount ??
+        (wheelPrize as { discount_value?: unknown } | null)?.discount_value ??
+        0;
+    const wheelPrizeDiscount = parseMaybeNumber(wheelPrizeDiscountRaw) ?? 0;
 
     const wheelPrizeDescriptionSource = useMemo<WheelPrize | null>(() => {
         if (!wheelPrize) {
             return null;
         }
-        const amountValue =
-            typeof wheelPrize.amount === "number"
-                ? wheelPrize.amount
-                : Number.isFinite(Number(wheelPrize.amount))
-                  ? Number(wheelPrize.amount)
-                  : null;
+        const prizeId = parseMaybeNumber((wheelPrize as { prize_id?: unknown }).prize_id) ?? 0;
+        const periodId = parseMaybeNumber((wheelPrize as { wheel_of_fortune_id?: unknown }).wheel_of_fortune_id) ?? 0;
+        const titleSource = (wheelPrize as { title?: unknown }).title;
+        const descriptionSource = (wheelPrize as { description?: unknown }).description;
+        const amountSource = (wheelPrize as { amount?: unknown }).amount ??
+            (wheelPrize as { discount_value?: unknown }).discount_value ??
+            null;
+        const typeSource = (wheelPrize as { type?: unknown }).type;
+        const amountValue = parseMaybeNumber(amountSource);
+        const titleValue = typeof titleSource === "string" && titleSource.trim().length > 0
+            ? titleSource
+            : "Premiu DaCars";
+        const descriptionValue = typeof descriptionSource === "string" && descriptionSource.trim().length > 0
+            ? descriptionSource
+            : null;
+        const typeValue = typeof typeSource === "string" && typeSource.trim().length > 0
+            ? typeSource
+            : "other";
         return {
-            id: wheelPrize.prize_id ?? 0,
-            period_id: wheelPrize.wheel_of_fortune_id ?? 0,
-            title: wheelPrize.title ?? "Premiu DaCars",
-            description: wheelPrize.description ?? null,
+            id: prizeId,
+            period_id: periodId,
+            title: titleValue,
+            description: descriptionValue,
             amount: amountValue,
             color: "#1E7149",
             probability: 0,
-            type: wheelPrize.type ?? "other",
+            type: typeValue,
         };
     }, [wheelPrize]);
 
@@ -140,13 +168,50 @@ const SuccessPage = () => {
         return t("wheelPrize.amount.other", { values: { amount: formatted } });
     }, [intlLocale, t, wheelPrize, wheelPrizeDescriptionSource]);
 
-    const wheelPrizeExpiryLabel = wheelPrize?.expires_at
-        ? formatWheelPrizeExpiry(wheelPrize.expires_at, intlLocale)
-        : null;
+    const wheelPrizeExpiryRaw = (wheelPrize as { expires_at?: unknown } | null)?.expires_at;
+    const wheelPrizeExpiryLabel =
+        typeof wheelPrizeExpiryRaw === "string" && wheelPrizeExpiryRaw.trim().length > 0
+            ? formatWheelPrizeExpiry(wheelPrizeExpiryRaw, intlLocale)
+            : null;
     const hasWheelPrize = Boolean(wheelPrize);
-    const wheelPrizeAmountSuffix = wheelPrizeAmountLabel
-        ? t("wheelPrize.amountSuffix", { values: { amount: wheelPrizeAmountLabel } })
+    const wheelPrizeAmountSuffix =
+        typeof wheelPrizeAmountLabel === "string" && wheelPrizeAmountLabel.length > 0
+            ? t("wheelPrize.amountSuffix", { values: { amount: wheelPrizeAmountLabel } })
+            : "";
+
+    const wheelPrizeTitle = (() => {
+        const titleSource = (wheelPrize as { title?: unknown } | null)?.title;
+        return typeof titleSource === "string" ? titleSource : "";
+    })();
+
+    const selectedCar = reservationData?.selectedCar ?? null;
+    const selectedCarName = typeof (selectedCar as { name?: unknown } | null)?.name === "string"
+        ? ((selectedCar as { name: string }).name)
         : "";
+
+    const reservationReference = (() => {
+        if (!reservationData) {
+            return "—";
+        }
+        const direct = typeof reservationData.reservationId === "string"
+            ? reservationData.reservationId.trim()
+            : "";
+        if (direct.length > 0) {
+            return direct;
+        }
+        const bookingNumber = (reservationData as { booking_number?: unknown }).booking_number;
+        if (typeof bookingNumber === "string" && bookingNumber.trim().length > 0) {
+            return bookingNumber.trim();
+        }
+        const fallbackId = (reservationData as { id?: unknown }).id;
+        if (typeof fallbackId === "number" || typeof fallbackId === "string") {
+            const normalized = String(fallbackId).trim();
+            if (normalized.length > 0) {
+                return normalized;
+            }
+        }
+        return "—";
+    })();
 
     const locationOptions =
         (messages.summary?.location?.options as SuccessMessages["summary"]["location"]["options"]) ?? {};
@@ -174,6 +239,11 @@ const SuccessPage = () => {
     const pickupDate = formatReservationDate(reservationData.rental_start_date);
     const dropoffDate = formatReservationDate(reservationData.rental_end_date);
 
+    const subtotalValue = parseMaybeNumber(reservationData.sub_total) ?? 0;
+    const servicesValue = parseMaybeNumber(reservationData.total_services) ?? 0;
+    const couponAmountValue = parseMaybeNumber(reservationData.coupon_amount) ?? 0;
+    const totalValue = parseMaybeNumber(reservationData.total) ?? 0;
+
     return (
         <div className="pt-16 lg:pt-20 min-h-screen bg-gradient-to-br from-jade/5 to-berkeley/5">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -195,7 +265,7 @@ const SuccessPage = () => {
 
                     <div className="mt-8 inline-flex items-center px-6 py-3 bg-jade/10 rounded-full">
                         <span className="text-jade font-dm-sans font-semibold">
-                            {t("header.reference", { values: { id: reservationData.reservationId } })}
+                            {t("header.reference", { values: { id: reservationReference } })}
                         </span>
                     </div>
                 </div>
@@ -214,7 +284,7 @@ const SuccessPage = () => {
                                 <p className="font-dm-sans text-gray-700">
                                     {t("wheelPrize.applied", {
                                         values: {
-                                            title: wheelPrize?.title ?? "",
+                                            title: wheelPrizeTitle,
                                             amount: wheelPrizeAmountSuffix,
                                         },
                                     })}
@@ -249,9 +319,7 @@ const SuccessPage = () => {
                                     <h3 className="font-poppins font-semibold text-berkeley text-lg">
                                         {t("summary.car.title")}
                                     </h3>
-                                    <p className="font-dm-sans text-gray-600 capitalize">
-                                        {reservationData.selectedCar.name}
-                                    </p>
+                                    <p className="font-dm-sans text-gray-600 capitalize">{selectedCarName}</p>
                                 </div>
                             </div>
 
@@ -292,11 +360,11 @@ const SuccessPage = () => {
                                     {t("summary.pricing.title")}
                                 </h3>
                                 <div className="text-lg font-dm-sans text-gray-600 mb-1">
-                                    {t("summary.pricing.subtotalLabel")} {formatPrice(reservationData.sub_total)}€
+                                    {t("summary.pricing.subtotalLabel")} {formatPrice(subtotalValue)}€
                                 </div>
-                                {reservationData.total_services > 0 && (
+                                {servicesValue > 0 && (
                                     <div className="text-lg font-dm-sans text-gray-600 mb-1">
-                                        {t("summary.pricing.servicesLabel")} +{formatPrice(reservationData.total_services)}€
+                                        {t("summary.pricing.servicesLabel")} +{formatPrice(servicesValue)}€
                                     </div>
                                 )}
                                 {wheelPrizeDiscount > 0 && (
@@ -304,13 +372,13 @@ const SuccessPage = () => {
                                         {t("summary.pricing.wheelPrizeLabel")} -{formatPrice(wheelPrizeDiscount)}€
                                     </div>
                                 )}
-                                {reservationData.coupon_amount > 0 && (
+                                {couponAmountValue > 0 && (
                                     <div className="text-lg font-dm-sans text-jade mb-2">
-                                        {t("summary.pricing.discountLabel")} -{formatPrice(reservationData.coupon_amount)}€
+                                        {t("summary.pricing.discountLabel")} -{formatPrice(couponAmountValue)}€
                                     </div>
                                 )}
                                 <div className="text-4xl font-poppins font-bold text-jade mb-2">
-                                    {formatPrice(reservationData.total)}€
+                                    {formatPrice(totalValue)}€
                                 </div>
                                 <p className="font-dm-sans text-gray-600 text-sm">{t("summary.pricing.note")}</p>
                             </div>

@@ -25,6 +25,7 @@ import {
     type QuotePricePayload,
     type QuotePriceResponse,
     type ReservationAppliedOffer,
+    type ReservationPayload,
 } from "@/types/reservation";
 import {Button} from "@/components/ui/button";
 import { useTranslations } from "@/lib/i18n/useTranslations";
@@ -814,7 +815,7 @@ const ReservationPage = () => {
             : null;
         if (quoteOffers && quoteOffers.length > 0) {
             return quoteOffers
-                .map((offer) => {
+                .map((offer): BookingAppliedOffer | null => {
                     if (!offer || typeof offer !== "object") return null;
                     if (typeof offer.id !== "number" || !Number.isFinite(offer.id)) {
                         return null;
@@ -824,9 +825,9 @@ const ReservationPage = () => {
                     return {
                         id: offer.id,
                         title,
-                        kind: offer.offer_type ?? undefined,
-                        value: offer.offer_value ?? undefined,
-                        badge: offer.discount_label ?? undefined,
+                        kind: offer.offer_type ?? null,
+                        value: offer.offer_value ?? null,
+                        badge: offer.discount_label ?? null,
                     };
                 })
                 .filter(
@@ -1030,6 +1031,10 @@ const ReservationPage = () => {
             return;
         }
 
+        const selectedCar = booking.selectedCar;
+        const rentalStart = booking.startDate;
+        const rentalEnd = booking.endDate;
+
         let ignore = false;
 
         const fetchQuote = async () => {
@@ -1037,9 +1042,9 @@ const ReservationPage = () => {
             setQuoteErrorKey(null);
             try {
                 const payload: QuotePricePayload = {
-                    car_id: booking.selectedCar.id,
-                    rental_start_date: booking.startDate,
-                    rental_end_date: booking.endDate,
+                    car_id: selectedCar.id,
+                    rental_start_date: rentalStart,
+                    rental_end_date: rentalEnd,
                 };
 
                 if (typeof booking.withDeposit === "boolean") {
@@ -1313,7 +1318,7 @@ const ReservationPage = () => {
 
         const quoteOffersPayload: ReservationAppliedOffer[] = Array.isArray(quoteResult?.applied_offers)
             ? quoteResult.applied_offers
-                .map((offer) => {
+                .map((offer): ReservationAppliedOffer | null => {
                     if (
                         !offer ||
                         typeof offer.id !== "number" ||
@@ -1383,7 +1388,7 @@ const ReservationPage = () => {
         const payload: ReservationPayload = {
             ...formData,
             car_id: selectedCar.id,
-            service_ids,
+            service_ids: serviceIds,
             price_per_day: pricePerDay,
             total_services: normalizedServicesAmount,
             coupon_amount: couponAmountValue,

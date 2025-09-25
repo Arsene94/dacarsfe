@@ -200,14 +200,19 @@ const normalizeOffer = (entry: Offer | Record<string, unknown>): PublicOffer | n
 
 const OffersPage = async () => {
   const api = new ApiClient(getApiBaseUrl());
-  const response = await api.getOffers({
-    audience: "public",
-    status: "published",
-    sort: "-starts_at,-created_at",
-    limit: 20,
-  });
-
-  const rawOffers = extractList(response);
+  let rawOffers: unknown[] = [];
+  try {
+    const response = await api.getOffers({
+      audience: "public",
+      status: "published",
+      sort: "-starts_at,-created_at",
+      limit: 20,
+    });
+    rawOffers = extractList(response);
+  } catch (error) {
+    console.error("Nu s-au putut încărca ofertele publice", error);
+    rawOffers = [];
+  }
   const offers = rawOffers
     .map((offer) => normalizeOffer(offer as Offer))
     .filter((offer): offer is PublicOffer => offer !== null);
