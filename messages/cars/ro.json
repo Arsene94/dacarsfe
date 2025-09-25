@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "title": "Flota completă de mașini pentru închiriere",
+    "description": "Analizează toată flota DaCars și filtrează rapid mașinile disponibile pentru închiriere.",
+    "keywords": [
+      "flotă închirieri auto",
+      "mașini disponibile București",
+      "rent a car fără garanție",
+      "rezervare mașină online",
+      "DaCars flotă auto"
+    ],
+    "openGraphTitle": "Flota completă de mașini pentru închiriere | DaCars Rent a Car",
+    "breadcrumb": {
+      "home": "Acasă",
+      "fleet": "Flotă auto"
+    }
+  },
+  "structuredData": {
+    "itemList": {
+      "name": "Flota DaCars pentru închiriere",
+      "description": "Toate mașinile disponibile pentru închiriere de la DaCars, actualizate în timp real.",
+      "currency": "EUR"
+    }
+  },
+  "fallbacks": {
+    "carName": "Autovehicul",
+    "unknownValue": "—",
+    "category": "Categorie #{{id}}"
+  },
+  "labels": {
+    "passengers": "{{count}} persoane"
+  },
+  "header": {
+    "title": {
+      "main": "Flota noastră",
+      "highlight": "completă"
+    },
+    "description": "Descoperă toate mașinile disponibile și alege cea potrivită pentru călătoria ta."
+  },
+  "search": {
+    "placeholder": "Caută mașină...",
+    "ariaLabel": "Caută mașină",
+    "sortAria": "Sortează mașinile",
+    "sortOptions": {
+      "cheapest": "Preț crescător",
+      "mostExpensive": "Preț descrescător"
+    },
+    "filtersButton": "Filtre",
+    "filtersAria": "Comută filtrele"
+  },
+  "filters": {
+    "labels": {
+      "category": "Categorie",
+      "type": "Tip mașină",
+      "transmission": "Transmisie",
+      "fuel": "Combustibil"
+    },
+    "allOption": "Toate",
+    "reset": "Resetează filtrele",
+    "resetAria": "Resetează filtrele",
+    "removeAria": "Elimină filtrul {{filter}}"
+  },
+  "results": {
+    "label": "mașini găsite"
+  },
+  "list": {
+    "empty": {
+      "title": "Nu am găsit mașini",
+      "description": "Încearcă să modifici filtrele sau să cauți altceva."
+    }
+  },
+  "card": {
+    "pricing": {
+      "noDepositLabel": "Fără garanție",
+      "withDepositLabel": "Cu garanție",
+      "perDay": "/zi",
+      "daysTotal": "x {{days}} zile ="
+    },
+    "actions": {
+      "reserveNoDeposit": "Rezervă fără garanție",
+      "reserveWithDeposit": "Rezervă cu garanție",
+      "reserveAria": "Rezervă"
+    }
+  },
+  "cta": {
+    "title": "Nu găsești mașina potrivită?",
+    "description": "Contactează-ne și te ajutăm să găsești soluția perfectă pentru călătoria ta.",
+    "primary": "Rezervă acum",
+    "secondary": "Contactează-ne"
+  }
+}

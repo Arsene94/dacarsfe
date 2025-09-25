@@ -1,0 +1,106 @@
+{
+  "metadata": {
+    "title": "Deine Reservierung ist bestätigt",
+    "description": "Sieh dir die Zusammenfassung deiner DaCars-Reservierung, die Abholdetails und die Kontaktdaten unseres Teams an.",
+    "openGraphTitle": "Deine Reservierung ist bestätigt | DaCars Rent a Car"
+  },
+  "loading": "Reservierungsdetails werden geladen...",
+  "fallbacks": {
+    "guestName": "DaCars-Gast"
+  },
+  "header": {
+    "title": {
+      "prefix": "Deine Reservierung ist",
+      "highlight": "bestätigt!"
+    },
+    "thanks": "Vielen Dank, {{name}}! Dein Auto wartet am Flughafen auf dich.",
+    "tagline": "Willkommen zu Hause!",
+    "reference": "Reservierung {{id}}"
+  },
+  "wheelPrize": {
+    "title": "Gewinn vom Glücksrad",
+    "applied": "Du hast den Gewinn {{title}}{{amount}} genutzt.",
+    "amountSuffix": " — {{amount}}",
+    "savings": "Du sparst {{amount}}€ bei dieser Reservierung.",
+    "expiry": {
+      "withDate": "Gewinn gültig bis {{date}}.",
+      "fallback": "Der Gewinn bleibt 30 Tage nach dem Gewinn gültig."
+    },
+    "amount": {
+      "percentage_discount": "{{amount}}% Rabatt",
+      "fixed_discount": "{{amount}} RON Rabatt",
+      "extra_rental_day": {
+        "one": "Bonus von {{amount}} Tag",
+        "other": "Bonus von {{amount}} Tagen"
+      },
+      "other": "{{amount}}"
+    }
+  },
+  "summary": {
+    "title": "Deine Reservierungsdetails",
+    "car": {
+      "title": "Dein Auto"
+    },
+    "period": {
+      "title": "Zeitraum",
+      "pickupLabel": "Abholung:",
+      "dropoffLabel": "Rückgabe:"
+    },
+    "location": {
+      "title": "Standort",
+      "options": {
+        "aeroport": "Flughafen Henri Coandă, Otopeni",
+        "city": "Zentrum Bukarest",
+        "other": "Anderer Standort"
+      }
+    },
+    "pricing": {
+      "title": "Gesamtkosten",
+      "subtotalLabel": "Zwischensumme:",
+      "servicesLabel": "Services:",
+      "wheelPrizeLabel": "Gewinn vom Glücksrad:",
+      "discountLabel": "Rabatt:",
+      "totalLabel": "Gesamt:",
+      "note": "*Endpreis, keine versteckten Gebühren"
+    },
+    "flight": {
+      "title": "Dein Flug"
+    }
+  },
+  "instructions": {
+    "title": "Wie geht es weiter?",
+    "steps": [
+      {
+        "title": "Nach der Landung",
+        "description": "Ruf uns an, sobald du das Terminal verlässt"
+      },
+      {
+        "title": "Wir treffen dich",
+        "description": "Wir erreichen dich in weniger als 5 Minuten im Kurzzeitparkplatz"
+      },
+      {
+        "title": "Gute Fahrt!",
+        "description": "Wir übergeben dir die Schlüssel und du kannst sicher nach Hause fahren"
+      }
+    ]
+  },
+  "contact": {
+    "title": "Kontaktiere uns jederzeit:",
+    "phone": "+40 722 123 456",
+    "ariaLabel": "{{phone}} anrufen",
+    "availability": "Rund um die Uhr für Notfälle erreichbar"
+  },
+  "actions": {
+    "print": {
+      "label": "Details drucken",
+      "aria": "Reservierungsdetails drucken"
+    },
+    "home": {
+      "label": "Zur Startseite",
+      "aria": "Zur Startseite"
+    }
+  },
+  "footer": {
+    "message": "Du erhältst eine E-Mail-Bestätigung mit allen Reservierungsdetails."
+  }
+}

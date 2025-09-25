@@ -1,0 +1,278 @@
+{
+  "hero": {
+    "badge": "We keep you close to home",
+    "title": "Car rental Bucharest - Otopeni",
+    "subtitle": {
+      "lead": "Pick-up at the airport in under 5 minutes.",
+      "highlight": "No hidden fees."
+    },
+    "features": [
+      { "title": "Under 5 min", "description": "Fast handover" },
+      { "title": "No fees", "description": "Transparent pricing" },
+      { "title": "24/7", "description": "Always available" }
+    ],
+    "form": {
+      "labels": {
+        "pickup": "Pick-up date",
+        "return": "Return date",
+        "location": "Location",
+        "carType": "Car type"
+      },
+      "placeholders": {
+        "location": "Choose a location",
+        "carType": "All types"
+      },
+      "options": {
+        "locations": [
+          { "value": "otopeni", "label": "Otopeni Airport" }
+        ]
+      },
+      "submit": "Search cars",
+      "aria": {
+        "submit": "Search cars",
+        "location": "Choose pick-up location"
+      }
+    }
+  },
+  "fleet": {
+    "title": {
+      "main": "Our fleet",
+      "highlight": "premium"
+    },
+    "description": "Modern cars, inspected and cared for to keep you safe and comfortable.",
+    "labels": {
+      "seatsSuffix": "people"
+    },
+    "cta": "View all cars",
+    "carousel": {
+      "aria": "Carousel",
+      "previous": "Previous car",
+      "next": "Next car",
+      "position": "{{current}} of {{total}}"
+    },
+    "structuredData": {
+      "name": "Featured cars from DaCars fleet",
+      "description": "Current selection of popular vehicles available for rent at DaCars.",
+      "currency": "EUR"
+    }
+  },
+  "benefits": {
+    "title": {
+      "main": "Why choose",
+      "highlight": "DaCars"
+    },
+    "description": "A trusted service created for Romanians returning home who need a reliable car.",
+    "items": [
+      {
+        "title": "No paperwork",
+        "description": "Simple and fast process, with no complicated forms or waiting."
+      },
+      {
+        "title": "Available 24/7",
+        "description": "Pick-up and drop-off at the airport anytime you need."
+      },
+      {
+        "title": "Maximum flexibility",
+        "description": "Change or cancel your booking with no extra fees."
+      },
+      {
+        "title": "No hidden costs",
+        "description": "Upfront pricing you can trust. What you see is what you pay."
+      }
+    ],
+    "stats": [
+      { "value": "500+", "label": "Happy customers" },
+      { "value": "24/7", "label": "Availability" },
+      { "value": "<5min", "label": "Handover time" },
+      { "value": "0", "label": "Hidden fees" }
+    ]
+  },
+  "offers": {
+    "title": {
+      "main": "Special",
+      "highlight": "offers"
+    },
+    "description": "Exclusive promotions for the important moments in your life.",
+    "cards": [
+      {
+        "title": "Wedding package",
+        "discount": "10% off",
+        "description": "For the happiest years ahead. A stylish car for your special day.",
+        "features": ["Decorations included", "Delivery at your venue", "Driver on request"],
+        "color": "bg-gradient-to-br from-pink-500 to-rose-600",
+        "textColor": "text-white"
+      },
+      {
+        "title": "Friends discount",
+        "discount": "20% off",
+        "description": "Bring your friends and save! The more you are, the better the deal.",
+        "features": ["For groups of 4+", "Valid for 30 days", "Can be combined with other offers"],
+        "color": "bg-gradient-to-br from-jade to-emerald-600",
+        "textColor": "text-white"
+      }
+    ],
+    "cta": {
+      "primary": "Claim offer",
+      "secondaryTitle": "Limited seasonal deal",
+      "secondaryDescription": "Book now for the holiday season and enjoy preferred rates with premium services included.",
+      "secondaryButton": "Book with discount"
+    }
+  },
+  "process": {
+    "title": {
+      "main": "Our process",
+      "highlight": "made simple"
+    },
+    "description": "Just 3 easy steps stand between you and your car. No hassle, no stress.",
+    "steps": [
+      {
+        "number": "01",
+        "title": "Reserve online",
+        "description": "Fill out the quick form and pick the car that fits you best.",
+        "color": "bg-jade"
+      },
+      {
+        "number": "02",
+        "title": "Pick up at the airport",
+        "description": "We meet you at arrivals in under 5 minutes with the car ready.",
+        "color": "bg-berkeley"
+      },
+      {
+        "number": "03",
+        "title": "Drive home safely",
+        "description": "Get home comfortably with your rented car.",
+        "color": "bg-jade"
+      }
+    ],
+    "cta": {
+      "title": "Ready to start?",
+      "description": "Booking takes just 2 minutes. Your car is waiting at the airport!",
+      "primary": "Book now",
+      "secondary": "See the fleet"
+    }
+  },
+  "contact": {
+    "title": {
+      "main": "Get in touch",
+      "highlight": "anytime"
+    },
+    "description": "We are here 24/7. Reach us using any of the options below.",
+    "items": {
+      "phone": {
+        "title": "Phone",
+        "description": "Available 24/7 for emergencies",
+        "aria": "Call +40 723 817 551"
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Drop us a message for a quick reply",
+        "aria": "Message us on WhatsApp at +40 723 817 551"
+      },
+      "email": {
+        "title": "Email",
+        "description": "For general questions",
+        "aria": "Send an email to contact@dacars.ro"
+      },
+      "location": {
+        "title": "Location",
+        "description": "Main pick-up point",
+        "address": "305 Bucurestilor Avenue",
+        "city": "Otopeni, Ilfov"
+      },
+      "schedule": {
+        "title": "Schedule",
+        "description": "Pick-up and drop-off",
+        "details": ["24/7 - Non-stop", "Always available"]
+      }
+    },
+    "map": {
+      "title": "Our location",
+      "advisor": "Consultant:",
+      "advisorText": "When you land, call us at",
+      "clientDialog": [
+        { "speaker": "Client", "message": "Okay, and then what?" },
+        { "speaker": "DaCars", "message": "We meet in front of the CFR station, near the green glass dome, at the Arrivals terminal." },
+        { "speaker": "Client", "message": "Perfect, see you there." }
+      ]
+    }
+  },
+  "wheel": {
+    "popup": {
+      "title": "Welcome to DaCars!",
+      "description": "Before you explore our offers, spin the Wheel of Fortune and unlock exclusive perks!"
+    },
+    "section": {
+      "title": "DaCars Wheel of Fortune",
+      "description": "Try your luck and win exclusive discounts and perks for your next booking!"
+    },
+    "activePeriod": "Active period: {{period}}. Fill in your details, spin the wheel and see what you win!",
+    "defaultPrompt": "Fill in your details, spin the wheel and see what you win!",
+    "spinsLeft": "Spins left",
+    "form": {
+      "name": {
+        "label": "Full name",
+        "placeholder": "e.g. Maria Popescu"
+      },
+      "phone": {
+        "label": "Phone",
+        "placeholder": "e.g. +40 712 345 678"
+      },
+      "consent": "We need these details to validate your prize according to DaCars rules."
+    },
+    "storedPrize": {
+      "title": "Active Wheel of Fortune prize",
+      "prefix": "You won ",
+      "suffix": ". The prize is valid until {{expiry}} and you can redeem it directly during checkout.",
+      "noExpiry": "automatic expiration"
+    },
+    "errors": {
+      "load": "Something went wrong while loading the wheel. Please try again later.",
+      "form": "Please fill in all the fields before spinning.",
+      "loadNoPeriod": "There is no active period for the wheel right now.",
+      "loadNoPrizes": "There are no prizes available for the current period.",
+      "loadFailed": "We couldn't load the prizes. Please try again later.",
+      "unavailable": "The wheel is not available right now.",
+      "activePrize": "You already have an active prize from the Wheel of Fortune. You can use it at checkout within the next 30 days.",
+      "nameRequired": "Enter your full name so we can save the prize.",
+      "phoneRequired": "Enter a valid phone number.",
+      "noPrize": "We couldn't determine a prize at this time. Please try again later.",
+      "saveFallback": "Something went wrong while saving your prize. Please try again."
+    },
+    "buttons": {
+      "spin": "Spin the wheel",
+      "spinning": "Spinning...",
+      "activePrize": "Active prize",
+      "outOfSpins": "No spins left",
+      "reset": "Reset (Demo)",
+      "close": "Close",
+      "tryAgain": "Try again",
+      "retrySave": "Retry saving",
+      "continue": "Continue booking"
+    },
+    "winner": {
+      "title": "Win exclusive prizes!",
+      "tryAgainHeading": "Try again!",
+      "successHeading": "Congratulations! 🎉",
+      "descriptionFallback": "Continue the booking process to learn more.",
+      "tryAgainMessage": "Don't worry! You've earned another chance to win an even better prize.",
+      "successMessage": "We've saved your prize and you'll receive the details shortly via SMS or email.",
+      "expiry": "The prize is valid until {{expiry}} and you'll also find it saved in the checkout page.",
+      "saving": "Saving your prize...",
+      "saved": "The prize was saved successfully! The DaCars team will send you all the details soon.",
+      "saveError": "We couldn't save the prize. Please try again.",
+      "close": "Close"
+    },
+    "regulation": {
+      "title": "Quick rules:",
+      "items": [
+        "• One spin per valid customer.",
+        "• Prize valid for 30 days from the winning date.",
+        "• Applies only to new bookings made on DaCars.",
+        "• Cannot be combined with other offers or discounts."
+      ]
+    },
+    "assets": {
+      "logoAlt": "DaCars logo"
+    }
+  }
+}

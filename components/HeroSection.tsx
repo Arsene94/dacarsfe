@@ -22,15 +22,38 @@ import { Label } from "@/components/ui/label";
 import {useBooking} from "@/context/BookingContext";
 import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
+import { useTranslations } from "@/lib/i18n/useTranslations";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null;
 
 const HeroSection = () => {
+    const { messages, t } = useTranslations("home");
+    const heroMessages = (messages.hero ?? {}) as Record<string, unknown>;
+    const heroForm = (heroMessages.form ?? {}) as Record<string, unknown>;
+    const heroFormLabels = (heroForm.labels ?? {}) as Record<string, string>;
+    const heroFormPlaceholders = (heroForm.placeholders ?? {}) as Record<string, string>;
+    const heroOptions = (heroForm.options ?? {}) as Record<string, unknown>;
+    const heroLocations = Array.isArray(heroOptions.locations)
+        ? (heroOptions.locations as Array<{ value?: string; label?: string }>)
+        : [];
+    const resolvedLocations = heroLocations.length > 0
+        ? heroLocations
+        : [{ value: "otopeni", label: "Aeroport Otopeni" }];
+    const heroFeatures = Array.isArray(heroMessages.features)
+        ? (heroMessages.features as Array<{ title?: string; description?: string }>)
+        : [];
+    const heroAria =
+        heroForm.aria && typeof heroForm.aria === "object"
+            ? (heroForm.aria as Record<string, string>)
+            : undefined;
+    const heroSubmitLabel =
+        typeof heroForm.submit === "string" ? heroForm.submit : "Caută mașini";
+
     const [formData, setFormData] = useState({
         start_date: "",
         end_date: "",
-        location: "otopeni",
+        location: resolvedLocations[0]?.value ?? "otopeni",
         car_type: "",
     });
     const { setBooking } = useBooking();
@@ -222,19 +245,22 @@ const HeroSection = () => {
                         <div className="inline-flex items-center px-4 py-2 bg-jade/40 rounded-full mb-6">
                             <Star className="h-4 w-4 text-white mr-2" />
                             <span className="text-white font-dm-sans font-medium">
-                Te ținem aproape de casă
-              </span>
+                                {t("hero.badge", { fallback: "Te ținem aproape de casă" })}
+                            </span>
                         </div>
 
                         <h1 className="text-4xl lg:text-6xl font-poppins font-bold leading-tight mb-6">
-                            Închiriere auto București - Otopeni{" "}
+                            {t("hero.title", { fallback: "Închiriere auto București - Otopeni" })}{" "}
                         </h1>
 
                         <p className="text-xl lg:text-2xl font-dm-sans text-gray-200 mb-8 leading-relaxed">
-                            Predare în aeroport în sub 5 minute. <br />
+                            {t("hero.subtitle.lead", {
+                                fallback: "Predare în aeroport în sub 5 minute.",
+                            })}
+                            <br />
                             <span className="text-jadeLight font-semibold">
-                Fără taxe ascunse.
-              </span>
+                                {t("hero.subtitle.highlight", { fallback: "Fără taxe ascunse." })}
+                            </span>
                         </p>
 
                         {/*<div className="hidden sm:flex flex-col sm:flex-row gap-4 mb-8">*/}
@@ -259,35 +285,25 @@ const HeroSection = () => {
 
                         {/* Features */}
                         <div className="hidden sm:grid sm:grid-cols-3 gap-6">
-                            <div className="flex items-center space-x-3">
-                                <div className="bg-jade/20 p-2 rounded-lg">
-                                    <Clock className="h-5 w-5 text-jade" aria-hidden="true" />
-                                </div>
-                                <div>
-                                    <p className="font-dm-sans font-semibold">Sub 5 min</p>
-                                    <p className="text-sm text-gray-300">Predare rapidă</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center space-x-3">
-                                <div className="bg-jade/20 p-2 rounded-lg">
-                                    <Shield className="h-5 w-5 text-jade" aria-hidden="true" />
-                                </div>
-                                <div>
-                                    <p className="font-dm-sans font-semibold">Fără taxe</p>
-                                    <p className="text-sm text-gray-300">Preț transparent</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center space-x-3">
-                                <div className="bg-jade/20 p-2 rounded-lg">
-                                    <Star className="h-5 w-5 text-jade" aria-hidden="true" />
-                                </div>
-                                <div>
-                                    <p className="font-dm-sans font-semibold">24/7</p>
-                                    <p className="text-sm text-gray-300">Disponibil non-stop</p>
-                                </div>
-                            </div>
+                            {heroFeatures.map(
+                                (feature, index) => (
+                                    <div key={`${feature.title}-${index}`} className="flex items-center space-x-3">
+                                        <div className="bg-jade/20 p-2 rounded-lg">
+                                            {index === 0 ? (
+                                                <Clock className="h-5 w-5 text-jade" aria-hidden="true" />
+                                            ) : index === 1 ? (
+                                                <Shield className="h-5 w-5 text-jade" aria-hidden="true" />
+                                            ) : (
+                                                <Star className="h-5 w-5 text-jade" aria-hidden="true" />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="font-dm-sans font-semibold">{feature.title}</p>
+                                            <p className="text-sm text-gray-300">{feature.description}</p>
+                                        </div>
+                                    </div>
+                                ),
+                            )}
                         </div>
                     </div>
 
@@ -316,7 +332,7 @@ const HeroSection = () => {
                                 htmlFor="hero-pickup-date"
                                 className="text-sm text-white font-medium font-['DM_Sans']"
                             >
-                                Data ridicare
+                                {heroFormLabels.pickup ?? "Data ridicare"}
                             </Label>
                             <div className="relative">
                                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -344,7 +360,7 @@ const HeroSection = () => {
                                 htmlFor="hero-return-date"
                                 className="text-sm text-white font-medium font-['DM_Sans']"
                             >
-                                Data returnare
+                                {heroFormLabels.return ?? "Data returnare"}
                             </Label>
                             <div className="relative">
                                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -372,7 +388,7 @@ const HeroSection = () => {
                                 htmlFor="hero-location"
                                 className="text-sm text-white font-medium font-['DM_Sans']"
                             >
-                                Locația
+                                {heroFormLabels.location ?? "Locația"}
                             </Label>
                             <div className="relative">
                                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -381,7 +397,7 @@ const HeroSection = () => {
                                     className={selectControlClass}
                                     value={formData.location}
                                     onValueChange={handleSelectChange("location")}
-                                    placeholder="Alege locația"
+                                    placeholder={heroFormPlaceholders.location ?? "Alege locația"}
                                     style={{
                                         minHeight: '3rem',
                                         maxHeight: '3rem',
@@ -389,7 +405,11 @@ const HeroSection = () => {
                                         lineHeight: '1.5'
                                     }}
                                 >
-                                    <option value="otopeni">Aeroport Otopeni</option>
+                                    {resolvedLocations.map((option) => (
+                                        <option key={option.value ?? "default"} value={option.value ?? ""}>
+                                            {option.label ?? option.value}
+                                        </option>
+                                    ))}
                                 </Select>
                             </div>
                         </div>
@@ -399,7 +419,7 @@ const HeroSection = () => {
                                 htmlFor="hero-car-type"
                                 className="text-sm text-white font-medium font-['DM_Sans']"
                             >
-                                Tip mașină
+                                {heroFormLabels.carType ?? "Tip mașină"}
                             </Label>
                             <div className="relative">
                                 <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -415,7 +435,7 @@ const HeroSection = () => {
                                         lineHeight: '1.5'
                                     }}
                                 >
-                                    <option value="">Toate tipurile</option>
+                                    <option value="">{heroFormPlaceholders.carType ?? "Toate tipurile"}</option>
                                     {categories?.map((category) => {
                                         return (
                                             <option key={category.id} value={category.id}>
@@ -430,9 +450,9 @@ const HeroSection = () => {
                         <Button
                             type="submit"
                             className="px-6 py-3 self-end"
-                            aria-label="Caută mașini"
+                            aria-label={heroAria?.submit ?? heroSubmitLabel}
                         >
-                            Caută mașini
+                            {heroSubmitLabel}
                         </Button>
                     </form>
                 </div>

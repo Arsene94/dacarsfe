@@ -1,0 +1,126 @@
+{
+  "metadata": {
+    "title": "Completa tu reserva",
+    "description": "Introduce tus datos y opciones para confirmar el coche de DaCars que elegiste.",
+    "openGraphTitle": "Completa tu reserva | DaCars Rent a Car"
+  },
+  "fallbacks": {
+    "carName": "Vehículo"
+  },
+  "hero": {
+    "title": "Reserva tu",
+    "highlight": "coche",
+    "subtitle": "Rellena el formulario y nos veremos en el aeropuerto en menos de 5 minutos!"
+  },
+  "emptyState": {
+    "message": "Debes rellenar los datos y seleccionar un coche."
+  },
+  "form": {
+    "personalInfo": {
+      "title": "Información personal",
+      "labels": {
+        "name": "Nombre *",
+        "email": "Email *",
+        "phone": "Teléfono",
+        "flight": "Vuelo (opcional)"
+      },
+      "placeholders": {
+        "name": "Introduce tu nombre completo",
+        "email": "nombre@email.com",
+        "phone": "+40 722 123 456",
+        "flight": "Ej: RO123 o Blue Air 456"
+      },
+      "searchPlaceholder": "Buscar país...",
+      "feedback": {
+        "noResults": "No se encontraron países",
+        "invalid": "El formato del número no es válido para {{country}}",
+        "example": "Ejemplo: {{prefix}} 722 123 456"
+      }
+    },
+    "discount": {
+      "title": "Código de descuento",
+      "placeholder": "Ej: WHEEL10",
+      "remove": "Eliminar código",
+      "validate": "Validar",
+      "ariaLabel": "Validar el código",
+      "messages": {
+        "success": "¡Descuento aplicado!",
+        "error": "Error al validar el código."
+      }
+    },
+    "services": {
+      "title": "Servicios extra",
+      "empty": "No hay servicios disponibles"
+    },
+    "reservationDetails": {
+      "title": "Detalles de la reserva",
+      "labels": {
+        "pickupDate": "Fecha de recogida *",
+        "pickupTime": "Hora de recogida *",
+        "dropoffDate": "Fecha de devolución *",
+        "dropoffTime": "Hora de devolución *"
+      },
+      "errors": {
+        "invalidDates": "La fecha de devolución debe ser posterior a la de recogida.",
+        "unavailable": "El coche no está disponible para el periodo seleccionado."
+      }
+    },
+    "deposit": {
+      "title": "Depósito",
+      "without": "Sin depósito",
+      "with": "Con depósito"
+    },
+    "submit": {
+      "label": "Finalizar reserva",
+      "processing": "Procesando...",
+      "ariaLabel": "Completar la reserva"
+    }
+  },
+  "wheelPrize": {
+    "title": "Premio de la Ruleta de la Fortuna",
+    "validUntil": "Válido hasta {{date}}.",
+    "validDefault": "Válido durante 30 días desde el momento en que lo ganaste.",
+    "note": "El equipo de DaCars aplicará el beneficio cuando termines la reserva.",
+    "savings": "Ahorra {{amount}}€ en esta reserva.",
+    "amount": {
+      "percentage": "{{amount}}% de descuento",
+      "fixed": "Descuento de {{amount}} RON",
+      "extraDay": {
+        "one": "Bono de {{amount}} día",
+        "other": "Bono de {{amount}} días"
+      },
+      "other": "{{amount}}"
+    }
+  },
+  "summary": {
+    "title": "Resumen de la reserva",
+    "car": "Coche:",
+    "from": "Desde:",
+    "to": "Hasta:",
+    "location": "Ubicación:",
+    "locationName": "Aeropuerto Henri Coandă, Otopeni",
+    "overviewLabel": "Resumen:",
+    "days": {
+      "one": "{{count}} día",
+      "other": "{{count}} días"
+    },
+    "subtotal": "Subtotal:",
+    "servicesLabel": "Servicios:",
+    "wheelPrizeLabel": "Premio de la Ruleta de la Fortuna:",
+    "preDiscount": "Total antes del descuento:",
+    "discount": "Descuento:",
+    "total": "Total:",
+    "deposit": "Depósito:",
+    "depositNote": "(+{{amount}}€ depósito)"
+  },
+  "footer": {
+    "disclaimer": "*Precio final, sin cargos ocultos",
+    "includesTitle": "Incluye:",
+    "includes": [
+      "✓ Recogida en menos de 5 minutos",
+      "✓ Disponibilidad 24/7",
+      "✓ Sin costes ocultos",
+      "✓ Cambios gratuitos"
+    ]
+  }
+}

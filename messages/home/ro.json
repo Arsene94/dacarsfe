@@ -1,0 +1,278 @@
+{
+  "hero": {
+    "badge": "Te ținem aproape de casă",
+    "title": "Închiriere auto București - Otopeni",
+    "subtitle": {
+      "lead": "Predare în aeroport în sub 5 minute.",
+      "highlight": "Fără taxe ascunse."
+    },
+    "features": [
+      { "title": "Sub 5 min", "description": "Predare rapidă" },
+      { "title": "Fără taxe", "description": "Preț transparent" },
+      { "title": "24/7", "description": "Disponibil non-stop" }
+    ],
+    "form": {
+      "labels": {
+        "pickup": "Data ridicare",
+        "return": "Data returnare",
+        "location": "Locația",
+        "carType": "Tip mașină"
+      },
+      "placeholders": {
+        "location": "Alege locația",
+        "carType": "Toate tipurile"
+      },
+      "options": {
+        "locations": [
+          { "value": "otopeni", "label": "Aeroport Otopeni" }
+        ]
+      },
+      "submit": "Caută mașini",
+      "aria": {
+        "submit": "Caută mașini",
+        "location": "Alege locația de ridicare"
+      }
+    }
+  },
+  "fleet": {
+    "title": {
+      "main": "Flota noastră",
+      "highlight": "premium"
+    },
+    "description": "Mașini moderne, verificate și întreținute cu grijă pentru confortul și siguranța ta.",
+    "labels": {
+      "seatsSuffix": "persoane"
+    },
+    "cta": "Vezi toată flota",
+    "carousel": {
+      "aria": "Carousel",
+      "previous": "Mașina precedentă",
+      "next": "Mașina următoare",
+      "position": "{{current}} din {{total}}"
+    },
+    "structuredData": {
+      "name": "Mașini recomandate din flota DaCars",
+      "description": "Selecție curentă de vehicule populare disponibile pentru închiriere la DaCars.",
+      "currency": "EUR"
+    }
+  },
+  "benefits": {
+    "title": {
+      "main": "De ce să alegi",
+      "highlight": "DaCars"
+    },
+    "description": "Serviciu de încredere, creat special pentru românii care călătoresc și au nevoie de o mașină la întoarcerea acasă.",
+    "items": [
+      {
+        "title": "Fără birocrație",
+        "description": "Proces simplu și rapid, fără acte complicate sau așteptare lungă."
+      },
+      {
+        "title": "Disponibil 24/7",
+        "description": "Predare și ridicare non-stop la aeroport, oricând ai nevoie."
+      },
+      {
+        "title": "Flexibilitate maximă",
+        "description": "Modifici sau anulezi rezervarea fără taxe suplimentare."
+      },
+      {
+        "title": "Fără taxe ascunse",
+        "description": "Preț transparent și clar de la început. Ce vezi, asta plătești."
+      }
+    ],
+    "stats": [
+      { "value": "500+", "label": "Clienți fericiți" },
+      { "value": "24/7", "label": "Disponibilitate" },
+      { "value": "<5min", "label": "Timp predare" },
+      { "value": "0", "label": "Taxe ascunse" }
+    ]
+  },
+  "offers": {
+    "title": {
+      "main": "Oferte",
+      "highlight": "speciale"
+    },
+    "description": "Promoții exclusive pentru momentele importante din viața ta.",
+    "cards": [
+      {
+        "title": "Pachet Nuntă",
+        "discount": "10% reducere",
+        "description": "Pentru cei mai frumoși ani din viața voastră. Mașină elegantă pentru ziua specială.",
+        "features": ["Decorațiuni incluse", "Predare la locație", "Șofer opțional"],
+        "color": "bg-gradient-to-br from-pink-500 to-rose-600",
+        "textColor": "text-white"
+      },
+      {
+        "title": "Reducere Prieteni",
+        "discount": "20% reducere",
+        "description": "Adu-ți prietenii și economisește! Cu cât sunteți mai mulți, cu atât mai avantajos.",
+        "features": ["Pentru grupuri 4+", "Valabil 30 zile", "Cumulabilă cu alte oferte"],
+        "color": "bg-gradient-to-br from-jade to-emerald-600",
+        "textColor": "text-white"
+      }
+    ],
+    "cta": {
+      "primary": "Profită acum",
+      "secondaryTitle": "Ofertă limitată de sezon",
+      "secondaryDescription": "Rezervă acum pentru perioada sărbătorilor și beneficiezi de tarife preferențiale și servicii premium incluse.",
+      "secondaryButton": "Rezervă cu reducere"
+    }
+  },
+  "process": {
+    "title": {
+      "main": "Procesul nostru",
+      "highlight": "simplu"
+    },
+    "description": "Doar 3 pași simpli te despart de mașina ta. Fără complicații, fără stres.",
+    "steps": [
+      {
+        "number": "01",
+        "title": "Rezervă online",
+        "description": "Completează formularul simplu și alege mașina potrivită pentru tine.",
+        "color": "bg-jade"
+      },
+      {
+        "number": "02",
+        "title": "Ridici la aeroport",
+        "description": "Te întâlnim la sosiri în sub 5 minute cu mașina pregătită.",
+        "color": "bg-berkeley"
+      },
+      {
+        "number": "03",
+        "title": "Drum bun acasă",
+        "description": "Ajungi acasă în siguranță cu mașina ta închiriată.",
+        "color": "bg-jade"
+      }
+    ],
+    "cta": {
+      "title": "Gata să începi?",
+      "description": "Rezervarea durează doar 2 minute. Mașina ta te așteaptă la aeroport!",
+      "primary": "Rezervă acum",
+      "secondary": "Vezi flota"
+    }
+  },
+  "contact": {
+    "title": {
+      "main": "Contactează-ne",
+      "highlight": "oricând"
+    },
+    "description": "Suntem aici să te ajutăm 24/7. Ia legătura cu noi prin oricare dintre metodele de mai jos.",
+    "items": {
+      "phone": {
+        "title": "Telefon",
+        "description": "Suntem disponibili 24/7 pentru urgențe",
+        "aria": "Sună la +40 723 817 551"
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Scrie-ne pentru răspuns rapid",
+        "aria": "Contactează pe WhatsApp la +40 723 817 551"
+      },
+      "email": {
+        "title": "Email",
+        "description": "Pentru întrebări generale",
+        "aria": "Trimite email la contact@dacars.ro"
+      },
+      "location": {
+        "title": "Locație",
+        "description": "Punct de predare principal",
+        "address": "Calea Bucurestilor 305",
+        "city": "Otopeni, Ilfov"
+      },
+      "schedule": {
+        "title": "Program",
+        "description": "Predare și ridicare",
+        "details": ["24/7 - Non-stop", "Disponibili oricând"]
+      }
+    },
+    "map": {
+      "title": "Locația noastră",
+      "advisor": "Consultant:",
+      "advisorText": "Când aterizezi, sună-ne la numărul de telefon",
+      "clientDialog": [
+        { "speaker": "Client", "message": "Pai si? Dupa ce fac?" },
+        { "speaker": "DaCars", "message": "Apoi ne întâlnim în fața stației CFR, în fața cupolei verde de sticlă, la terminalul Sosiri." },
+        { "speaker": "Client", "message": "Bine bossu meu, asa facem" }
+      ]
+    }
+  },
+  "wheel": {
+    "popup": {
+      "title": "Bun venit la DaCars!",
+      "description": "Înainte să explorezi ofertele noastre, încearcă-ți norocul la Roata Norocului și câștigă beneficii exclusive!"
+    },
+    "section": {
+      "title": "Roata Norocului DaCars",
+      "description": "Încearcă-ți norocul și câștigă reduceri exclusive și beneficii speciale pentru următoarea ta rezervare!"
+    },
+    "activePeriod": "Perioada activă: {{period}}. Completează datele tale, învârte roata și vezi ce premiu primești!",
+    "defaultPrompt": "Completează datele tale, învârte roata și vezi ce premiu primești!",
+    "spinsLeft": "Încercări rămase",
+    "form": {
+      "name": {
+        "label": "Nume complet",
+        "placeholder": "Ex. Maria Popescu"
+      },
+      "phone": {
+        "label": "Telefon",
+        "placeholder": "Ex. +40 712 345 678"
+      },
+      "consent": "Datele sunt necesare pentru validarea premiului conform regulamentului DaCars."
+    },
+    "storedPrize": {
+      "title": "Premiu activ din Roata Norocului",
+      "prefix": "Ai câștigat ",
+      "suffix": ". Premiul este valabil până la {{expiry}} și îl poți folosi direct în pagina de checkout.",
+      "noExpiry": "expirarea automată"
+    },
+    "errors": {
+      "load": "A apărut o eroare la încărcarea roții. Încearcă din nou mai târziu.",
+      "form": "Completează toate câmpurile pentru a continua.",
+      "loadNoPeriod": "Momentan nu există o perioadă activă pentru roata norocului.",
+      "loadNoPrizes": "Momentan nu sunt premii disponibile pentru această perioadă.",
+      "loadFailed": "Nu am putut încărca premiile. Te rugăm să încerci din nou mai târziu.",
+      "unavailable": "Roata nu este disponibilă în acest moment.",
+      "activePrize": "Ai deja un premiu activ câștigat la Roata Norocului. Îl poți folosi la checkout în următoarele 30 de zile.",
+      "nameRequired": "Introdu numele complet pentru a putea salva premiul.",
+      "phoneRequired": "Introdu un număr de telefon valid.",
+      "noPrize": "Nu am putut determina un premiu în acest moment. Încearcă din nou mai târziu.",
+      "saveFallback": "A apărut o eroare la salvarea premiului. Te rugăm să încerci din nou."
+    },
+    "buttons": {
+      "spin": "Învârte Roata",
+      "spinning": "Se învârte...",
+      "activePrize": "Premiu activ",
+      "outOfSpins": "Încercări epuizate",
+      "reset": "Resetează (Demo)",
+      "close": "Închide",
+      "tryAgain": "Încearcă din nou",
+      "retrySave": "Reîncearcă salvarea",
+      "continue": "Continuă rezervarea"
+    },
+    "winner": {
+      "title": "Câștigă premii exclusive!",
+      "tryAgainHeading": "Mai încearcă!",
+      "successHeading": "Felicitări! 🎉",
+      "descriptionFallback": "Continuă procesul de rezervare pentru a afla mai multe detalii.",
+      "tryAgainMessage": "Nu te descuraja! Ai primit o nouă șansă să câștigi un premiu și mai bun.",
+      "successMessage": "Am înregistrat premiul tău și vei primi detalii prin SMS sau email în scurt timp.",
+      "expiry": "Premiul este valabil până la {{expiry}} și îl vei găsi salvat și în pagina de checkout.",
+      "saving": "Salvăm premiul tău...",
+      "saved": "Premiul a fost salvat cu succes! Echipa DaCars îți va trimite toate detaliile curând.",
+      "saveError": "Nu am putut salva premiul. Încearcă din nou.",
+      "close": "Închide"
+    },
+    "regulation": {
+      "title": "Regulament rapid:",
+      "items": [
+        "• O singură încercare per client valid.",
+        "• Premiul este valabil 30 de zile din momentul câștigului.",
+        "• Se aplică doar la rezervări noi efectuate pe DaCars.",
+        "• Nu se cumulează cu alte oferte sau reduceri."
+      ]
+    },
+    "assets": {
+      "logoAlt": "Siglă DaCars"
+    }
+  }
+}

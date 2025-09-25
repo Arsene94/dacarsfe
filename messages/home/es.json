@@ -1,0 +1,278 @@
+{
+  "hero": {
+    "badge": "Te mantenemos cerca de casa",
+    "title": "Alquiler de coches Bucarest - Otopeni",
+    "subtitle": {
+      "lead": "Recogida en el aeropuerto en menos de 5 minutos.",
+      "highlight": "Sin cargos ocultos."
+    },
+    "features": [
+      { "title": "Menos de 5 min", "description": "Entrega rápida" },
+      { "title": "Sin tasas", "description": "Precio transparente" },
+      { "title": "24/7", "description": "Siempre disponibles" }
+    ],
+    "form": {
+      "labels": {
+        "pickup": "Fecha de recogida",
+        "return": "Fecha de devolución",
+        "location": "Ubicación",
+        "carType": "Tipo de coche"
+      },
+      "placeholders": {
+        "location": "Elige una ubicación",
+        "carType": "Todos los tipos"
+      },
+      "options": {
+        "locations": [
+          { "value": "otopeni", "label": "Aeropuerto de Otopeni" }
+        ]
+      },
+      "submit": "Buscar coches",
+      "aria": {
+        "submit": "Buscar coches",
+        "location": "Elige la ubicación de recogida"
+      }
+    }
+  },
+  "fleet": {
+    "title": {
+      "main": "Nuestra flota",
+      "highlight": "premium"
+    },
+    "description": "Coches modernos, revisados y cuidados para mantenerte seguro y cómodo.",
+    "labels": {
+      "seatsSuffix": "personas"
+    },
+    "cta": "Ver todos los coches",
+    "carousel": {
+      "aria": "Carrusel",
+      "previous": "Coche anterior",
+      "next": "Siguiente coche",
+      "position": "{{current}} de {{total}}"
+    },
+    "structuredData": {
+      "name": "Coches destacados de la flota DaCars",
+      "description": "Selección actual de vehículos populares disponibles para alquilar en DaCars.",
+      "currency": "EUR"
+    }
+  },
+  "benefits": {
+    "title": {
+      "main": "Por qué elegir",
+      "highlight": "DaCars"
+    },
+    "description": "Un servicio de confianza creado para los rumanos que vuelven a casa y necesitan un coche fiable.",
+    "items": [
+      {
+        "title": "Sin papeleo",
+        "description": "Proceso sencillo y rápido, sin formularios complicados ni esperas."
+      },
+      {
+        "title": "Disponible 24/7",
+        "description": "Recogida y devolución en el aeropuerto cuando lo necesites."
+      },
+      {
+        "title": "Máxima flexibilidad",
+        "description": "Cambia o cancela tu reserva sin cargos adicionales."
+      },
+      {
+        "title": "Sin costes ocultos",
+        "description": "Precios claros en los que puedes confiar. Lo que ves es lo que pagas."
+      }
+    ],
+    "stats": [
+      { "value": "500+", "label": "Clientes satisfechos" },
+      { "value": "24/7", "label": "Disponibilidad" },
+      { "value": "<5min", "label": "Tiempo de entrega" },
+      { "value": "0", "label": "Cargos ocultos" }
+    ]
+  },
+  "offers": {
+    "title": {
+      "main": "Ofertas",
+      "highlight": "especiales"
+    },
+    "description": "Promociones exclusivas para los momentos importantes de tu vida.",
+    "cards": [
+      {
+        "title": "Paquete boda",
+        "discount": "10% dto.",
+        "description": "Para los años más felices que vienen. Un coche elegante para tu gran día.",
+        "features": ["Decoraciones incluidas", "Entrega en tu evento", "Conductor a petición"],
+        "color": "bg-gradient-to-br from-pink-500 to-rose-600",
+        "textColor": "text-white"
+      },
+      {
+        "title": "Descuento amigos",
+        "discount": "20% dto.",
+        "description": "Trae a tus amigos y ahorra. ¡Cuantos más seáis, mejor oferta!",
+        "features": ["Para grupos de 4+", "Válido durante 30 días", "Se puede combinar con otras ofertas"],
+        "color": "bg-gradient-to-br from-jade to-emerald-600",
+        "textColor": "text-white"
+      }
+    ],
+    "cta": {
+      "primary": "Solicitar oferta",
+      "secondaryTitle": "Promoción de temporada limitada",
+      "secondaryDescription": "Reserva ahora para la temporada festiva y disfruta de tarifas preferenciales con servicios premium incluidos.",
+      "secondaryButton": "Reservar con descuento"
+    }
+  },
+  "process": {
+    "title": {
+      "main": "Nuestro proceso",
+      "highlight": "sin complicaciones"
+    },
+    "description": "Solo 3 pasos sencillos te separan de tu coche. Sin estrés ni trámites.",
+    "steps": [
+      {
+        "number": "01",
+        "title": "Reserva en línea",
+        "description": "Completa el formulario rápido y elige el coche que mejor se adapte a ti.",
+        "color": "bg-jade"
+      },
+      {
+        "number": "02",
+        "title": "Recoge en el aeropuerto",
+        "description": "Nos encontramos contigo en llegadas en menos de 5 minutos con el coche listo.",
+        "color": "bg-berkeley"
+      },
+      {
+        "number": "03",
+        "title": "Conduce a casa con seguridad",
+        "description": "Llega a casa cómodo con tu coche de alquiler.",
+        "color": "bg-jade"
+      }
+    ],
+    "cta": {
+      "title": "¿Listo para empezar?",
+      "description": "Reservar toma solo 2 minutos. ¡Tu coche te espera en el aeropuerto!",
+      "primary": "Reserva ahora",
+      "secondary": "Ver la flota"
+    }
+  },
+  "contact": {
+    "title": {
+      "main": "Ponte en contacto",
+      "highlight": "en cualquier momento"
+    },
+    "description": "Estamos aquí 24/7. Contáctanos usando cualquiera de las opciones siguientes.",
+    "items": {
+      "phone": {
+        "title": "Teléfono",
+        "description": "Disponible 24/7 para emergencias",
+        "aria": "Llamar al +40 723 817 551"
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Envíanos un mensaje para una respuesta rápida",
+        "aria": "Escríbenos por WhatsApp al +40 723 817 551"
+      },
+      "email": {
+        "title": "Correo electrónico",
+        "description": "Para preguntas generales",
+        "aria": "Enviar un correo a contact@dacars.ro"
+      },
+      "location": {
+        "title": "Ubicación",
+        "description": "Punto principal de recogida",
+        "address": "Bulevar Bucurestilor 305",
+        "city": "Otopeni, Ilfov"
+      },
+      "schedule": {
+        "title": "Horario",
+        "description": "Recogida y entrega",
+        "details": ["24/7 - Sin interrupción", "Siempre disponibles"]
+      }
+    },
+    "map": {
+      "title": "Nuestra ubicación",
+      "advisor": "Consultor:",
+      "advisorText": "Cuando aterrices, llámanos al",
+      "clientDialog": [
+        { "speaker": "Cliente", "message": "Vale, ¿y después qué?" },
+        { "speaker": "DaCars", "message": "Nos vemos frente a la estación CFR, cerca de la cúpula verde de cristal, en la terminal de llegadas." },
+        { "speaker": "Cliente", "message": "Perfecto, nos vemos allí." }
+      ]
+    }
+  },
+  "wheel": {
+    "popup": {
+      "title": "¡Bienvenido a DaCars!",
+      "description": "Antes de explorar nuestras ofertas, gira la Ruleta de la Fortuna y desbloquea ventajas exclusivas!"
+    },
+    "section": {
+      "title": "Ruleta de la Fortuna DaCars",
+      "description": "Pon a prueba tu suerte y gana descuentos y ventajas exclusivas para tu próxima reserva!"
+    },
+    "activePeriod": "Periodo activo: {{period}}. Completa tus datos, gira la ruleta y descubre tu premio!",
+    "defaultPrompt": "Completa tus datos, gira la ruleta y descubre tu premio!",
+    "spinsLeft": "Giros restantes",
+    "form": {
+      "name": {
+        "label": "Nombre completo",
+        "placeholder": "p. ej. Maria Popescu"
+      },
+      "phone": {
+        "label": "Teléfono",
+        "placeholder": "p. ej. +40 712 345 678"
+      },
+      "consent": "Necesitamos estos datos para validar tu premio según las reglas de DaCars."
+    },
+    "storedPrize": {
+      "title": "Premio activo de la Ruleta de la Fortuna",
+      "prefix": "Ganaste ",
+      "suffix": ". El premio es válido hasta {{expiry}} y puedes canjearlo directamente durante el checkout.",
+      "noExpiry": "caducidad automática"
+    },
+    "errors": {
+      "load": "Algo salió mal al cargar la ruleta. Por favor, inténtalo de nuevo más tarde.",
+      "form": "Completa todos los campos antes de girar.",
+      "loadNoPeriod": "No hay un periodo activo para la ruleta en este momento.",
+      "loadNoPrizes": "No hay premios disponibles para el periodo actual.",
+      "loadFailed": "No pudimos cargar los premios. Inténtalo de nuevo más tarde.",
+      "unavailable": "La ruleta no está disponible ahora mismo.",
+      "activePrize": "Ya tienes un premio activo de la Ruleta de la Fortuna. Puedes usarlo en el checkout dentro de los próximos 30 días.",
+      "nameRequired": "Introduce tu nombre completo para que podamos guardar el premio.",
+      "phoneRequired": "Introduce un número de teléfono válido.",
+      "noPrize": "No pudimos determinar un premio esta vez. Inténtalo de nuevo más tarde.",
+      "saveFallback": "Algo salió mal al guardar tu premio. Inténtalo nuevamente."
+    },
+    "buttons": {
+      "spin": "Girar la ruleta",
+      "spinning": "Girando...",
+      "activePrize": "Premio activo",
+      "outOfSpins": "Sin giros disponibles",
+      "reset": "Reiniciar (Demo)",
+      "close": "Cerrar",
+      "tryAgain": "Intentar de nuevo",
+      "retrySave": "Reintentar guardar",
+      "continue": "Continuar reserva"
+    },
+    "winner": {
+      "title": "¡Gana premios exclusivos!",
+      "tryAgainHeading": "¡Inténtalo otra vez!",
+      "successHeading": "¡Felicidades! 🎉",
+      "descriptionFallback": "Continúa el proceso de reserva para saber más.",
+      "tryAgainMessage": "¡No pasa nada! Has ganado otra oportunidad para conseguir un premio aún mejor.",
+      "successMessage": "Hemos guardado tu premio y pronto recibirás los detalles por SMS o email.",
+      "expiry": "El premio es válido hasta {{expiry}} y también lo encontrarás guardado en la página de checkout.",
+      "saving": "Guardando tu premio...",
+      "saved": "¡El premio se guardó correctamente! El equipo de DaCars te enviará todos los detalles en breve.",
+      "saveError": "No pudimos guardar el premio. Por favor, inténtalo de nuevo.",
+      "close": "Cerrar"
+    },
+    "regulation": {
+      "title": "Reglas rápidas:",
+      "items": [
+        "• Un giro por cliente válido.",
+        "• Premio válido durante 30 días desde la fecha de obtención.",
+        "• Aplica solo a nuevas reservas realizadas en DaCars.",
+        "• No se puede combinar con otras ofertas o descuentos."
+      ]
+    },
+    "assets": {
+      "logoAlt": "Logo de DaCars"
+    }
+  }
+}

@@ -12,4 +12,9 @@ export interface PhoneInputProps {
   required?: boolean;
   className?: string;
   placeholder?: string;
+  label?: string;
+  searchPlaceholder?: string;
+  noResultsLabel?: string;
+  invalidFormatMessage?: (countryName: string) => string;
+  exampleLabel?: (countryPrefix: string) => string;
 }

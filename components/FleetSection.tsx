@@ -21,6 +21,7 @@ import {
 } from "@/lib/seo/structuredData";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { ApiCar, CarCategory, FleetCar } from "@/types/car";
+import { useTranslations } from "@/lib/i18n/useTranslations";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
@@ -95,6 +96,23 @@ const resolveRelationName = (relation: unknown, fallback: string): string => {
 const FleetSection = () => {
     const [cars, setCars] = useState<FleetCar[]>([]);
     const [current, setCurrent] = useState(0);
+    const { messages, t } = useTranslations("home");
+    const fleetMessages = (messages.fleet ?? {}) as Record<string, unknown>;
+    const fleetTitle = (fleetMessages.title ?? {}) as { main?: string; highlight?: string };
+    const fleetLabels = (fleetMessages.labels ?? {}) as { seatsSuffix?: string };
+    const fleetCarousel = (fleetMessages.carousel ?? {}) as {
+        aria?: string;
+        previous?: string;
+        next?: string;
+        position?: string;
+    };
+    const fleetStructuredData = (fleetMessages.structuredData ?? {}) as {
+        name?: string;
+        description?: string;
+        currency?: string;
+    };
+    const fleetCtaLabel = typeof fleetMessages.cta === "string" ? fleetMessages.cta : "Vezi toată flota";
+    const fallbackCarName = t("fleet.fallbackName", { fallback: "Autovehicul" });
 
     useEffect(() => {
         let cancelled = false;
@@ -105,7 +123,7 @@ const FleetSection = () => {
 
             const mapped: FleetCar[] = list.map((c) => ({
                 id: c.id,
-                name: c.name ?? "Autovehicul",
+                name: c.name ?? fallbackCarName,
                 type: (c.type?.name ?? "—").trim(),
                 icon: toImageUrl(resolvePrimaryImage(c)),
                 number_of_seats: toSafeNumber(c.number_of_seats) ?? 0,
@@ -131,7 +149,7 @@ const FleetSection = () => {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [fallbackCarName]);
 
     const nextSlide = useCallback(() => {
         setCurrent((prev) => (prev + 1) % Math.max(cars.length, 1));
@@ -163,11 +181,13 @@ const FleetSection = () => {
         return createVehicleItemListStructuredData(mapped, {
             baseUrl: siteUrl,
             pageUrl: `${siteUrl}/`,
-            name: "Mașini recomandate din flota DaCars",
-            description: "Selecție curentă de vehicule populare disponibile pentru închiriere la DaCars.",
-            currency: "EUR",
+            name: fleetStructuredData.name ?? "Mașini recomandate din flota DaCars",
+            description:
+                fleetStructuredData.description ??
+                "Selecție curentă de vehicule populare disponibile pentru închiriere la DaCars.",
+            currency: fleetStructuredData.currency ?? "EUR",
         });
-    }, [cars]);
+    }, [cars, fleetStructuredData.currency, fleetStructuredData.description, fleetStructuredData.name]);
 
     const CarCard = ({ car, index }: { car: FleetCar; index: number }) => (
         <div
@@ -203,7 +223,9 @@ const FleetSection = () => {
                     <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                         <div className="flex items-center space-x-2">
                             <Users className="h-4 w-4 text-jade" />
-                            <span>{car.number_of_seats} persoane</span>
+                            <span>
+                                {car.number_of_seats} {fleetLabels.seatsSuffix ?? "persoane"}
+                            </span>
                         </div>
                         <div className="flex items-center space-x-2">
                             <Settings className="h-4 w-4 text-jade" />
@@ -244,14 +266,22 @@ const FleetSection = () => {
                 )}
                 <div className="text-center mb-16 animate-fade-in">
                     <h2 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
-                        Flota noastră <span className="text-jade">premium</span>
+                        {fleetTitle.main ?? "Flota noastră"} {" "}
+                        <span className="text-jade">{fleetTitle.highlight ?? "premium"}</span>
                     </h2>
                     <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                        Mașini moderne, verificate și întreținute cu grijă pentru confortul și siguranța ta.
+                        {t("fleet.description", {
+                            fallback:
+                                "Mașini moderne, verificate și întreținute cu grijă pentru confortul și siguranța ta.",
+                        })}
                     </p>
                 </div>
 
-                <div className="md:hidden relative overflow-hidden" role="region" aria-label="Carousel">
+                <div
+                    className="md:hidden relative overflow-hidden"
+                    role="region"
+                    aria-label={fleetCarousel.aria ?? "Carousel"}
+                >
                     <div
                         className="flex transition-transform duration-700 ease-out"
                         style={{ transform: `translateX(-${current * 100}%)` }}
@@ -263,7 +293,10 @@ const FleetSection = () => {
                                 className="min-w-full"
                                 role="group"
                                 aria-roledescription="slide"
-                                aria-label={`${index + 1} din ${cars.length}`}
+                                aria-label={t("fleet.carousel.position", {
+                                    values: { current: index + 1, total: cars.length },
+                                    fallback: `${index + 1} din ${cars.length}`,
+                                })}
                             >
                                 <CarCard car={car} index={index} />
                             </div>
@@ -274,14 +307,14 @@ const FleetSection = () => {
                         <>
                             <button
                                 onClick={prevSlide}
-                                aria-label="Mașina precedentă"
+                                aria-label={fleetCarousel.previous ?? "Mașina precedentă"}
                                 className="absolute top-1/2 left-2 -translate-y-1/2 p-2 rounded-full bg-white/80 shadow hover:bg-white"
                             >
                                 <ChevronLeft className="h-5 w-5 text-jade" />
                             </button>
                             <button
                                 onClick={nextSlide}
-                                aria-label="Mașina următoare"
+                                aria-label={fleetCarousel.next ?? "Mașina următoare"}
                                 className="absolute top-1/2 right-2 -translate-y-1/2 p-2 rounded-full bg-white/80 shadow hover:bg-white"
                             >
                                 <ChevronRight className="h-5 w-5 text-jade" />
@@ -297,13 +330,13 @@ const FleetSection = () => {
                 </div>
 
                 <div className="text-center mt-12">
-                    <Link href="/cars" aria-label="Vezi toată flota">
+                    <Link href="/cars" aria-label={fleetCtaLabel}>
                         <Button
-                            aria-label="Vezi toată flota"
+                            aria-label={fleetCtaLabel}
                             variant="outline"
                             className="border-jade text-jade hover:bg-jade hover:text-white"
                         >
-                            Vezi toată flota
+                            {fleetCtaLabel}
                         </Button>
                     </Link>
                 </div>

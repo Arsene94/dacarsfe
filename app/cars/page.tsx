@@ -7,25 +7,22 @@ import {
     createBreadcrumbStructuredData,
     createSearchActionStructuredData,
 } from "@/lib/seo/structuredData";
+import carsMessagesRo from "@/messages/cars/ro.json";
+
+type CarsMessages = typeof carsMessagesRo;
 
 const siteUrl = siteMetadata.siteUrl;
 const pageUrl = absoluteUrl("/cars");
 
-const PAGE_DESCRIPTION =
-    "Analizează toată flota DaCars și filtrează rapid mașinile disponibile pentru închiriere.";
+const carsMessages: CarsMessages = carsMessagesRo;
+const { metadata: carsMetadataMessages } = carsMessages;
 
 const carsMetadata = buildMetadata({
-    title: "Flota completă de mașini pentru închiriere",
-    description: PAGE_DESCRIPTION,
-    keywords: [
-        "flotă închirieri auto",
-        "mașini disponibile București",
-        "rent a car fără garanție",
-        "rezervare mașină online",
-        "DaCars flotă auto",
-    ],
+    title: carsMetadataMessages.title,
+    description: carsMetadataMessages.description,
+    keywords: carsMetadataMessages.keywords,
     path: "/cars",
-    openGraphTitle: "Flota completă de mașini pentru închiriere | DaCars Rent a Car",
+    openGraphTitle: carsMetadataMessages.openGraphTitle,
 });
 
 export const metadata: Metadata = {
@@ -39,9 +36,11 @@ const searchStructuredData = createSearchActionStructuredData({
     queryInput: "required name=search_term_string",
 });
 
+const breadcrumbMessages = carsMetadataMessages.breadcrumb ?? { home: "Acasă", fleet: "Flotă auto" };
+
 const breadcrumbStructuredData = createBreadcrumbStructuredData([
-    { name: "Acasă", item: siteUrl },
-    { name: "Flotă auto", item: pageUrl },
+    { name: breadcrumbMessages.home ?? "Acasă", item: siteUrl },
+    { name: breadcrumbMessages.fleet ?? "Flotă auto", item: pageUrl },
 ]);
 
 const CarsPage = () => (

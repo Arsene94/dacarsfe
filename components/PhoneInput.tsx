@@ -13,6 +13,12 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   required = false,
   className = '',
   placeholder = 'Numărul de telefon',
+  label = 'Telefon',
+  searchPlaceholder = 'Caută țară...',
+  noResultsLabel = 'Nu s-au găsit țări',
+  invalidFormatMessage = (countryName: string) =>
+    `Formatul numărului de telefon nu este valid pentru ${countryName}`,
+  exampleLabel = (prefix: string) => `Exemplu: ${prefix} 722 123 456`,
 }) => {
   const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -106,11 +112,14 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
     }
   }, [phoneNumber, value]);
 
+  const resolvedInvalidMessage = invalidFormatMessage(selectedCountry.name);
+  const resolvedExampleLabel = exampleLabel(selectedCountry.prefix);
+
   return (
     <div className={cn('relative', className)}>
       <Label htmlFor={inputId} className="mb-2">
         <Phone className="h-4 w-4 inline text-jade mr-1" />
-        Telefon {required ? '*' : ''}
+        {label} {required ? '*' : ''}
       </Label>
       <div className="flex">
         <div className="relative" ref={dropdownRef}>
@@ -138,7 +147,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
                   <input
                     ref={searchInputRef}
                     type="text"
-                    placeholder="Caută țară..."
+                    placeholder={searchPlaceholder}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-jade focus:border-transparent text-sm"
@@ -168,7 +177,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
                   ))
                 ) : (
                   <div className="px-3 py-4 text-center text-gray-500 text-sm font-dm-sans">
-                    Nu s-au găsit țări
+                    {noResultsLabel}
                   </div>
                 )}
               </div>
@@ -191,11 +200,11 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
       </div>
       {!isValid && phoneNumber && (
         <div className="mt-2 text-sm text-red-600 font-dm-sans">
-          Formatul numărului de telefon nu este valid pentru {selectedCountry.name}
+          {resolvedInvalidMessage}
         </div>
       )}
       <div className="mt-2 text-xs text-gray-500 font-dm-sans">
-        Exemplu: {selectedCountry.prefix} 722 123 456
+        {resolvedExampleLabel}
       </div>
     </div>
   );

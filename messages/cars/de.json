@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "title": "Komplette Mietwagenflotte",
+    "description": "Entdecke die gesamte DaCars-Flotte und filtere schnell die verfügbaren Mietwagen.",
+    "keywords": [
+      "autovermietung flotte",
+      "verfügbare autos bukarest",
+      "auto mieten ohne kaution",
+      "online auto buchen",
+      "dacars autoflotte"
+    ],
+    "openGraphTitle": "Komplette Mietwagenflotte | DaCars Rent a Car",
+    "breadcrumb": {
+      "home": "Startseite",
+      "fleet": "Autoflotte"
+    }
+  },
+  "structuredData": {
+    "itemList": {
+      "name": "DaCars Mietwagenflotte",
+      "description": "Alle Fahrzeuge zur Miete bei DaCars, in Echtzeit aktualisiert.",
+      "currency": "EUR"
+    }
+  },
+  "fallbacks": {
+    "carName": "Fahrzeug",
+    "unknownValue": "—",
+    "category": "Kategorie #{{id}}"
+  },
+  "labels": {
+    "passengers": "{{count}} Personen"
+  },
+  "header": {
+    "title": {
+      "main": "Unsere",
+      "highlight": "komplette Flotte"
+    },
+    "description": "Sieh dir alle verfügbaren Fahrzeuge an und wähle das passende für deine Reise aus."
+  },
+  "search": {
+    "placeholder": "Nach einem Auto suchen...",
+    "ariaLabel": "Nach einem Auto suchen",
+    "sortAria": "Autos sortieren",
+    "sortOptions": {
+      "cheapest": "Niedrigster Preis zuerst",
+      "mostExpensive": "Höchster Preis zuerst"
+    },
+    "filtersButton": "Filter",
+    "filtersAria": "Filter ein-/ausblenden"
+  },
+  "filters": {
+    "labels": {
+      "category": "Kategorie",
+      "type": "Fahrzeugtyp",
+      "transmission": "Getriebe",
+      "fuel": "Kraftstoff"
+    },
+    "allOption": "Alle",
+    "reset": "Filter zurücksetzen",
+    "resetAria": "Filter zurücksetzen",
+    "removeAria": "Filter {{filter}} entfernen"
+  },
+  "results": {
+    "label": "gefundene Autos"
+  },
+  "list": {
+    "empty": {
+      "title": "Keine Autos gefunden",
+      "description": "Passe die Filter an oder suche nach einem anderen Begriff."
+    }
+  },
+  "card": {
+    "pricing": {
+      "noDepositLabel": "Ohne Kaution",
+      "withDepositLabel": "Mit Kaution",
+      "perDay": "/Tag",
+      "daysTotal": "x {{days}} Tage ="
+    },
+    "actions": {
+      "reserveNoDeposit": "Ohne Kaution buchen",
+      "reserveWithDeposit": "Mit Kaution buchen",
+      "reserveAria": "Buchen"
+    }
+  },
+  "cta": {
+    "title": "Du findest nicht das richtige Auto?",
+    "description": "Melde dich bei uns und wir helfen dir, die perfekte Option für deine Reise zu finden.",
+    "primary": "Jetzt buchen",
+    "secondary": "Kontaktiere uns"
+  }
+}

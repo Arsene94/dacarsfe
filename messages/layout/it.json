@@ -1,0 +1,67 @@
+{
+  "header": {
+    "menu": [
+      { "label": "Home", "href": "/", "aria": "Home" },
+      { "label": "Flotta", "href": "/cars", "aria": "Flotta" },
+      { "label": "Offerte", "href": "#oferte", "aria": "Offerte" },
+      { "label": "Prenotazione", "href": "/checkout", "aria": "Prenotazione" },
+      { "label": "Contatto", "href": "#contact", "aria": "Contatto" }
+    ],
+    "cta": {
+      "label": "Prenota ora",
+      "href": "/checkout"
+    },
+    "mobileMenu": {
+      "open": "Apri menu",
+      "close": "Chiudi menu"
+    },
+    "languageSwitcher": {
+      "aria": "Scegli la lingua",
+      "labels": {
+        "ro": "Romeno",
+        "en": "Inglese",
+        "it": "Italiano",
+        "es": "Spagnolo",
+        "fr": "Francese",
+        "de": "Tedesco"
+      }
+    }
+  },
+  "footer": {
+    "brand": {
+      "name": "DaCars",
+      "tagline": "Auto oneste per persone oneste. Ritiro in aeroporto in meno di 5 minuti, senza costi nascosti."
+    },
+    "quickLinks": {
+      "title": "Link rapidi",
+      "links": [
+        { "label": "Home", "href": "/", "aria": "Home" },
+        { "label": "La nostra flotta", "href": "/cars", "aria": "La nostra flotta" },
+        { "label": "Offerte speciali", "href": "#oferte", "aria": "Offerte speciali" },
+        { "label": "Prenotazione", "href": "/checkout", "aria": "Prenotazione" }
+      ]
+    },
+    "contact": {
+      "title": "Contatto",
+      "items": {
+        "phone": "+40 723 817 551",
+        "email": "contact@dacars.ro",
+        "address": "Aeroporto Henri Coandă, Otopeni",
+        "schedule": "Disponibile 24/7"
+      }
+    },
+    "schedule": {
+      "title": "Orari",
+      "days": "Lunedì - Domenica",
+      "hours": "24/7",
+      "note": "Ritiro e consegna in aeroporto, non-stop"
+    },
+    "bottom": {
+      "copyright": "© 2024 DaCars. Tutti i diritti riservati.",
+      "links": [
+        { "label": "Termini e condizioni", "href": "#", "aria": "Termini e condizioni" },
+        { "label": "Informativa sulla privacy", "href": "#", "aria": "Informativa sulla privacy" }
+      ]
+    }
+  }
+}

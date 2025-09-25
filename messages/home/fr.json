@@ -1,0 +1,278 @@
+{
+  "hero": {
+    "badge": "Nous vous rapprochons de la maison",
+    "title": "Location de voitures Bucarest - Otopeni",
+    "subtitle": {
+      "lead": "Retrait à l'aéroport en moins de 5 minutes.",
+      "highlight": "Aucun frais caché."
+    },
+    "features": [
+      { "title": "Moins de 5 min", "description": "Remise rapide" },
+      { "title": "Sans frais", "description": "Tarification transparente" },
+      { "title": "24/7", "description": "Toujours disponibles" }
+    ],
+    "form": {
+      "labels": {
+        "pickup": "Date de prise en charge",
+        "return": "Date de retour",
+        "location": "Lieu",
+        "carType": "Type de voiture"
+      },
+      "placeholders": {
+        "location": "Choisissez un lieu",
+        "carType": "Tous les types"
+      },
+      "options": {
+        "locations": [
+          { "value": "otopeni", "label": "Aéroport Otopeni" }
+        ]
+      },
+      "submit": "Rechercher des voitures",
+      "aria": {
+        "submit": "Rechercher des voitures",
+        "location": "Choisir le lieu de prise en charge"
+      }
+    }
+  },
+  "fleet": {
+    "title": {
+      "main": "Notre flotte",
+      "highlight": "premium"
+    },
+    "description": "Des voitures modernes, inspectées et entretenues pour votre sécurité et votre confort.",
+    "labels": {
+      "seatsSuffix": "personnes"
+    },
+    "cta": "Voir toutes les voitures",
+    "carousel": {
+      "aria": "Carrousel",
+      "previous": "Voiture précédente",
+      "next": "Voiture suivante",
+      "position": "{{current}} sur {{total}}"
+    },
+    "structuredData": {
+      "name": "Voitures vedettes de la flotte DaCars",
+      "description": "Sélection actuelle des véhicules populaires disponibles à la location chez DaCars.",
+      "currency": "EUR"
+    }
+  },
+  "benefits": {
+    "title": {
+      "main": "Pourquoi choisir",
+      "highlight": "DaCars"
+    },
+    "description": "Un service de confiance créé pour les Roumains qui rentrent au pays et ont besoin d'une voiture fiable.",
+    "items": [
+      {
+        "title": "Sans paperasse",
+        "description": "Processus simple et rapide, sans formulaires compliqués ni attentes."
+      },
+      {
+        "title": "Disponible 24/7",
+        "description": "Prise en charge et restitution à l'aéroport quand vous en avez besoin."
+      },
+      {
+        "title": "Flexibilité maximale",
+        "description": "Modifiez ou annulez votre réservation sans frais supplémentaires."
+      },
+      {
+        "title": "Aucun coût caché",
+        "description": "Une tarification claire et honnête. Ce que vous voyez est ce que vous payez."
+      }
+    ],
+    "stats": [
+      { "value": "500+", "label": "Clients satisfaits" },
+      { "value": "24/7", "label": "Disponibilité" },
+      { "value": "<5min", "label": "Temps de remise" },
+      { "value": "0", "label": "Frais cachés" }
+    ]
+  },
+  "offers": {
+    "title": {
+      "main": "Offres",
+      "highlight": "spéciales"
+    },
+    "description": "Promotions exclusives pour les moments importants de votre vie.",
+    "cards": [
+      {
+        "title": "Forfait mariage",
+        "discount": "Réduction de 10%",
+        "description": "Pour les plus belles années à venir. Une voiture élégante pour votre jour spécial.",
+        "features": ["Décorations incluses", "Livraison sur votre lieu", "Chauffeur sur demande"],
+        "color": "bg-gradient-to-br from-pink-500 to-rose-600",
+        "textColor": "text-white"
+      },
+      {
+        "title": "Réduction entre amis",
+        "discount": "Réduction de 20%",
+        "description": "Venez avec vos amis et économisez ! Plus vous êtes, plus l'offre est intéressante.",
+        "features": ["Pour les groupes de 4+", "Valable 30 jours", "Cumulable avec d'autres offres"],
+        "color": "bg-gradient-to-br from-jade to-emerald-600",
+        "textColor": "text-white"
+      }
+    ],
+    "cta": {
+      "primary": "Profiter de l'offre",
+      "secondaryTitle": "Offre saisonnière limitée",
+      "secondaryDescription": "Réservez maintenant pour la période des fêtes et profitez de tarifs préférentiels avec services premium inclus.",
+      "secondaryButton": "Réserver avec réduction"
+    }
+  },
+  "process": {
+    "title": {
+      "main": "Notre processus",
+      "highlight": "simplifié"
+    },
+    "description": "Seulement 3 étapes simples vous séparent de votre voiture. Pas de stress, pas de complications.",
+    "steps": [
+      {
+        "number": "01",
+        "title": "Réservez en ligne",
+        "description": "Remplissez le formulaire rapide et choisissez la voiture qui vous convient.",
+        "color": "bg-jade"
+      },
+      {
+        "number": "02",
+        "title": "Retirez-la à l'aéroport",
+        "description": "Nous vous retrouvons aux arrivées en moins de 5 minutes avec la voiture prête.",
+        "color": "bg-berkeley"
+      },
+      {
+        "number": "03",
+        "title": "Rentrez en toute sécurité",
+        "description": "Arrivez chez vous confortablement avec votre voiture de location.",
+        "color": "bg-jade"
+      }
+    ],
+    "cta": {
+      "title": "Prêt à commencer ?",
+      "description": "La réservation prend seulement 2 minutes. Votre voiture vous attend à l'aéroport !",
+      "primary": "Réservez maintenant",
+      "secondary": "Voir la flotte"
+    }
+  },
+  "contact": {
+    "title": {
+      "main": "Contactez-nous",
+      "highlight": "à tout moment"
+    },
+    "description": "Nous sommes disponibles 24/7. Contactez-nous par l'une des options ci-dessous.",
+    "items": {
+      "phone": {
+        "title": "Téléphone",
+        "description": "Disponible 24/7 pour les urgences",
+        "aria": "Appeler le +40 723 817 551"
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Envoyez-nous un message pour une réponse rapide",
+        "aria": "Écrivez-nous sur WhatsApp au +40 723 817 551"
+      },
+      "email": {
+        "title": "Email",
+        "description": "Pour les questions générales",
+        "aria": "Envoyer un email à contact@dacars.ro"
+      },
+      "location": {
+        "title": "Emplacement",
+        "description": "Point principal de prise en charge",
+        "address": "305 Boulevard Bucurestilor",
+        "city": "Otopeni, Ilfov"
+      },
+      "schedule": {
+        "title": "Horaires",
+        "description": "Prise en charge et restitution",
+        "details": ["24/7 - Non-stop", "Toujours disponibles"]
+      }
+    },
+    "map": {
+      "title": "Notre emplacement",
+      "advisor": "Consultant :",
+      "advisorText": "À l'atterrissage, appelez-nous au",
+      "clientDialog": [
+        { "speaker": "Client", "message": "D'accord, et ensuite ?" },
+        { "speaker": "DaCars", "message": "Nous nous retrouvons devant la gare CFR, près du dôme en verre vert, au terminal des Arrivées." },
+        { "speaker": "Client", "message": "Parfait, à tout à l'heure." }
+      ]
+    }
+  },
+  "wheel": {
+    "popup": {
+      "title": "Bienvenue chez DaCars !",
+      "description": "Avant d'explorer nos offres, faites tourner la Roue de la Fortune et débloquez des avantages exclusifs !"
+    },
+    "section": {
+      "title": "Roue de la Fortune DaCars",
+      "description": "Tentez votre chance et gagnez des remises et avantages exclusifs pour votre prochaine réservation !"
+    },
+    "activePeriod": "Période active : {{period}}. Remplissez vos informations, faites tourner la roue et découvrez votre gain !",
+    "defaultPrompt": "Remplissez vos informations, faites tourner la roue et découvrez votre gain !",
+    "spinsLeft": "Tours restants",
+    "form": {
+      "name": {
+        "label": "Nom complet",
+        "placeholder": "ex. Maria Popescu"
+      },
+      "phone": {
+        "label": "Téléphone",
+        "placeholder": "ex. +40 712 345 678"
+      },
+      "consent": "Nous avons besoin de ces informations pour valider votre prix selon les règles DaCars."
+    },
+    "storedPrize": {
+      "title": "Prix actif de la Roue de la Fortune",
+      "prefix": "Vous avez gagné ",
+      "suffix": ". Le prix est valable jusqu'au {{expiry}} et vous pouvez l'utiliser directement lors du paiement.",
+      "noExpiry": "expiration automatique"
+    },
+    "errors": {
+      "load": "Une erreur est survenue lors du chargement de la roue. Veuillez réessayer plus tard.",
+      "form": "Veuillez remplir tous les champs avant de lancer la roue.",
+      "loadNoPeriod": "Aucune période active pour la roue pour le moment.",
+      "loadNoPrizes": "Aucun prix disponible pour la période actuelle.",
+      "loadFailed": "Impossible de charger les prix. Veuillez réessayer plus tard.",
+      "unavailable": "La roue n'est pas disponible pour le moment.",
+      "activePrize": "Vous avez déjà un prix actif de la Roue de la Fortune. Vous pouvez l'utiliser au paiement dans les 30 prochains jours.",
+      "nameRequired": "Indiquez votre nom complet pour que nous puissions enregistrer le prix.",
+      "phoneRequired": "Indiquez un numéro de téléphone valide.",
+      "noPrize": "Nous n'avons pas pu déterminer de prix pour le moment. Veuillez réessayer plus tard.",
+      "saveFallback": "Une erreur est survenue lors de l'enregistrement de votre prix. Veuillez réessayer."
+    },
+    "buttons": {
+      "spin": "Faire tourner la roue",
+      "spinning": "En rotation...",
+      "activePrize": "Prix actif",
+      "outOfSpins": "Plus de tours disponibles",
+      "reset": "Réinitialiser (Démo)",
+      "close": "Fermer",
+      "tryAgain": "Réessayer",
+      "retrySave": "Réessayer l'enregistrement",
+      "continue": "Continuer la réservation"
+    },
+    "winner": {
+      "title": "Gagnez des prix exclusifs !",
+      "tryAgainHeading": "Réessayez !",
+      "successHeading": "Félicitations ! 🎉",
+      "descriptionFallback": "Poursuivez la réservation pour en savoir plus.",
+      "tryAgainMessage": "Ne vous inquiétez pas ! Vous avez une nouvelle chance de gagner un prix encore meilleur.",
+      "successMessage": "Nous avons enregistré votre prix et vous recevrez les détails très bientôt par SMS ou e-mail.",
+      "expiry": "Le prix est valable jusqu'au {{expiry}} et sera également disponible sur la page de paiement.",
+      "saving": "Enregistrement de votre prix...",
+      "saved": "Le prix a été enregistré avec succès ! L'équipe DaCars vous enverra bientôt tous les détails.",
+      "saveError": "Nous n'avons pas pu enregistrer le prix. Veuillez réessayer.",
+      "close": "Fermer"
+    },
+    "regulation": {
+      "title": "Règles rapides :",
+      "items": [
+        "• Un tour par client valide.",
+        "• Prix valable 30 jours à partir de la date de gain.",
+        "• S'applique uniquement aux nouvelles réservations effectuées sur DaCars.",
+        "• Ne peut pas être cumulé avec d'autres offres ou remises."
+      ]
+    },
+    "assets": {
+      "logoAlt": "Logo DaCars"
+    }
+  }
+}

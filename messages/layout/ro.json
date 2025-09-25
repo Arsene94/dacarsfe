@@ -1,0 +1,67 @@
+{
+  "header": {
+    "menu": [
+      { "label": "Acasă", "href": "/", "aria": "Acasă" },
+      { "label": "Flotă", "href": "/cars", "aria": "Flotă" },
+      { "label": "Oferte", "href": "#oferte", "aria": "Oferte" },
+      { "label": "Rezervare", "href": "/checkout", "aria": "Rezervare" },
+      { "label": "Contact", "href": "#contact", "aria": "Contact" }
+    ],
+    "cta": {
+      "label": "Rezervă acum",
+      "href": "/checkout"
+    },
+    "mobileMenu": {
+      "open": "Deschide meniul",
+      "close": "Închide meniul"
+    },
+    "languageSwitcher": {
+      "aria": "Selectează limba",
+      "labels": {
+        "ro": "Română",
+        "en": "Engleză",
+        "it": "Italiană",
+        "es": "Spaniolă",
+        "fr": "Franceză",
+        "de": "Germană"
+      }
+    }
+  },
+  "footer": {
+    "brand": {
+      "name": "DaCars",
+      "tagline": "Mașini oneste pentru români onești. Predare în aeroport în sub 5 minute, fără taxe ascunse."
+    },
+    "quickLinks": {
+      "title": "Linkuri Rapide",
+      "links": [
+        { "label": "Acasă", "href": "/", "aria": "Acasă" },
+        { "label": "Flota Auto", "href": "/cars", "aria": "Flota Auto" },
+        { "label": "Oferte Speciale", "href": "#oferte", "aria": "Oferte Speciale" },
+        { "label": "Rezervare", "href": "/checkout", "aria": "Rezervare" }
+      ]
+    },
+    "contact": {
+      "title": "Contact",
+      "items": {
+        "phone": "+40 723 817 551",
+        "email": "contact@dacars.ro",
+        "address": "Aeroportul Henri Coandă, Otopeni",
+        "schedule": "Disponibil 24/7"
+      }
+    },
+    "schedule": {
+      "title": "Program",
+      "days": "Luni - Duminică",
+      "hours": "24/7",
+      "note": "Predare și ridicare non-stop la aeroport"
+    },
+    "bottom": {
+      "copyright": "© 2024 DaCars. Toate drepturile rezervate.",
+      "links": [
+        { "label": "Termeni și Condiții", "href": "#", "aria": "Termeni și Condiții" },
+        { "label": "Politica de Confidențialitate", "href": "#", "aria": "Politica de Confidențialitate" }
+      ]
+    }
+  }
+}
