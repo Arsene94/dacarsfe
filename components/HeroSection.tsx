@@ -28,7 +28,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null;
 
 const HeroSection = () => {
-    const { messages, t } = useTranslations("home");
+    const { messages, t, locale } = useTranslations("home");
     const heroMessages = (messages.hero ?? {}) as Record<string, unknown>;
     const heroForm = (heroMessages.form ?? {}) as Record<string, unknown>;
     const heroFormLabels = (heroForm.labels ?? {}) as Record<string, string>;
@@ -113,6 +113,8 @@ const HeroSection = () => {
     }, [formData.start_date]);
 
     useEffect(() => {
+        let cancelled = false;
+
         const getCategories = async () => {
             const res = await apiClient.getCarCategories();
             const list = extractList<Record<string, unknown>>(
@@ -176,11 +178,16 @@ const HeroSection = () => {
                 return ao - bo || a.id - b.id;
             });
 
-            setCategories(cat);
+            if (!cancelled) {
+                setCategories(cat);
+            }
         };
 
         getCategories();
-    }, []);
+        return () => {
+            cancelled = true;
+        };
+    }, [locale]);
 
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,

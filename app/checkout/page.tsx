@@ -421,6 +421,8 @@ const ReservationPage = () => {
     const [wheelPrizeRecord, setWheelPrizeRecord] = useState<StoredWheelPrizeEntry | null>(null);
 
     useEffect(() => {
+        let cancelled = false;
+
         const fetchServices = async () => {
             try {
                 const res = await apiClient.getServices();
@@ -447,13 +449,36 @@ const ReservationPage = () => {
                         };
                     })
                     .filter((service): service is Service => service !== null);
+
+                if (cancelled) {
+                    return;
+                }
+
                 setServices(mapped);
+                if (mapped.length > 0) {
+                    setSelectedServices((prev) => {
+                        if (prev.length === 0) {
+                            return prev;
+                        }
+                        const nextById = new Map(mapped.map((service) => [service.id, service]));
+                        return prev
+                            .map((service) => nextById.get(service.id) ?? service)
+                            .filter((service, index, self) =>
+                                self.findIndex((item) => item.id === service.id) === index,
+                            );
+                    });
+                }
             } catch (error) {
                 console.error(error);
             }
         };
+
         fetchServices();
-    }, []);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [locale]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -495,6 +520,7 @@ const ReservationPage = () => {
         carId: null,
         withDeposit: null,
     });
+    const previousLocaleRef = useRef(locale);
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     ) => {
@@ -615,6 +641,128 @@ const ReservationPage = () => {
         formData.rental_end_time,
         discountStatus?.isValid,
     ]);
+
+    useEffect(() => {
+        if (previousLocaleRef.current === locale) {
+            return;
+        }
+        previousLocaleRef.current = locale;
+
+        if (!booking.selectedCar) {
+            return;
+        }
+
+        const start = booking.startDate;
+        const end = booking.endDate;
+
+        if (!start || !end) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const refreshSelection = async () => {
+            try {
+                if (discountStatus?.isValid) {
+                    const couponCode = formData.coupon_code?.trim();
+                    if (!couponCode) {
+                        return;
+                    }
+
+                    const payload: DiscountValidationPayload = {
+                        code: couponCode,
+                        car_id: booking.selectedCar.id,
+                        start_date: start,
+                        end_date: end,
+                        price: booking.selectedCar.rental_rate ?? 0,
+                        price_casco: booking.selectedCar.rental_rate_casco ?? 0,
+                        total_price: booking.selectedCar.total_deposit ?? 0,
+                        total_price_casco: booking.selectedCar.total_without_deposit ?? 0,
+                    };
+
+                    const data = await apiClient.validateDiscountCode(payload);
+                    if (cancelled) {
+                        return;
+                    }
+
+                    setOriginalCar(booking.selectedCar);
+
+                    if (data.valid === false) {
+                        setDiscountStatus({
+                            isValid: false,
+                            messageKey: "error",
+                            discount: "0",
+                            discountCasco: "0",
+                        });
+                        return;
+                    }
+
+                    const discountCar = data.data ? mapApiCar(data.data) : booking.selectedCar;
+                    setBooking({
+                        startDate: start,
+                        endDate: end,
+                        withDeposit: booking.withDeposit,
+                        selectedCar: discountCar,
+                    });
+                    lastValidatedRef.current = {
+                        carId: discountCar.id,
+                        withDeposit: booking.withDeposit ?? null,
+                    };
+                    const coupon = data.data?.coupon;
+                    const discountData = {
+                        code: couponCode,
+                        discount: coupon?.discount_deposit ?? "0",
+                        discountCasco: coupon?.discount_casco ?? "0",
+                    };
+                    localStorage.setItem("discount", JSON.stringify(discountData));
+                    localStorage.setItem("originalCar", JSON.stringify(booking.selectedCar));
+                    setDiscountStatus({
+                        isValid: true,
+                        messageKey: "success",
+                        discount: String(discountData.discount),
+                        discountCasco: String(discountData.discountCasco),
+                    });
+                    return;
+                }
+
+                const info = await apiClient.getCarForBooking({
+                    car_id: booking.selectedCar.id,
+                    start_date: start,
+                    end_date: end,
+                });
+                if (cancelled) {
+                    return;
+                }
+                const apiCar = extractFirstCar(info);
+                if (!apiCar) {
+                    return;
+                }
+                const mapped = mapApiCar(apiCar);
+                const resolvedCar: Car = {
+                    ...mapped,
+                    available:
+                        typeof info.available === "boolean"
+                            ? info.available
+                            : mapped.available,
+                };
+                setBooking({
+                    startDate: start,
+                    endDate: end,
+                    withDeposit: booking.withDeposit,
+                    selectedCar: resolvedCar,
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        };
+
+        refreshSelection();
+
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [locale]);
 
     const servicesTotal = selectedServices.reduce(
         (sum, service) => sum + service.price,
