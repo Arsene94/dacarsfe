@@ -19,7 +19,8 @@
       "aria": "Choose language",
       "labels": {
         "ro": "Romanian",
-        "en": "English"
+        "en": "English",
+        "it": "Italian"
       }
     }
   },

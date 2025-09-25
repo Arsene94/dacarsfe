@@ -1,4 +1,4 @@
-export const AVAILABLE_LOCALES = ["ro", "en"] as const;
+export const AVAILABLE_LOCALES = ["ro", "en", "it"] as const;
 
 export type Locale = (typeof AVAILABLE_LOCALES)[number];
 

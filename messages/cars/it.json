@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "title": "Flotta completa di auto a noleggio",
+    "description": "Scopri l'intera flotta DaCars e filtra rapidamente le auto disponibili a noleggio.",
+    "keywords": [
+      "flotta noleggio auto",
+      "auto disponibili Bucarest",
+      "noleggio auto senza deposito",
+      "prenotazione auto online",
+      "flotta auto DaCars"
+    ],
+    "openGraphTitle": "Flotta completa di auto a noleggio | DaCars Rent a Car",
+    "breadcrumb": {
+      "home": "Home",
+      "fleet": "Flotta auto"
+    }
+  },
+  "structuredData": {
+    "itemList": {
+      "name": "Flotta di noleggio DaCars",
+      "description": "Tutti i veicoli disponibili a noleggio da DaCars, aggiornati in tempo reale.",
+      "currency": "EUR"
+    }
+  },
+  "fallbacks": {
+    "carName": "Veicolo",
+    "unknownValue": "—",
+    "category": "Categoria #{{id}}"
+  },
+  "labels": {
+    "passengers": "{{count}} passeggeri"
+  },
+  "header": {
+    "title": {
+      "main": "La nostra",
+      "highlight": "flotta completa"
+    },
+    "description": "Sfoglia tutti i veicoli disponibili e scegli quello giusto per il tuo viaggio."
+  },
+  "search": {
+    "placeholder": "Cerca un'auto...",
+    "ariaLabel": "Cerca un'auto",
+    "sortAria": "Ordina le auto",
+    "sortOptions": {
+      "cheapest": "Prezzo più basso",
+      "mostExpensive": "Prezzo più alto"
+    },
+    "filtersButton": "Filtri",
+    "filtersAria": "Attiva/disattiva filtri"
+  },
+  "filters": {
+    "labels": {
+      "category": "Categoria",
+      "type": "Tipo di auto",
+      "transmission": "Cambio",
+      "fuel": "Carburante"
+    },
+    "allOption": "Tutto",
+    "reset": "Reimposta filtri",
+    "resetAria": "Reimposta filtri",
+    "removeAria": "Rimuovi filtro {{filter}}"
+  },
+  "results": {
+    "label": "auto trovate"
+  },
+  "list": {
+    "empty": {
+      "title": "Nessuna auto trovata",
+      "description": "Prova a modificare i filtri o cerca qualcos'altro."
+    }
+  },
+  "card": {
+    "pricing": {
+      "noDepositLabel": "Senza deposito",
+      "withDepositLabel": "Con deposito",
+      "perDay": "/giorno",
+      "daysTotal": "x {{days}} giorni ="
+    },
+    "actions": {
+      "reserveNoDeposit": "Prenota senza deposito",
+      "reserveWithDeposit": "Prenota con deposito",
+      "reserveAria": "Prenota"
+    }
+  },
+  "cta": {
+    "title": "Non trovi l'auto giusta?",
+    "description": "Contattaci e ti aiuteremo a trovare l'opzione perfetta per il tuo viaggio.",
+    "primary": "Prenota ora",
+    "secondary": "Contattaci"
+  }
+}

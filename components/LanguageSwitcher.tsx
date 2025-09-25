@@ -9,6 +9,7 @@ import type { Locale } from "@/lib/i18n/config";
 const flagByLocale: Partial<Record<Locale, string>> = {
     ro: "🇷🇴",
     en: "🇬🇧",
+    it: "🇮🇹",
 };
 
 const dropdownBaseItemClass =
