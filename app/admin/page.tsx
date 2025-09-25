@@ -1,17 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
+    AlertCircle,
     Calendar,
     Car,
-    Users,
-    Eye,
     Clock,
-    User,
+    Eye,
+    Newspaper,
     Phone,
     Plane,
-    Newspaper,
+    User,
+    Users,
+    X,
 } from "lucide-react";
 import Link from "next/link";
 import { Select } from "@/components/ui/select";
@@ -23,6 +25,7 @@ import BookingForm from "@/components/admin/BookingForm";
 import BookingContractForm from "@/components/admin/BookingContractForm";
 import { Label } from "@/components/ui/label";
 import type { Column } from "@/types/ui";
+import { useAuth } from "@/context/AuthContext";
 import {
     AdminBookingFormValues,
     AdminReservation,
@@ -238,6 +241,19 @@ type ExpiringDocumentField =
     | "rovinietaExpiresAt"
     | "insuranceExpiresAt";
 
+type ExpiringDocumentNotice = {
+    field: ExpiringDocumentField;
+    label: string;
+    days: number;
+};
+
+type ExpiringDocumentAlertItem = {
+    id: string;
+    name: string;
+    licensePlate: string;
+    documents: ExpiringDocumentNotice[];
+};
+
 const EXPIRING_DOCUMENT_FIELDS: Array<{ field: ExpiringDocumentField; label: string }> = [
     { field: "itpExpiresAt", label: "ITP" },
     { field: "rovinietaExpiresAt", label: "Rovinietă" },
@@ -245,6 +261,9 @@ const EXPIRING_DOCUMENT_FIELDS: Array<{ field: ExpiringDocumentField; label: str
 ];
 
 const EXPIRING_DAYS_THRESHOLD = 7;
+
+const EXPIRING_ALERT_STORAGE_KEY_PREFIX =
+    "dacars:admin:expiring-documents-alert:last-shown";
 
 const normalizeIsoDate = (value: unknown): string | null => {
     if (typeof value !== "string") return null;
@@ -310,6 +329,37 @@ const getExpiringDocumentSummary = (
 
     entries.sort((a, b) => a.days - b.days);
     return entries[0];
+};
+
+const getExpiringDocumentEntries = (
+    row: ExpiringDocumentCarRow,
+): ExpiringDocumentNotice[] => {
+    const entries = EXPIRING_DOCUMENT_FIELDS.map(({ field, label }) => {
+        const iso = row[field];
+        const days = calculateDaysUntil(iso);
+        if (!iso || days === null) {
+            return null;
+        }
+        if (days > EXPIRING_DAYS_THRESHOLD) {
+            return null;
+        }
+        return { field, label, days } satisfies ExpiringDocumentNotice;
+    }).filter(
+        (entry): entry is ExpiringDocumentNotice => entry !== null,
+    );
+
+    return entries.sort((a, b) => a.days - b.days);
+};
+
+const getAlertStorageKey = (userId?: number | null): string =>
+    `${EXPIRING_ALERT_STORAGE_KEY_PREFIX}:${userId ?? "anonymous"}`;
+
+const getTodayStamp = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
 };
 
 const mapExpiringDocumentCar = (raw: unknown): ExpiringDocumentCarRow | null => {
@@ -432,9 +482,11 @@ const expiringDocumentsColumns: Column<ExpiringDocumentCarRow>[] = [
 
 const AdminDashboard = () => {
     const router = useRouter();
+    const { user, loading: authLoading } = useAuth();
     const [expiringCars, setExpiringCars] = useState<ExpiringDocumentCarRow[]>([]);
     const [loadingExpiringCars, setLoadingExpiringCars] = useState(false);
     const [expiringCarsError, setExpiringCarsError] = useState<string | null>(null);
+    const [showExpiringAlert, setShowExpiringAlert] = useState(false);
     const [carActivityDay, setCarActivityDay] = useState<string>('azi');
     const [activityDay, setActivityDay] = useState<string>('');
     const [activityHours, setActivityHours] = useState<string[]>([]);
@@ -569,6 +621,59 @@ const AdminDashboard = () => {
     useEffect(() => {
         loadExpiringCars();
     }, [loadExpiringCars]);
+
+    const expiringAlertItems = useMemo<ExpiringDocumentAlertItem[]>(() => {
+        return expiringCars
+            .map((car) => {
+                const documents = getExpiringDocumentEntries(car);
+                if (documents.length === 0) {
+                    return null;
+                }
+                return {
+                    id: String(car.id),
+                    name: car.name,
+                    licensePlate: car.licensePlate,
+                    documents,
+                } satisfies ExpiringDocumentAlertItem;
+            })
+            .filter((item): item is ExpiringDocumentAlertItem => item !== null);
+    }, [expiringCars]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") {
+            return;
+        }
+        if (authLoading || loadingExpiringCars) {
+            return;
+        }
+        if (expiringAlertItems.length === 0) {
+            setShowExpiringAlert(false);
+            return;
+        }
+
+        const storageKey = getAlertStorageKey(user?.id);
+        const todayStamp = getTodayStamp();
+        let lastShown: string | null = null;
+
+        try {
+            lastShown = window.localStorage.getItem(storageKey);
+        } catch (error) {
+            console.warn('Nu am putut citi notificările zilnice:', error);
+        }
+
+        if (lastShown !== todayStamp) {
+            setShowExpiringAlert(true);
+            try {
+                window.localStorage.setItem(storageKey, todayStamp);
+            } catch (error) {
+                console.warn('Nu am putut memora notificarea zilnică:', error);
+            }
+        }
+    }, [authLoading, expiringAlertItems, loadingExpiringCars, user?.id]);
+
+    const handleDismissExpiringAlert = () => {
+        setShowExpiringAlert(false);
+    };
 
     const getCarActivityLabel = (status: string) => {
         switch (status) {
@@ -754,6 +859,66 @@ const AdminDashboard = () => {
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {showExpiringAlert && expiringAlertItems.length > 0 && (
+                    <div className="mb-8 rounded-xl border border-orange-200 bg-orange-50 p-6 shadow-sm">
+                        <div className="flex items-start gap-4">
+                            <AlertCircle className="mt-1 h-6 w-6 flex-shrink-0 text-orange-500" />
+                            <div className="flex-1">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <h2 className="font-poppins text-lg font-semibold text-berkeley">
+                                            Alertă documente ce expiră curând
+                                        </h2>
+                                        <p className="mt-1 text-sm font-dm-sans text-gray-700">
+                                            Următoarele mașini au documente care expiră în cel mult {EXPIRING_DAYS_THRESHOLD} zile:
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleDismissExpiringAlert}
+                                        className="inline-flex rounded-full p-1 text-orange-500 transition hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                                        aria-label="Închide alerta pentru documente ce expiră"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                </div>
+                                <ul className="mt-4 space-y-2">
+                                    {expiringAlertItems.map((item) => (
+                                        <li
+                                            key={item.id}
+                                            className="text-sm font-dm-sans text-gray-800"
+                                        >
+                                            <span className="font-semibold text-gray-900">{item.name}</span>
+                                            {item.licensePlate !== "—" && (
+                                                <span className="text-gray-600"> ({item.licensePlate})</span>
+                                            )}
+                                            <span className="text-gray-600"> — </span>
+                                            {item.documents.map((doc, index) => (
+                                                <span key={`${item.id}-${doc.field}`} className="text-gray-800">
+                                                    <span className="font-medium text-gray-900">{doc.label}</span>
+                                                    {": "}
+                                                    {formatExpiryDistance(doc.days)}
+                                                    {index < item.documents.length - 1 ? "; " : ""}
+                                                </span>
+                                            ))}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <div className="mt-4 text-sm font-dm-sans text-gray-600">
+                                    Verifică detalii complete în secțiunea flotă pentru actualizarea documentelor.
+                                    <span className="ml-1">
+                                        <Link
+                                            href="/admin/cars"
+                                            className="font-semibold text-berkeley underline-offset-2 hover:underline"
+                                        >
+                                            Deschide flotă
+                                        </Link>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="bg-white rounded-xl p-6 shadow-sm">
