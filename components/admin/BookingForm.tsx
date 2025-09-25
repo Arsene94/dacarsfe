@@ -200,10 +200,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 setQuote(data);
                 updateBookingInfo((prev) => ({
                     ...prev,
-                    days: data.days,
+                    days: typeof data.days === "number" ? data.days : prev.days ?? 0,
                     price_per_day: data.price_per_day,
-                    base_price: data.rental_rate,
-                    base_price_casco: data.rental_rate_casco,
+                    base_price: typeof data.rental_rate === "number"
+                        ? data.rental_rate
+                        : prev.base_price ?? data.base_price ?? null,
+                    base_price_casco: typeof data.rental_rate_casco === "number"
+                        ? data.rental_rate_casco
+                        : prev.base_price_casco ?? data.base_price_casco ?? null,
                     sub_total: prev.with_deposit
                         ? data.sub_total
                         : data.sub_total_casco ?? data.sub_total,

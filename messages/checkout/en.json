@@ -107,11 +107,19 @@
     "subtotal": "Subtotal:",
     "servicesLabel": "Services:",
     "wheelPrizeLabel": "Wheel of Fortune prize:",
+    "offersDiscount": "Offer discount:",
+    "couponDiscount": "Coupon discount:",
     "preDiscount": "Total before discount:",
     "discount": "Discount:",
     "total": "Total:",
     "deposit": "Deposit:",
-    "depositNote": "(+{{amount}}€ deposit)"
+    "depositNote": "(+{{amount}}€ deposit)",
+    "depositWaived": "The deposit is waived thanks to the validated offer.",
+    "quoteError": "We couldn't refresh the quote. Please check your details and try again.",
+    "offersApplied": {
+      "title": "Applied offers",
+      "note": "Our team will confirm the selected perks before issuing the contract."
+    }
   },
   "footer": {
     "disclaimer": "*Final price, no hidden fees",

@@ -156,7 +156,7 @@ const FleetPage = () => {
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
-    const { setBooking } = useBooking();
+    const { booking, setBooking } = useBooking();
 
     const [filters, setFilters] = useState(() => ({
         car_type: searchParams.get("car_type") || "all",
@@ -433,7 +433,13 @@ const FleetPage = () => {
 
     const handleBooking = (withDeposit: boolean, car: Car) => {
         if (startDate && endDate) {
-            setBooking({ startDate, endDate, withDeposit, selectedCar: car });
+            setBooking({
+                ...booking,
+                startDate,
+                endDate,
+                withDeposit,
+                selectedCar: car,
+            });
             router.push("/checkout");
         } else {
             router.push("/");

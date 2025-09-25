@@ -1,4 +1,5 @@
 import type { ApiCar, CarLookup } from "@/types/car";
+import type { Offer, OfferIcon, OfferStatus } from "@/types/offer";
 import type { ReservationWheelPrizeSummary, ServiceStatus } from "@/types/reservation";
 
 export interface AdminReservation {
@@ -167,6 +168,19 @@ export interface AdminService {
   created_at?: string | null;
   updated_at?: string | null;
   [key: string]: unknown;
+}
+
+export interface AdminOffer extends Offer {
+  discount_label?: string | null;
+  features?: string[];
+  icon?: OfferIcon | null;
+  background_class?: string | null;
+  text_class?: string | null;
+  primary_cta_label?: string | null;
+  primary_cta_url?: string | null;
+  status?: OfferStatus | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
 }
 
 export interface AdminBookingLinkedService {

@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import type { User } from "@/types/auth";
 import {
   BarChart3,
+  BadgePercent,
   Calendar,
   CalendarDays,
   Car,
@@ -371,6 +372,12 @@ const menuItems: readonly AdminSidebarItem[] = [
               href: "/admin/services",
               icon: ConciergeBell,
               requiredPermissions: buildPermissionList("services", ["service", "extras"]),
+          },
+          {
+              name: "Oferte",
+              href: "/admin/offers",
+              icon: BadgePercent,
+              requiredPermissions: buildPermissionList("offers", ["offer", "promotion", "promotions"]),
           },
           {
               name: "Wheel of Fortune",
