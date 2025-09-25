@@ -107,11 +107,15 @@
     "subtotal": "Subtotale:",
     "servicesLabel": "Servizi:",
     "wheelPrizeLabel": "Premio Ruota della Fortuna:",
+    "offersDiscount": "Sconto offerte:",
+    "couponDiscount": "Sconto coupon:",
     "preDiscount": "Totale prima dello sconto:",
     "discount": "Sconto:",
     "total": "Totale:",
     "deposit": "Deposito:",
     "depositNote": "(+{{amount}}€ deposito)",
+    "depositWaived": "Il deposito è stato annullato grazie all'offerta valida.",
+    "quoteError": "Impossibile aggiornare il preventivo. Controlla i dati e riprova.",
     "offersApplied": {
       "title": "Offerte applicate",
       "note": "Il nostro team confermerà i vantaggi selezionati telefonicamente prima di emettere il contratto."

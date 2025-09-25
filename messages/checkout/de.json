@@ -107,11 +107,15 @@
     "subtotal": "Zwischensumme:",
     "servicesLabel": "Services:",
     "wheelPrizeLabel": "Gewinn vom Glücksrad:",
+    "offersDiscount": "Aktionsrabatt:",
+    "couponDiscount": "Coupon-Rabatt:",
     "preDiscount": "Summe vor Rabatt:",
     "discount": "Rabatt:",
     "total": "Gesamt:",
     "deposit": "Kaution:",
     "depositNote": "(+{{amount}}€ Kaution)",
+    "depositWaived": "Die Kaution entfällt dank des bestätigten Angebots.",
+    "quoteError": "Das Angebot konnte nicht aktualisiert werden. Bitte überprüfe die Angaben und versuche es erneut.",
     "offersApplied": {
       "title": "Aktivierte Angebote",
       "note": "Unser Team bestätigt die ausgewählten Vorteile telefonisch, bevor der Vertrag erstellt wird."

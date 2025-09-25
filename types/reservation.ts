@@ -66,13 +66,23 @@ export interface ServiceTranslation {
 export interface ReservationWheelPrizeSummary {
   wheel_of_fortune_id: number | null;
   prize_id: number | null;
+  wheel_of_fortune_prize_id?: number | null;
   title: string;
   type?: WheelOfFortuneType;
+  type_label?: string | null;
   amount?: number | null;
   description?: string | null;
   amount_label?: string | null;
   expires_at?: string | null;
   discount_value: number;
+}
+
+export interface ReservationWheelPrizePayload {
+  prize_id: number | string;
+  wheel_of_fortune_id?: number | string | null;
+  wheel_of_fortune_prize_id?: number | string | null;
+  discount_value: number | string;
+  [key: string]: unknown;
 }
 
 export interface ReservationAppliedOffer {
@@ -84,18 +94,26 @@ export interface ReservationAppliedOffer {
 }
 
 export interface ReservationPayload extends ReservationFormData {
-  services: Service[];
+  services?: Service[];
+  service_ids?: Array<number | string>;
   price_per_day: number;
-  total_services: number;
-  coupon_amount: number;
-  total: number;
-  sub_total: number;
-  reservationId: string;
-  selectedCar: Car;
+  total_services?: number;
+  coupon_amount?: number;
+  coupon_code?: string;
+  coupon_type?: string | null;
+  offers_discount?: number;
+  deposit_waived?: boolean;
+  total?: number;
+  sub_total?: number;
+  reservationId?: string;
+  selectedCar?: Car;
+  with_deposit?: boolean | null;
   total_before_wheel_prize?: number;
   wheel_prize_discount?: number;
-  wheel_prize?: ReservationWheelPrizeSummary | null;
+  wheel_of_fortune_prize_id?: number | string | null;
+  wheel_prize?: ReservationWheelPrizeSummary | ReservationWheelPrizePayload | null;
   applied_offers?: ReservationAppliedOffer[];
+  note?: string;
 }
 
 export interface DiscountValidationPayload {
@@ -113,6 +131,8 @@ export interface DiscountValidationPayload {
 export interface DiscountCouponDetails {
   discount_deposit?: number | string | null;
   discount_casco?: number | string | null;
+  discount_type?: string | null;
+  type?: string | null;
   [key: string]: unknown;
 }
 
@@ -132,28 +152,38 @@ export interface QuotePricePayload {
   car_id: number | string;
   rental_start_date: string;
   rental_end_date: string;
-  base_price?: number | string;
-  base_price_casco?: number | string;
-  original_price_per_day?: number | string;
+  with_deposit?: boolean | null;
   coupon_type?: string | null;
   coupon_amount?: number | string;
   coupon_code?: string | null;
   service_ids?: Array<number | string>;
-  with_deposit?: boolean;
+  total_services?: number | string;
+  wheel_prize_discount?: number | string;
+  wheel_of_fortune_prize_id?: number | string | null;
+  wheel_prize?: ReservationWheelPrizePayload | null;
   [key: string]: unknown;
 }
 
 export interface QuotePriceResponse {
-  days: number;
   price_per_day: number;
-  rental_rate: number;
-  rental_rate_casco: number;
+  base_price: number;
+  base_price_casco?: number;
   sub_total: number;
   sub_total_casco?: number;
   total: number;
   total_casco?: number;
   discount?: number;
+  coupon_amount?: number;
+  coupon_code?: string | null;
+  coupon_type?: string | null;
+  offers_discount?: number;
+  deposit_waived?: boolean;
   total_services?: number;
+  service_ids?: number[];
+  total_before_wheel_prize?: number;
+  wheel_prize_discount?: number;
+  applied_offers?: ReservationAppliedOffer[];
+  wheel_prize?: ReservationWheelPrizeSummary | null;
   [key: string]: unknown;
 }
 

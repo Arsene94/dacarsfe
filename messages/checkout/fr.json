@@ -107,11 +107,15 @@
     "subtotal": "Sous-total :",
     "servicesLabel": "Services :",
     "wheelPrizeLabel": "Prix Roue de la Fortune :",
+    "offersDiscount": "Remise offres :",
+    "couponDiscount": "Remise coupon :",
     "preDiscount": "Total avant réduction :",
     "discount": "Réduction :",
     "total": "Total :",
     "deposit": "Dépôt :",
     "depositNote": "(+{{amount}}€ de dépôt)",
+    "depositWaived": "La caution est supprimée grâce à l'offre validée.",
+    "quoteError": "Impossible de mettre à jour l'estimation. Vérifiez vos informations et réessayez.",
     "offersApplied": {
       "title": "Offres appliquées",
       "note": "Notre équipe confirmera les avantages sélectionnés par téléphone avant d'émettre le contrat."

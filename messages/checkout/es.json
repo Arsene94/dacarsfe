@@ -107,11 +107,15 @@
     "subtotal": "Subtotal:",
     "servicesLabel": "Servicios:",
     "wheelPrizeLabel": "Premio de la Ruleta de la Fortuna:",
+    "offersDiscount": "Descuento por ofertas:",
+    "couponDiscount": "Descuento cupón:",
     "preDiscount": "Total antes del descuento:",
     "discount": "Descuento:",
     "total": "Total:",
     "deposit": "Depósito:",
     "depositNote": "(+{{amount}}€ depósito)",
+    "depositWaived": "La fianza se elimina gracias a la oferta validada.",
+    "quoteError": "No pudimos actualizar el cálculo. Revisa los datos e inténtalo nuevamente.",
     "offersApplied": {
       "title": "Ofertas aplicadas",
       "note": "Nuestro equipo confirmará los beneficios seleccionados por teléfono antes de emitir el contrato."

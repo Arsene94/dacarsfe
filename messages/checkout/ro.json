@@ -107,11 +107,15 @@
     "subtotal": "Subtotal:",
     "servicesLabel": "Servicii:",
     "wheelPrizeLabel": "Premiu Roata Norocului:",
+    "offersDiscount": "Reducere oferte:",
+    "couponDiscount": "Reducere cupon:",
     "preDiscount": "Total înainte de reducere:",
     "discount": "Reducere:",
     "total": "Total:",
     "deposit": "Garanție:",
     "depositNote": "(+{{amount}}€ garanție)",
+    "depositWaived": "Depozitul a fost eliminat datorită ofertei validate.",
+    "quoteError": "Nu am putut actualiza estimarea. Verifică datele și reîncearcă.",
     "offersApplied": {
       "title": "Oferte aplicate",
       "note": "Beneficiile selectate se confirmă telefonic înainte de emiterea contractului."
