@@ -10,6 +10,7 @@ Admin-only endpoints for managing cars, their categories, colours, and translate
 | DELETE | `/api/cars/{id}` | Remove a car (soft-delete if your model uses `SoftDeletes`). | `cars.delete` |
 | POST | `/api/cars/{id}/sync-categories` | Replace the car-category pivot set. | `cars.sync_categories` |
 | POST | `/api/cars/{id}/sync-colors` | Replace the car-colour pivot set. | `cars.sync_colors` |
+| GET | `/api/admin/cars/expiring-documents` | List cars whose technical documents expire within `within_days` (default 7). | `cars.view` |
 | GET | `/api/cars/{id}/translations` | List stored translations for `name`, `description`, `content`. | `cars.view_translations` |
 | PUT | `/api/cars/{id}/translations/{lang}` | Upsert a translation row. | `cars.update_translations` |
 | DELETE | `/api/cars/{id}/translations/{lang}` | Delete a translation row. | `cars.delete_translations` |
@@ -109,6 +110,44 @@ Sends the same fields as `store`, but each rule becomes `sometimes`. Validation 
 
 ## DELETE `/api/cars/{id}`
 Returns `{ "deleted": true }` on success. If the model uses soft deletes the record remains in the database for restoration.
+
+---
+
+## GET `/api/admin/cars/expiring-documents`
+
+Returns the cars whose `itp_expires_at`, `rovinieta_expires_at`, or `insurance_expires_at` values occur within the next `within_days` days. By default the controller filters with `within_days=7`. The response mirrors the public car resource but only the identification and expiry fields are required by the dashboard.
+
+### Query parameters
+- `within_days` – optional positive integer. Overrides the default 7-day window.
+
+### Sample response
+```json
+{
+  "data": [
+    {
+      "id": 21,
+      "name": "Skoda Octavia Combi Style",
+      "license_plate": "B-55-SKO",
+      "itp_expires_at": "2025-02-20",
+      "rovinieta_expires_at": "2025-02-18",
+      "insurance_expires_at": "2025-02-15"
+    },
+    {
+      "id": 12,
+      "name": "Dacia Logan",
+      "license_plate": "B-99-LOG",
+      "itp_expires_at": null,
+      "rovinieta_expires_at": "2025-02-19",
+      "insurance_expires_at": null
+    }
+  ],
+  "meta": {
+    "count": 2,
+    "current_page": 1,
+    "per_page": 50
+  }
+}
+```
 
 ---
 

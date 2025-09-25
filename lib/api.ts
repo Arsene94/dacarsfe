@@ -15,6 +15,8 @@ import type {
 } from "@/types/auth";
 import type {
     AdminBookingResource,
+    AdminExpiringCarDocumentsParams,
+    AdminExpiringDocumentCar,
     BookingContractResponse,
     CategoryPrice,
     CategoryPriceCalendar,
@@ -2445,6 +2447,23 @@ export class ApiClient {
         const query = searchParams.toString();
         return this.request<AdminCarsTotalMetrics>(
             `/admin/metrics/cars-total${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminExpiringCarDocuments(
+        params: AdminExpiringCarDocumentsParams = {},
+    ): Promise<ApiListResult<AdminExpiringDocumentCar>> {
+        const searchParams = new URLSearchParams();
+        if (
+            typeof params.within_days === 'number' &&
+            Number.isFinite(params.within_days) &&
+            params.within_days > 0
+        ) {
+            searchParams.append('within_days', String(params.within_days));
+        }
+        const query = searchParams.toString();
+        return this.request<ApiListResult<AdminExpiringDocumentCar>>(
+            `/admin/cars/expiring-documents${query ? `?${query}` : ''}`,
         );
     }
 
