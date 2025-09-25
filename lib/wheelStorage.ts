@@ -15,6 +15,10 @@ export interface StoredWheelPrizeEntry {
     prize_id?: number | null;
     saved_at: string;
     expires_at: string;
+    /**
+     * @deprecated Folosit doar pentru compatibilitate cu versiunile vechi care salvau `expiration_date`.
+     */
+    expiration_date?: string | null;
 }
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => (
@@ -132,7 +136,10 @@ export const parseStoredWheelPrize = (
     const winnerName = normalizeString(winnerSource?.name ?? raw.name);
     const winnerPhone = normalizeString(winnerSource?.phone ?? raw.phone);
     const savedAt = normalizeDateIso(raw.saved_at ?? raw.created_at);
-    const expiresAt = normalizeDateIso(raw.expires_at ?? raw.expire_at ?? raw.valid_until);
+    const legacyExpiration = normalizeDateIso(raw.expiration_date);
+    const expiresAt = normalizeDateIso(
+        raw.expires_at ?? raw.expire_at ?? raw.valid_until ?? legacyExpiration,
+    );
 
     if (!prize || !winnerName || !winnerPhone || !savedAt || !expiresAt) {
         return null;
@@ -142,7 +149,7 @@ export const parseStoredWheelPrize = (
     const prizeId = normalizeOptionalNumber(raw.prize_id ?? raw.id);
     const version = typeof raw.version === "number" ? raw.version : WHEEL_PRIZE_STORAGE_VERSION;
 
-    return {
+    const record: StoredWheelPrizeEntry = {
         version,
         prize: sanitizePrizeForStorage(prize),
         winner: {
@@ -154,6 +161,12 @@ export const parseStoredWheelPrize = (
         saved_at: savedAt,
         expires_at: expiresAt,
     };
+
+    if (typeof legacyExpiration === "string") {
+        record.expiration_date = legacyExpiration;
+    }
+
+    return record;
 };
 
 export const getStoredWheelPrize = (): StoredWheelPrizeEntry | null => {

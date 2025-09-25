@@ -16,6 +16,10 @@ type SuccessMessages = typeof successMessagesRo;
 const LOCALE_TO_INTL: Record<Locale, string> = {
     ro: "ro-RO",
     en: "en-US",
+    de: "de-DE",
+    fr: "fr-FR",
+    es: "es-ES",
+    it: "it-IT",
 };
 
 const SuccessPage = () => {

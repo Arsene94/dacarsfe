@@ -274,7 +274,10 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         typeof wheelMessages.defaultPrompt === "string"
             ? wheelMessages.defaultPrompt
             : "Completează datele tale, învârte roata și vezi ce premiu primești!";
-    const spinsLeftLabel = wheelMessages.spinsLeft ?? "Încercări rămase";
+    const spinsLeftLabel =
+        typeof wheelMessages.spinsLeft === "string"
+            ? wheelMessages.spinsLeft
+            : "Încercări rămase";
     const spinButtonLabel = wheelButtons.spin ?? "Învârte Roata";
     const spinningLabel = wheelButtons.spinning ?? "Se învârte...";
     const activePrizeLabel = wheelButtons.activePrize ?? "Premiu activ";
