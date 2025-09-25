@@ -80,6 +80,7 @@ import type {
     ServiceTranslation,
 } from "@/types/reservation";
 import type { Role } from "@/types/roles";
+import type { Offer, OfferListParams, OfferPayload } from "@/types/offer";
 import type {
     Customer,
     CustomerAuthResponse,
@@ -1222,6 +1223,82 @@ export class ApiClient {
     async deleteServiceTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
         const language = encodeURIComponent(lang.trim());
         return this.request<ApiDeleteResponse>(`/services/${id}/translations/${language}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getOffers(params: OfferListParams = {}): Promise<ApiListResult<Offer>> {
+        const { language, include, ...rest } = params;
+        const searchParams = new URLSearchParams();
+
+        if (typeof rest.page === 'number' && Number.isFinite(rest.page)) {
+            searchParams.append('page', rest.page.toString());
+        }
+
+        const perPageCandidate =
+            typeof rest.perPage === 'number' && Number.isFinite(rest.perPage)
+                ? rest.perPage
+                : typeof (rest as { per_page?: number }).per_page === 'number' &&
+                        Number.isFinite((rest as { per_page?: number }).per_page)
+                    ? (rest as { per_page: number }).per_page
+                    : undefined;
+        if (typeof perPageCandidate === 'number') {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+
+        if (typeof rest.limit === 'number' && Number.isFinite(rest.limit)) {
+            searchParams.append('limit', rest.limit.toString());
+        }
+
+        if (typeof rest.status === 'string' && rest.status.trim().length > 0) {
+            searchParams.append('status', rest.status.trim());
+        }
+
+        if (typeof rest.search === 'string' && rest.search.trim().length > 0) {
+            searchParams.append('search', rest.search.trim());
+        }
+
+        if (typeof rest.audience === 'string' && rest.audience.trim().length > 0) {
+            searchParams.append('audience', rest.audience.trim());
+        }
+
+        if (typeof rest.sort === 'string' && rest.sort.trim().length > 0) {
+            searchParams.append('sort', rest.sort.trim());
+        }
+
+        const includeParam = resolveIncludeParam(include ?? (rest as { include?: string | readonly string[] }).include);
+        if (includeParam) {
+            searchParams.append('include', includeParam);
+        }
+
+        const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/offers`, this.resolveLanguage(language));
+        return this.request<ApiListResult<Offer>>(query ? `${basePath}?${query}` : basePath);
+    }
+
+    async getOffer(id: number | string, language?: string): Promise<ApiItemResult<Offer>> {
+        const basePath = appendOptionalLanguage(`/offers/${id}`, this.resolveLanguage(language));
+        return this.request<ApiItemResult<Offer>>(basePath);
+    }
+
+    async createOffer(payload: OfferPayload): Promise<ApiItemResult<Offer>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<Offer>>(`/offers`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateOffer(id: number | string, payload: OfferPayload): Promise<ApiItemResult<Offer>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<Offer>>(`/offers/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteOffer(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/offers/${id}`, {
             method: 'DELETE',
         });
     }

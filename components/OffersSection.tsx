@@ -1,10 +1,13 @@
 "use client";
 
-import React from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Heart, Users, Gift, Calendar } from "lucide-react";
+import { Calendar, Gift, Heart, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import apiClient from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import type { Offer } from "@/types/offer";
 
 type OfferCard = {
     title?: string;
@@ -13,7 +16,9 @@ type OfferCard = {
     features?: string[];
     color?: string;
     textColor?: string;
-    icon?: "heart" | "users";
+    icon?: "heart" | "users" | "gift" | "calendar" | "sparkles";
+    ctaLabel?: string;
+    ctaHref?: string;
 };
 
 type OffersMessages = {
@@ -31,14 +36,145 @@ type OffersMessages = {
 const iconMap = {
     heart: Heart,
     users: Users,
+    gift: Gift,
+    calendar: Calendar,
+    sparkles: Sparkles,
 } as const;
+
+const collectStringValues = (raw: unknown): string[] => {
+    if (raw == null) {
+        return [];
+    }
+
+    if (typeof raw === "string") {
+        return raw
+            .split(/[,;\n]+/)
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0);
+    }
+
+    if (typeof raw === "number" || typeof raw === "boolean") {
+        const normalized = String(raw).trim();
+        return normalized.length > 0 ? [normalized] : [];
+    }
+
+    if (Array.isArray(raw)) {
+        return raw.flatMap((entry) => collectStringValues(entry));
+    }
+
+    if (typeof raw === "object") {
+        return collectStringValues(Object.values(raw as Record<string, unknown>));
+    }
+
+    return [];
+};
+
+const parseOptionalString = (value: unknown): string | undefined => {
+    if (value == null) {
+        return undefined;
+    }
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+        const normalized = String(value).trim();
+        return normalized.length > 0 ? normalized : undefined;
+    }
+    return undefined;
+};
+
+const resolveIconKey = (value: unknown): OfferCard["icon"] => {
+    const candidate = parseOptionalString(value);
+    if (!candidate) {
+        return undefined;
+    }
+    const normalized = candidate.toLowerCase();
+    if (normalized in iconMap) {
+        return normalized as OfferCard["icon"];
+    }
+    return undefined;
+};
+
+const mapOfferToCard = (entry: Offer | Record<string, unknown>): OfferCard | null => {
+    const source = entry as Record<string, unknown>;
+    const title = parseOptionalString(source.title ?? (source as { name?: unknown }).name);
+    if (!title) {
+        return null;
+    }
+
+    const description = parseOptionalString(source.description);
+    const discount = parseOptionalString(
+        source.discount_label ?? (source as { discountLabel?: unknown }).discountLabel ?? (source as { badge?: unknown }).badge,
+    );
+    const color = parseOptionalString(source.background_class ?? (source as { backgroundClass?: unknown }).backgroundClass);
+    const textColor = parseOptionalString(source.text_class ?? (source as { textClass?: unknown }).textClass);
+    const ctaLabel = parseOptionalString(
+        source.primary_cta_label ?? (source as { primaryCtaLabel?: unknown }).primaryCtaLabel ?? (source as { cta_label?: unknown }).cta_label,
+    );
+    const ctaHref = parseOptionalString(
+        source.primary_cta_url ?? (source as { primaryCtaUrl?: unknown }).primaryCtaUrl ?? (source as { cta_url?: unknown }).cta_url,
+    );
+
+    return {
+        title,
+        description,
+        discount,
+        features: collectStringValues(source.features ?? (source as { benefits?: unknown }).benefits),
+        color: color ?? undefined,
+        textColor: textColor ?? undefined,
+        icon: resolveIconKey(source.icon ?? (source as { icon_name?: unknown }).icon_name),
+        ctaLabel: ctaLabel ?? undefined,
+        ctaHref: ctaHref ?? undefined,
+    };
+};
 
 const OffersSection = () => {
     const { messages, t } = useTranslations("home");
     const offers = (messages.offers ?? {}) as OffersMessages;
     const cards = offers.cards ?? [];
-    const primaryCtaLabel = offers.cta?.primary ?? "Profită acum";
     const secondaryButton = offers.cta?.secondaryButton ?? "Rezervă cu reducere";
+
+    const [remoteOffers, setRemoteOffers] = useState<OfferCard[]>([]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchOffers = async () => {
+            try {
+                const response = await apiClient.getOffers({
+                    audience: "public",
+                    status: "published",
+                    limit: 4,
+                    sort: "-starts_at,-created_at",
+                });
+                if (cancelled) {
+                    return;
+                }
+                const rawList = extractList(response);
+                const mapped = rawList
+                    .map((item) => mapOfferToCard(item as Offer))
+                    .filter((item): item is OfferCard => item !== null);
+                if (mapped.length > 0) {
+                    setRemoteOffers(mapped);
+                }
+            } catch (error) {
+                console.error("Nu am putut încărca ofertele publice", error);
+            }
+        };
+
+        fetchOffers();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const displayedCards = remoteOffers.length > 0 ? remoteOffers : cards;
+    const remotePrimaryCtaLabel = remoteOffers.find((card) => card.ctaLabel)?.ctaLabel ?? null;
+    const remotePrimaryHref = remoteOffers.find((card) => card.ctaHref)?.ctaHref ?? null;
+    const primaryCtaLabel = remotePrimaryCtaLabel ?? offers.cta?.primary ?? "Profită acum";
+    const primaryCtaHref = remotePrimaryHref ?? "/checkout";
 
     return (
         <section id="oferte" className="py-20 bg-berkeley">
@@ -56,8 +192,10 @@ const OffersSection = () => {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
-                    {cards.map((offer, index) => {
-                        const Icon = iconMap[offer.icon ?? "heart"] ?? Heart;
+                    {displayedCards.map((offer, index) => {
+                        const Icon = iconMap[(offer.icon ?? "heart") as keyof typeof iconMap] ?? Heart;
+                        const ctaLabel = offer.ctaLabel ?? primaryCtaLabel;
+                        const ctaHref = offer.ctaHref ?? primaryCtaHref;
                         return (
                             <div
                                 key={`${offer.title}-${index}`}
@@ -93,12 +231,12 @@ const OffersSection = () => {
                                         ))}
                                     </div>
 
-                                    <Link href="/checkout" aria-label={primaryCtaLabel}>
+                                    <Link href={ctaHref} aria-label={ctaLabel ?? primaryCtaLabel}>
                                         <Button
                                             className="px-6 py-3 bg-white !text-berkeley hover:!bg-gray-100"
-                                            aria-label={primaryCtaLabel}
+                                            aria-label={ctaLabel ?? primaryCtaLabel}
                                         >
-                                            {primaryCtaLabel}
+                                            {ctaLabel ?? primaryCtaLabel}
                                         </Button>
                                     </Link>
                                 </div>

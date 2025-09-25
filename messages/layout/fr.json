@@ -3,7 +3,7 @@
     "menu": [
       { "label": "Accueil", "href": "/", "aria": "Accueil" },
       { "label": "Flotte", "href": "/cars", "aria": "Flotte" },
-      { "label": "Offres", "href": "#oferte", "aria": "Offres" },
+      { "label": "Offres", "href": "/offers", "aria": "Offres" },
       { "label": "Réservation", "href": "/checkout", "aria": "Réservation" },
       { "label": "Contact", "href": "#contact", "aria": "Contact" }
     ],
@@ -37,7 +37,7 @@
       "links": [
         { "label": "Accueil", "href": "/", "aria": "Accueil" },
         { "label": "Notre flotte", "href": "/cars", "aria": "Notre flotte" },
-        { "label": "Offres spéciales", "href": "#oferte", "aria": "Offres spéciales" },
+        { "label": "Offres spéciales", "href": "/offers", "aria": "Offres spéciales" },
         { "label": "Réservation", "href": "/checkout", "aria": "Réservation" }
       ]
     },
