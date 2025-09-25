@@ -120,6 +120,47 @@ Badge-ul afișat în UI poate fi transmis manual (`discount_label`), însă admi
 | `free_service_upgrade` | Upgrade gratuit | includeți un serviciu premium (asigurare, scaun copil, upgrade categorie) la cost zero. | marcați serviciul ca inclus în comandă și setați valoarea lui la 0; puteți identifica serviciul din `offer_value`. | `offer_value = "Asigurare completă"` → `Asigurare completă gratuit` |
 | `deposit_waiver` | Fără depozit | eliminați blocarea garanției/depozitului standard. | setați depozitul rezervării la 0 și nu solicitați autorizare pe card. | (fără valoare) → `Fără depozit` |
 
+> **Notă UI:** pentru `free_service_upgrade` cardurile publice afișează automat mesajul „Upgrade-ul gratuit este disponibil în limita stocului și se confirmă telefonic după trimiterea cererii de rezervare.” pentru a seta așteptările clienților.
+
+---
+
+## Aplicarea ofertelor în checkout
+
+- Un client selectează explicit o ofertă din homepage sau din pagina dedicată `/offers` apăsând butonul cardului.
+- În acel moment frontend-ul salvează oferta în contextul de rezervare (`BookingContext`) și o trimite către checkout.
+- Ofertele nu se aplică implicit: dacă utilizatorul ajunge în checkout fără să apese pe un card promoțional, câmpul nu este trimis.
+
+La trimiterea formularului frontend-ul include un câmp opțional `applied_offers` în payload-ul către `POST /bookings`:
+
+```jsonc
+{
+  "customer_name": "Ion Popescu",
+  "customer_email": "ion@example.com",
+  "customer_phone": "+40 722 123 456",
+  "rental_start_date": "2025-08-10",
+  "rental_end_date": "2025-08-15",
+  "car_id": 42,
+  "applied_offers": [
+    {
+      "id": 12,
+      "title": "Weekend fără garanție",
+      "offer_type": "percentage_discount",
+      "offer_value": "20",
+      "discount_label": "-20% reducere"
+    },
+    {
+      "id": 18,
+      "title": "Upgrade SUV gratuit",
+      "offer_type": "free_service_upgrade",
+      "offer_value": "SUV Premium",
+      "discount_label": "Upgrade gratuit"
+    }
+  ]
+}
+```
+
+Backend-ul poate utiliza această listă pentru a aplica logica descrisă în tabelul de mai sus (inclusiv cumularea ofertelor acolo unde este permisă). Dacă lista este goală, cheia lipsește din request.
+
 ---
 
 ## PUT `/api/offers/{id}`

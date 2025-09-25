@@ -1,4 +1,5 @@
 import type { ApiCar, Car } from "@/types/car";
+import type { OfferKind } from "@/types/offer";
 import type { WheelOfFortuneType } from "@/types/wheel";
 
 export type ServiceStatus =
@@ -74,6 +75,14 @@ export interface ReservationWheelPrizeSummary {
   discount_value: number;
 }
 
+export interface ReservationAppliedOffer {
+  id: number;
+  title: string;
+  offer_type?: OfferKind | null;
+  offer_value?: string | null;
+  discount_label?: string | null;
+}
+
 export interface ReservationPayload extends ReservationFormData {
   services: Service[];
   price_per_day: number;
@@ -86,6 +95,7 @@ export interface ReservationPayload extends ReservationFormData {
   total_before_wheel_prize?: number;
   wheel_prize_discount?: number;
   wheel_prize?: ReservationWheelPrizeSummary | null;
+  applied_offers?: ReservationAppliedOffer[];
 }
 
 export interface DiscountValidationPayload {

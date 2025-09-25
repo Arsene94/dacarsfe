@@ -111,7 +111,11 @@
     "discount": "Sconto:",
     "total": "Totale:",
     "deposit": "Deposito:",
-    "depositNote": "(+{{amount}}€ deposito)"
+    "depositNote": "(+{{amount}}€ deposito)",
+    "offersApplied": {
+      "title": "Offerte applicate",
+      "note": "Il nostro team confermerà i vantaggi selezionati telefonicamente prima di emettere il contratto."
+    }
   },
   "footer": {
     "disclaimer": "*Prezzo finale, nessun costo nascosto",

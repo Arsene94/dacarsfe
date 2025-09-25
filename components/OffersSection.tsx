@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Calendar, Gift, Heart, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ApplyOfferButton from "@/components/offers/ApplyOfferButton";
 import { formatOfferBadge } from "@/lib/offers";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { cn } from "@/lib/utils";
 import type { Offer, OfferKind } from "@/types/offer";
 
 type OfferCard = {
+    id?: number;
     title?: string;
     discount?: string;
     description?: string;
@@ -20,6 +23,8 @@ type OfferCard = {
     icon?: "heart" | "users" | "gift" | "calendar" | "sparkles";
     ctaLabel?: string;
     ctaHref?: string;
+    offerType?: OfferKind | null;
+    offerValue?: string | null;
 };
 
 type OffersMessages = {
@@ -99,6 +104,8 @@ const resolveIconKey = (value: unknown): OfferCard["icon"] => {
 
 const mapOfferToCard = (entry: Offer | Record<string, unknown>): OfferCard | null => {
     const source = entry as Record<string, unknown>;
+    const idCandidate = source.id ?? (source as { offer_id?: unknown }).offer_id;
+    const id = typeof idCandidate === "number" ? idCandidate : Number(idCandidate);
     const title = parseOptionalString(source.title ?? (source as { name?: unknown }).name);
     if (!title) {
         return null;
@@ -111,7 +118,7 @@ const mapOfferToCard = (entry: Offer | Record<string, unknown>): OfferCard | nul
     const offerValue = parseOptionalString(
         source.offer_value ?? (source as { offerValue?: unknown }).offerValue,
     );
-    const discount =
+    const discountLabel =
         parseOptionalString(
             source.discount_label ??
                 (source as { discountLabel?: unknown }).discountLabel ??
@@ -126,29 +133,43 @@ const mapOfferToCard = (entry: Offer | Record<string, unknown>): OfferCard | nul
         source.primary_cta_url ?? (source as { primaryCtaUrl?: unknown }).primaryCtaUrl ?? (source as { cta_url?: unknown }).cta_url,
     );
 
+    const upgradeNote =
+        "Upgrade-ul gratuit este disponibil în limita stocului și se confirmă telefonic după trimiterea cererii de rezervare.";
+
+    const features = (() => {
+        const benefits = collectStringValues(
+            source.benefits ??
+                (source as { offer_benefits?: unknown }).offer_benefits ??
+                (source as { benefits_list?: unknown }).benefits_list,
+        );
+        const fallback = collectStringValues(
+            source.features ??
+                (source as { feature_list?: unknown }).feature_list ??
+                (source as { perks?: unknown }).perks ??
+                (source as { highlights?: unknown }).highlights,
+        );
+        const list = benefits.length > 0 ? benefits : fallback;
+        if ((offerType ?? null) === "free_service_upgrade") {
+            if (!list.some((entry) => entry.toLowerCase().includes("upgrade-ul gratuit"))) {
+                return [...list, upgradeNote];
+            }
+        }
+        return list;
+    })();
+
     return {
+        id: Number.isFinite(id) ? Number(id) : undefined,
         title,
         description,
-        discount,
-        features: (() => {
-            const benefits = collectStringValues(
-                source.benefits ??
-                    (source as { offer_benefits?: unknown }).offer_benefits ??
-                    (source as { benefits_list?: unknown }).benefits_list,
-            );
-            const fallback = collectStringValues(
-                source.features ??
-                    (source as { feature_list?: unknown }).feature_list ??
-                    (source as { perks?: unknown }).perks ??
-                    (source as { highlights?: unknown }).highlights,
-            );
-            return benefits.length > 0 ? benefits : fallback;
-        })(),
+        discount: discountLabel,
+        features,
         color: color ?? undefined,
         textColor: textColor ?? undefined,
         icon: resolveIconKey(source.icon ?? (source as { icon_name?: unknown }).icon_name),
         ctaLabel: ctaLabel ?? undefined,
         ctaHref: ctaHref ?? undefined,
+        offerType: offerType ?? null,
+        offerValue: offerValue ?? null,
     };
 };
 
@@ -221,8 +242,11 @@ const OffersSection = () => {
                         const ctaHref = offer.ctaHref ?? primaryCtaHref;
                         return (
                             <div
-                                key={`${offer.title}-${index}`}
-                                className={`${offer.color ?? "bg-gradient-to-br from-jade to-emerald-600"} rounded-3xl p-8 relative overflow-hidden group transform hover:scale-105 transition-all duration-300 animate-slide-up`}
+                                key={`${offer.id ?? offer.title}-${index}`}
+                                className={cn(
+                                    offer.color ?? "bg-gradient-to-br from-jade to-emerald-600",
+                                    "rounded-3xl p-8 relative overflow-hidden group transform hover:scale-105 transition-all duration-300 animate-slide-up",
+                                )}
                                 style={{ animationDelay: `${index * 0.2}s` }}
                             >
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
@@ -254,14 +278,23 @@ const OffersSection = () => {
                                         ))}
                                     </div>
 
-                                    <Link href={ctaHref} aria-label={ctaLabel ?? primaryCtaLabel}>
-                                        <Button
-                                            className="px-6 py-3 bg-white !text-berkeley hover:!bg-gray-100"
-                                            aria-label={ctaLabel ?? primaryCtaLabel}
-                                        >
-                                            {ctaLabel ?? primaryCtaLabel}
-                                        </Button>
-                                    </Link>
+                                    <ApplyOfferButton
+                                        className="px-6 py-3 bg-white !text-berkeley hover:!bg-gray-100"
+                                        href={ctaHref ?? "/checkout"}
+                                        label={ctaLabel ?? primaryCtaLabel}
+                                        ariaLabel={ctaLabel ?? primaryCtaLabel}
+                                        offer={
+                                            typeof offer.id === "number"
+                                                ? {
+                                                      id: offer.id,
+                                                      title: offer.title ?? ctaLabel ?? "Ofertă DaCars",
+                                                      kind: offer.offerType ?? null,
+                                                      value: offer.offerValue ?? null,
+                                                      badge: offer.discount ?? null,
+                                                  }
+                                                : null
+                                        }
+                                    />
                                 </div>
                             </div>
                         );

@@ -9,6 +9,7 @@ import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
 import { createBreadcrumbStructuredData } from "@/lib/seo/structuredData";
 import { formatDate } from "@/lib/datetime";
 import { Button } from "@/components/ui/button";
+import ApplyOfferButton from "@/components/offers/ApplyOfferButton";
 import JsonLd from "@/components/seo/JsonLd";
 import type { Offer, OfferKind } from "@/types/offer";
 
@@ -106,6 +107,7 @@ const formatOfferPeriod = (startsAt?: string | null, endsAt?: string | null): st
 };
 
 type PublicOffer = {
+  id?: number;
   title: string;
   description?: string;
   discount?: string;
@@ -117,10 +119,14 @@ type PublicOffer = {
   endsAt?: string | null;
   ctaLabel?: string;
   ctaHref?: string;
+  offerType?: OfferKind | null;
+  offerValue?: string | null;
 };
 
 const normalizeOffer = (entry: Offer | Record<string, unknown>): PublicOffer | null => {
   const source = entry as Record<string, unknown>;
+  const idCandidate = source.id ?? (source as { offer_id?: unknown }).offer_id;
+  const id = typeof idCandidate === "number" ? idCandidate : Number(idCandidate);
   const title = parseOptionalString(source.title ?? (source as { name?: unknown }).name);
   if (!title) {
     return null;
@@ -150,24 +156,36 @@ const normalizeOffer = (entry: Offer | Record<string, unknown>): PublicOffer | n
     source.primary_cta_url ?? (source as { primaryCtaUrl?: unknown }).primaryCtaUrl ?? (source as { cta_url?: unknown }).cta_url,
   );
 
+  const upgradeNote =
+    "Upgrade-ul gratuit este disponibil în limita stocului și se confirmă telefonic după trimiterea cererii de rezervare.";
+
+  const features = (() => {
+    const benefits = collectStringValues(
+      source.benefits ??
+        (source as { offer_benefits?: unknown }).offer_benefits ??
+        (source as { benefits_list?: unknown }).benefits_list,
+    );
+    const fallback = collectStringValues(
+      source.features ??
+        (source as { feature_list?: unknown }).feature_list ??
+        (source as { perks?: unknown }).perks ??
+        (source as { highlights?: unknown }).highlights,
+    );
+    const list = benefits.length > 0 ? benefits : fallback;
+    if ((offerType ?? null) === "free_service_upgrade") {
+      if (!list.some((entry) => entry.toLowerCase().includes("upgrade-ul gratuit"))) {
+        return [...list, upgradeNote];
+      }
+    }
+    return list;
+  })();
+
   return {
+    id: Number.isFinite(id) ? Number(id) : undefined,
     title,
     description: description ?? undefined,
     discount: discount ?? undefined,
-    features: (() => {
-      const benefits = collectStringValues(
-        source.benefits ??
-          (source as { offer_benefits?: unknown }).offer_benefits ??
-          (source as { benefits_list?: unknown }).benefits_list,
-      );
-      const fallback = collectStringValues(
-        source.features ??
-          (source as { feature_list?: unknown }).feature_list ??
-          (source as { perks?: unknown }).perks ??
-          (source as { highlights?: unknown }).highlights,
-      );
-      return benefits.length > 0 ? benefits : fallback;
-    })(),
+    features,
     backgroundClass: backgroundClass ?? undefined,
     textClass: textClass ?? undefined,
     icon: resolveIcon(source.icon ?? (source as { icon_name?: unknown }).icon_name),
@@ -175,6 +193,8 @@ const normalizeOffer = (entry: Offer | Record<string, unknown>): PublicOffer | n
     endsAt: parseOptionalString(source.ends_at ?? (source as { end_at?: unknown }).end_at),
     ctaLabel: ctaLabel ?? undefined,
     ctaHref: ctaHref ?? undefined,
+    offerType: offerType ?? null,
+    offerValue: offerValue ?? null,
   };
 };
 
@@ -265,7 +285,7 @@ const OffersPage = async () => {
 
               return (
                 <article
-                  key={`${offer.title}-${index}`}
+                  key={`${offer.id ?? offer.title}-${index}`}
                   className={`group transform hover:scale-105 transition-all duration-300 animate-slide-up ${offer.backgroundClass ?? "bg-white"} ${offer.textClass ?? "text-berkeley"} relative overflow-hidden rounded-3xl p-8 shadow-lg hover:-translate-y-1`}
                   style={{ animationDelay: "0s" }}
                 >
@@ -303,9 +323,23 @@ const OffersPage = async () => {
                       </ul>
                     )}
 
-                    <Button asChild className="mt-4 bg-white !text-berkeley hover:!bg-gray-100">
-                      <Link href={ctaHref}>{ctaLabel}</Link>
-                    </Button>
+                    <ApplyOfferButton
+                      className="mt-4 bg-white !text-berkeley hover:!bg-gray-100"
+                      href={ctaHref ?? "/checkout"}
+                      label={ctaLabel}
+                      ariaLabel={ctaLabel}
+                      offer={
+                        typeof offer.id === "number"
+                          ? {
+                              id: offer.id,
+                              title: offer.title,
+                              kind: offer.offerType ?? null,
+                              value: offer.offerValue ?? null,
+                              badge: offer.discount ?? null,
+                            }
+                          : null
+                      }
+                    />
                   </div>
                 </article>
               );

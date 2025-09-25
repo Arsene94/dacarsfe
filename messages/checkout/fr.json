@@ -111,7 +111,11 @@
     "discount": "Réduction :",
     "total": "Total :",
     "deposit": "Dépôt :",
-    "depositNote": "(+{{amount}}€ de dépôt)"
+    "depositNote": "(+{{amount}}€ de dépôt)",
+    "offersApplied": {
+      "title": "Offres appliquées",
+      "note": "Notre équipe confirmera les avantages sélectionnés par téléphone avant d'émettre le contrat."
+    }
   },
   "footer": {
     "disclaimer": "*Prix final, aucun frais caché",

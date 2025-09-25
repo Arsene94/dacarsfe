@@ -595,9 +595,9 @@ const ReservationPage = () => {
             }
             setAvailabilityErrorKey(null);
             setBooking({
+                ...booking,
                 startDate: start,
                 endDate: end,
-                withDeposit: booking.withDeposit,
                 selectedCar: booking.selectedCar,
             });
             try {
@@ -703,9 +703,9 @@ const ReservationPage = () => {
 
                     const discountCar = data.data ? mapApiCar(data.data) : selectedCar;
                     setBooking({
+                        ...booking,
                         startDate: start,
                         endDate: end,
-                        withDeposit: booking.withDeposit,
                         selectedCar: discountCar,
                     });
                     lastValidatedRef.current = {
@@ -753,9 +753,9 @@ const ReservationPage = () => {
                             : mapped.available,
                 };
                 setBooking({
+                    ...booking,
                     startDate: start,
                     endDate: end,
-                    withDeposit: booking.withDeposit,
                     selectedCar: resolvedCar,
                 });
             } catch (error) {
@@ -777,6 +777,13 @@ const ReservationPage = () => {
     );
 
     const selectedCar = booking.selectedCar;
+    const appliedOffersSummary = useMemo(
+        () =>
+            (booking.appliedOffers ?? []).filter(
+                (offer) => typeof offer.id === "number" && Number.isFinite(offer.id) && offer.title?.trim(),
+            ),
+        [booking.appliedOffers],
+    );
 
     const hasWheelPrize = wheelPrizeRecord ? isStoredWheelPrizeActive(wheelPrizeRecord) : false;
     const wheelPrizeAmountLabel = useMemo(() => {
@@ -972,9 +979,7 @@ const ReservationPage = () => {
                     ? mapApiCar(data.data)
                     : carForValidation;
                 setBooking({
-                    startDate: booking?.startDate,
-                    endDate: booking?.endDate,
-                    withDeposit: booking?.withDeposit,
+                    ...booking,
                     selectedCar: discountCar,
                 });
                 lastValidatedRef.current = {
@@ -1011,9 +1016,7 @@ const ReservationPage = () => {
     const handleRemoveDiscountCode = () => {
         if (originalCar) {
             setBooking({
-                startDate: booking.startDate,
-                endDate: booking.endDate,
-                withDeposit: booking.withDeposit,
+                ...booking,
                 selectedCar: originalCar,
             });
         }
@@ -1094,6 +1097,17 @@ const ReservationPage = () => {
                 discount_value: wheelPrizeDiscountValue,
             }
             : null;
+        const appliedOffers = (booking.appliedOffers ?? []).filter(
+            (offer) => typeof offer.id === "number" && Number.isFinite(offer.id) && offer.title?.trim(),
+        );
+        const appliedOffersPayload = appliedOffers.map((offer) => ({
+            id: offer.id,
+            title: offer.title,
+            offer_type: offer.kind ?? null,
+            offer_value: offer.value ?? null,
+            discount_label: offer.badge ?? null,
+        }));
+
         const payload = {
             ...formData,
             service_ids: selectedServices.map((s) => s.id),
@@ -1106,6 +1120,7 @@ const ReservationPage = () => {
             wheel_prize_discount: wheelPrizeDiscountValue,
             wheel_prize: wheelPrizeDetails,
             with_deposit: booking.withDeposit,
+            applied_offers: appliedOffersPayload.length > 0 ? appliedOffersPayload : undefined,
         };
 
         try {
@@ -1129,6 +1144,7 @@ const ReservationPage = () => {
                     total_before_wheel_prize: totalBeforeWheelPrize,
                     wheel_prize_discount: wheelPrizeDiscountValue,
                     wheel_prize: wheelPrizeDetails,
+                    applied_offers: appliedOffersPayload,
                     reservationId,
                 }),
             );
@@ -1616,6 +1632,42 @@ const ReservationPage = () => {
                                     </div>
                                 )}
                                 <hr className="my-2" />
+                                {appliedOffersSummary.length > 0 && (
+                                    <div className="mt-4 rounded-lg border border-jade/30 bg-jade/5 p-4">
+                                        <span className="font-poppins font-semibold text-berkeley">
+                                            {t("summary.offersApplied.title", {
+                                                fallback: "Oferte aplicate",
+                                            })}
+                                        </span>
+                                        <ul className="mt-3 space-y-2">
+                                            {appliedOffersSummary.map((offer) => {
+                                                const badge = offer.badge?.trim() ?? "";
+                                                const title = offer.title.trim();
+                                                const showBadge =
+                                                    badge.length > 0 && badge.toLowerCase() !== title.toLowerCase();
+                                                return (
+                                                    <li
+                                                        key={`applied-offer-${offer.id}`}
+                                                        className="rounded-md bg-white/80 px-3 py-2 text-sm shadow-sm"
+                                                    >
+                                                        <span className="font-dm-sans font-semibold text-berkeley">
+                                                            {title}
+                                                        </span>
+                                                        {showBadge && (
+                                                            <span className="block text-xs text-gray-600">{badge}</span>
+                                                        )}
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                        <p className="mt-3 text-xs text-gray-600">
+                                            {t("summary.offersApplied.note", {
+                                                fallback:
+                                                    "Beneficiile selectate se confirmă de consultant înainte de emiterea contractului.",
+                                            })}
+                                        </p>
+                                    </div>
+                                )}
                                 {wheelPrizeApplied && wheelPrizeDiscount > 0 && (
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="font-dm-sans text-jade">

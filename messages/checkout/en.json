@@ -111,7 +111,11 @@
     "discount": "Discount:",
     "total": "Total:",
     "deposit": "Deposit:",
-    "depositNote": "(+{{amount}}€ deposit)"
+    "depositNote": "(+{{amount}}€ deposit)",
+    "offersApplied": {
+      "title": "Applied offers",
+      "note": "Our team will confirm the selected perks before issuing the contract."
+    }
   },
   "footer": {
     "disclaimer": "*Final price, no hidden fees",

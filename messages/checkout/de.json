@@ -111,7 +111,11 @@
     "discount": "Rabatt:",
     "total": "Gesamt:",
     "deposit": "Kaution:",
-    "depositNote": "(+{{amount}}€ Kaution)"
+    "depositNote": "(+{{amount}}€ Kaution)",
+    "offersApplied": {
+      "title": "Aktivierte Angebote",
+      "note": "Unser Team bestätigt die ausgewählten Vorteile telefonisch, bevor der Vertrag erstellt wird."
+    }
   },
   "footer": {
     "disclaimer": "*Endpreis, keine versteckten Gebühren",
