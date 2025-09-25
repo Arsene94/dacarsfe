@@ -96,7 +96,7 @@ const resolveRelationName = (relation: unknown, fallback: string): string => {
 const FleetSection = () => {
     const [cars, setCars] = useState<FleetCar[]>([]);
     const [current, setCurrent] = useState(0);
-    const { messages, t } = useTranslations("home");
+    const { messages, t, locale } = useTranslations("home");
     const fleetMessages = (messages.fleet ?? {}) as Record<string, unknown>;
     const fleetTitle = (fleetMessages.title ?? {}) as { main?: string; highlight?: string };
     const fleetLabels = (fleetMessages.labels ?? {}) as { seatsSuffix?: string };
@@ -118,7 +118,7 @@ const FleetSection = () => {
         let cancelled = false;
 
         (async () => {
-            const response = await apiClient.getHomePageCars({ limit: 4 });
+            const response = await apiClient.getHomePageCars({ limit: 4, language: locale });
             const list = extractList<ApiCar>(response);
 
             const mapped: FleetCar[] = list.map((c) => ({
@@ -149,7 +149,7 @@ const FleetSection = () => {
         return () => {
             cancelled = true;
         };
-    }, [fallbackCarName]);
+    }, [fallbackCarName, locale]);
 
     const nextSlide = useCallback(() => {
         setCurrent((prev) => (prev + 1) % Math.max(cars.length, 1));
