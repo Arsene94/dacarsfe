@@ -283,6 +283,7 @@ const normalizeOffer = (raw: unknown): AdminOffer | null => {
     );
 
     const normalizedFeatures = features.length > 0 ? features : benefits;
+    const normalizedBenefits = benefits.length > 0 ? benefits : normalizedFeatures;
 
     return {
         id,
@@ -295,7 +296,7 @@ const normalizeOffer = (raw: unknown): AdminOffer | null => {
         discount_label: discountLabel,
         badge: typeof source.badge === "string" ? source.badge : null,
         features: normalizedFeatures,
-        benefits,
+        benefits: normalizedBenefits,
         icon: parseIcon(source.icon ?? (source as { icon_name?: unknown }).icon_name),
         background_class: parseClassName(source.background_class ?? (source as { backgroundClass?: unknown }).backgroundClass),
         text_class: parseClassName(source.text_class ?? (source as { textClass?: unknown }).textClass),
@@ -418,7 +419,8 @@ const OffersAdminPage = () => {
         setTitle(offer.title ?? "");
         setDiscountLabel(offer.discount_label ?? "");
         setDescription(offer.description ?? "");
-        const mappedBenefits = mapBenefitsToFormEntries(offer.benefits ?? offer.features ?? null);
+        const benefitSource = (offer.benefits?.length ?? 0) > 0 ? offer.benefits : offer.features;
+        const mappedBenefits = mapBenefitsToFormEntries(benefitSource ?? null);
         setBenefits(mappedBenefits.length > 0 ? mappedBenefits : [createBenefitFormEntry()]);
         setIcon(offer.icon ?? "");
         setBackgroundClass(offer.background_class ?? "");
