@@ -21,6 +21,11 @@ interface CarOption {
   licensePlate: string | null;
 }
 
+interface AuthorOption {
+  id: number;
+  name: string;
+}
+
 interface NormalizedExpense {
   id: number;
   type: string;
@@ -38,6 +43,8 @@ interface NormalizedExpense {
   recurrenceStartsOn: string | null;
   recurrenceEndsOn: string | null;
   recurrenceLastGenerated: string | null;
+  createdById: number | null;
+  createdByName: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -110,6 +117,14 @@ const toNumericId = (value: unknown): number | null => {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+};
+
+const toTrimmedString = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 };
 
 const parseAmount = (value: unknown): number => {
@@ -194,6 +209,104 @@ const pickCarName = (car: unknown): { name: string | null; plate: string | null 
   };
 };
 
+const pickAuthorName = (author: Record<string, unknown>): string | null => {
+  const directKeys = [
+    "name",
+    "full_name",
+    "fullName",
+    "display_name",
+    "displayName",
+  ];
+  for (const key of directKeys) {
+    const candidate = toTrimmedString(author[key]);
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  const firstName =
+    toTrimmedString(author.first_name) ?? toTrimmedString(author.firstName);
+  const lastName =
+    toTrimmedString(author.last_name) ?? toTrimmedString(author.lastName);
+  const parts = [firstName, lastName].filter(
+    (part): part is string => typeof part === "string" && part.length > 0,
+  );
+  if (parts.length > 0) {
+    return parts.join(" ");
+  }
+
+  const username = toTrimmedString(author.username);
+  if (username) {
+    return username;
+  }
+
+  const email = toTrimmedString(author.email);
+  if (email) {
+    return email;
+  }
+
+  return null;
+};
+
+const extractExpenseAuthor = (
+  expense: Expense,
+): { id: number | null; name: string | null } => {
+  const idCandidates: unknown[] = [
+    expense.created_by,
+    (expense as { createdBy?: unknown }).createdBy,
+    (expense as { author_id?: unknown }).author_id,
+    (expense as { user_id?: unknown }).user_id,
+  ];
+
+  let id: number | null = null;
+  for (const candidate of idCandidates) {
+    const parsed = toNumericId(candidate);
+    if (parsed != null) {
+      id = parsed;
+      break;
+    }
+  }
+
+  const nameCandidates: unknown[] = [
+    (expense as { created_by_name?: unknown }).created_by_name,
+    (expense as { createdByName?: unknown }).createdByName,
+  ];
+
+  let name: string | null = null;
+  for (const candidate of nameCandidates) {
+    const parsed = toTrimmedString(candidate);
+    if (parsed) {
+      name = parsed;
+      break;
+    }
+  }
+
+  if (!name) {
+    const authorRecords: unknown[] = [
+      expense.created_by_user,
+      (expense as { createdByUser?: unknown }).createdByUser,
+      (expense as { creator?: unknown }).creator,
+      (expense as { author?: unknown }).author,
+      (expense as { user?: unknown }).user,
+    ];
+
+    for (const candidate of authorRecords) {
+      if (isRecord(candidate)) {
+        const extracted = pickAuthorName(candidate);
+        if (extracted) {
+          name = extracted;
+          break;
+        }
+      }
+    }
+  }
+
+  return {
+    id,
+    name,
+  };
+};
+
 const normalizeExpense = (expense: Expense): NormalizedExpense | null => {
   const id = toNumericId(expense.id);
   if (id == null) {
@@ -216,6 +329,8 @@ const normalizeExpense = (expense: Expense): NormalizedExpense | null => {
 
   const carId = toNumericId(expense.car_id);
   const { name: carName, plate: carPlate } = pickCarName(expense.car);
+
+  const author = extractExpenseAuthor(expense);
 
   const recurrence = expense.recurrence;
   const recurrenceDay = isRecord(recurrence)
@@ -256,6 +371,8 @@ const normalizeExpense = (expense: Expense): NormalizedExpense | null => {
     recurrenceStartsOn,
     recurrenceEndsOn,
     recurrenceLastGenerated,
+    createdById: author.id,
+    createdByName: author.name,
     createdAt:
       typeof expense.created_at === "string" ? expense.created_at : null,
     updatedAt:
@@ -332,15 +449,17 @@ const ExpensesPage = () => {
   const [carOptions, setCarOptions] = useState<CarOption[]>([]);
   const [selectedCar, setSelectedCar] = useState<CarOption | null>(null);
   const [carSearch, setCarSearch] = useState("");
+  const [authorOptions, setAuthorOptions] = useState<AuthorOption[]>([]);
   const [typeFilter, setTypeFilter] = useState("");
   const [recurringFilter, setRecurringFilter] = useState("all");
+  const [createdByFilter, setCreatedByFilter] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const loadExpenses = useCallback(async () => {
     setIsLoading(true);
     try {
       const params: ExpenseListParams = {
-        include: ["car", "recurrence"],
+        include: ["car", "recurrence", "createdBy", "createdByUser", "creator", "user"],
         perPage: 100,
       };
       if (typeFilter) {
@@ -350,6 +469,14 @@ const ExpensesPage = () => {
         params.is_recurring = true;
       } else if (recurringFilter === "false") {
         params.is_recurring = false;
+      }
+      if (createdByFilter) {
+        const numericCreatedBy = Number(createdByFilter);
+        if (Number.isFinite(numericCreatedBy)) {
+          params.created_by = numericCreatedBy;
+        } else {
+          params.created_by = createdByFilter;
+        }
       }
       const response = await apiClient.getExpenses(params);
       const rawList = extractList<Expense>(response);
@@ -362,12 +489,33 @@ const ExpensesPage = () => {
           return timeB - timeA;
         });
       setExpenses(normalized);
+      setAuthorOptions((prev) => {
+        const map = new Map<number, AuthorOption>();
+        prev.forEach((option) => {
+          map.set(option.id, option);
+        });
+        normalized.forEach((item) => {
+          if (item.createdById != null) {
+            const label =
+              item.createdByName && item.createdByName.length > 0
+                ? item.createdByName
+                : `Utilizator #${item.createdById}`;
+            const existing = map.get(item.createdById);
+            if (!existing || existing.name.startsWith("Utilizator #")) {
+              map.set(item.createdById, { id: item.createdById, name: label });
+            }
+          }
+        });
+        return Array.from(map.values()).sort((a, b) =>
+          a.name.localeCompare(b.name, "ro", { sensitivity: "base" }),
+        );
+      });
     } catch (error) {
       console.error("Nu am putut încărca cheltuielile", error);
     } finally {
       setIsLoading(false);
     }
-  }, [typeFilter, recurringFilter]);
+  }, [typeFilter, recurringFilter, createdByFilter]);
 
   const loadCars = useCallback(async () => {
     try {
@@ -406,6 +554,11 @@ const ExpensesPage = () => {
       })
       .slice(0, 50);
   }, [carOptions, carSearch]);
+
+  const totalAmount = useMemo(
+    () => expenses.reduce((sum, item) => sum + item.amount, 0),
+    [expenses],
+  );
 
   const openAddModal = () => {
     setFormState(defaultFormState);
@@ -609,6 +762,17 @@ const ExpensesPage = () => {
           : "-",
     },
     {
+      id: "createdBy",
+      header: "Adăugată de",
+      accessor: (row) =>
+        row.createdByName ??
+        (row.createdById != null ? `Utilizator #${row.createdById}` : ""),
+      sortable: true,
+      cell: (row) =>
+        row.createdByName ??
+        (row.createdById != null ? `Utilizator #${row.createdById}` : "-"),
+    },
+    {
       id: "recurring",
       header: "Recurent",
       accessor: (row) => (row.isRecurring ? "Da" : "Nu"),
@@ -682,6 +846,11 @@ const ExpensesPage = () => {
         </div>
       )}
       <div className="grid gap-1 text-xs text-gray-500 md:grid-cols-2">
+        <span>
+          Adăugată de:{" "}
+          {row.createdByName ??
+            (row.createdById != null ? `Utilizator #${row.createdById}` : "-")}
+        </span>
         {row.createdAt && (
           <span>
             Creată: {formatDateTime(row.createdAt) ?? row.createdAt}
@@ -746,6 +915,21 @@ const ExpensesPage = () => {
             <option value="false">Doar unice</option>
           </Select>
         </div>
+        <div className="space-y-1">
+          <Label htmlFor="expense-filter-created-by">Adăugată de</Label>
+          <Select
+            id="expense-filter-created-by"
+            value={createdByFilter}
+            onValueChange={setCreatedByFilter}
+          >
+            <option value="">Toți autorii</option>
+            {authorOptions.map((option) => (
+              <option key={option.id} value={option.id.toString()}>
+                {option.name}
+              </option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       <DataTable
@@ -753,6 +937,10 @@ const ExpensesPage = () => {
         columns={columns}
         renderRowDetails={renderRowDetails}
       />
+
+      <div className="flex justify-end text-sm font-semibold text-gray-900">
+        Total filtrat: {currencyFormatter.format(totalAmount)}
+      </div>
 
       <Popup open={isModalOpen} onClose={closeModal} className="max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
