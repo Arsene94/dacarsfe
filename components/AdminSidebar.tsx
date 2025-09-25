@@ -323,6 +323,17 @@ const menuItems: readonly AdminSidebarItem[] = [
     requiredPermissions: buildPermissionList("dashboard", ["overview", "statistics"]),
   },
   {
+    name: "Rapoarte",
+    href: "/admin/reports",
+    icon: Gauge,
+    requiredPermissions: buildPermissionList("reports", [
+      "analytics",
+      "insights",
+      "performance",
+      "kpi",
+    ]),
+  },
+  {
       name: "Închirieri",
       icon: Car,
       subItems: [
