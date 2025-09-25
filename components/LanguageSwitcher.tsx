@@ -10,6 +10,7 @@ const flagByLocale: Partial<Record<Locale, string>> = {
     ro: "🇷🇴",
     en: "🇬🇧",
     it: "🇮🇹",
+    es: "🇪🇸",
 };
 
 const dropdownBaseItemClass =

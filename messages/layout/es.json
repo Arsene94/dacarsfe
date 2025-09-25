@@ -1,0 +1,65 @@
+{
+  "header": {
+    "menu": [
+      { "label": "Inicio", "href": "/", "aria": "Inicio" },
+      { "label": "Flota", "href": "/cars", "aria": "Flota" },
+      { "label": "Ofertas", "href": "#oferte", "aria": "Ofertas" },
+      { "label": "Reservas", "href": "/checkout", "aria": "Reservas" },
+      { "label": "Contacto", "href": "#contact", "aria": "Contacto" }
+    ],
+    "cta": {
+      "label": "Reserva ahora",
+      "href": "/checkout"
+    },
+    "mobileMenu": {
+      "open": "Abrir menú",
+      "close": "Cerrar menú"
+    },
+    "languageSwitcher": {
+      "aria": "Elige el idioma",
+      "labels": {
+        "ro": "Rumano",
+        "en": "Inglés",
+        "it": "Italiano",
+        "es": "Español"
+      }
+    }
+  },
+  "footer": {
+    "brand": {
+      "name": "DaCars",
+      "tagline": "Coches honestos para gente honesta. Recogida en el aeropuerto en menos de 5 minutos, sin cargos ocultos."
+    },
+    "quickLinks": {
+      "title": "Enlaces rápidos",
+      "links": [
+        { "label": "Inicio", "href": "/", "aria": "Inicio" },
+        { "label": "Nuestra flota", "href": "/cars", "aria": "Nuestra flota" },
+        { "label": "Ofertas especiales", "href": "#oferte", "aria": "Ofertas especiales" },
+        { "label": "Reservas", "href": "/checkout", "aria": "Reservas" }
+      ]
+    },
+    "contact": {
+      "title": "Contacto",
+      "items": {
+        "phone": "+40 723 817 551",
+        "email": "contact@dacars.ro",
+        "address": "Aeropuerto Henri Coandă, Otopeni",
+        "schedule": "Disponible 24/7"
+      }
+    },
+    "schedule": {
+      "title": "Horario",
+      "days": "Lunes - Domingo",
+      "hours": "24/7",
+      "note": "Recogida y entrega en el aeropuerto, sin interrupción"
+    },
+    "bottom": {
+      "copyright": "© 2024 DaCars. Todos los derechos reservados.",
+      "links": [
+        { "label": "Términos y condiciones", "href": "#", "aria": "Términos y condiciones" },
+        { "label": "Política de privacidad", "href": "#", "aria": "Política de privacidad" }
+      ]
+    }
+  }
+}
