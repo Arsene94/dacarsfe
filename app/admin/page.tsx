@@ -32,7 +32,7 @@ import {
 import type { ActivityReservation } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import {getStatusText} from "@/lib/utils";
-import { extractItem } from "@/lib/apiResponse";
+import { extractItem, extractList } from "@/lib/apiResponse";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://backend.dacars.ro/storage';
@@ -224,87 +224,217 @@ const getStatusColor = (status: string) => {
     }
 };
 
-const reservationColumns: Column<AdminReservation>[] = [
-    {
-        id: "id",
-        header: "ID",
-        accessor: (r) => r.id,
-        sortable: true,
-        cell: (r) => (
-            <span className="font-dm-sans text-sm text-berkeley font-semibold">
-        {r.id}
-      </span>
+type ExpiringDocumentCarRow = {
+    id: number | string;
+    name: string;
+    licensePlate: string;
+    itpExpiresAt: string | null;
+    rovinietaExpiresAt: string | null;
+    insuranceExpiresAt: string | null;
+};
+
+type ExpiringDocumentField =
+    | "itpExpiresAt"
+    | "rovinietaExpiresAt"
+    | "insuranceExpiresAt";
+
+const EXPIRING_DOCUMENT_FIELDS: Array<{ field: ExpiringDocumentField; label: string }> = [
+    { field: "itpExpiresAt", label: "ITP" },
+    { field: "rovinietaExpiresAt", label: "Rovinietă" },
+    { field: "insuranceExpiresAt", label: "Asigurare" },
+];
+
+const EXPIRING_DAYS_THRESHOLD = 7;
+
+const normalizeIsoDate = (value: unknown): string | null => {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = new Date(trimmed);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return trimmed;
+};
+
+const formatDateDisplay = (iso?: string | null): string => {
+    if (!iso) return "—";
+    const parsed = new Date(iso);
+    if (Number.isNaN(parsed.getTime())) {
+        return "—";
+    }
+    return parsed.toLocaleDateString("ro-RO");
+};
+
+const calculateDaysUntil = (iso?: string | null): number | null => {
+    if (!iso) return null;
+    const parsed = new Date(iso);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const target = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    const diffMs = target.getTime() - today.getTime();
+    return Math.round(diffMs / 86400000);
+};
+
+const formatExpiryDistance = (days: number): string => {
+    if (days < 0) {
+        const absolute = Math.abs(days);
+        return absolute === 1 ? "Expirat de 1 zi" : `Expirat de ${absolute} zile`;
+    }
+    if (days === 0) {
+        return "Expiră astăzi";
+    }
+    if (days === 1) {
+        return "Expiră mâine";
+    }
+    return `Expiră în ${days} zile`;
+};
+
+const getExpiringDocumentSummary = (
+    row: ExpiringDocumentCarRow,
+): { field: ExpiringDocumentField; label: string; days: number } | null => {
+    const entries = EXPIRING_DOCUMENT_FIELDS.map(({ field, label }) => {
+        const iso = row[field];
+        const days = calculateDaysUntil(iso);
+        return iso && days !== null ? { field, label, days } : null;
+    }).filter(
+        (
+            entry,
+        ): entry is { field: ExpiringDocumentField; label: string; days: number } => entry !== null,
+    );
+
+    if (entries.length === 0) {
+        return null;
+    }
+
+    entries.sort((a, b) => a.days - b.days);
+    return entries[0];
+};
+
+const mapExpiringDocumentCar = (raw: unknown): ExpiringDocumentCarRow | null => {
+    if (!isRecord(raw)) return null;
+    const rawId = raw.id ?? (raw as { car_id?: unknown }).car_id;
+    const numericId = toNumericId(rawId);
+    const fallbackId = toSafeString(rawId ?? "", "").trim();
+    const nameCandidate = toSafeString(raw.name ?? (raw as { car_name?: unknown }).car_name);
+    const normalizedName = nameCandidate.trim().length > 0
+        ? nameCandidate.trim()
+        : `Autovehicul${numericId != null ? ` #${numericId}` : ""}`;
+    const plateCandidate = toSafeString(
+        raw.license_plate ??
+            (raw as { licensePlate?: unknown }).licensePlate ??
+            (raw as { plate?: unknown }).plate,
+        "",
+    ).trim();
+    const licensePlate = plateCandidate.length > 0 ? plateCandidate.toUpperCase() : "—";
+    const idValue = numericId ?? (fallbackId.length > 0 ? fallbackId : normalizedName);
+
+    return {
+        id: idValue,
+        name: normalizedName,
+        licensePlate,
+        itpExpiresAt: normalizeIsoDate(
+            raw.itp_expires_at ?? (raw as { itpExpiresAt?: unknown }).itpExpiresAt,
         ),
-    },
-    {
-        id: "customer",
-        header: "Client",
-        accessor: (r) => r.customerName,
-        sortable: true,
-        cell: (r) => (
-            <span className="font-dm-sans text-sm text-gray-900">
-        {r.customerName}
-      </span>
+        rovinietaExpiresAt: normalizeIsoDate(
+            raw.rovinieta_expires_at ??
+                (raw as { rovinietaExpiresAt?: unknown }).rovinietaExpiresAt,
         ),
-    },
-    {
-        id: "phone",
-        header: "Telefon",
-        accessor: (r) => r.phone,
-        cell: (r) => (
-            <span className="font-dm-sans text-sm text-gray-600">{r.phone}</span>
+        insuranceExpiresAt: normalizeIsoDate(
+            raw.insurance_expires_at ??
+                (raw as { insuranceExpiresAt?: unknown }).insuranceExpiresAt,
         ),
-    },
+    };
+};
+
+const expiringDocumentsColumns: Column<ExpiringDocumentCarRow>[] = [
     {
         id: "car",
         header: "Mașină",
-        accessor: (r) => r.carName,
-        cell: (r) => (
-            <span className="font-dm-sans text-sm text-gray-900">{r.carName}</span>
+        accessor: (car) => car.name,
+        sortable: true,
+        cell: (car) => (
+            <span className="font-dm-sans text-sm text-gray-900 font-medium">{car.name}</span>
         ),
     },
     {
-        id: "period",
-        header: "Perioada",
-        accessor: (r) => new Date(r.startDate).getTime(),
-        cell: (r) => (
-            <span className="font-dm-sans text-sm text-gray-600">
-        {new Date(r.startDate).toLocaleDateString("ro-RO")} -
-                {" "}
-                {new Date(r.endDate).toLocaleDateString("ro-RO")}
-      </span>
+        id: "license",
+        header: "Număr înmatriculare",
+        accessor: (car) => car.licensePlate,
+        sortable: true,
+        cell: (car) => (
+            <span className="font-dm-sans text-sm text-gray-700">{car.licensePlate}</span>
         ),
     },
     {
-        id: "status",
-        header: "Status",
-        accessor: (r) => r.status,
-        cell: (r) => (
-            <span
-                className={`px-2 py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
-                    r.status,
-                )}`}
-            >
-                {getStatusText(r.status)}
+        id: "itp",
+        header: "ITP",
+        accessor: (car) => (car.itpExpiresAt ? new Date(car.itpExpiresAt) : null),
+        sortable: true,
+        cell: (car) => (
+            <span className="font-dm-sans text-sm text-gray-700">
+                {formatDateDisplay(car.itpExpiresAt)}
             </span>
         ),
     },
     {
-        id: "total",
-        header: "Total",
-        accessor: (r) => r.total,
+        id: "rovinieta",
+        header: "Rovinietă",
+        accessor: (car) => (car.rovinietaExpiresAt ? new Date(car.rovinietaExpiresAt) : null),
         sortable: true,
-        cell: (r) => (
-            <span className="font-dm-sans text-sm font-semibold text-berkeley">
-        {r.total}€
-      </span>
+        cell: (car) => (
+            <span className="font-dm-sans text-sm text-gray-700">
+                {formatDateDisplay(car.rovinietaExpiresAt)}
+            </span>
         ),
+    },
+    {
+        id: "insurance",
+        header: "Asigurare",
+        accessor: (car) => (car.insuranceExpiresAt ? new Date(car.insuranceExpiresAt) : null),
+        sortable: true,
+        cell: (car) => (
+            <span className="font-dm-sans text-sm text-gray-700">
+                {formatDateDisplay(car.insuranceExpiresAt)}
+            </span>
+        ),
+    },
+    {
+        id: "next-expiry",
+        header: "Expiră în",
+        accessor: (car) => {
+            const summary = getExpiringDocumentSummary(car);
+            return summary ? summary.days : EXPIRING_DAYS_THRESHOLD + 1;
+        },
+        sortable: true,
+        cell: (car) => {
+            const summary = getExpiringDocumentSummary(car);
+            if (!summary) {
+                return <span className="font-dm-sans text-sm text-gray-500">—</span>;
+            }
+            const badgeColor =
+                summary.days < 0
+                    ? "bg-red-100 text-red-800"
+                    : summary.days <= 3
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-orange-100 text-orange-800";
+            return (
+                <span
+                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${badgeColor}`}
+                >
+                    {formatExpiryDistance(summary.days)} ({summary.label})
+                </span>
+            );
+        },
     },
 ];
 
 const AdminDashboard = () => {
     const router = useRouter();
-    const [reservations, setReservations] = useState<AdminReservation[]>([]);
+    const [expiringCars, setExpiringCars] = useState<ExpiringDocumentCarRow[]>([]);
+    const [loadingExpiringCars, setLoadingExpiringCars] = useState(false);
+    const [expiringCarsError, setExpiringCarsError] = useState<string | null>(null);
     const [carActivityDay, setCarActivityDay] = useState<string>('azi');
     const [activityDay, setActivityDay] = useState<string>('');
     const [activityHours, setActivityHours] = useState<string[]>([]);
@@ -416,90 +546,29 @@ const AdminDashboard = () => {
         };
         loadMetrics();
     }, []);
-
-
-    // Mock data pentru demo
-    useEffect(() => {
-        const mockReservations: AdminReservation[] = [
-            {
-                id: "DC001",
-                customerName: "Ana Popescu",
-                phone: "+40722123456",
-                carId: 1,
-                carName: "Dacia Logan",
-                startDate: "2025-01-15",
-                endDate: "2025-01-18",
-                plan: 1,
-                status: "reserved",
-                total: 135,
-                couponAmount: 0,
-                subTotal: 0,
-                taxAmount: 0
-            },
-            {
-                id: "DC002",
-                customerName: "Mihai Ionescu",
-                phone: "+40733987654",
-                carId: 2,
-                carName: "VW Golf",
-                startDate: "2025-01-20",
-                endDate: "2025-01-25",
-                plan: 0,
-                status: "reserved",
-                total: 325,
-                couponAmount: 0,
-                subTotal: 0,
-                taxAmount: 0
-            },
-            {
-                id: "DC003",
-                customerName: "Elena Dumitrescu",
-                phone: "+40744555666",
-                carId: 3,
-                carName: "BMW Seria 3",
-                startDate: "2025-01-22",
-                endDate: "2025-01-24",
-                plan: 0,
-                status: "pending",
-                total: 190,
-                couponAmount: 0,
-                subTotal: 0,
-                taxAmount: 0
-            },
-            {
-                id: "DC004",
-                customerName: "Radu Constantin",
-                phone: "+40755111222",
-                carId: 1,
-                carName: "Dacia Logan",
-                startDate: "2025-02-01",
-                endDate: "2025-02-05",
-                plan: 1,
-                status: "completed",
-                total: 180,
-                couponAmount: 0,
-                subTotal: 0,
-                taxAmount: 0
-            },
-            {
-                id: "DC005",
-                customerName: "Maria Georgescu",
-                phone: "+40766333444",
-                carId: 4,
-                carName: "Ford Transit",
-                startDate: "2025-02-10",
-                plan: 1,
-                endDate: "2025-02-12",
-                status: "cancelled",
-                total: 170,
-                couponAmount: 0,
-                subTotal: 0,
-                taxAmount: 0
-            },
-        ];
-
-        setReservations(mockReservations);
+    const loadExpiringCars = useCallback(async () => {
+        setLoadingExpiringCars(true);
+        setExpiringCarsError(null);
+        try {
+            const response = await apiClient.fetchAdminExpiringCarDocuments({
+                within_days: EXPIRING_DAYS_THRESHOLD,
+            });
+            const list = extractList(response)
+                .map(mapExpiringDocumentCar)
+                .filter((car): car is ExpiringDocumentCarRow => car !== null);
+            setExpiringCars(list);
+        } catch (error) {
+            console.error('Error loading expiring car documents:', error);
+            setExpiringCars([]);
+            setExpiringCarsError('Nu am putut încărca expirările documentelor auto.');
+        } finally {
+            setLoadingExpiringCars(false);
+        }
     }, []);
+
+    useEffect(() => {
+        loadExpiringCars();
+    }, [loadExpiringCars]);
 
     const getCarActivityLabel = (status: string) => {
         switch (status) {
@@ -941,23 +1010,50 @@ const AdminDashboard = () => {
                     </div>
                 </div>
 
-                {/* Recent Reservations */}
+                {/* Expiring car documents */}
                 <div className="mt-8">
                     <div className="bg-white rounded-xl shadow-sm p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-poppins font-semibold text-berkeley">
-                                Rezervări Recente
+                                Documente auto care expiră în {EXPIRING_DAYS_THRESHOLD} zile
                             </h2>
                             <Link
-                                href="/admin/bookings"
+                                href="/admin/cars"
                                 className="px-4 py-2 bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors"
-                                aria-label="Vezi toate rezervările"
+                                aria-label="Gestionează flota"
                             >
-                                Vezi toate
+                                Gestionează flota
                             </Link>
                         </div>
 
-                        <DataTable data={reservations.slice(0, 5)} columns={reservationColumns} />
+                        {loadingExpiringCars ? (
+                            <div className="py-10 text-center">
+                                <p className="text-sm font-dm-sans text-gray-500">
+                                    Încărcăm lista cu expirări iminente...
+                                </p>
+                            </div>
+                        ) : expiringCarsError ? (
+                            <div className="py-10 text-center">
+                                <p className="text-sm font-dm-sans text-red-600 mb-4">
+                                    {expiringCarsError}
+                                </p>
+                                <Button onClick={loadExpiringCars} variant="outline">
+                                    Reîncarcă lista
+                                </Button>
+                            </div>
+                        ) : expiringCars.length > 0 ? (
+                            <DataTable data={expiringCars} columns={expiringDocumentsColumns} />
+                        ) : (
+                            <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
+                                <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                <h3 className="text-lg font-poppins font-semibold text-gray-600 mb-2">
+                                    Nicio expirare în următoarele {EXPIRING_DAYS_THRESHOLD} zile
+                                </h3>
+                                <p className="text-gray-500 font-dm-sans">
+                                    Toate documentele auto sunt în regulă pentru perioada următoare.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

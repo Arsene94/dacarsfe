@@ -86,6 +86,24 @@ export interface AdminCar {
   partnerPercentage?: number | null;
 }
 
+export interface AdminExpiringCarDocumentsParams {
+  within_days?: number;
+}
+
+export interface AdminExpiringDocumentCar {
+  id?: number | string | null;
+  car_id?: number | string | null;
+  name?: string | null;
+  car_name?: string | null;
+  license_plate?: string | null;
+  licensePlate?: string | null;
+  plate?: string | null;
+  itp_expires_at?: string | null;
+  rovinieta_expires_at?: string | null;
+  insurance_expires_at?: string | null;
+  [key: string]: unknown;
+}
+
 export interface AdminCategory {
   id: number;
   name: string;
