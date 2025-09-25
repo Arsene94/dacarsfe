@@ -62,6 +62,12 @@ const backgroundClassOptions: Array<{
         previewTextClass: "text-white",
     },
     {
+        value: "bg-gradient-to-br from-pink-500 to-rose-600",
+        label: "Gradient roz",
+        description: "Variantă caldă în nuanțe de roz pentru campanii energice.",
+        previewTextClass: "text-white",
+    },
+    {
         value: "bg-rose-600",
         label: "Roșu intens",
         description: "Creează sentimentul de urgență pentru promoțiile limitate.",
