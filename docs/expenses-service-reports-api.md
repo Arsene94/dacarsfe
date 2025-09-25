@@ -6,7 +6,7 @@ Write operations require an authenticated admin user with the appropriate permis
 ## Expenses (`/api/expenses`)
 | Method | Description | Auth | Permission |
 | --- | --- | --- | --- |
-| GET `/api/expenses` | Paginated list of expenses. Supports `type`, `car_id`, `is_recurring`, plus `?include=car,recurrence`. | Admin | `expenses.view` |
+| GET `/api/expenses` | Paginated list of expenses. Supports `type`, `car_id`, `is_recurring`, `created_by`, plus `?include=car,recurrence,createdBy`. | Admin | `expenses.view` |
 | GET `/api/expenses/{id}` | Retrieve a single expense with optional relationships. | Admin | `expenses.view` |
 | POST `/api/expenses` | Create a new expense (fields below). | Admin | `expenses.create` |
 | PUT/PATCH `/api/expenses/{id}` | Update an expense. Recurring chains propagate updates forward. | Admin | `expenses.update` |
@@ -20,6 +20,7 @@ Write operations require an authenticated admin user with the appropriate permis
 - `car_id` – optional, links the expense to a car (`dacars_cars.id`).
 - `is_recurring` – boolean flag (default `false`). When `true` the expense repeats monthly.
 - `ends_on` – optional ISO date. When provided, recurring generation stops after that month.
+- Responses include `created_by` (the admin ID) and, when using `?include=createdBy`, a `created_by_user` object with the author's profile (name, email, username).
 
 ### Recurring behaviour
 - Setting `is_recurring = true` stores a template in `dacars_expense_recurrences` and instantly creates one entry per month up to the current month.
@@ -50,6 +51,7 @@ Write operations require an authenticated admin user with the appropriate permis
     "car_id": null,
     "spent_at": "2025-01-10",
     "is_recurring": true,
+    "created_by": 4,
     "created_at": "2025-01-10T09:00:00+02:00",
     "updated_at": "2025-01-10T09:00:00+02:00",
     "recurrence": {
@@ -59,6 +61,12 @@ Write operations require an authenticated admin user with the appropriate permis
       "starts_on": "2025-01-10",
       "ends_on": "2025-12-31",
       "last_generated_period": "2025-03-01"
+    },
+    "created_by_user": {
+      "id": 4,
+      "first_name": "Irina",
+      "last_name": "Popescu",
+      "email": "irina@dacars.ro"
     }
   }
 }
