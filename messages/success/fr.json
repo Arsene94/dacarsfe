@@ -1,0 +1,106 @@
+{
+  "metadata": {
+    "title": "Votre réservation est confirmée",
+    "description": "Consultez le récapitulatif de votre réservation DaCars, les détails de prise en charge et nos coordonnées.",
+    "openGraphTitle": "Votre réservation est confirmée | DaCars Rent a Car"
+  },
+  "loading": "Chargement des détails de votre réservation...",
+  "fallbacks": {
+    "guestName": "Client DaCars"
+  },
+  "header": {
+    "title": {
+      "prefix": "Votre réservation est",
+      "highlight": "confirmée !"
+    },
+    "thanks": "Merci, {{name}} ! Votre voiture vous attend à l'aéroport.",
+    "tagline": "À très vite chez vous !",
+    "reference": "Réservation {{id}}"
+  },
+  "wheelPrize": {
+    "title": "Prix de la Roue de la Fortune",
+    "applied": "Vous avez utilisé le prix {{title}}{{amount}}.",
+    "amountSuffix": " — {{amount}}",
+    "savings": "Vous économisez {{amount}}€ sur cette réservation.",
+    "expiry": {
+      "withDate": "Prix valable jusqu'au {{date}}.",
+      "fallback": "Le prix reste valable 30 jours après le gain."
+    },
+    "amount": {
+      "percentage_discount": "Réduction de {{amount}}%",
+      "fixed_discount": "Réduction de {{amount}} RON",
+      "extra_rental_day": {
+        "one": "Bonus de {{amount}} jour",
+        "other": "Bonus de {{amount}} jours"
+      },
+      "other": "{{amount}}"
+    }
+  },
+  "summary": {
+    "title": "Détails de votre réservation",
+    "car": {
+      "title": "Votre voiture"
+    },
+    "period": {
+      "title": "Période",
+      "pickupLabel": "Prise en charge :",
+      "dropoffLabel": "Retour :"
+    },
+    "location": {
+      "title": "Lieu",
+      "options": {
+        "aeroport": "Aéroport Henri Coandă, Otopeni",
+        "city": "Centre-ville de Bucarest",
+        "other": "Autre lieu"
+      }
+    },
+    "pricing": {
+      "title": "Coût total",
+      "subtotalLabel": "Sous-total :",
+      "servicesLabel": "Services :",
+      "wheelPrizeLabel": "Prix Roue de la Fortune :",
+      "discountLabel": "Réduction :",
+      "totalLabel": "Total :",
+      "note": "*Prix final, aucun frais caché"
+    },
+    "flight": {
+      "title": "Votre vol"
+    }
+  },
+  "instructions": {
+    "title": "Et ensuite ?",
+    "steps": [
+      {
+        "title": "À l'atterrissage",
+        "description": "Appelez-nous dès que vous quittez le terminal"
+      },
+      {
+        "title": "Nous vous retrouvons",
+        "description": "Nous arrivons en moins de 5 minutes dans le parking courte durée"
+      },
+      {
+        "title": "Bon voyage !",
+        "description": "Nous vous remettons les clés et vous pouvez rentrer sereinement"
+      }
+    ]
+  },
+  "contact": {
+    "title": "Contactez-nous à tout moment :",
+    "phone": "+40 722 123 456",
+    "ariaLabel": "Appeler {{phone}}",
+    "availability": "Disponible 24/7 pour les urgences"
+  },
+  "actions": {
+    "print": {
+      "label": "Imprimer les détails",
+      "aria": "Imprimer les détails de la réservation"
+    },
+    "home": {
+      "label": "Retour à l'accueil",
+      "aria": "Retour à l'accueil"
+    }
+  },
+  "footer": {
+    "message": "Vous recevrez un e-mail de confirmation avec tous les détails de la réservation."
+  }
+}

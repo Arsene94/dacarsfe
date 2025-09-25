@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { buildMetadata } from "@/lib/seo/meta";
+import checkoutMessagesRo from "@/messages/checkout/ro.json";
+
+type CheckoutMessages = typeof checkoutMessagesRo;
+
+const checkoutMessages: CheckoutMessages = checkoutMessagesRo;
+const { metadata: checkoutMetadataMessages } = checkoutMessages;
 
 const checkoutMetadata = buildMetadata({
-    title: "Finalizează rezervarea",
-    description: "Completează datele și opțiunile pentru a confirma rezervarea mașinii alese de la DaCars.",
+    title: checkoutMetadataMessages.title,
+    description: checkoutMetadataMessages.description,
     path: "/checkout",
-    openGraphTitle: "Finalizează rezervarea ta | DaCars Rent a Car",
+    openGraphTitle: checkoutMetadataMessages.openGraphTitle,
     noIndex: true,
 });
 

@@ -5,10 +5,27 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import Image from "next/image";
 import { Button } from '@/components/ui/button';
+import { useTranslations } from "@/lib/i18n/useTranslations";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { messages, t } = useTranslations("layout");
+
+  const headerMessages = (messages.header ?? {}) as {
+    menu?: Array<{ label?: string; href?: string; aria?: string }>;
+    cta?: { label?: string; href?: string };
+    mobileMenu?: { open?: string; close?: string };
+  };
+
+  const menuItems = headerMessages.menu?.filter((item) => Boolean(item?.label && item?.href)) ?? [];
+
+  const cta = headerMessages.cta;
+  const mobileMenuMessages = headerMessages.mobileMenu ?? {};
+  const mobileToggleLabel = isMobileMenuOpen
+    ? mobileMenuMessages.close ?? t('header.mobileMenu.close', { fallback: 'Închide meniul' })
+    : mobileMenuMessages.open ?? t('header.mobileMenu.open', { fallback: 'Deschide meniul' });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,20 +36,12 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const menuItems = [
-    { name: 'Acasă', href: '/' },
-    { name: 'Flotă', href: '/cars' },
-    { name: 'Oferte', href: '#oferte' },
-    { name: 'Rezervare', href: '/checkout' },
-    { name: 'Contact', href: '#contact' },
-  ];
-
   return (
     <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${
       isScrolled ? 'bg-white shadow-lg' : 'bg-white/95 backdrop-blur-sm'
     }`}>
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center h-16 lg:h-20 overflow-hidden">
+        <div className="flex justify-between items-center h-16 lg:h-20">
             <Link href="/" className="flex items-center space-x-2 group" aria-label="DaCars — închirieri auto rapide și oneste">
                     {/* Eager + fetchpriority=high ajută LCP pe homepage */}
                     <Image
@@ -51,18 +60,19 @@ const Header = () => {
           <nav className="hidden lg:flex items-center space-x-8">
             {menuItems.map((item) => (
               <Link
-                key={item.name}
-                href={item.href}
+                key={`${item.href}-${item.label}`}
+                href={item.href ?? '#'}
                 className="text-eefie font-dm-sans font-medium hover:text-jade transition-colors duration-300 relative group"
-                aria-label={item.name}
+                aria-label={item.aria ?? item.label}
               >
-                {item.name}
+                {item.label}
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-jade transition-all duration-300 group-hover:w-full"></span>
               </Link>
             ))}
+            <LanguageSwitcher className="ml-4" />
           </nav>
 
-            {/* CTA Button */}
+          {/* CTA Button */}
             {/*<Link href="/checkout" aria-label="Rezervă acum">*/}
             {/*  <Button*/}
             {/*    aria-label="Rezervă acum"*/}
@@ -73,14 +83,17 @@ const Header = () => {
             {/*</Link>*/}
 
           {/* Mobile menu button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 rounded-md text-berkeley hover:bg-gray-100 transition-colors duration-300"
-            aria-label={isMobileMenuOpen ? 'Închide meniul' : 'Deschide meniul'}
-            aria-expanded={isMobileMenuOpen}
-          >
+          <div className="flex items-center gap-2 lg:hidden">
+            <LanguageSwitcher />
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-md text-berkeley hover:bg-gray-100 transition-colors duration-300"
+              aria-label={mobileToggleLabel}
+              aria-expanded={isMobileMenuOpen}
+            >
             {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+            </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}
@@ -89,27 +102,29 @@ const Header = () => {
             <div className="px-2 pt-2 pb-3 space-y-1">
               {menuItems.map((item) => (
                 <Link
-                  key={item.name}
-                  href={item.href}
+                  key={`${item.href}-${item.label}`}
+                  href={item.href ?? '#'}
                   className="block px-3 py-2 text-base font-dm-sans font-medium text-eefie hover:text-jade hover:bg-gray-50 rounded-md transition-colors duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  aria-label={item.name}
+                  aria-label={item.aria ?? item.label}
                 >
-                  {item.name}
+                  {item.label}
                 </Link>
               ))}
-                <Link
-                  href="/checkout"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  aria-label="Rezervă acum"
-                >
-                  <Button
-                    aria-label="Rezervă acum"
-                    className="w-full mt-4 px-3 py-2 bg-jade text-white hover:bg-jade/90"
+                {cta?.label && cta?.href && (
+                  <Link
+                    href={cta.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    aria-label={cta.label}
                   >
-                    Rezervă acum
-                  </Button>
-                </Link>
+                    <Button
+                      aria-label={cta.label}
+                      className="w-full mt-4 px-3 py-2 bg-jade text-white hover:bg-jade/90"
+                    >
+                      {cta.label}
+                    </Button>
+                  </Link>
+                )}
             </div>
           </div>
         )}

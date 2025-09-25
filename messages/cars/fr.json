@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "title": "Flotte complète de voitures de location",
+    "description": "Découvrez toute la flotte DaCars et filtrez rapidement les voitures disponibles à la location.",
+    "keywords": [
+      "flotte location voiture",
+      "voitures disponibles Bucarest",
+      "location voiture sans dépôt",
+      "réservation voiture en ligne",
+      "flotte automobile DaCars"
+    ],
+    "openGraphTitle": "Flotte complète de voitures de location | DaCars Rent a Car",
+    "breadcrumb": {
+      "home": "Accueil",
+      "fleet": "Flotte auto"
+    }
+  },
+  "structuredData": {
+    "itemList": {
+      "name": "Flotte de location DaCars",
+      "description": "Tous les véhicules disponibles à la location chez DaCars, mis à jour en temps réel.",
+      "currency": "EUR"
+    }
+  },
+  "fallbacks": {
+    "carName": "Véhicule",
+    "unknownValue": "—",
+    "category": "Catégorie #{{id}}"
+  },
+  "labels": {
+    "passengers": "{{count}} passagers"
+  },
+  "header": {
+    "title": {
+      "main": "Notre",
+      "highlight": "flotte complète"
+    },
+    "description": "Parcourez tous les véhicules disponibles et choisissez celui qui convient à votre trajet."
+  },
+  "search": {
+    "placeholder": "Rechercher une voiture...",
+    "ariaLabel": "Rechercher une voiture",
+    "sortAria": "Trier les voitures",
+    "sortOptions": {
+      "cheapest": "Prix le plus bas d'abord",
+      "mostExpensive": "Prix le plus élevé d'abord"
+    },
+    "filtersButton": "Filtres",
+    "filtersAria": "Afficher les filtres"
+  },
+  "filters": {
+    "labels": {
+      "category": "Catégorie",
+      "type": "Type de voiture",
+      "transmission": "Transmission",
+      "fuel": "Carburant"
+    },
+    "allOption": "Toutes",
+    "reset": "Réinitialiser les filtres",
+    "resetAria": "Réinitialiser les filtres",
+    "removeAria": "Retirer le filtre {{filter}}"
+  },
+  "results": {
+    "label": "voitures trouvées"
+  },
+  "list": {
+    "empty": {
+      "title": "Aucune voiture trouvée",
+      "description": "Essayez d'ajuster les filtres ou recherchez autre chose."
+    }
+  },
+  "card": {
+    "pricing": {
+      "noDepositLabel": "Sans dépôt",
+      "withDepositLabel": "Avec dépôt",
+      "perDay": "/jour",
+      "daysTotal": "x {{days}} jours ="
+    },
+    "actions": {
+      "reserveNoDeposit": "Réserver sans dépôt",
+      "reserveWithDeposit": "Réserver avec dépôt",
+      "reserveAria": "Réserver"
+    }
+  },
+  "cta": {
+    "title": "Vous ne trouvez pas la bonne voiture ?",
+    "description": "Contactez-nous et nous vous aiderons à trouver l'option idéale pour votre voyage.",
+    "primary": "Réservez maintenant",
+    "secondary": "Contactez-nous"
+  }
+}

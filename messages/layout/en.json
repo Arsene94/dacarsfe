@@ -1,0 +1,67 @@
+{
+  "header": {
+    "menu": [
+      { "label": "Home", "href": "/", "aria": "Home" },
+      { "label": "Fleet", "href": "/cars", "aria": "Fleet" },
+      { "label": "Offers", "href": "#oferte", "aria": "Offers" },
+      { "label": "Booking", "href": "/checkout", "aria": "Booking" },
+      { "label": "Contact", "href": "#contact", "aria": "Contact" }
+    ],
+    "cta": {
+      "label": "Book now",
+      "href": "/checkout"
+    },
+    "mobileMenu": {
+      "open": "Open menu",
+      "close": "Close menu"
+    },
+    "languageSwitcher": {
+      "aria": "Choose language",
+      "labels": {
+        "ro": "Romanian",
+        "en": "English",
+        "it": "Italian",
+        "es": "Spanish",
+        "fr": "French",
+        "de": "German"
+      }
+    }
+  },
+  "footer": {
+    "brand": {
+      "name": "DaCars",
+      "tagline": "Honest cars for honest people. Pick-up at the airport in under 5 minutes, with no hidden fees."
+    },
+    "quickLinks": {
+      "title": "Quick Links",
+      "links": [
+        { "label": "Home", "href": "/", "aria": "Home" },
+        { "label": "Our Fleet", "href": "/cars", "aria": "Our Fleet" },
+        { "label": "Special Offers", "href": "#oferte", "aria": "Special Offers" },
+        { "label": "Booking", "href": "/checkout", "aria": "Booking" }
+      ]
+    },
+    "contact": {
+      "title": "Contact",
+      "items": {
+        "phone": "+40 723 817 551",
+        "email": "contact@dacars.ro",
+        "address": "Henri Coandă Airport, Otopeni",
+        "schedule": "Available 24/7"
+      }
+    },
+    "schedule": {
+      "title": "Schedule",
+      "days": "Monday - Sunday",
+      "hours": "24/7",
+      "note": "Pick-up and drop-off at the airport, non-stop"
+    },
+    "bottom": {
+      "copyright": "© 2024 DaCars. All rights reserved.",
+      "links": [
+        { "label": "Terms & Conditions", "href": "#", "aria": "Terms & Conditions" },
+        { "label": "Privacy Policy", "href": "#", "aria": "Privacy Policy" }
+      ]
+    }
+  }
+}

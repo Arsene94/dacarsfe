@@ -14,7 +14,8 @@ import { extractList } from "@/lib/apiResponse";
 import { createVehicleItemListStructuredData } from "@/lib/seo/structuredData";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { useBooking } from "@/context/BookingContext";
-import { ApiCar, Car, CarCategory } from "@/types/car";
+import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
+import { useTranslations } from "@/lib/i18n/useTranslations";
 
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
@@ -46,73 +47,112 @@ const parsePrice = (raw: unknown): number => {
     try { return parsePrice(String(raw)); } catch { return 0; }
 };
 
-const mapApiCar = (c: ApiCar): Car => {
-    const imageCandidates: Array<unknown> = [
-        c.image_preview,
-        c.image,
-        c.thumbnail,
-        c.cover_image,
-    ];
-    if (Array.isArray(c.images)) {
-        imageCandidates.push(
-            c.images.find((value) => typeof value === "string" && value.trim().length > 0) ?? null,
-        );
-    } else if (c.images && typeof c.images === "object") {
-        imageCandidates.push(
-            Object.values(c.images).find(
-                (value) => typeof value === "string" && value.trim().length > 0,
-            ) ?? null,
-        );
-    }
-
-    const primaryImage = imageCandidates.find(
-        (value): value is string => typeof value === "string" && value.trim().length > 0,
+const FleetPage = () => {
+    const { t, locale } = useTranslations("cars");
+    const fallbackCarName = useMemo(() => t("fallbacks.carName"), [t]);
+    const unknownValue = useMemo(() => t("fallbacks.unknownValue"), [t]);
+    const formatCategoryFallback = useCallback(
+        (id: number) => t("fallbacks.category", { values: { id } }),
+        [t],
+    );
+    const formatPassengersLabel = useCallback(
+        (value: string | number) => t("labels.passengers", { values: { count: value } }),
+        [t],
     );
 
-    return {
-        id: c.id,
-        name: c.name ?? "Autovehicul",
-        type: (c.type?.name ?? "—").trim(),
-        typeId: c.type?.id ?? null,
-        image: toImageUrl(primaryImage ?? null),
-        price: parsePrice(
-            Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco)),
-        ),
-        rental_rate: String(Number(c.rental_rate ?? 0)),
-        rental_rate_casco: String(Number(c.rental_rate_casco ?? 0)),
-        days: Number(c.days ?? 0),
-        deposit: Number(c.deposit ?? 0),
-        total_deposit: String(Number(c.total_deposit ?? 0)),
-        total_without_deposit: String(Number(c.total_without_deposit ?? 0)),
-        available: typeof c.available === "boolean" ? c.available : undefined,
-        features: {
-            passengers: Number(c.number_of_seats) || 0,
-            transmission:
+    const mapCar = useCallback(
+        (c: ApiCar): Car => {
+            const imageCandidates: Array<unknown> = [
+                c.image_preview,
+                c.image,
+                c.thumbnail,
+                c.cover_image,
+            ];
+            if (Array.isArray(c.images)) {
+                imageCandidates.push(
+                    c.images.find((value) => typeof value === "string" && value.trim().length > 0) ?? null,
+                );
+            } else if (c.images && typeof c.images === "object") {
+                imageCandidates.push(
+                    Object.values(c.images).find(
+                        (value) => typeof value === "string" && value.trim().length > 0,
+                    ) ?? null,
+                );
+            }
+
+            const primaryImage = imageCandidates.find(
+                (value): value is string => typeof value === "string" && value.trim().length > 0,
+            );
+
+            const resolvedName =
+                typeof c.name === "string" && c.name.trim().length > 0
+                    ? c.name
+                    : fallbackCarName;
+
+            const resolvedType =
+                typeof c.type?.name === "string" && c.type.name.trim().length > 0
+                    ? c.type.name.trim()
+                    : unknownValue;
+
+            const resolvedTransmission =
                 typeof c.transmission === "string"
                     ? c.transmission
-                    : c.transmission?.name ?? "—",
-            transmissionId:
+                    : typeof c.transmission?.name === "string" && c.transmission.name.trim().length > 0
+                        ? c.transmission.name
+                        : unknownValue;
+
+            const transmissionId =
                 typeof c.transmission === "object" && c.transmission !== null
                     ? c.transmission.id ?? null
-                    : null,
-            fuel:
+                    : null;
+
+            const resolvedFuel =
                 typeof c.fuel === "string"
                     ? c.fuel
-                    : c.fuel?.name ?? "—",
-            fuelId:
+                    : typeof c.fuel?.name === "string" && c.fuel.name.trim().length > 0
+                        ? c.fuel.name
+                        : unknownValue;
+
+            const fuelId =
                 typeof c.fuel === "object" && c.fuel !== null
                     ? c.fuel.id ?? null
-                    : null,
-            doors: 4,
-            luggage: 2,
-        },
-        rating: Number(c.avg_review ?? 0) || 0,
-        description: c.content ?? "",
-        specs: [],
-    };
-};
+                    : null;
 
-const FleetPage = () => {
+            const passengersCount = Number(c.number_of_seats) || 0;
+
+            return {
+                id: c.id,
+                name: resolvedName,
+                type: resolvedType,
+                typeId: c.type?.id ?? null,
+                image: toImageUrl(primaryImage ?? null),
+                price: parsePrice(
+                    Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco)),
+                ),
+                rental_rate: String(Number(c.rental_rate ?? 0)),
+                rental_rate_casco: String(Number(c.rental_rate_casco ?? 0)),
+                days: Number(c.days ?? 0),
+                deposit: Number(c.deposit ?? 0),
+                total_deposit: String(Number(c.total_deposit ?? 0)),
+                total_without_deposit: String(Number(c.total_without_deposit ?? 0)),
+                available: typeof c.available === "boolean" ? c.available : undefined,
+                features: {
+                    passengers: passengersCount,
+                    transmission: resolvedTransmission,
+                    transmissionId,
+                    fuel: resolvedFuel,
+                    fuelId,
+                    doors: 4,
+                    luggage: 2,
+                },
+                rating: Number(c.avg_review ?? 0) || 0,
+                description: c.content ?? "",
+                specs: [],
+            };
+        },
+        [fallbackCarName, unknownValue],
+    );
+
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
@@ -158,21 +198,27 @@ const FleetPage = () => {
         const passengers = new Set<number>();
 
         cars.forEach((car) => {
-            if (car.typeId && car.type && car.type !== "—") types.set(car.typeId, car.type);
-            if (car.features.transmissionId && car.features.transmission && car.features.transmission !== "—")
+            if (car.typeId && car.type && car.type !== unknownValue) types.set(car.typeId, car.type);
+            if (car.features.transmissionId && car.features.transmission && car.features.transmission !== unknownValue)
                 transmissions.set(car.features.transmissionId, car.features.transmission);
-            if (car.features.fuelId && car.features.fuel && car.features.fuel !== "—")
+            if (car.features.fuelId && car.features.fuel && car.features.fuel !== unknownValue)
                 fuels.set(car.features.fuelId, car.features.fuel);
             if (car.features.passengers) passengers.add(car.features.passengers);
         });
 
         return {
-            types: Array.from(types, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
-            transmissions: Array.from(transmissions, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
-            fuels: Array.from(fuels, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+            types: Array.from(types, ([id, name]) => ({ id, name })).sort((a, b) =>
+                a.name.localeCompare(b.name, locale, { sensitivity: "base" })
+            ),
+            transmissions: Array.from(transmissions, ([id, name]) => ({ id, name })).sort((a, b) =>
+                a.name.localeCompare(b.name, locale, { sensitivity: "base" })
+            ),
+            fuels: Array.from(fuels, ([id, name]) => ({ id, name })).sort((a, b) =>
+                a.name.localeCompare(b.name, locale, { sensitivity: "base" })
+            ),
             passengers: Array.from(passengers).sort((a, b) => a - b),
         };
-    }, [cars]);
+    }, [cars, locale, unknownValue]);
 
     // core fetcher (stabil)
     const fetchCars = useCallback(async () => {
@@ -181,7 +227,7 @@ const FleetPage = () => {
         setLoading(p => (currentPage === 1 ? true : p));
 
         // construim payload doar cu valori „reale”
-        const payload: Record<string, string | number | undefined> = {
+        const payload: CarSearchUiPayload = {
             start_date: startDate || undefined,
             end_date: endDate || undefined,
             car_type: carTypeParam || undefined,
@@ -199,10 +245,10 @@ const FleetPage = () => {
         if (searchTerm)                   payload.search = searchTerm;
 
         try {
-            const resp = await apiClient.getCarsByDateCriteria(payload);
+            const resp = await apiClient.getCarsByDateCriteria(payload, locale);
             const list = extractList(resp);
 
-            const mapped = list.map(mapApiCar);
+            const mapped = list.map(mapCar);
 
             const respRecord =
                 !Array.isArray(resp) && typeof resp === "object"
@@ -244,7 +290,18 @@ const FleetPage = () => {
             setLoading(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentPage, sortBy, filters, searchTerm, startDate, endDate, carTypeParam, location]);
+    }, [
+        currentPage,
+        sortBy,
+        filters,
+        searchTerm,
+        startDate,
+        endDate,
+        carTypeParam,
+        location,
+        locale,
+        mapCar,
+    ]);
 
     // trigger fetch la montare + când se schimbă pagina
     useEffect(() => { fetchCars(); }, [fetchCars]);
@@ -255,11 +312,11 @@ const FleetPage = () => {
         hasMoreRef.current = true;
     }, [filters, sortBy, searchTerm, startDate, endDate, carTypeParam, location]);
 
-    // categories (o singură dată)
+    // categories (reîncărcare la schimbarea localei pentru fallback-uri)
     useEffect(() => {
         (async () => {
             try {
-                const res = await apiClient.getCarCategories();
+                const res = await apiClient.getCarCategories({ language: locale });
                 const list = extractList(res);
                 let cat: CarCategory[] = [];
 
@@ -278,7 +335,7 @@ const FleetPage = () => {
                                 null;
                             return {
                                 id,
-                                name: nameSource ? String(nameSource) : `Categorie #${id}`,
+                                name: nameSource ? String(nameSource) : formatCategoryFallback(id),
                             };
                         })
                         .filter((entry): entry is CarCategory => entry != null)
@@ -296,7 +353,7 @@ const FleetPage = () => {
                 console.error(e);
             }
         })();
-    }, []);
+    }, [formatCategoryFallback, locale]);
 
     // url sync cu filtrele
     useEffect(() => {
@@ -367,10 +424,12 @@ const FleetPage = () => {
             const label = filterOptions.fuels.find((f) => String(f.id) === filters.fuel)?.name;
             if (label) active.push({ key: "fuel", label });
         }
-        if (filters.passengers !== "all") active.push({ key: "passengers", label: `${filters.passengers} persoane` });
+        if (filters.passengers !== "all") {
+            active.push({ key: "passengers", label: formatPassengersLabel(filters.passengers) });
+        }
         if (filters.priceRange !== "all") active.push({ key: "priceRange", label: String(filters.priceRange) });
         return active;
-    }, [filters, categories, filterOptions]);
+    }, [filters, categories, filterOptions, formatPassengersLabel]);
 
     const handleBooking = (withDeposit: boolean, car: Car) => {
         if (startDate && endDate) {
@@ -405,7 +464,7 @@ const FleetPage = () => {
                         <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                             <div className="flex items-center space-x-2">
                                 <Users className="h-4 w-4 text-jade" />
-                                <span>{car.features.passengers} persoane</span>
+                                <span>{formatPassengersLabel(car.features.passengers)}</span>
                             </div>
                             {!isListView && (
                                 <div className="flex items-center space-x-2">
@@ -431,12 +490,14 @@ const FleetPage = () => {
                     <>
                         <div className="flex items-center justify-between mb-5">
                             <div className="me-1">
-                                <span className="text-jade font-bold font-dm-sans">Fără garanție </span>
+                                <span className="text-jade font-bold font-dm-sans">{t("card.pricing.noDepositLabel")}</span>
                                 <span className="text-base font-poppins font-bold text-jade">{car.rental_rate_casco}€</span>
-                                <span className="text-jade font-bold font-dm-sans">/zi</span>
+                                <span className="text-jade font-bold font-dm-sans"> {t("card.pricing.perDay")}</span>
                                 {startDate && endDate && (
                                     <div>
-                                        <span className="text-jade font-bold font-dm-sans">x {car.days} zile = </span>
+                                        <span className="text-jade font-bold font-dm-sans">
+                                            {t("card.pricing.daysTotal", { values: { days: car.days } })}
+                                        </span>
                                         <span className="text-base font-poppins font-bold text-jade">{car.total_without_deposit}€</span>
                                     </div>
                                 )}
@@ -444,20 +505,22 @@ const FleetPage = () => {
                             <Button
                                 onClick={startDate && endDate ? () => handleBooking(false, car) : undefined}
                                 className="px-2 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
-                                aria-label="Rezervă"
+                                aria-label={t("card.actions.reserveAria")}
                             >
-                                Rezervă fără garanție
+                                {t("card.actions.reserveNoDeposit")}
                             </Button>
                         </div>
 
                         <div className="flex items-center justify-between">
                             <div className="me-3">
-                                <span className="text-gray-600 font-dm-sans">Cu garanție </span>
+                                <span className="text-gray-600 font-dm-sans">{t("card.pricing.withDepositLabel")}</span>
                                 <span className="text-base font-poppins font-bold text-berkeley">{car.rental_rate}€</span>
-                                <span className="text-gray-600 font-dm-sans">/zi</span>
+                                <span className="text-gray-600 font-dm-sans"> {t("card.pricing.perDay")}</span>
                                 {startDate && endDate && (
                                     <div>
-                                        <span className="text-gray-600 font-bold font-dm-sans">x {car.days} zile = </span>
+                                        <span className="text-gray-600 font-bold font-dm-sans">
+                                            {t("card.pricing.daysTotal", { values: { days: car.days } })}
+                                        </span>
                                         <span className="text-base font-poppins font-bold text-berkeley">{car.total_deposit}€</span>
                                     </div>
                                 )}
@@ -465,9 +528,9 @@ const FleetPage = () => {
                             <Button
                                 onClick={startDate && endDate ? () => handleBooking(true, car) : undefined}
                                 className="px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg hover:!bg-jade/90 hover:!text-white transition-colors duration-300"
-                                aria-label="Rezervă"
+                                aria-label={t("card.actions.reserveAria")}
                             >
-                                Rezervă cu garanție
+                                {t("card.actions.reserveWithDeposit")}
                             </Button>
                         </div>
                     </>
@@ -508,11 +571,11 @@ const FleetPage = () => {
         return createVehicleItemListStructuredData(structuredCars, {
             baseUrl: siteUrl,
             pageUrl: fleetPageUrl,
-            name: "Flota DaCars pentru închiriere",
-            description: "Toate mașinile disponibile pentru închiriere de la DaCars, actualizate în timp real.",
-            currency: "EUR",
+            name: t("structuredData.itemList.name"),
+            description: t("structuredData.itemList.description"),
+            currency: t("structuredData.itemList.currency"),
         });
-    }, [cars]);
+    }, [cars, t]);
 
     return (
         <>
@@ -531,10 +594,10 @@ const FleetPage = () => {
                     {/* Header */}
                     <div className="text-center mb-12 animate-fade-in">
                         <h1 className="text-4xl lg:text-5xl font-poppins font-bold text-berkeley mb-6">
-                            Flota noastră <span className="text-jade">completă</span>
+                            {t("header.title.main")} <span className="text-jade">{t("header.title.highlight")}</span>
                         </h1>
                         <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                            Descoperă toate mașinile disponibile și alege cea potrivită pentru călătoria ta.
+                            {t("header.description")}
                         </p>
                     </div>
 
@@ -545,8 +608,8 @@ const FleetPage = () => {
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Caută mașină..."
-                                    aria-label="Caută mașină"
+                                    placeholder={t("search.placeholder")}
+                                    aria-label={t("search.ariaLabel")}
                                     value={searchTerm}
                                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300"
@@ -558,10 +621,10 @@ const FleetPage = () => {
                                     className="w-auto px-4 py-2 transition-all duration-300"
                                     value={sortBy}
                                     onValueChange={(v) => { setSortBy(v); setCurrentPage(1); }}
-                                    aria-label="Sortează mașinile"
+                                    aria-label={t("search.sortAria")}
                                 >
-                                    <option value="cheapest">Preț crescător</option>
-                                    <option value="most_expensive">Preț descrescător</option>
+                                    <option value="cheapest">{t("search.sortOptions.cheapest")}</option>
+                                    <option value="most_expensive">{t("search.sortOptions.mostExpensive")}</option>
                                 </Select>
 
                                 <button
@@ -569,10 +632,10 @@ const FleetPage = () => {
                                     className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-300 ${
                                         showFilters ? "bg-jade text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                                     }`}
-                                    aria-label="Comută filtrele"
+                                    aria-label={t("search.filtersAria")}
                                 >
                                     <SlidersHorizontal className="h-5 w-5" />
-                                    <span className="font-dm-sans">Filtre</span>
+                                    <span className="font-dm-sans">{t("search.filtersButton")}</span>
                                 </button>
                             </div>
                         </div>
@@ -581,14 +644,14 @@ const FleetPage = () => {
                             <div className="border-t border-gray-200 pt-6 animate-slide-up">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                                     <div>
-                                        <Label htmlFor="filter-car-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Categorie</Label>
+                                        <Label htmlFor="filter-car-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{t("filters.labels.category")}</Label>
                                         <Select
                                             id="filter-car-type"
                                             className="px-3 py-2 transition-all duration-300"
                                             value={filters.car_type}
                                             onValueChange={(v) => handleFilterChange("car_type", v)}
                                         >
-                                            <option value="all">Toate</option>
+                                            <option value="all">{t("filters.allOption")}</option>
                                             {categories?.map((category) => (
                                                 <option key={category.id} value={String(category.id)}>{category.name}</option>
                                             ))}
@@ -596,25 +659,25 @@ const FleetPage = () => {
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="filter-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Tip mașină</Label>
+                                        <Label htmlFor="filter-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{t("filters.labels.type")}</Label>
                                         <Select id="filter-type" className="px-3 py-2" value={filters.type} onValueChange={(v) => handleFilterChange("type", v)}>
-                                            <option value="all">Toate</option>
+                                            <option value="all">{t("filters.allOption")}</option>
                                             {filterOptions.types.map(t => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
                                         </Select>
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="filter-transmission" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Transmisie</Label>
+                                        <Label htmlFor="filter-transmission" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{t("filters.labels.transmission")}</Label>
                                         <Select id="filter-transmission" className="px-3 py-2" value={filters.transmission} onValueChange={(v) => handleFilterChange("transmission", v)}>
-                                            <option value="all">Toate</option>
+                                            <option value="all">{t("filters.allOption")}</option>
                                             {filterOptions.transmissions.map(t => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
                                         </Select>
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="filter-fuel" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">Combustibil</Label>
+                                        <Label htmlFor="filter-fuel" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{t("filters.labels.fuel")}</Label>
                                         <Select id="filter-fuel" className="px-3 py-2" value={filters.fuel} onValueChange={(v) => handleFilterChange("fuel", v)}>
-                                            <option value="all">Toate</option>
+                                            <option value="all">{t("filters.allOption")}</option>
                                             {filterOptions.fuels.map(f => <option key={f.id} value={String(f.id)}>{f.name}</option>)}
                                         </Select>
                                     </div>
@@ -624,13 +687,21 @@ const FleetPage = () => {
                                     {activeFilters.map((f) => (
                                         <span key={f.key} className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full">
                       {f.label}
-                                            <button onClick={() => handleFilterChange(f.key, "all")} className="ml-2 hover:text-berkeley" aria-label={`Elimină filtrul ${f.label}`}>
+                                            <button
+                                                onClick={() => handleFilterChange(f.key, "all")}
+                                                className="ml-2 hover:text-berkeley"
+                                                aria-label={t("filters.removeAria", { values: { filter: f.label } })}
+                                            >
                         <X className="h-4 w-4" />
                       </button>
                     </span>
                                     ))}
-                                    <button onClick={clearFilters} className="px-4 py-2 text-jade font-dm-sans font-semibold hover:bg-jade/10 rounded-lg transition-colors duration-300" aria-label="Resetează filtrele">
-                                        Resetează filtrele
+                                    <button
+                                        onClick={clearFilters}
+                                        className="px-4 py-2 text-jade font-dm-sans font-semibold hover:bg-jade/10 rounded-lg transition-colors duration-300"
+                                        aria-label={t("filters.resetAria")}
+                                    >
+                                        {t("filters.reset")}
                                     </button>
                                 </div>
                             </div>
@@ -640,7 +711,7 @@ const FleetPage = () => {
                     {/* Results Count */}
                     <div id="results-section" className="flex items-center mb-8">
                         <p className="text-gray-600 font-dm-sans">
-                            <span className="font-semibold text-berkeley">{totalCars}</span> mașini găsite
+                            <span className="font-semibold text-berkeley">{totalCars}</span> {t("results.label")}
                         </p>
                     </div>
 
@@ -658,16 +729,22 @@ const FleetPage = () => {
                             <div className="bg-gray-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <Filter className="h-12 w-12 text-gray-400" />
                             </div>
-                            <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-4">Nu am găsit mașini</h3>
+                            <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-4">{t("list.empty.title")}</h3>
                             <p className="text-gray-600 font-dm-sans mb-6 max-w-md mx-auto">
-                                Încearcă să modifici filtrele sau să cauți altceva.
+                                {t("list.empty.description")}
                             </p>
                             <div className="flex flex-wrap items-center justify-center gap-2">
-                                <Button onClick={clearFilters} className="px-6 py-3" aria-label="Resetează filtrele">Resetează filtrele</Button>
+                                <Button onClick={clearFilters} className="px-6 py-3" aria-label={t("filters.resetAria")}>
+                                    {t("filters.reset")}
+                                </Button>
                                 {activeFilters.map((f) => (
                                     <span key={f.key} className="flex items-center px-3 py-1 bg-jade/10 text-jade text-sm font-dm-sans rounded-full">
                     {f.label}
-                                        <button onClick={() => handleFilterChange(f.key, "all")} className="ml-2 hover:text-berkeley" aria-label={`Elimină filtrul ${f.label}`}>
+                                        <button
+                                            onClick={() => handleFilterChange(f.key, "all")}
+                                            className="ml-2 hover:text-berkeley"
+                                            aria-label={t("filters.removeAria", { values: { filter: f.label } })}
+                                        >
                       <X className="h-4 w-4" />
                     </button>
                   </span>
@@ -681,17 +758,19 @@ const FleetPage = () => {
 
                     {/* CTA */}
                     <div className="mt-16 bg-gradient-to-r from-berkeley/5 to-jade/5 rounded-3xl p-8 lg:p-12 text-center">
-                        <h3 className="text-3xl font-poppins font-bold text-berkeley mb-4">Nu găsești mașina potrivită?</h3>
+                        <h3 className="text-3xl font-poppins font-bold text-berkeley mb-4">{t("cta.title")}</h3>
                         <p className="text-xl font-dm-sans text-gray-600 mb-8 max-w-2xl mx-auto">
-                            Contactează-ne și te ajutăm să găsești soluția perfectă pentru călătoria ta.
+                            {t("cta.description")}
                         </p>
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
-                            <Link href="/checkout" aria-label="Rezervă acum">
-                                <Button className="transform hover:scale-105 shadow-lg" aria-label="Rezervă acum">Rezervă acum</Button>
+                            <Link href="/checkout" aria-label={t("cta.primary")}>
+                                <Button className="transform hover:scale-105 shadow-lg" aria-label={t("cta.primary")}>
+                                    {t("cta.primary")}
+                                </Button>
                             </Link>
-                            <a href="#contact" aria-label="Contactează-ne">
-                                <Button variant="outline" className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white" aria-label="Contactează-ne">
-                                    Contactează-ne
+                            <a href="#contact" aria-label={t("cta.secondary")}>
+                                <Button variant="outline" className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white" aria-label={t("cta.secondary")}>
+                                    {t("cta.secondary")}
                                 </Button>
                             </a>
                         </div>

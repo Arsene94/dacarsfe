@@ -1,0 +1,126 @@
+{
+  "metadata": {
+    "title": "Complétez votre réservation",
+    "description": "Renseignez vos informations et options pour confirmer la voiture de location DaCars choisie.",
+    "openGraphTitle": "Complétez votre réservation | DaCars Rent a Car"
+  },
+  "fallbacks": {
+    "carName": "Véhicule"
+  },
+  "hero": {
+    "title": "Réservez votre",
+    "highlight": "voiture",
+    "subtitle": "Remplissez le formulaire et nous vous retrouverons à l'aéroport en moins de 5 minutes !"
+  },
+  "emptyState": {
+    "message": "Vous devez saisir vos informations et sélectionner une voiture."
+  },
+  "form": {
+    "personalInfo": {
+      "title": "Informations personnelles",
+      "labels": {
+        "name": "Nom *",
+        "email": "Email *",
+        "phone": "Téléphone",
+        "flight": "Vol (optionnel)"
+      },
+      "placeholders": {
+        "name": "Indiquez votre nom complet",
+        "email": "nom@email.com",
+        "phone": "+40 722 123 456",
+        "flight": "Ex : RO123 ou Blue Air 456"
+      },
+      "searchPlaceholder": "Rechercher un pays...",
+      "feedback": {
+        "noResults": "Aucun pays trouvé",
+        "invalid": "Le numéro de téléphone n'est pas valide pour {{country}}",
+        "example": "Exemple : {{prefix}} 722 123 456"
+      }
+    },
+    "discount": {
+      "title": "Code de réduction",
+      "placeholder": "Ex : WHEEL10",
+      "remove": "Supprimer le code",
+      "validate": "Valider",
+      "ariaLabel": "Valider le code",
+      "messages": {
+        "success": "Réduction appliquée !",
+        "error": "Erreur lors de la validation du code."
+      }
+    },
+    "services": {
+      "title": "Services supplémentaires",
+      "empty": "Aucun service disponible"
+    },
+    "reservationDetails": {
+      "title": "Détails de la réservation",
+      "labels": {
+        "pickupDate": "Date de prise en charge *",
+        "pickupTime": "Heure de prise en charge *",
+        "dropoffDate": "Date de retour *",
+        "dropoffTime": "Heure de retour *"
+      },
+      "errors": {
+        "invalidDates": "La date de retour doit être postérieure à la date de prise en charge.",
+        "unavailable": "La voiture n'est pas disponible pour la période sélectionnée."
+      }
+    },
+    "deposit": {
+      "title": "Dépôt",
+      "without": "Sans dépôt",
+      "with": "Avec dépôt"
+    },
+    "submit": {
+      "label": "Finaliser la réservation",
+      "processing": "Traitement...",
+      "ariaLabel": "Finaliser la réservation"
+    }
+  },
+  "wheelPrize": {
+    "title": "Prix de la Roue de la Fortune",
+    "validUntil": "Valable jusqu'au {{date}}.",
+    "validDefault": "Valable 30 jours à partir du moment du gain.",
+    "note": "L'équipe DaCars appliquera l'avantage lorsque vous finaliserez la réservation.",
+    "savings": "Vous économisez {{amount}}€ sur cette réservation.",
+    "amount": {
+      "percentage": "Réduction de {{amount}}%",
+      "fixed": "Réduction de {{amount}} RON",
+      "extraDay": {
+        "one": "Bonus de {{amount}} jour",
+        "other": "Bonus de {{amount}} jours"
+      },
+      "other": "{{amount}}"
+    }
+  },
+  "summary": {
+    "title": "Récapitulatif de la réservation",
+    "car": "Voiture :",
+    "from": "Du :",
+    "to": "Jusqu'au :",
+    "location": "Lieu :",
+    "locationName": "Aéroport Henri Coandă, Otopeni",
+    "overviewLabel": "Aperçu :",
+    "days": {
+      "one": "{{count}} jour",
+      "other": "{{count}} jours"
+    },
+    "subtotal": "Sous-total :",
+    "servicesLabel": "Services :",
+    "wheelPrizeLabel": "Prix Roue de la Fortune :",
+    "preDiscount": "Total avant réduction :",
+    "discount": "Réduction :",
+    "total": "Total :",
+    "deposit": "Dépôt :",
+    "depositNote": "(+{{amount}}€ de dépôt)"
+  },
+  "footer": {
+    "disclaimer": "*Prix final, aucun frais caché",
+    "includesTitle": "Comprend :",
+    "includes": [
+      "✓ Prise en charge en moins de 5 minutes",
+      "✓ Disponibilité 24/7",
+      "✓ Aucun frais caché",
+      "✓ Modifications gratuites"
+    ]
+  }
+}

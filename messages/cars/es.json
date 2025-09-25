@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "title": "Flota completa de coches de alquiler",
+    "description": "Explora toda la flota de DaCars y filtra rápidamente los coches disponibles para alquilar.",
+    "keywords": [
+      "flota alquiler coches",
+      "coches disponibles Bucarest",
+      "alquiler sin depósito",
+      "reserva de coche online",
+      "flota DaCars"
+    ],
+    "openGraphTitle": "Flota completa de coches de alquiler | DaCars Rent a Car",
+    "breadcrumb": {
+      "home": "Inicio",
+      "fleet": "Flota de coches"
+    }
+  },
+  "structuredData": {
+    "itemList": {
+      "name": "Flota de alquiler DaCars",
+      "description": "Todos los vehículos disponibles para alquilar en DaCars, actualizados en tiempo real.",
+      "currency": "EUR"
+    }
+  },
+  "fallbacks": {
+    "carName": "Vehículo",
+    "unknownValue": "—",
+    "category": "Categoría #{{id}}"
+  },
+  "labels": {
+    "passengers": "{{count}} pasajeros"
+  },
+  "header": {
+    "title": {
+      "main": "Nuestra",
+      "highlight": "flota completa"
+    },
+    "description": "Explora cada vehículo disponible y elige el ideal para tu viaje."
+  },
+  "search": {
+    "placeholder": "Busca un coche...",
+    "ariaLabel": "Buscar un coche",
+    "sortAria": "Ordenar coches",
+    "sortOptions": {
+      "cheapest": "Precio más bajo primero",
+      "mostExpensive": "Precio más alto primero"
+    },
+    "filtersButton": "Filtros",
+    "filtersAria": "Mostrar/ocultar filtros"
+  },
+  "filters": {
+    "labels": {
+      "category": "Categoría",
+      "type": "Tipo de coche",
+      "transmission": "Transmisión",
+      "fuel": "Combustible"
+    },
+    "allOption": "Todos",
+    "reset": "Restablecer filtros",
+    "resetAria": "Restablecer filtros",
+    "removeAria": "Quitar filtro {{filter}}"
+  },
+  "results": {
+    "label": "coches encontrados"
+  },
+  "list": {
+    "empty": {
+      "title": "No se encontraron coches",
+      "description": "Prueba a ajustar los filtros o busca otra opción."
+    }
+  },
+  "card": {
+    "pricing": {
+      "noDepositLabel": "Sin depósito",
+      "withDepositLabel": "Con depósito",
+      "perDay": "/día",
+      "daysTotal": "x {{days}} días ="
+    },
+    "actions": {
+      "reserveNoDeposit": "Reservar sin depósito",
+      "reserveWithDeposit": "Reservar con depósito",
+      "reserveAria": "Reservar"
+    }
+  },
+  "cta": {
+    "title": "¿No encuentras el coche adecuado?",
+    "description": "Ponte en contacto y te ayudaremos a encontrar la opción perfecta para tu viaje.",
+    "primary": "Reserva ahora",
+    "secondary": "Contáctanos"
+  }
+}

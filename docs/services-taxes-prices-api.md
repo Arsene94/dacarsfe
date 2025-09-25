@@ -5,8 +5,8 @@ These endpoints manage ancillary services, tax rates, and per-category price lad
 ## Additional services (`/api/services`)
 | Method | Description | Auth | Permission |
 | --- | --- | --- | --- |
-| GET `/api/services` | Paginated list of services with translations. Supports `status`, `name_like`. | Public | – |
-| GET `/api/services/{id}` | Retrieve a service. | Public | – |
+| GET `/api/services/{lang?}` | Paginated list of services with translations. Supports `status`, `name_like`. | Public | – |
+| GET `/api/services/{id}/{lang?}` | Retrieve a service. | Public | – |
 | POST `/api/services` | Create a service (fields below). | Admin | `services.create` |
 | PUT/PATCH `/api/services/{id}` | Update service. | Admin | `services.update` |
 | DELETE `/api/services/{id}` | Delete service. | Admin | `services.delete` |
@@ -57,8 +57,8 @@ Translations accept any combination of `name`, `description`, `content` and resp
 ## Taxes (`/api/taxes`)
 | Method | Description | Auth | Permission |
 | --- | --- | --- | --- |
-| GET `/api/taxes` | Paginated list of tax rules. Filter by `status`. | Public | – |
-| GET `/api/taxes/{id}` | Retrieve a tax. | Public | – |
+| GET `/api/taxes/{lang?}` | Paginated list of tax rules. Filter by `status`. | Public | – |
+| GET `/api/taxes/{id}/{lang?}` | Retrieve a tax. | Public | – |
 | POST `/api/taxes` | Create a tax (`name`, `percentage`, optional `priority`). | Admin | `taxes.create` |
 | PUT/PATCH `/api/taxes/{id}` | Update a tax. | Admin | `taxes.update` |
 | DELETE `/api/taxes/{id}` | Delete. | Admin | `taxes.delete` |

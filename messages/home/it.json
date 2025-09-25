@@ -1,0 +1,278 @@
+{
+  "hero": {
+    "badge": "Ti riportiamo a casa",
+    "title": "Noleggio auto Bucarest - Otopeni",
+    "subtitle": {
+      "lead": "Ritiro in aeroporto in meno di 5 minuti.",
+      "highlight": "Nessun costo nascosto."
+    },
+    "features": [
+      { "title": "<5 min", "description": "Consegna rapidissima" },
+      { "title": "Zero costi", "description": "Prezzi trasparenti" },
+      { "title": "24/7", "description": "Sempre disponibili" }
+    ],
+    "form": {
+      "labels": {
+        "pickup": "Data di ritiro",
+        "return": "Data di riconsegna",
+        "location": "Località",
+        "carType": "Tipo di auto"
+      },
+      "placeholders": {
+        "location": "Scegli una località",
+        "carType": "Tutti i tipi"
+      },
+      "options": {
+        "locations": [
+          { "value": "otopeni", "label": "Aeroporto di Otopeni" }
+        ]
+      },
+      "submit": "Cerca auto",
+      "aria": {
+        "submit": "Cerca auto",
+        "location": "Scegli il luogo di ritiro"
+      }
+    }
+  },
+  "fleet": {
+    "title": {
+      "main": "La nostra flotta",
+      "highlight": "premium"
+    },
+    "description": "Auto moderne, controllate e curate per garantirti sicurezza e comfort.",
+    "labels": {
+      "seatsSuffix": "persone"
+    },
+    "cta": "Vedi tutte le auto",
+    "carousel": {
+      "aria": "Carosello",
+      "previous": "Auto precedente",
+      "next": "Auto successiva",
+      "position": "{{current}} di {{total}}"
+    },
+    "structuredData": {
+      "name": "Auto in evidenza dalla flotta DaCars",
+      "description": "Selezione attuale dei veicoli più richiesti disponibili a noleggio da DaCars.",
+      "currency": "EUR"
+    }
+  },
+  "benefits": {
+    "title": {
+      "main": "Perché scegliere",
+      "highlight": "DaCars"
+    },
+    "description": "Un servizio affidabile pensato per i romeni che tornano a casa e vogliono un'auto sicura.",
+    "items": [
+      {
+        "title": "Niente scartoffie",
+        "description": "Procedura semplice e veloce, senza moduli complicati o attese."
+      },
+      {
+        "title": "Disponibili 24/7",
+        "description": "Ritiro e consegna in aeroporto quando ne hai bisogno."
+      },
+      {
+        "title": "Massima flessibilità",
+        "description": "Modifica o annulla la prenotazione senza costi extra."
+      },
+      {
+        "title": "Zero costi nascosti",
+        "description": "Prezzi trasparenti su cui puoi contare. Quello che vedi è quello che paghi."
+      }
+    ],
+    "stats": [
+      { "value": "500+", "label": "Clienti soddisfatti" },
+      { "value": "24/7", "label": "Disponibilità" },
+      { "value": "<5min", "label": "Tempo di consegna" },
+      { "value": "0", "label": "Costi nascosti" }
+    ]
+  },
+  "offers": {
+    "title": {
+      "main": "Offerte",
+      "highlight": "speciali"
+    },
+    "description": "Promozioni esclusive per i momenti importanti della tua vita.",
+    "cards": [
+      {
+        "title": "Pacchetto matrimonio",
+        "discount": "Sconto 10%",
+        "description": "Per gli anni più felici davanti a voi. Un'auto elegante per il tuo giorno speciale.",
+        "features": ["Decorazioni incluse", "Consegna presso la tua location", "Autista su richiesta"],
+        "color": "bg-gradient-to-br from-pink-500 to-rose-600",
+        "textColor": "text-white"
+      },
+      {
+        "title": "Sconto amici",
+        "discount": "Sconto 20%",
+        "description": "Porta i tuoi amici e risparmia! Più siete, migliore è l'offerta.",
+        "features": ["Per gruppi di 4+", "Valido per 30 giorni", "Combinabile con altre offerte"],
+        "color": "bg-gradient-to-br from-jade to-emerald-600",
+        "textColor": "text-white"
+      }
+    ],
+    "cta": {
+      "primary": "Richiedi l'offerta",
+      "secondaryTitle": "Promozione stagionale limitata",
+      "secondaryDescription": "Prenota ora per le vacanze e approfitta di tariffe preferenziali con servizi premium inclusi.",
+      "secondaryButton": "Prenota con sconto"
+    }
+  },
+  "process": {
+    "title": {
+      "main": "Il nostro processo",
+      "highlight": "è semplice"
+    },
+    "description": "Solo 3 semplici passi ti separano dalla tua auto. Niente stress, niente problemi.",
+    "steps": [
+      {
+        "number": "01",
+        "title": "Prenota online",
+        "description": "Compila il modulo veloce e scegli l'auto perfetta per te.",
+        "color": "bg-jade"
+      },
+      {
+        "number": "02",
+        "title": "Ritiro in aeroporto",
+        "description": "Ci incontriamo agli arrivi in meno di 5 minuti con l'auto pronta.",
+        "color": "bg-berkeley"
+      },
+      {
+        "number": "03",
+        "title": "Guida a casa in sicurezza",
+        "description": "Arriva a casa comodo con l'auto noleggiata.",
+        "color": "bg-jade"
+      }
+    ],
+    "cta": {
+      "title": "Pronto a iniziare?",
+      "description": "La prenotazione richiede solo 2 minuti. La tua auto ti aspetta in aeroporto!",
+      "primary": "Prenota ora",
+      "secondary": "Guarda la flotta"
+    }
+  },
+  "contact": {
+    "title": {
+      "main": "Contattaci",
+      "highlight": "quando vuoi"
+    },
+    "description": "Siamo qui 24/7. Contattaci con una delle opzioni qui sotto.",
+    "items": {
+      "phone": {
+        "title": "Telefono",
+        "description": "Disponibile 24/7 per emergenze",
+        "aria": "Chiama +40 723 817 551"
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Mandaci un messaggio per una risposta rapida",
+        "aria": "Scrivici su WhatsApp al +40 723 817 551"
+      },
+      "email": {
+        "title": "Email",
+        "description": "Per domande generali",
+        "aria": "Invia un'email a contact@dacars.ro"
+      },
+      "location": {
+        "title": "Località",
+        "description": "Punto di ritiro principale",
+        "address": "Strada Bucurestilor 305",
+        "city": "Otopeni, Ilfov"
+      },
+      "schedule": {
+        "title": "Orari",
+        "description": "Ritiro e riconsegna",
+        "details": ["24/7 - Non-stop", "Sempre disponibili"]
+      }
+    },
+    "map": {
+      "title": "Dove ci trovi",
+      "advisor": "Consulente:",
+      "advisorText": "Quando atterri, chiamaci al",
+      "clientDialog": [
+        { "speaker": "Cliente", "message": "Va bene, e poi?" },
+        { "speaker": "DaCars", "message": "Ci vediamo davanti alla stazione CFR, vicino alla cupola di vetro verde, al terminal Arrivi." },
+        { "speaker": "Cliente", "message": "Perfetto, a presto." }
+      ]
+    }
+  },
+  "wheel": {
+    "popup": {
+      "title": "Benvenuto su DaCars!",
+      "description": "Prima di esplorare le nostre offerte, gira la Ruota della Fortuna e sblocca vantaggi esclusivi!"
+    },
+    "section": {
+      "title": "Ruota della Fortuna DaCars",
+      "description": "Metti alla prova la fortuna e vinci sconti e benefici esclusivi per la tua prossima prenotazione!"
+    },
+    "activePeriod": "Periodo attivo: {{period}}. Inserisci i tuoi dati, gira la ruota e scopri cosa vinci!",
+    "defaultPrompt": "Inserisci i tuoi dati, gira la ruota e scopri cosa vinci!",
+    "spinsLeft": "Giri rimasti",
+    "form": {
+      "name": {
+        "label": "Nome e cognome",
+        "placeholder": "es. Maria Popescu"
+      },
+      "phone": {
+        "label": "Telefono",
+        "placeholder": "es. +40 712 345 678"
+      },
+      "consent": "Abbiamo bisogno di questi dati per validare il tuo premio secondo le regole DaCars."
+    },
+    "storedPrize": {
+      "title": "Premio attivo Ruota della Fortuna",
+      "prefix": "Hai vinto ",
+      "suffix": ". Il premio è valido fino al {{expiry}} e puoi riscattarlo direttamente al checkout.",
+      "noExpiry": "scadenza automatica"
+    },
+    "errors": {
+      "load": "Si è verificato un errore durante il caricamento della ruota. Riprova più tardi.",
+      "form": "Compila tutti i campi prima di girare.",
+      "loadNoPeriod": "Al momento non c'è un periodo attivo per la ruota.",
+      "loadNoPrizes": "Non ci sono premi disponibili per il periodo corrente.",
+      "loadFailed": "Non siamo riusciti a caricare i premi. Riprova più tardi.",
+      "unavailable": "La ruota non è disponibile in questo momento.",
+      "activePrize": "Hai già un premio attivo dalla Ruota della Fortuna. Puoi usarlo al checkout entro 30 giorni.",
+      "nameRequired": "Inserisci il tuo nome completo così possiamo salvare il premio.",
+      "phoneRequired": "Inserisci un numero di telefono valido.",
+      "noPrize": "Non siamo riusciti a determinare un premio ora. Riprova più tardi.",
+      "saveFallback": "Si è verificato un errore durante il salvataggio del premio. Riprova."
+    },
+    "buttons": {
+      "spin": "Gira la ruota",
+      "spinning": "Giro in corso...",
+      "activePrize": "Premio attivo",
+      "outOfSpins": "Nessun giro disponibile",
+      "reset": "Reset (Demo)",
+      "close": "Chiudi",
+      "tryAgain": "Riprova",
+      "retrySave": "Riprova a salvare",
+      "continue": "Continua la prenotazione"
+    },
+    "winner": {
+      "title": "Vinci premi esclusivi!",
+      "tryAgainHeading": "Riprova!",
+      "successHeading": "Congratulazioni! 🎉",
+      "descriptionFallback": "Continua la prenotazione per scoprire di più.",
+      "tryAgainMessage": "Non preoccuparti! Hai ottenuto un'altra possibilità di vincere un premio ancora migliore.",
+      "successMessage": "Abbiamo salvato il tuo premio e riceverai presto i dettagli via SMS o email.",
+      "expiry": "Il premio è valido fino al {{expiry}} e lo trovi anche salvato nella pagina di checkout.",
+      "saving": "Stiamo salvando il premio...",
+      "saved": "Premio salvato con successo! Il team DaCars ti invierà presto tutti i dettagli.",
+      "saveError": "Non siamo riusciti a salvare il premio. Riprova.",
+      "close": "Chiudi"
+    },
+    "regulation": {
+      "title": "Regole rapide:",
+      "items": [
+        "• Un giro per ogni cliente valido.",
+        "• Premio valido per 30 giorni dalla data di vincita.",
+        "• Si applica solo alle nuove prenotazioni effettuate su DaCars.",
+        "• Non cumulabile con altre offerte o sconti."
+      ]
+    },
+    "assets": {
+      "logoAlt": "Logo DaCars"
+    }
+  }
+}

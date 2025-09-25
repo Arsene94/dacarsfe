@@ -1,0 +1,278 @@
+{
+  "hero": {
+    "badge": "Wir bringen dich nach Hause",
+    "title": "Autovermietung Bukarest – Otopeni",
+    "subtitle": {
+      "lead": "Abholung am Flughafen in unter 5 Minuten.",
+      "highlight": "Keine versteckten Gebühren."
+    },
+    "features": [
+      { "title": "Unter 5 Min", "description": "Schnelle Übergabe" },
+      { "title": "Keine Gebühren", "description": "Transparente Preise" },
+      { "title": "24/7", "description": "Immer verfügbar" }
+    ],
+    "form": {
+      "labels": {
+        "pickup": "Abholdatum",
+        "return": "Rückgabedatum",
+        "location": "Standort",
+        "carType": "Fahrzeugtyp"
+      },
+      "placeholders": {
+        "location": "Standort wählen",
+        "carType": "Alle Typen"
+      },
+      "options": {
+        "locations": [
+          { "value": "otopeni", "label": "Flughafen Otopeni" }
+        ]
+      },
+      "submit": "Autos suchen",
+      "aria": {
+        "submit": "Autos suchen",
+        "location": "Abholort wählen"
+      }
+    }
+  },
+  "fleet": {
+    "title": {
+      "main": "Unsere",
+      "highlight": "Premiumflotte"
+    },
+    "description": "Moderne Fahrzeuge, geprüft und gepflegt, damit du sicher und komfortabel unterwegs bist.",
+    "labels": {
+      "seatsSuffix": "Personen"
+    },
+    "cta": "Alle Autos ansehen",
+    "carousel": {
+      "aria": "Karussell",
+      "previous": "Voriges Auto",
+      "next": "Nächstes Auto",
+      "position": "{{current}} von {{total}}"
+    },
+    "structuredData": {
+      "name": "Ausgewählte Fahrzeuge der DaCars-Flotte",
+      "description": "Aktuelle Auswahl beliebter Fahrzeuge, die bei DaCars zur Miete verfügbar sind.",
+      "currency": "EUR"
+    }
+  },
+  "benefits": {
+    "title": {
+      "main": "Warum",
+      "highlight": "DaCars wählen"
+    },
+    "description": "Ein vertrauenswürdiger Service für Rumänen, die nach Hause zurückkehren und ein zuverlässiges Auto brauchen.",
+    "items": [
+      {
+        "title": "Keine Bürokratie",
+        "description": "Einfacher und schneller Prozess ohne komplizierte Formulare oder Wartezeiten."
+      },
+      {
+        "title": "Rund um die Uhr",
+        "description": "Abholung und Rückgabe am Flughafen, wann immer du ankommst."
+      },
+      {
+        "title": "Maximale Flexibilität",
+        "description": "Ändere oder storniere deine Buchung ohne zusätzliche Gebühren."
+      },
+      {
+        "title": "Keine versteckten Kosten",
+        "description": "Transparente Preise, auf die du dich verlassen kannst."
+      }
+    ],
+    "stats": [
+      { "value": "500+", "label": "Zufriedene Kunden" },
+      { "value": "24/7", "label": "Verfügbarkeit" },
+      { "value": "<5min", "label": "Übergabezeit" },
+      { "value": "0", "label": "Versteckte Gebühren" }
+    ]
+  },
+  "offers": {
+    "title": {
+      "main": "Spezielle",
+      "highlight": "Angebote"
+    },
+    "description": "Exklusive Aktionen für die wichtigen Momente in deinem Leben.",
+    "cards": [
+      {
+        "title": "Hochzeitspaket",
+        "discount": "10 % Rabatt",
+        "description": "Für die schönsten Jahre vor euch. Ein stilvolles Auto für euren großen Tag.",
+        "features": ["Dekoration inklusive", "Lieferung zu eurer Location", "Fahrer auf Anfrage"],
+        "color": "bg-gradient-to-br from-pink-500 to-rose-600",
+        "textColor": "text-white"
+      },
+      {
+        "title": "Freundesrabatt",
+        "discount": "20 % Rabatt",
+        "description": "Bring deine Freunde mit und spare! Je mehr ihr seid, desto besser das Angebot.",
+        "features": ["Für Gruppen ab 4 Personen", "Gültig 30 Tage", "Mit anderen Angeboten kombinierbar"],
+        "color": "bg-gradient-to-br from-jade to-emerald-600",
+        "textColor": "text-white"
+      }
+    ],
+    "cta": {
+      "primary": "Angebot sichern",
+      "secondaryTitle": "Limitierte Saisonaktion",
+      "secondaryDescription": "Buche jetzt für die Feiertage und genieße Vorzugspreise inklusive Premium-Services.",
+      "secondaryButton": "Mit Rabatt buchen"
+    }
+  },
+  "process": {
+    "title": {
+      "main": "Unser Ablauf",
+      "highlight": "ganz einfach"
+    },
+    "description": "Nur 3 einfache Schritte trennen dich von deinem Auto. Kein Stress, kein Aufwand.",
+    "steps": [
+      {
+        "number": "01",
+        "title": "Online reservieren",
+        "description": "Fülle das kurze Formular aus und wähle das passende Auto.",
+        "color": "bg-jade"
+      },
+      {
+        "number": "02",
+        "title": "Abholung am Flughafen",
+        "description": "Wir treffen dich innerhalb von 5 Minuten in der Ankunftshalle mit fertig vorbereitetem Auto.",
+        "color": "bg-berkeley"
+      },
+      {
+        "number": "03",
+        "title": "Sicher nach Hause fahren",
+        "description": "Komm bequem und sicher mit deinem Mietwagen nach Hause.",
+        "color": "bg-jade"
+      }
+    ],
+    "cta": {
+      "title": "Bereit zu starten?",
+      "description": "Die Buchung dauert nur 2 Minuten. Dein Auto wartet am Flughafen!",
+      "primary": "Jetzt buchen",
+      "secondary": "Flotte ansehen"
+    }
+  },
+  "contact": {
+    "title": {
+      "main": "Kontaktiere uns",
+      "highlight": "jederzeit"
+    },
+    "description": "Wir sind 24/7 für dich da. Wähle einen der folgenden Kontaktwege.",
+    "items": {
+      "phone": {
+        "title": "Telefon",
+        "description": "24/7 für Notfälle erreichbar",
+        "aria": "+40 723 817 551 anrufen"
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Schreib uns für eine schnelle Antwort",
+        "aria": "Schicke uns eine WhatsApp an +40 723 817 551"
+      },
+      "email": {
+        "title": "E-Mail",
+        "description": "Für allgemeine Fragen",
+        "aria": "Eine E-Mail an contact@dacars.ro senden"
+      },
+      "location": {
+        "title": "Standort",
+        "description": "Hauptabholpunkt",
+        "address": "Șoseaua Bucureștilor 305",
+        "city": "Otopeni, Ilfov"
+      },
+      "schedule": {
+        "title": "Öffnungszeiten",
+        "description": "Abholung und Rückgabe",
+        "details": ["24/7 - Rund um die Uhr", "Immer verfügbar"]
+      }
+    },
+    "map": {
+      "title": "Unser Standort",
+      "advisor": "Berater:",
+      "advisorText": "Wenn du landest, ruf uns an unter",
+      "clientDialog": [
+        { "speaker": "Kunde", "message": "Okay, und was dann?" },
+        { "speaker": "DaCars", "message": "Wir treffen uns vor dem CFR-Bahnhof, in der Nähe der grünen Glaskuppel am Ankunftsterminal." },
+        { "speaker": "Kunde", "message": "Perfekt, bis gleich." }
+      ]
+    }
+  },
+  "wheel": {
+    "popup": {
+      "title": "Willkommen bei DaCars!",
+      "description": "Bevor du unsere Angebote entdeckst, drehe das Glücksrad und sichere dir exklusive Vorteile!"
+    },
+    "section": {
+      "title": "DaCars Glücksrad",
+      "description": "Versuche dein Glück und gewinne exklusive Rabatte und Vorteile für deine nächste Buchung!"
+    },
+    "activePeriod": "Aktionszeitraum: {{period}}. Gib deine Daten ein, drehe das Rad und sieh, was du gewinnst!",
+    "defaultPrompt": "Gib deine Daten ein, drehe das Rad und sieh, was du gewinnst!",
+    "spinsLeft": "Verbleibende Drehungen",
+    "form": {
+      "name": {
+        "label": "Vollständiger Name",
+        "placeholder": "z. B. Maria Popescu"
+      },
+      "phone": {
+        "label": "Telefon",
+        "placeholder": "z. B. +40 712 345 678"
+      },
+      "consent": "Wir benötigen diese Daten, um deinen Gewinn gemäß den DaCars-Regeln zu bestätigen."
+    },
+    "storedPrize": {
+      "title": "Aktiver Gewinn vom Glücksrad",
+      "prefix": "Du hast ",
+      "suffix": " gewonnen. Der Gewinn ist bis {{expiry}} gültig und kann direkt beim Checkout eingelöst werden.",
+      "noExpiry": "automatisches Ablaufdatum"
+    },
+    "errors": {
+      "load": "Beim Laden des Rads ist etwas schiefgelaufen. Bitte versuche es später erneut.",
+      "form": "Bitte fülle alle Felder aus, bevor du drehst.",
+      "loadNoPeriod": "Derzeit ist kein Aktionszeitraum für das Rad aktiv.",
+      "loadNoPrizes": "Für den aktuellen Zeitraum stehen keine Gewinne zur Verfügung.",
+      "loadFailed": "Wir konnten die Gewinne nicht laden. Bitte versuche es später erneut.",
+      "unavailable": "Das Rad ist momentan nicht verfügbar.",
+      "activePrize": "Du hast bereits einen aktiven Gewinn vom Glücksrad. Du kannst ihn innerhalb der nächsten 30 Tage beim Checkout verwenden.",
+      "nameRequired": "Bitte gib deinen vollständigen Namen ein, damit wir den Gewinn speichern können.",
+      "phoneRequired": "Bitte gib eine gültige Telefonnummer ein.",
+      "noPrize": "Wir konnten aktuell keinen Gewinn bestimmen. Bitte versuche es später erneut.",
+      "saveFallback": "Beim Speichern deines Gewinns ist ein Fehler aufgetreten. Bitte versuche es erneut."
+    },
+    "buttons": {
+      "spin": "Rad drehen",
+      "spinning": "Dreht...",
+      "activePrize": "Aktiver Gewinn",
+      "outOfSpins": "Keine Drehungen mehr",
+      "reset": "Zurücksetzen (Demo)",
+      "close": "Schließen",
+      "tryAgain": "Noch einmal versuchen",
+      "retrySave": "Speichern wiederholen",
+      "continue": "Weiter zur Buchung"
+    },
+    "winner": {
+      "title": "Gewinne exklusive Preise!",
+      "tryAgainHeading": "Versuch es erneut!",
+      "successHeading": "Herzlichen Glückwunsch! 🎉",
+      "descriptionFallback": "Fahre mit der Buchung fort, um mehr zu erfahren.",
+      "tryAgainMessage": "Kein Problem! Du erhältst eine weitere Chance auf einen noch besseren Gewinn.",
+      "successMessage": "Wir haben deinen Gewinn gespeichert und senden dir die Details in Kürze per SMS oder E-Mail.",
+      "expiry": "Der Gewinn ist bis {{expiry}} gültig und wird auch auf der Checkout-Seite angezeigt.",
+      "saving": "Dein Gewinn wird gespeichert...",
+      "saved": "Der Gewinn wurde erfolgreich gespeichert! Das DaCars-Team schickt dir bald alle Details.",
+      "saveError": "Wir konnten den Gewinn nicht speichern. Bitte versuche es erneut.",
+      "close": "Schließen"
+    },
+    "regulation": {
+      "title": "Kurze Regeln:",
+      "items": [
+        "• Eine Drehung pro berechtigtem Kunden.",
+        "• Gewinn 30 Tage ab Gewinn-Datum gültig.",
+        "• Gilt nur für neue Buchungen über DaCars.",
+        "• Nicht mit anderen Angeboten oder Rabatten kombinierbar."
+      ]
+    },
+    "assets": {
+      "logoAlt": "DaCars-Logo"
+    }
+  }
+}

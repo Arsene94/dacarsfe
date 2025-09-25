@@ -7,8 +7,8 @@ Wheel configuration and prize listings are exposed publicly so the marketing sit
 ### Wheel configuration (`/api/wheel-of-fortunes`)
 | Method | URL | Description |
 | --- | --- | --- |
-| GET | `/api/wheel-of-fortunes` | List wheel slices. Supports `?include=period` and filter/query helpers from `BaseCrudController`. |
-| GET | `/api/wheel-of-fortunes/{id}` | Retrieve a specific slice. |
+| GET | `/api/wheel-of-fortunes/{lang?}` | List wheel slices. Supports `?include=period` and filter/query helpers from `BaseCrudController`. |
+| GET | `/api/wheel-of-fortunes/{id}/{lang?}` | Retrieve a specific slice. |
 | POST | `/api/wheel-of-fortunes` | Create a new slice for the active wheel campaign. |
 | PUT/PATCH | `/api/wheel-of-fortunes/{id}` | Update slice details (probability, colors, etc.). |
 | DELETE | `/api/wheel-of-fortunes/{id}` | Remove a slice. |

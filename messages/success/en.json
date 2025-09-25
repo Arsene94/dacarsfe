@@ -1,0 +1,106 @@
+{
+  "metadata": {
+    "title": "Your reservation is confirmed",
+    "description": "Review your DaCars reservation summary, pickup details and our team's contact information.",
+    "openGraphTitle": "Your reservation is confirmed | DaCars Rent a Car"
+  },
+  "loading": "Loading your reservation details...",
+  "fallbacks": {
+    "guestName": "DaCars guest"
+  },
+  "header": {
+    "title": {
+      "prefix": "Your reservation is",
+      "highlight": "confirmed!"
+    },
+    "thanks": "Thank you, {{name}}! Your car is waiting for you at the airport.",
+    "tagline": "See you back home!",
+    "reference": "Reservation {{id}}"
+  },
+  "wheelPrize": {
+    "title": "Wheel of Fortune prize",
+    "applied": "You used the prize {{title}}{{amount}}.",
+    "amountSuffix": " — {{amount}}",
+    "savings": "You save {{amount}}€ on this reservation.",
+    "expiry": {
+      "withDate": "Prize valid until {{date}}.",
+      "fallback": "Prize remains valid for 30 days after winning."
+    },
+    "amount": {
+      "percentage_discount": "{{amount}}% discount",
+      "fixed_discount": "{{amount}} RON discount",
+      "extra_rental_day": {
+        "one": "Bonus of {{amount}} day",
+        "other": "Bonus of {{amount}} days"
+      },
+      "other": "{{amount}}"
+    }
+  },
+  "summary": {
+    "title": "Your reservation details",
+    "car": {
+      "title": "Your car"
+    },
+    "period": {
+      "title": "Period",
+      "pickupLabel": "Pickup:",
+      "dropoffLabel": "Return:"
+    },
+    "location": {
+      "title": "Location",
+      "options": {
+        "aeroport": "Henri Coandă Airport, Otopeni",
+        "city": "Downtown Bucharest",
+        "other": "Other location"
+      }
+    },
+    "pricing": {
+      "title": "Total cost",
+      "subtotalLabel": "Subtotal:",
+      "servicesLabel": "Services:",
+      "wheelPrizeLabel": "Wheel of Fortune prize:",
+      "discountLabel": "Discount:",
+      "totalLabel": "Total:",
+      "note": "*Final price, no hidden fees"
+    },
+    "flight": {
+      "title": "Your flight"
+    }
+  },
+  "instructions": {
+    "title": "What happens next?",
+    "steps": [
+      {
+        "title": "Upon landing",
+        "description": "Call us as soon as you leave the terminal"
+      },
+      {
+        "title": "We'll meet you",
+        "description": "We'll reach you in the short-term parking area in under 5 minutes"
+      },
+      {
+        "title": "Safe travels!",
+        "description": "We hand you the keys and you can head home safely"
+      }
+    ]
+  },
+  "contact": {
+    "title": "Contact us anytime:",
+    "phone": "+40 722 123 456",
+    "ariaLabel": "Call {{phone}}",
+    "availability": "Available 24/7 for emergencies"
+  },
+  "actions": {
+    "print": {
+      "label": "Print details",
+      "aria": "Print the reservation details"
+    },
+    "home": {
+      "label": "Back home",
+      "aria": "Back home"
+    }
+  },
+  "footer": {
+    "message": "You'll receive an email confirmation with all reservation details."
+  }
+}
