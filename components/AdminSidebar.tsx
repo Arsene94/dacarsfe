@@ -33,6 +33,7 @@ import {
   Gauge,
   Palette,
   Fuel,
+  Languages,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -479,6 +480,18 @@ const menuItems: readonly AdminSidebarItem[] = [
     href: "/admin/mail-branding",
     icon: Mail,
     requiredPermissions: buildPermissionList("mail-branding", ["mailbranding", "mail"]),
+  },
+  {
+    name: "Traduceri site",
+    href: "/admin/translations",
+    icon: Languages,
+    requiredPermissions: buildPermissionList("translations", [
+      "translation",
+      "translations",
+      "i18n",
+      "messages",
+      "localization",
+    ]),
   },
   {
     name: "Utilizatori",
