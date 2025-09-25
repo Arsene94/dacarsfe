@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { cn } from "@/lib/utils";
 import type { PageKey } from "@/lib/i18n/translations";
 
 const PAGE_OPTIONS: Array<{ value: PageKey; label: string; description: string }> = [
@@ -25,6 +27,24 @@ const LOCALE_LABELS: Record<Locale, string> = {
     de: "Germană",
 };
 
+type JsonPrimitive = string | number | boolean | null;
+
+type PathSegment =
+    | { type: "key"; key: string }
+    | { type: "index"; index: number };
+
+type PrimitiveType = "string" | "number" | "boolean" | "null";
+
+type TranslationRow = {
+    id: string;
+    segments: PathSegment[];
+    baseValue: JsonPrimitive;
+    baseDisplay: string;
+    translationValue: string;
+    valueType: PrimitiveType;
+    currentValue?: JsonPrimitive;
+};
+
 type TranslationResponse = {
     page: PageKey;
     locale: Locale;
@@ -32,28 +52,200 @@ type TranslationResponse = {
     baseMessages: Record<string, unknown>;
 };
 
-const formatJson = (value: Record<string, unknown>): string => `${JSON.stringify(value, null, 2)}\n`;
-
 const isPageKey = (value: string): value is PageKey =>
     PAGE_OPTIONS.some((option) => option.value === value);
 
 const isLocale = (value: string): value is Locale =>
     (AVAILABLE_LOCALES as readonly string[]).includes(value);
 
+const isPrimitive = (value: unknown): value is JsonPrimitive =>
+    typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null;
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+
+const getPrimitiveType = (value: JsonPrimitive): PrimitiveType =>
+    value === null ? "null" : typeof value;
+
+const toDisplayPath = (segments: PathSegment[]): string =>
+    segments
+        .map((segment, index) =>
+            segment.type === "key"
+                ? index === 0
+                    ? segment.key
+                    : `.${segment.key}`
+                : `[${segment.index}]`,
+        )
+        .join("");
+
+const toInputValue = (value: JsonPrimitive | undefined): string => {
+    if (value === undefined || value === null) {
+        return "";
+    }
+
+    return typeof value === "string" ? value : String(value);
+};
+
+const flattenMessages = (
+    base: Record<string, unknown>,
+    translation: Record<string, unknown>,
+): TranslationRow[] => {
+    const rows: TranslationRow[] = [];
+
+    const walk = (baseNode: unknown, translationNode: unknown, segments: PathSegment[]) => {
+        if (isPrimitive(baseNode)) {
+            const translationPrimitive = isPrimitive(translationNode) ? translationNode : undefined;
+
+            rows.push({
+                id: toDisplayPath(segments),
+                segments,
+                baseValue: baseNode,
+                baseDisplay: baseNode === null ? "—" : String(baseNode),
+                translationValue: toInputValue(translationPrimitive),
+                valueType: getPrimitiveType(baseNode),
+                currentValue: translationPrimitive,
+            });
+            return;
+        }
+
+        if (Array.isArray(baseNode)) {
+            const translationArray = Array.isArray(translationNode) ? translationNode : [];
+
+            baseNode.forEach((item, index) => {
+                walk(item, translationArray[index], [...segments, { type: "index", index }]);
+            });
+            return;
+        }
+
+        if (isPlainObject(baseNode)) {
+            const translationObject = isPlainObject(translationNode) ? translationNode : {};
+
+            Object.keys(baseNode).forEach((key) => {
+                walk(
+                    (baseNode as Record<string, unknown>)[key],
+                    translationObject[key],
+                    [...segments, { type: "key", key }],
+                );
+            });
+        }
+    };
+
+    walk(base, translation, []);
+    return rows;
+};
+
+const convertInputToPrimitive = (
+    value: string,
+    type: PrimitiveType,
+    fallback: JsonPrimitive,
+): JsonPrimitive => {
+    switch (type) {
+        case "string":
+            return value;
+        case "number": {
+            const trimmed = value.trim();
+
+            if (!trimmed) {
+                return fallback;
+            }
+
+            const parsed = Number(trimmed);
+            return Number.isFinite(parsed) ? parsed : fallback;
+        }
+        case "boolean":
+            if (value === "true" || value === "false") {
+                return value === "true";
+            }
+            return fallback;
+        case "null":
+        default:
+            return value.trim() === "" ? null : fallback;
+    }
+};
+
+const setDeepValue = (
+    node: unknown,
+    segments: PathSegment[],
+    depth: number,
+    nextValue: JsonPrimitive,
+): unknown => {
+    if (depth >= segments.length) {
+        return nextValue;
+    }
+
+    const segment = segments[depth];
+
+    if (segment.type === "key") {
+        const baseObject = isPlainObject(node) ? (node as Record<string, unknown>) : {};
+        const currentValue = baseObject[segment.key];
+
+        return {
+            ...baseObject,
+            [segment.key]: setDeepValue(currentValue, segments, depth + 1, nextValue),
+        };
+    }
+
+    const sourceArray = Array.isArray(node) ? (node as unknown[]) : [];
+    const copy = [...sourceArray];
+    copy[segment.index] = setDeepValue(sourceArray[segment.index], segments, depth + 1, nextValue);
+    return copy;
+};
+
+const applyValueAtPath = (
+    source: Record<string, unknown>,
+    row: TranslationRow,
+    rawValue: string,
+): Record<string, unknown> => {
+    const nextPrimitive = convertInputToPrimitive(rawValue, row.valueType, row.currentValue ?? row.baseValue);
+    return setDeepValue(source, row.segments, 0, nextPrimitive) as Record<string, unknown>;
+};
+
+const cloneJson = <T,>(value: T): T => {
+    const serialized = JSON.stringify(value);
+    return serialized ? (JSON.parse(serialized) as T) : value;
+};
+
+const computeTextareaRows = (value: string): number => {
+    if (!value) {
+        return 2;
+    }
+
+    const lines = value.split(/\r?\n/).length;
+    const approx = Math.ceil(value.length / 90);
+    return Math.max(2, Math.min(8, Math.max(lines, approx)));
+};
+
 export default function AdminTranslationsPage() {
     const [page, setPage] = useState<PageKey>("layout");
     const [locale, setLocale] = useState<Locale>(DEFAULT_LOCALE);
-    const [baseContent, setBaseContent] = useState<string>("");
-    const [draftContent, setDraftContent] = useState<string>("");
-    const [initialContent, setInitialContent] = useState<string>("");
+    const [baseMessages, setBaseMessages] = useState<Record<string, unknown>>({});
+    const [draftMessages, setDraftMessages] = useState<Record<string, unknown>>({});
+    const [initialMessages, setInitialMessages] = useState<Record<string, unknown>>({});
     const [loading, setLoading] = useState<boolean>(false);
     const [saving, setSaving] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const localeName = useMemo(() => LOCALE_LABELS[locale] ?? locale.toUpperCase(), [locale]);
+    const serializedDraft = useMemo(() => JSON.stringify(draftMessages), [draftMessages]);
+    const serializedInitial = useMemo(() => JSON.stringify(initialMessages), [initialMessages]);
+    const hasChanges = serializedDraft !== serializedInitial;
 
-    const hasChanges = useMemo(() => draftContent !== initialContent, [draftContent, initialContent]);
+    const translationRows = useMemo(
+        () => flattenMessages(baseMessages, draftMessages),
+        [baseMessages, draftMessages],
+    );
+
+    const missingTranslations = useMemo(
+        () =>
+            translationRows.filter(
+                (row) =>
+                    locale !== DEFAULT_LOCALE &&
+                    row.valueType === "string" &&
+                    row.translationValue.trim().length === 0,
+            ).length,
+        [translationRows, locale],
+    );
 
     const loadTranslations = useCallback(async () => {
         setLoading(true);
@@ -73,17 +265,18 @@ export default function AdminTranslationsPage() {
             }
 
             const data = (await response.json()) as TranslationResponse;
-            const baseFormatted = formatJson(data.baseMessages);
-            const draftFormatted = formatJson(data.messages);
 
-            setBaseContent(baseFormatted);
-            setDraftContent(draftFormatted);
-            setInitialContent(draftFormatted);
+            const basePayload = cloneJson(data.baseMessages as Record<string, unknown>);
+            const draftPayload = cloneJson(data.messages as Record<string, unknown>);
+
+            setBaseMessages(basePayload);
+            setDraftMessages(draftPayload);
+            setInitialMessages(cloneJson(draftPayload));
         } catch (error) {
             console.error("Failed to load translations", error);
-            setBaseContent("");
-            setDraftContent("");
-            setInitialContent("");
+            setBaseMessages({});
+            setDraftMessages({});
+            setInitialMessages({});
             setErrorMessage(error instanceof Error ? error.message : "Nu am putut încărca traducerile.");
         } finally {
             setLoading(false);
@@ -119,7 +312,7 @@ export default function AdminTranslationsPage() {
     };
 
     const handleReset = () => {
-        setDraftContent(initialContent);
+        setDraftMessages(cloneJson(initialMessages));
         setSuccessMessage(null);
         setErrorMessage(null);
     };
@@ -133,33 +326,13 @@ export default function AdminTranslationsPage() {
         setErrorMessage(null);
         setSuccessMessage(null);
 
-        let parsed: Record<string, unknown>;
-
-        try {
-            parsed = JSON.parse(draftContent) as Record<string, unknown>;
-        } catch (error) {
-            setSaving(false);
-            setErrorMessage(
-                error instanceof Error
-                    ? `JSON invalid: ${error.message}`
-                    : "Conținutul introdus nu este un JSON valid.",
-            );
-            return;
-        }
-
-        if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-            setSaving(false);
-            setErrorMessage("Structura trebuie să fie un obiect JSON (chei și valori).");
-            return;
-        }
-
         try {
             const response = await fetch("/api/admin/translations", {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ page, locale, messages: parsed }),
+                body: JSON.stringify({ page, locale, messages: draftMessages }),
             });
 
             if (!response.ok) {
@@ -168,12 +341,12 @@ export default function AdminTranslationsPage() {
             }
 
             const data = (await response.json()) as TranslationResponse;
-            const baseFormatted = formatJson(data.baseMessages);
-            const savedFormatted = formatJson(data.messages);
+            const basePayload = cloneJson(data.baseMessages as Record<string, unknown>);
+            const savedPayload = cloneJson(data.messages as Record<string, unknown>);
 
-            setBaseContent(baseFormatted);
-            setDraftContent(savedFormatted);
-            setInitialContent(savedFormatted);
+            setBaseMessages(basePayload);
+            setDraftMessages(savedPayload);
+            setInitialMessages(cloneJson(savedPayload));
             setSuccessMessage("Traducerile au fost salvate cu succes.");
         } catch (error) {
             console.error("Failed to save translations", error);
@@ -181,6 +354,12 @@ export default function AdminTranslationsPage() {
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleRowChange = (row: TranslationRow, nextValue: string) => {
+        setDraftMessages((prev) => applyValueAtPath(prev ?? {}, row, nextValue));
+        setSuccessMessage(null);
+        setErrorMessage(null);
     };
 
     return (
@@ -258,57 +437,104 @@ export default function AdminTranslationsPage() {
                 </div>
             )}
 
-            <div className="grid gap-6 lg:grid-cols-2">
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-sm font-semibold text-gray-700">Referință Română</h2>
-                        <span className="text-xs text-gray-500">Doar citire</span>
-                    </div>
-                    <Textarea
-                        value={baseContent}
-                        readOnly
-                        rows={28}
-                        className="font-mono text-sm"
-                        spellCheck={false}
-                        disabled={loading}
-                    />
-                </div>
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-sm font-semibold text-gray-700">
-                                {locale === DEFAULT_LOCALE ? "Traducere principală" : `Traducere ${localeName}`}
-                            </h2>
-                            {locale !== DEFAULT_LOCALE && (
-                                <p className="text-xs text-gray-500">
-                                    Actualizează doar valorile din JSON; cheile trebuie să rămână identice cu versiunea în română.
-                                </p>
-                            )}
-                        </div>
-                        {hasChanges && (
-                            <span className="text-xs font-medium text-amber-600">Modificări nesalvate</span>
-                        )}
-                    </div>
-                    <Textarea
-                        value={draftContent}
-                        onChange={(event) => setDraftContent(event.target.value)}
-                        rows={28}
-                        className="font-mono text-sm"
-                        spellCheck={false}
-                        disabled={loading}
-                    />
-                    <div className="flex flex-wrap items-center gap-3">
-                        <Button
-                            type="button"
-                            onClick={handleSave}
-                            disabled={!hasChanges || saving || loading}
-                        >
-                            {saving ? "Se salvează..." : "Salvează traducerile"}
-                        </Button>
+            <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h2 className="text-sm font-semibold text-gray-700">Compară și traduce</h2>
                         <p className="text-xs text-gray-500">
-                            Asigură-te că JSON-ul este valid înainte de salvare. Formatul este rearanjat automat după salvare.
+                            Valorile din stânga sunt referința în limba română. Completează coloana din dreapta pentru limba selectată.
                         </p>
                     </div>
+                    {locale !== DEFAULT_LOCALE && missingTranslations > 0 && (
+                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+                            {missingTranslations} câmpuri fără traducere
+                        </span>
+                    )}
+                    {hasChanges && (
+                        <span className="text-xs font-medium text-amber-600">Modificări nesalvate</span>
+                    )}
+                </div>
+
+                {translationRows.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-500">
+                        Nu există chei de tradus pentru combinația selectată.
+                    </div>
+                ) : (
+                    <div className="overflow-hidden rounded-lg border border-gray-200">
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse text-left">
+                                <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                    <tr>
+                                        <th className="w-1/2 px-4 py-3">Română (referință)</th>
+                                        <th className="w-1/2 px-4 py-3">
+                                            {locale === DEFAULT_LOCALE ? "Editare limba principală" : `Traducere ${localeName}`}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
+                                    {translationRows.map((row) => {
+                                        const isMissing =
+                                            locale !== DEFAULT_LOCALE && row.translationValue.trim().length === 0;
+                                        const referenceValue =
+                                            row.translationValue ||
+                                            (typeof row.baseValue === "string" ? row.baseValue : "");
+                                        const textareaRows = computeTextareaRows(referenceValue);
+
+                                        return (
+                                            <tr
+                                                key={row.id}
+                                                className={cn(
+                                                    "bg-white",
+                                                    isMissing && "bg-amber-50/40",
+                                                )}
+                                            >
+                                                <td className="align-top px-4 py-3">
+                                                    <div className="space-y-1">
+                                                        <p className="font-mono text-[11px] uppercase tracking-tight text-gray-400">
+                                                            {row.id || "(rădăcină)"}
+                                                        </p>
+                                                        <p className="whitespace-pre-wrap text-sm text-gray-700">
+                                                            {row.baseValue === null ? "—" : String(row.baseValue)}
+                                                        </p>
+                                                    </div>
+                                                </td>
+                                                <td className="align-top px-4 py-3">
+                                                    {row.valueType === "string" ? (
+                                                        <Textarea
+                                                            value={row.translationValue}
+                                                            onChange={(event) => handleRowChange(row, event.target.value)}
+                                                            placeholder="Introdu traducerea..."
+                                                            rows={textareaRows}
+                                                            className="font-mono text-sm"
+                                                            spellCheck={false}
+                                                            disabled={loading}
+                                                        />
+                                                    ) : (
+                                                        <Input
+                                                            value={row.translationValue}
+                                                            onChange={(event) => handleRowChange(row, event.target.value)}
+                                                            placeholder="Introdu valoarea..."
+                                                            className="font-mono text-sm"
+                                                            disabled={loading}
+                                                        />
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-3">
+                    <Button type="button" onClick={handleSave} disabled={!hasChanges || saving || loading}>
+                        {saving ? "Se salvează..." : "Salvează traducerile"}
+                    </Button>
+                    <p className="text-xs text-gray-500">
+                        Valorile sunt salvate direct în fișierele JSON din proiect. Verifică traducerile goale înainte de salvare.
+                    </p>
                 </div>
             </div>
         </div>
