@@ -4,8 +4,8 @@
       { "label": "Acasă", "href": "/", "aria": "Acasă" },
       { "label": "Flotă", "href": "/cars", "aria": "Flotă" },
       { "label": "Oferte", "href": "/offers", "aria": "Oferte" },
-      { "label": "Rezervare", "href": "/checkout", "aria": "Rezervare" },
-      { "label": "Contact", "href": "#contact", "aria": "Contact" }
+      { "label": "Blog", "href": "/blog", "aria": "Blog" },
+      { "label": "Contact", "href": "/contact", "aria": "Contact" }
     ],
     "cta": {
       "label": "Rezervă acum",
@@ -38,7 +38,7 @@
         { "label": "Acasă", "href": "/", "aria": "Acasă" },
         { "label": "Flota Auto", "href": "/cars", "aria": "Flota Auto" },
         { "label": "Oferte Speciale", "href": "/offers", "aria": "Oferte Speciale" },
-        { "label": "Rezervare", "href": "/checkout", "aria": "Rezervare" }
+        { "label": "Blog", "href": "/blog", "aria": "Blog" }
       ]
     },
     "contact": {
