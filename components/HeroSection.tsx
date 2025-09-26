@@ -96,23 +96,6 @@ const HeroSection = () => {
         : formatDate(startOfDay(addDays(new Date(), 1)));
 
     useEffect(() => {
-        if (!formData.start_date) return;
-        const minReturn = startOfDay(addDays(new Date(formData.start_date), 1));
-        setFormData((prev) => {
-            if (
-                !prev.end_date ||
-                startOfDay(new Date(prev.end_date)) < minReturn
-            ) {
-                const current = prev.end_date ? new Date(prev.end_date) : new Date();
-                const adjusted = new Date(minReturn);
-                adjusted.setHours(current.getHours(), current.getMinutes());
-                return { ...prev, end_date: formatDate(adjusted) };
-            }
-            return prev;
-        });
-    }, [formData.start_date]);
-
-    useEffect(() => {
         if (!formData.start_date || !formData.end_date) {
             return;
         }
