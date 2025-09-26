@@ -323,6 +323,65 @@ const menuItems: readonly AdminSidebarItem[] = [
     requiredPermissions: buildPermissionList("dashboard", ["overview", "statistics"]),
   },
   {
+    name: "Rapoarte",
+    icon: BarChart3,
+    href: "/admin/reports",
+    requiredPermissions: buildPermissionList("reports", [
+      "reports",
+      "analytics",
+      "insights",
+      "performance",
+      "kpi",
+    ]),
+    subItems: [
+      {
+        name: "Privire generală",
+        href: "/admin/reports",
+        icon: Gauge,
+        requiredPermissions: buildPermissionList("reports-overview", [
+          "reports.analytics",
+          "reports.overview",
+        ]),
+      },
+      {
+        name: "Raport săptămânal",
+        href: "/admin/reports/weekly",
+        icon: CalendarDays,
+        requiredPermissions: buildPermissionList("reports-weekly", [
+          "reports.performance",
+          "reports.weekly",
+        ]),
+      },
+      {
+        name: "Raport lunar",
+        href: "/admin/reports/monthly",
+        icon: Calendar,
+        requiredPermissions: buildPermissionList("reports-monthly", [
+          "reports.insights",
+          "reports.monthly",
+        ]),
+      },
+      {
+        name: "Raport trimestrial",
+        href: "/admin/reports/quarterly",
+        icon: Layers,
+        requiredPermissions: buildPermissionList("reports-quarterly", [
+          "reports.performance",
+          "reports.quarterly",
+        ]),
+      },
+      {
+        name: "Raport anual",
+        href: "/admin/reports/annual",
+        icon: BadgePercent,
+        requiredPermissions: buildPermissionList("reports-annual", [
+          "reports.kpi",
+          "reports.annual",
+        ]),
+      },
+    ],
+  },
+  {
       name: "Închirieri",
       icon: Car,
       subItems: [
