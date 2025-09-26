@@ -86,7 +86,7 @@ const AMOUNT_FIELD_CONFIG: Record<string, {
         max: 100,
     },
     fixed_discount: {
-        label: "Discount fix (RON)",
+        label: "Discount fix (EUR)",
         placeholder: "Ex. 150",
         helper: "Introduce valoarea reducerii în lei.",
         step: "0.01",
@@ -124,7 +124,7 @@ const formatPrizeAmount = (prize: {
         return `${amountFormatter.format(amount)}%`;
     }
     if (normalizedType === "fixed_discount") {
-        return `${amountFormatter.format(amount)} RON`;
+        return `${amountFormatter.format(amount)} EUR`;
     }
     if (normalizedType === "extra_rental_day") {
         const formatted = Number.isInteger(amount)

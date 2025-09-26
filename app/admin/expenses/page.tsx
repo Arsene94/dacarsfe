@@ -76,7 +76,7 @@ const expenseTypeOptions = Object.entries(expenseTypeLabels).map(([value, label]
 
 const currencyFormatter = new Intl.NumberFormat("ro-RO", {
   style: "currency",
-  currency: "RON",
+  currency: "EUR",
 });
 
 const dateFormatter = new Intl.DateTimeFormat("ro-RO", { dateStyle: "medium" });
