@@ -1,7 +1,7 @@
 import { buildWheelPrizeDefaultDescription } from "@/lib/wheelFormatting";
 import type { WheelOfFortunePeriod, WheelPrize } from "@/types/wheel";
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null;
 
 export const extractArray = (response: unknown): unknown[] => {
@@ -76,7 +76,7 @@ export const isPeriodActive = (period?: WheelOfFortunePeriod | null) => {
     return false;
 };
 
-const toOptionalNumber = (value: unknown): number | null => {
+export const toOptionalNumber = (value: unknown): number | null => {
     if (typeof value === "undefined" || value === null) return null;
     if (typeof value === "number") {
         return Number.isFinite(value) ? value : null;

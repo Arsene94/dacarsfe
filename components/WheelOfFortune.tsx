@@ -24,9 +24,11 @@ import {
 } from "@/lib/wheelFormatting";
 import {
     extractArray,
+    isRecord,
     isPeriodActive,
     mapPeriod,
     mapPrize,
+    toOptionalNumber,
 } from "@/lib/wheelNormalization";
 import {
     clearStoredWheelPrize,
