@@ -1,203 +1,134 @@
-import Image from "next/image";
-import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { cache } from "react";
-import { ApiClient } from "@/lib/api";
-import { extractList } from "@/lib/apiResponse";
-import { formatDate } from "@/lib/datetime";
-import { resolveMediaUrl } from "@/lib/media";
-import { getUserDisplayName } from "@/lib/users";
-import { buildMetadata } from "@/lib/seo/meta";
-import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
-import { createBreadcrumbStructuredData } from "@/lib/seo/structuredData";
-import type { BlogPost, BlogPostListParams } from "@/types/blog";
-import { Button } from "@/components/ui/button";
-import JsonLd from "@/components/seo/JsonLd";
-import BlogPostCard from "@/components/blog/BlogPostCard";
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
-const getApiBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+import { SEO } from '@/components/SEO';
+import { BLOG_POSTS } from '@/lib/seo/content';
+import { buildArticleJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo/jsonld';
+import { buildCanonicalUrl } from '@/lib/seo/url';
 
-const fetchPostBySlug = cache(async (slug: string): Promise<BlogPost | null> => {
-  if (!slug) {
-    return null;
-  }
-  const api = new ApiClient(getApiBaseUrl());
-  const params: BlogPostListParams = {
-    limit: 1,
-    slug,
-    status: "published",
-    include: ["category", "tags", "author"],
-  };
-  const response = await api.getBlogPosts(params);
-  const [post] = extractList(response);
-  return post ?? null;
-});
+export const dynamicParams = false;
 
-type BlogPostPageProps = {
-  params: Promise<{ slug: string }>;
-};
+export function generateStaticParams() {
+    return BLOG_POSTS.map((post) => ({ slug: post.slug }));
+}
 
-export const generateMetadata = async ({ params }: BlogPostPageProps): Promise<Metadata> => {
-  const { slug } = await params;
-  const post = await fetchPostBySlug(slug);
-  if (!post) {
-    return buildMetadata({
-      title: "Articolul de blog nu a fost găsit",
-      description: "Articolul solicitat nu există sau a fost retras.",
-      path: `/blog/${slug}`,
-      noIndex: true,
-    });
-  }
+export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+    const post = BLOG_POSTS.find((item) => item.slug === params.slug);
+    if (!post) {
+        notFound();
+    }
 
-  const pagePath = `/blog/${post.slug}`;
-  const description =
-    post.meta_description ??
-    post.excerpt ??
-    `Citește articolul „${post.title}” pe blogul DaCars și descoperă sfaturi utile pentru următoarea închiriere auto.`;
-  const thumbnail = resolveMediaUrl(post.image ?? post.thumbnail ?? null);
+    const canonical = buildCanonicalUrl(`/blog/${post.slug}`);
 
-  return buildMetadata({
-    title: `${post.title} | Blog DaCars`,
-    description,
-    path: pagePath,
-    openGraphTitle: `${post.title} | Blog DaCars`,
-    image: thumbnail ? { src: thumbnail, alt: post.meta_title ?? post.title } : undefined,
-    openGraphType: "article",
-  });
-};
-
-const BlogPostPage = async ({ params }: BlogPostPageProps) => {
-  const { slug } = await params;
-  const post = await fetchPostBySlug(slug);
-  if (!post) {
-    notFound();
-  }
-
-  const api = new ApiClient(getApiBaseUrl());
-  const relatedParams: BlogPostListParams = {
-    limit: 4,
-    status: "published",
-    sort: "-published_at,-id",
-    include: ["category", "tags", "author"],
-  };
-  if (post.category_id) {
-    relatedParams.category_id = post.category_id;
-  }
-  const relatedResponse = await api.getBlogPosts(relatedParams);
-  const relatedCandidates = extractList(relatedResponse).filter((candidate) => candidate.id !== post.id);
-  const relatedPosts = relatedCandidates.slice(0, 3);
-
-  const pageUrl = absoluteUrl(`/blog/${post.slug}`);
-  const breadcrumbStructuredData = createBreadcrumbStructuredData([
-    { name: "Acasă", item: siteMetadata.siteUrl },
-    { name: "Blog", item: absoluteUrl("/blog") },
-    { name: post.title, item: pageUrl },
-  ]);
-
-  const articleStructuredData = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.title,
-    description:
-      post.meta_description ??
-      post.excerpt ??
-      `Citește articolul „${post.title}” pe blogul DaCars și află cele mai noi informații despre închirieri auto.`,
-    author: post.author
-      ? {
-          "@type": "Person",
-          name: getUserDisplayName(post.author),
-        }
-      : {
-          "@type": "Organization",
-          name: siteMetadata.siteName,
+    return {
+        title: post.title,
+        description: post.excerpt,
+        alternates: {
+            canonical,
         },
-    publisher: {
-      "@type": "Organization",
-      name: siteMetadata.siteName,
-      logo: {
-        "@type": "ImageObject",
-        url: absoluteUrl(siteMetadata.defaultSocialImage.src),
-      },
-    },
-    datePublished: post.published_at ?? post.created_at,
-    dateModified: post.updated_at ?? post.published_at ?? post.created_at,
-    url: pageUrl,
-    mainEntityOfPage: pageUrl,
-    image: resolveMediaUrl(post.image ?? post.thumbnail ?? null) ?? undefined,
-  };
+        openGraph: {
+            title: post.title,
+            description: post.excerpt,
+            type: 'article',
+            url: canonical,
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: post.title,
+            description: post.excerpt,
+        },
+    };
+}
 
-  const heroImage = resolveMediaUrl(post.image ?? post.thumbnail ?? null);
-  const publishedLabel = formatDate(post.published_at ?? post.created_at);
-  const authorName = post.author ? getUserDisplayName(post.author) : null;
+export default function BlogPostPage({ params }: { params: { slug: string } }) {
+    const post = BLOG_POSTS.find((item) => item.slug === params.slug);
+    if (!post) {
+        notFound();
+    }
 
-  return (
-    <div className="bg-slate-50">
-      <JsonLd data={articleStructuredData} id={`dacars-blog-post-${post.id}`} />
-      {breadcrumbStructuredData && (
-        <JsonLd data={breadcrumbStructuredData} id={`dacars-blog-post-breadcrumb-${post.id}`} />
-      )}
-      <article className="mx-auto max-w-4xl px-6 py-12">
-        <Link
-          href={post.category?.slug ? `/blog?category=${post.category.slug}` : "/blog"}
-          className="text-sm font-semibold uppercase tracking-wide text-berkeley"
-        >
-          {post.category?.name ?? "Blog DaCars"}
-        </Link>
-        <h1 className="mt-3 text-3xl font-semibold text-gray-900 sm:text-4xl">{post.title}</h1>
-        <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-500">
-          {publishedLabel !== "—" && <span>{publishedLabel}</span>}
-          {authorName && <span>De {authorName}</span>}
-        </div>
-        {heroImage && (
-          <div className="mt-8 overflow-hidden rounded-xl">
-            <Image
-              src={heroImage}
-              alt={post.title}
-              width={1280}
-              height={640}
-              className="h-auto w-full object-cover"
+    const canonical = buildCanonicalUrl(`/blog/${post.slug}`);
+    const breadcrumb = buildBreadcrumbJsonLd([
+        { name: 'Acasă', path: '/' },
+        { name: 'Blog', path: '/blog' },
+        { name: post.title, path: `/blog/${post.slug}` },
+    ]);
+
+    const articleSchema = buildArticleJsonLd({
+        title: post.title,
+        description: post.excerpt,
+        slug: post.slug,
+        publishedAt: post.publishedAt,
+        updatedAt: post.updatedAt,
+        author: post.author,
+    });
+
+    return (
+        <div className="space-y-10">
+            <SEO
+                title={post.title}
+                description={post.excerpt}
+                path={`/blog/${post.slug}`}
+                jsonLd={[breadcrumb, articleSchema]}
+                openGraph={{ type: 'article', url: canonical, title: post.title, description: post.excerpt }}
+                twitter={{ card: 'summary_large_image', title: post.title, description: post.excerpt }}
             />
-          </div>
-        )}
-        <div
-          className="max-w-none space-y-6 leading-relaxed text-gray-700 [&_a]:text-berkeley [&_a:hover]:underline [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-semibold [&_p]:mt-4 [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mt-4 [&_ol]:list-decimal [&_ol]:pl-6"
-          dangerouslySetInnerHTML={{ __html: post.content ?? "" }}
-        />
-        {post.tags && post.tags.length > 0 && (
-          <div className="mt-8 flex flex-wrap gap-3">
-            {post.tags.map((tag) => (
-              <span
-                key={tag.id}
-                className="rounded-full bg-berkeley/10 px-3 py-1 text-xs font-medium text-berkeley"
-              >
-                {tag.name}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="mt-10">
-          <Button asChild variant="secondary">
-            <Link href="/blog">Înapoi la blog</Link>
-          </Button>
+
+            <nav aria-label="Breadcrumb" className="text-sm text-gray-500">
+                <ol className="flex items-center gap-2">
+                    <li>
+                        <Link href="/" className="hover:text-berkeley-600">
+                            Acasă
+                        </Link>
+                    </li>
+                    <li aria-hidden="true">/</li>
+                    <li>
+                        <Link href="/blog" className="hover:text-berkeley-600">
+                            Blog
+                        </Link>
+                    </li>
+                    <li aria-hidden="true">/</li>
+                    <li className="font-medium text-gray-700">{post.title}</li>
+                </ol>
+            </nav>
+
+            <article className="prose prose-berkeley max-w-none">
+                <header>
+                    <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">{post.title}</h1>
+                    <p className="mt-2 text-gray-600">{post.excerpt}</p>
+                    <p className="mt-2 text-sm text-gray-400">
+                        Publicat pe {new Date(post.publishedAt).toLocaleDateString('ro-RO', { day: '2-digit', month: 'long', year: 'numeric' })}
+                        {post.updatedAt ? ` · Actualizat ${new Date(post.updatedAt).toLocaleDateString('ro-RO', { day: '2-digit', month: 'long', year: 'numeric' })}` : ''}
+                        {' '}
+                        • {post.author}
+                    </p>
+                </header>
+
+                <section>
+                    <h2>Context și oportunitate</h2>
+                    <p>
+                        Managerii de flotă se confruntă cu volatilitate ridicată a cererii. Prin analiza datelor din DaCars poți previziona perioadele de vârf și ajusta prețurile fără a afecta experiența clienților.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Recomandări cheie</h2>
+                    <ul>
+                        <li>Analizează rapoartele predictive săptămânal.</li>
+                        <li>Definește reguli automate pentru creșteri graduale de tarif.</li>
+                        <li>Monitorizează reacțiile clienților prin scorul NPS.</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Acțiuni imediate</h2>
+                    <ol>
+                        <li>Configurează segmentarea flotei pe clase și sezon.</li>
+                        <li>Activează testele A/B pentru campaniile promoționale.</li>
+                        <li>Setează alerte pentru ocupare sub 70% în perioada extra-sezon.</li>
+                    </ol>
+                </section>
+            </article>
         </div>
-      </article>
-
-      {relatedPosts.length > 0 && (
-        <section className="mx-auto max-w-6xl px-6 pb-12">
-          <h2 className="text-2xl font-semibold text-gray-900">Articole similare</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Inspiră-te din alte povești și recomandări pregătite de echipa DaCars.
-          </p>
-          <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {relatedPosts.map((related) => (
-              <BlogPostCard key={related.id} post={related} />
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
-  );
-};
-
-export default BlogPostPage;
+    );
+}
