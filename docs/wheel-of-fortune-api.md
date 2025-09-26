@@ -7,8 +7,8 @@ Wheel configuration and prize listings are exposed publicly so the marketing sit
 ### Wheel configuration (`/api/wheel-of-fortunes`)
 | Method | URL | Description |
 | --- | --- | --- |
-| GET | `/api/wheel-of-fortunes/{lang?}` | List wheel slices. Supports `?include=period` and filter/query helpers from `BaseCrudController`. |
-| GET | `/api/wheel-of-fortunes/{id}/{lang?}` | Retrieve a specific slice. |
+| GET | `/api/wheel-of-fortunes` | List wheel slices. Supports `?include=period` and filter/query helpers from `BaseCrudController`. |
+| GET | `/api/wheel-of-fortunes/{id}` | Retrieve a specific slice. |
 | POST | `/api/wheel-of-fortunes` | Create a new slice for the active wheel campaign. |
 | PUT/PATCH | `/api/wheel-of-fortunes/{id}` | Update slice details (probability, colors, etc.). |
 | DELETE | `/api/wheel-of-fortunes/{id}` | Remove a slice. |
@@ -117,7 +117,7 @@ Validation failures (missing phone, invalid ID) return HTTP 422.
 | --- | --- | --- |
 | GET `/api/wheel-of-fortune-periods` | List periods (includes related wheels). | `wheel_of_fortune_periods.view` |
 | GET `/api/wheel-of-fortune-periods/{id}` | Retrieve a period. | `wheel_of_fortune_periods.view` |
-| POST `/api/wheel-of-fortune-periods` | Create a period (`name`, optional `starts_at`, `ends_at`, `active`). | `wheel_of_fortune_periods.create` |
+| POST `/api/wheel-of-fortune-periods` | Create a period (`name`, optional `starts_at`, `ends_at`, `active`, `active_months`). | `wheel_of_fortune_periods.create` |
 | PUT/PATCH `/api/wheel-of-fortune-periods/{id}` | Update. | `wheel_of_fortune_periods.update` |
 | DELETE `/api/wheel-of-fortune-periods/{id}` | Delete. | `wheel_of_fortune_periods.delete` |
 
@@ -127,9 +127,14 @@ Example request:
   "name": "Martie 2025",
   "starts_at": "2025-03-01T00:00:00",
   "ends_at": "2025-03-31T23:59:59",
-  "active": true
+  "active": true,
+  "active_months": [11, 12]
 }
 ```
+
+`active_months` accepts an array of month numbers (1 = ianuarie, 12 = decembrie). When it is populated the associated wheel
+prizes will only be eligible for bookings that overlap at least one of those months, even if the reservation dates fall inside the
+`starts_at`/`ends_at` interval.
 
 Response includes nested wheels when `with=wheelOfFortunes` is requested.
 

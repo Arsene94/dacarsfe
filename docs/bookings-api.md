@@ -74,7 +74,8 @@ Returns a Laravel paginator plus nested resources defined in `BookingResource`.
         "type_label": "Reducere fixă",
         "amount": 20,
         "description": "Voucher aplicat automat la rezervare.",
-        "discount_value": 20
+        "discount_value": 20,
+        "eligible": true
       },
       "services": [
         { "id": 1, "name": "Scaun copil" },
@@ -134,6 +135,10 @@ Returns a Laravel paginator plus nested resources defined in `BookingResource`.
 }
 ```
 
+`wheel_prize.eligible` indică dacă reducerea aferentă premiului poate fi aplicată pentru intervalul de rezervare curent. Atunci
+când este `false`, câmpurile `wheel_prize_discount` și `wheel_prize.discount_value` vor rămâne la `0` chiar dacă premiul există,
+deoarece perioada configurată (`active_months`) nu se suprapune cu datele selectate.
+
 ---
 
 ## GET `/api/bookings/{id}`
@@ -161,7 +166,8 @@ Validates the provided payload, resolves the base price via `CarPriceService`, a
   "wheel_prize": {
     "prize_id": 4,
     "wheel_of_fortune_id": 2,
-    "discount_value": 20
+    "discount_value": 20,
+    "eligible": true
   }
 }
 ```
@@ -177,23 +183,15 @@ Validates the provided payload, resolves the base price via `CarPriceService`, a
   "discount": 15,
   "coupon_amount": 15,
   "coupon_code": "SPRING15",
-  "offers_discount": 30,
   "total_services": 12,
   "service_ids": [1, 3],
   "total": 247,
   "total_casco": 302,
   "total_before_wheel_prize": 231,
+  "offers_discount": 0,
   "wheel_prize_discount": 20,
   "deposit_waived": false,
-  "applied_offers": [
-    {
-      "id": 12,
-      "title": "Weekend fără garanție",
-      "offer_type": "percentage_discount",
-      "offer_value": "20",
-      "discount_label": "-20% reducere"
-    }
-  ],
+  "applied_offers": [],
   "wheel_prize": {
     "wheel_of_fortune_prize_id": 4,
     "wheel_of_fortune_id": 2,
@@ -202,14 +200,15 @@ Validates the provided payload, resolves the base price via `CarPriceService`, a
     "type_label": "Reducere fixă",
     "amount": 20,
     "description": "Voucher aplicat automat la rezervare.",
-    "discount_value": 20
+    "discount_value": 20,
+    "eligible": true
   }
 }
 ```
 
-`offers_discount` cumulează reducerile provenite din motorul de oferte, `applied_offers` listează promoțiile validate împreună cu tipul și valoarea lor, iar `deposit_waived` devine `true` dacă o ofertă de tip `deposit_waiver` elimină garanția din rezervare.
-
 Validation failures respond with HTTP 422 detailing the offending fields (e.g. missing `car_id`, invalid `service_ids.*`).
+
+`offers_discount` raportează totalul valorilor scăzute de engine-ul de oferte, iar `applied_offers` conține lista promoțiilor validate (inclusiv titlul tradus și tipul din backend). Dacă o ofertă de tip `deposit_waiver` este acceptată, câmpul `deposit_waived` devine `true` pentru a semnala că rezervarea nu mai necesită garanție, deși tariful promoțional rămâne cel de depozit.
 
 ---
 
@@ -250,18 +249,6 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
   "coupon_type": "percent",
   "offers_discount": 30,
   "deposit_waived": false,
-  "total_services": 12,
-  "sub_total": 216,
-  "total_before_wheel_prize": 231,
-  "wheel_prize_discount": 20,
-  "total": 211,
-  "service_ids": [1, 3],
-  "wheel_of_fortune_prize_id": 4,
-  "wheel_prize": {
-    "prize_id": 4,
-    "wheel_of_fortune_id": 2,
-    "discount_value": 20
-  },
   "applied_offers": [
     {
       "id": 12,
@@ -271,24 +258,19 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
       "discount_label": "-20% reducere"
     }
   ],
+  "total_services": 12,
+  "service_ids": [1, 3],
+  "wheel_prize_discount": 20,
+  "wheel_of_fortune_prize_id": 4,
+  "wheel_prize": {
+    "prize_id": 4,
+    "wheel_of_fortune_id": 2,
+    "discount_value": 20,
+    "eligible": true
+  },
   "note": "Predare la terminal Plecări"
 }
 ```
-
-### Detalierea câmpurilor de prețuri din checkout
-
-- `sub_total` – totalul de bază pentru mașină (cu sau fără depozit, în funcție de `with_deposit`) înainte de servicii și oferte.
-- `total_services` – suma serviciilor extra selectate în formular.
-- `total_before_wheel_prize` – valoarea estimată în UI înainte de aplicarea premiului din roata norocului (`sub_total + total_services`).
-- `wheel_prize_discount` – reducerea calculată pe frontend pentru premiul activ. Backend-ul trebuie să o verifice înainte de a o accepta.
-- `total` – totalul afișat în checkout după cupoane și premiul roții, dar **înainte** de procesarea ofertelor aplicate din `applied_offers`.
-- `applied_offers` – lista de promoții selectate în prealabil (structura este identică cu documentația din [Offers API](./offers-api.md#aplicarea-ofertelor-în-checkout)).
-- `offers_discount` – suma totală a reducerilor validate de motorul de oferte pentru această cerere.
-- `deposit_waived` – semnalizează că oferta acceptată elimină garanția (`true` doar pentru oferte de tip `deposit_waiver`).
-
-> Backend-ul trebuie să recalculeze aceste valori folosind propriile servicii (tarife de bază, cupoane, roata norocului și logica de ofertă) pentru a preveni manipularea datelor și pentru a aplica cumulările admise. Frontend-ul transmite aceste câmpuri pentru transparență și pentru a afișa estimări corecte în UI.
-
-> În răspuns, valorile `total`, `sub_total`, `total_services` și `total_before_wheel_prize` trebuie să reflecte rezultatul final după ce engine-ul backend aplică fiecare ofertă din `applied_offers` conform regulilor descrise în Offers API; acestea pot diferi față de cifrele primite în request.
 
 ### Success response (HTTP 201)
 `BookingResource` payload plus an informational message:
@@ -320,6 +302,15 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
     "coupon_type": "percent",
     "offers_discount": 30.0,
     "deposit_waived": false,
+    "applied_offers": [
+      {
+        "id": 12,
+        "title": "Weekend fără garanție",
+        "offer_type": "percentage_discount",
+        "offer_value": "20",
+        "discount_label": "-20% reducere"
+      }
+    ],
     "tax_amount": 0.0,
     "wheel_of_fortune_prize_id": 4,
     "total_before_wheel_prize": 231.0,
@@ -337,25 +328,17 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
       "type_label": "Reducere fixă",
       "amount": 20,
       "description": "Voucher aplicat automat la rezervare.",
-      "discount_value": 20
-    },
-    "applied_offers": [
-      {
-        "id": 12,
-        "title": "Weekend fără garanție",
-        "offer_type": "percentage_discount",
-        "offer_value": "20",
-        "discount_label": "-20% reducere"
-      }
-    ]
+      "discount_value": 20,
+      "eligible": true
+    }
   },
   "message": "Booking created"
 }
 ```
 
-`BookingResource` serializat include câmpurile `offers_discount`, `applied_offers` și `deposit_waived` pentru ca aplicațiile client să afișeze reducerile validate și statusul garanției.
-
 Availability conflicts or invalid date ranges trigger `422` errors sourced from `BookingService`.
+
+Pe lângă câmpurile existente, `BookingResource` serializată de endpoint include suma totală `offers_discount`, lista normalizată `applied_offers` și indicatorul `deposit_waived`, astfel încât aplicațiile client să știe ce promoții au fost acceptate și dacă garanția a fost eliminată în urma unei oferte.
 
 ---
 
