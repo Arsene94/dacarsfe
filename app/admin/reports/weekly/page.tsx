@@ -23,35 +23,10 @@ import {
 import "@/components/admin/reports/chartSetup";
 import { getColor } from "@/components/admin/reports/chartSetup";
 import { formatCurrency } from "@/components/admin/reports/formatting";
+import { describeRelativeChange } from "@/components/admin/reports/trends";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
   `${(value * 100).toFixed(fractionDigits)}%`;
-
-const describeRelativeChange = (
-  current: number,
-  previous: number,
-  context: string,
-) => {
-  if (previous === 0) {
-    if (current === 0) {
-      return {
-        trend: "neutral" as const,
-        trendLabel: `Neschimbat față de ${context}`,
-      };
-    }
-    return { trend: "up" as const, trendLabel: `Creștere față de ${context}` };
-  }
-
-  const delta = current - previous;
-  const ratio = delta / Math.abs(previous);
-  if (!Number.isFinite(ratio) || Math.abs(ratio) < 0.0001) {
-    return { trend: "neutral" as const, trendLabel: `În linie cu ${context}` };
-  }
-  const percent = (ratio * 100).toFixed(1);
-  const trend = ratio > 0 ? "up" : ratio < 0 ? "down" : "neutral";
-  const sign = ratio > 0 ? "+" : "";
-  return { trend, trendLabel: `${sign}${percent}% față de ${context}` };
-};
 
 const comparisonOptions = [
   { value: "previous_week", label: "Săptămâna precedentă" },
