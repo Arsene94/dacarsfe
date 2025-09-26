@@ -108,6 +108,18 @@ import type {
     AdminCarsTotalParams,
 } from "@/types/metrics";
 import type {
+    AdminReportAnnualParams,
+    AdminReportAnnualResponse,
+    AdminReportMonthlyParams,
+    AdminReportMonthlyResponse,
+    AdminReportOverviewParams,
+    AdminReportOverviewResponse,
+    AdminReportQuarterlyParams,
+    AdminReportQuarterlyResponse,
+    AdminReportWeeklyParams,
+    AdminReportWeeklyResponse,
+} from "@/types/reports";
+import type {
     WheelOfFortunePeriod,
     WheelOfFortunePrizePayload,
     WheelOfFortunePrizeWinner,
@@ -2482,6 +2494,154 @@ export class ApiClient {
         const query = searchParams.toString();
         return this.request<AdminBookingsTotalMetrics>(
             `/admin/metrics/bookings-total${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminReportOverview(
+        params: AdminReportOverviewParams = {},
+    ): Promise<AdminReportOverviewResponse> {
+        const searchParams = new URLSearchParams();
+        if (params.week_start) {
+            const normalized = params.week_start.trim();
+            if (normalized.length > 0) {
+                searchParams.append('week_start', normalized);
+            }
+        }
+        if (params.quarter) {
+            const normalized = params.quarter.trim();
+            if (normalized.length > 0) {
+                searchParams.append('quarter', normalized);
+            }
+        }
+        if (params.timezone) {
+            const normalized = params.timezone.trim();
+            if (normalized.length > 0) {
+                searchParams.append('timezone', normalized);
+            }
+        }
+        const query = searchParams.toString();
+        return this.request<AdminReportOverviewResponse>(
+            `/admin/reports/overview${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminReportWeekly(
+        params: AdminReportWeeklyParams,
+    ): Promise<AdminReportWeeklyResponse> {
+        const searchParams = new URLSearchParams();
+        searchParams.append('start_date', params.start_date);
+        if (params.compare_with) {
+            const normalized = params.compare_with.trim();
+            if (normalized.length > 0) {
+                searchParams.append('compare_with', normalized);
+            }
+        }
+        if (
+            params.compare_with === 'custom' &&
+            params.custom_compare_start &&
+            params.custom_compare_start.trim().length > 0
+        ) {
+            searchParams.append('custom_compare_start', params.custom_compare_start.trim());
+        }
+        if (params.timezone) {
+            const normalized = params.timezone.trim();
+            if (normalized.length > 0) {
+                searchParams.append('timezone', normalized);
+            }
+        }
+        const query = searchParams.toString();
+        return this.request<AdminReportWeeklyResponse>(
+            `/admin/reports/weekly${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminReportMonthly(
+        params: AdminReportMonthlyParams,
+    ): Promise<AdminReportMonthlyResponse> {
+        const searchParams = new URLSearchParams();
+        searchParams.append('month', params.month);
+        if (params.compare_with) {
+            const normalized = params.compare_with.trim();
+            if (normalized.length > 0) {
+                searchParams.append('compare_with', normalized);
+            }
+        }
+        if (
+            params.compare_with === 'custom' &&
+            params.custom_compare &&
+            params.custom_compare.trim().length > 0
+        ) {
+            searchParams.append('custom_compare', params.custom_compare.trim());
+        }
+        if (params.timezone) {
+            const normalized = params.timezone.trim();
+            if (normalized.length > 0) {
+                searchParams.append('timezone', normalized);
+            }
+        }
+        const query = searchParams.toString();
+        return this.request<AdminReportMonthlyResponse>(
+            `/admin/reports/monthly${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminReportQuarterly(
+        params: AdminReportQuarterlyParams,
+    ): Promise<AdminReportQuarterlyResponse> {
+        const searchParams = new URLSearchParams();
+        searchParams.append('quarter', params.quarter);
+        if (params.compare_with) {
+            const normalized = params.compare_with.trim();
+            if (normalized.length > 0) {
+                searchParams.append('compare_with', normalized);
+            }
+        }
+        if (
+            params.compare_with === 'custom' &&
+            params.custom_compare &&
+            params.custom_compare.trim().length > 0
+        ) {
+            searchParams.append('custom_compare', params.custom_compare.trim());
+        }
+        if (params.timezone) {
+            const normalized = params.timezone.trim();
+            if (normalized.length > 0) {
+                searchParams.append('timezone', normalized);
+            }
+        }
+        const query = searchParams.toString();
+        return this.request<AdminReportQuarterlyResponse>(
+            `/admin/reports/quarterly${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminReportAnnual(
+        params: AdminReportAnnualParams,
+    ): Promise<AdminReportAnnualResponse> {
+        const searchParams = new URLSearchParams();
+        searchParams.append('year', params.year);
+        if (params.compare_with) {
+            const normalized = params.compare_with.trim();
+            if (normalized.length > 0) {
+                searchParams.append('compare_with', normalized);
+            }
+        }
+        if (
+            params.compare_with === 'custom' &&
+            params.custom_compare &&
+            params.custom_compare.trim().length > 0
+        ) {
+            searchParams.append('custom_compare', params.custom_compare.trim());
+        }
+        if (params.timezone) {
+            const normalized = params.timezone.trim();
+            if (normalized.length > 0) {
+                searchParams.append('timezone', normalized);
+            }
+        }
+        const query = searchParams.toString();
+        return this.request<AdminReportAnnualResponse>(
+            `/admin/reports/annual${query ? `?${query}` : ''}`,
         );
     }
 
