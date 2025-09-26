@@ -16,7 +16,6 @@ import {
   Sparkles,
   Users,
   Shield,
-  ShieldAlert,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -488,28 +487,6 @@ const menuItems: readonly AdminSidebarItem[] = [
     href: "/admin/mail-branding",
     icon: Mail,
     requiredPermissions: buildPermissionList("mail-branding", ["mailbranding", "mail"]),
-  },
-  {
-    name: "Setări platformă",
-    icon: Settings2,
-    requiredPermissions: buildPermissionList("system-settings", [
-      "settings",
-      "system",
-      "maintenance",
-      "maintenance-mode",
-    ]),
-    subItems: [
-      {
-        name: "Mod mentenanță",
-        href: "/admin/system/maintenance",
-        icon: ShieldAlert,
-        requiredPermissions: buildPermissionList("maintenance", [
-          "maintenance-mode",
-          "maintenance",
-          "maintenance_settings",
-        ]),
-      },
-    ],
   },
   {
     name: "Traduceri site",
