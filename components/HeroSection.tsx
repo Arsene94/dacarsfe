@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import {useBooking} from "@/context/BookingContext";
+import { useBooking } from "@/context/BookingContext";
 import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 import { useTranslations } from "@/lib/i18n/useTranslations";
@@ -56,7 +56,7 @@ const HeroSection = () => {
         location: resolvedLocations[0]?.value ?? "otopeni",
         car_type: "",
     });
-    const { setBooking } = useBooking();
+    const { booking, setBooking } = useBooking();
 
     const [categories, setCategories] = useState<CarCategory[]>([]);
     const router = useRouter();
@@ -111,6 +111,25 @@ const HeroSection = () => {
             return prev;
         });
     }, [formData.start_date]);
+
+    useEffect(() => {
+        if (!formData.start_date || !formData.end_date) {
+            return;
+        }
+
+        const pickup = formData.start_date;
+        const dropoff = formData.end_date;
+
+        if (booking.startDate === pickup && booking.endDate === dropoff) {
+            return;
+        }
+
+        setBooking({
+            ...booking,
+            startDate: pickup,
+            endDate: dropoff,
+        });
+    }, [booking, formData.end_date, formData.start_date, setBooking]);
 
     useEffect(() => {
         let cancelled = false;
