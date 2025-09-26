@@ -21,13 +21,7 @@ import {
 } from "@/components/admin/reports/ChartPrimitives";
 import "@/components/admin/reports/chartSetup";
 import { getColor } from "@/components/admin/reports/chartSetup";
-
-const formatCurrency = (value: number, currency: string) =>
-  new Intl.NumberFormat("ro-RO", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: value % 1 === 0 ? 0 : 1,
-  }).format(value);
+import { formatCurrency } from "@/components/admin/reports/formatting";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
   `${(value * 100).toFixed(fractionDigits)}%`;
