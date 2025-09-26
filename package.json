@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "build:css": "tailwindcss -c tailwind.config.ts -i ./app/globals.css -o ./public/tailwind.css --minify",
-    "images:webp": "node scripts/convert-images.cjs"
+    "images:webp": "node scripts/convert-images.cjs",
+    "check:seo": "node scripts/check-seo.mjs"
   },
   "dependencies": {
     "@codemirror/lang-html": "^6.4.10",
@@ -35,6 +36,8 @@
   "devDependencies": {
     "@eslint/js": "^9.9.1",
     "@next/eslint-plugin-next": "^15.5.2",
+    "@next/mdx": "^15.4.6",
+    "@mdx-js/loader": "^3.0.1",
     "@types/node": "^20.14.9",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",

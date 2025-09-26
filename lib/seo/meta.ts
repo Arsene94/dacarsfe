@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ensureAbsoluteUrl } from "@/lib/seo/structuredData";
+import { buildCanonicalUrl } from "@/lib/seo/url";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 
 type SocialImageInput = {
@@ -38,7 +39,7 @@ type BuildMetadataOptions = {
 
 export const buildMetadata = (options: BuildMetadataOptions): Metadata => {
     const canonicalUrl = options.path
-        ? ensureAbsoluteUrl(options.path, siteMetadata.siteUrl)
+        ? buildCanonicalUrl(options.path)
         : siteMetadata.siteUrl;
 
     const image = options.image ?? siteMetadata.defaultSocialImage;
