@@ -988,6 +988,9 @@ const ReservationPage = () => {
 
     const wheelPrizeDiscount = useMemo(() => {
         if (!hasWheelPrize || !wheelPrizeRecord) return 0;
+        if (quoteResult?.wheel_prize?.eligible === false) {
+            return 0;
+        }
         if (typeof quoteResult?.wheel_prize_discount === "number") {
             const normalized = Math.round(quoteResult.wheel_prize_discount * 100) / 100;
             return normalized > 0 ? normalized : 0;
@@ -1002,6 +1005,7 @@ const ReservationPage = () => {
         hasWheelPrize,
         quoteResult?.price_per_day,
         quoteResult?.total_before_wheel_prize,
+        quoteResult?.wheel_prize?.eligible,
         quoteResult?.wheel_prize_discount,
         wheelPrizeRecord,
     ]);
@@ -1014,10 +1018,17 @@ const ReservationPage = () => {
     }, [hasWheelPrize, t, wheelPrizeExpiryLabel]);
     const wheelPrizeSavingsMessage = useMemo(() => {
         if (!wheelPrizeApplied || wheelPrizeDiscount <= 0) return null;
+        if (quoteResult?.wheel_prize?.eligible === false) return null;
         return t("wheelPrize.savings", {
             values: { amount: formatCurrency(wheelPrizeDiscount) },
         });
-    }, [formatCurrency, t, wheelPrizeApplied, wheelPrizeDiscount]);
+    }, [
+        formatCurrency,
+        quoteResult?.wheel_prize?.eligible,
+        t,
+        wheelPrizeApplied,
+        wheelPrizeDiscount,
+    ]);
     const normalizedCouponCode = formData.coupon_code.trim();
 
     useEffect(() => {
@@ -1079,6 +1090,7 @@ const ReservationPage = () => {
                         prize_id: prizeId,
                         wheel_of_fortune_id: wheelPrizeRecord.wheel_of_fortune_id,
                         discount_value: wheelPrizeDiscountForRequest,
+                        eligible: true,
                     };
                 } else {
                     payload.wheel_prize_discount = 0;
@@ -1156,6 +1168,7 @@ const ReservationPage = () => {
         : estimatedPerDayPrice;
     const quoteCouponType = quoteResult?.coupon_type ?? discountStatus?.couponType ?? null;
     const quoteWheelPrizeDetails = quoteResult?.wheel_prize ?? null;
+    const isQuoteWheelPrizeEligible = quoteWheelPrizeDetails?.eligible !== false;
 
     const handleDiscountCodeValidation = async (
         force = false,
@@ -1368,6 +1381,7 @@ const ReservationPage = () => {
                 amount_label: wheelPrizeAmountLabel,
                 expires_at: wheelPrizeRecord.expires_at,
                 discount_value: wheelPrizeDiscountValue,
+                eligible: true,
             }
             : null;
 
@@ -1375,6 +1389,7 @@ const ReservationPage = () => {
             ? {
                 ...quoteWheelPrizeDetails,
                 discount_value: wheelPrizeDiscountValue,
+                eligible: quoteWheelPrizeDetails.eligible ?? true,
             }
             : fallbackWheelPrizeDetails;
 

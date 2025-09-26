@@ -32,6 +32,7 @@ import {
     type AdminBookingResource,
     createEmptyBookingForm,
 } from "@/types/admin";
+import type { ReservationAppliedOffer } from "@/types/reservation";
 import type { ActivityReservation } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import {getStatusText} from "@/lib/utils";
@@ -113,6 +114,54 @@ const pickLookupName = (value: unknown): string | undefined => {
     }
 
     return undefined;
+};
+
+const normalizeAppliedOfferEntry = (
+    raw: unknown,
+): ReservationAppliedOffer | null => {
+    if (!isRecord(raw)) return null;
+    const id = parseOptionalNumber(raw.id ?? (raw as { offer_id?: unknown }).offer_id);
+    if (typeof id !== "number" || Number.isNaN(id)) {
+        return null;
+    }
+    const titleSource =
+        typeof raw.title === "string" && raw.title.trim().length > 0
+            ? raw.title
+            : typeof raw.name === "string" && raw.name.trim().length > 0
+                ? raw.name
+                : null;
+    if (!titleSource) {
+        return null;
+    }
+    const offerType = toSafeString((raw as { offer_type?: unknown }).offer_type, "").trim();
+    const offerValue = toSafeString((raw as { offer_value?: unknown }).offer_value, "").trim();
+    const discountLabel = toSafeString((raw as { discount_label?: unknown }).discount_label, "").trim()
+        || toSafeString((raw as { badge?: unknown }).badge, "").trim();
+
+    return {
+        id,
+        title: titleSource,
+        offer_type: offerType.length > 0 ? offerType : null,
+        offer_value: offerValue.length > 0 ? offerValue : null,
+        discount_label: discountLabel.length > 0 ? discountLabel : null,
+    };
+};
+
+const normalizeAppliedOffersList = (value: unknown): ReservationAppliedOffer[] => {
+    if (!Array.isArray(value)) return [];
+    const normalized = value
+        .map((entry) => normalizeAppliedOfferEntry(entry))
+        .filter((entry): entry is ReservationAppliedOffer => entry !== null);
+    if (normalized.length === 0) {
+        return [];
+    }
+    const unique = new Map<number, ReservationAppliedOffer>();
+    normalized.forEach((entry) => {
+        if (!unique.has(entry.id)) {
+            unique.set(entry.id, entry);
+        }
+    });
+    return Array.from(unique.values());
 };
 
 const toLocalDateTimeInput = (iso?: string | null): string => {
@@ -770,6 +819,10 @@ const AdminDashboard = () => {
                 ) ?? null;
             const wheelPrizeDiscount =
                 parseOptionalNumber(info.wheel_prize_discount) ?? 0;
+            const offersDiscount =
+                parseOptionalNumber(info.offers_discount ?? (info as { offersDiscount?: unknown }).offersDiscount) ?? 0;
+            const depositWaived = normalizeBoolean(info.deposit_waived, false);
+            const appliedOffers = normalizeAppliedOffersList(info.applied_offers);
             const couponType =
                 typeof info.coupon_type === "string"
                     ? info.coupon_type
@@ -841,6 +894,9 @@ const AdminDashboard = () => {
                 total_before_wheel_prize: totalBeforeWheelPrize,
                 wheel_prize_discount: wheelPrizeDiscount,
                 wheel_prize: (info.wheel_prize ?? null) as AdminBookingFormValues["wheel_prize"],
+                offers_discount: offersDiscount,
+                deposit_waived: depositWaived,
+                applied_offers: appliedOffers,
                 advance_payment: advancePayment,
                 note: toSafeString(info.note, ""),
                 currency_id: currencyId,

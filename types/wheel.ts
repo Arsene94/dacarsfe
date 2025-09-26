@@ -42,6 +42,7 @@ export interface WheelOfFortuneSlice {
   type: WheelOfFortuneType;
   created_at?: string | null;
   updated_at?: string | null;
+  period?: WheelOfFortunePeriod | null;
 }
 
 export type WheelPrize = WheelOfFortuneSlice;
@@ -51,11 +52,15 @@ export interface WheelOfFortunePeriod {
   name: string;
   start_at?: string | null;
   end_at?: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
   active?: boolean;
   is_active?: boolean;
   description?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  active_months?: number[] | null;
+  wheel_of_fortunes?: WheelPrize[] | null;
 }
 
 export interface WheelOfFortunePrizePayload {

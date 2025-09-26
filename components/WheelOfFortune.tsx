@@ -77,16 +77,30 @@ const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
     const activeRaw = item.active ?? item.is_active ?? item.enabled ?? item.status;
     const normalizedActive = normalizeActiveFlag(activeRaw);
 
+    const activeMonths = Array.isArray(item.active_months)
+        ? item.active_months
+              .map((entry) => Number(entry))
+              .filter((entry) => Number.isFinite(entry) && entry >= 1 && entry <= 12)
+        : [];
+
     return {
         id,
         name,
         start_at: typeof start === "string" ? start : null,
         end_at: typeof end === "string" ? end : null,
+        starts_at: typeof start === "string" ? start : null,
+        ends_at: typeof end === "string" ? end : null,
         active: normalizedActive,
         is_active: normalizedActive,
         description: typeof item.description === "string" ? item.description : null,
         created_at: typeof item.created_at === "string" ? item.created_at : null,
         updated_at: typeof item.updated_at === "string" ? item.updated_at : null,
+        active_months: activeMonths.length > 0 ? activeMonths : null,
+        wheel_of_fortunes: Array.isArray(item.wheel_of_fortunes)
+            ? item.wheel_of_fortunes
+                  .map((entry) => mapPrize(entry, false))
+                  .filter((entry): entry is WheelPrize => entry !== null)
+            : null,
     };
 };
 
@@ -129,7 +143,7 @@ const formatDateLabel = (value: string | null | undefined): string | null => {
     }
 };
 
-const mapPrize = (item: unknown): WheelPrize | null => {
+const mapPrize = (item: unknown, includePeriod = true): WheelPrize | null => {
     if (!isRecord(item)) return null;
     const id = Number(item.id ?? item.wheel_of_fortune_id ?? item.value);
     if (!Number.isFinite(id)) return null;
@@ -143,12 +157,13 @@ const mapPrize = (item: unknown): WheelPrize | null => {
     const colorSource = item.color ?? item.hex ?? item.swatch ?? "#1E7149";
     const probabilitySource = item.probability ?? item.weight ?? item.chance ?? 0;
     const typeSource = item.type ?? item.prize_type ?? item.category ?? "other";
+    const rawPeriod = isRecord(item.period) ? item.period : null;
     const periodCandidate =
         item.period_id ??
-        (isRecord(item.period)
-            ? item.period.id ??
-                (item.period as Record<string, unknown>).period_id ??
-                (item.period as Record<string, unknown>).value
+        (rawPeriod
+            ? rawPeriod.id ??
+                (rawPeriod as Record<string, unknown>).period_id ??
+                (rawPeriod as Record<string, unknown>).value
             : typeof item.period === "string" || typeof item.period === "number"
                 ? item.period
                 : null);
@@ -178,6 +193,7 @@ const mapPrize = (item: unknown): WheelPrize | null => {
         type: typeof typeSource === "string" ? typeSource : "other",
         created_at: typeof item.created_at === "string" ? item.created_at : null,
         updated_at: typeof item.updated_at === "string" ? item.updated_at : null,
+        period: includePeriod && period ? mapPeriod(period) : null,
     };
 
     const resolvedDescription = basePrize.description ?? buildWheelPrizeDefaultDescription(basePrize);

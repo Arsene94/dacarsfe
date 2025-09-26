@@ -1720,25 +1720,77 @@ export class ApiClient {
             body: JSON.stringify(params),
         })
     }
-    async getBookingInfo(id: number | string): Promise<ApiItemResult<AdminBookingResource>> {
-        return this.request<ApiItemResult<AdminBookingResource>>(`/bookings/${id}`)
+    async getBookingInfo(
+        id: number | string,
+        params: { include?: string | readonly string[] } = {},
+    ): Promise<ApiItemResult<AdminBookingResource>> {
+        const includeValue = resolveIncludeParam(params.include);
+        if (!includeValue) {
+            return this.request<ApiItemResult<AdminBookingResource>>(`/bookings/${id}`);
+        }
+        const query = new URLSearchParams({ include: includeValue }).toString();
+        return this.request<ApiItemResult<AdminBookingResource>>(`/bookings/${id}?${query}`);
     }
 
     async getBookings(params: {
         page?: number;
         perPage?: number;
+        per_page?: number;
         search?: string;
         status?: string;
+        customer_id?: number | string;
+        car_id?: number | string;
         start_date?: string;
         end_date?: string;
+        from?: string;
+        to?: string;
+        limit?: number;
+        include?: string | readonly string[];
     } = {}): Promise<ApiListResult<AdminBookingResource>> {
         const searchParams = new URLSearchParams();
-        if (params.page) searchParams.append('page', params.page.toString());
-        if (params.perPage) searchParams.append('per_page', params.perPage.toString());
-        if (params.search) searchParams.append('search', params.search);
-        if (params.status) searchParams.append('status', params.status);
-        if (params.start_date) searchParams.append('start_date', params.start_date);
-        if (params.end_date) searchParams.append('end_date', params.end_date);
+        const includeValue = resolveIncludeParam(params.include);
+        if (includeValue) {
+            searchParams.append('include', includeValue);
+        }
+        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
+            searchParams.append('page', params.page.toString());
+        }
+        const perPageCandidate =
+            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
+                ? params.perPage
+                : typeof params.per_page === 'number' && Number.isFinite(params.per_page)
+                    ? params.per_page
+                    : undefined;
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
+            searchParams.append('limit', params.limit.toString());
+        }
+        if (typeof params.search === 'string' && params.search.trim().length > 0) {
+            searchParams.append('search', params.search.trim());
+        }
+        if (typeof params.status === 'string' && params.status.trim().length > 0) {
+            searchParams.append('status', params.status.trim());
+        }
+        if (typeof params.customer_id !== 'undefined' && params.customer_id !== null) {
+            searchParams.append('customer_id', String(params.customer_id));
+        }
+        if (typeof params.car_id !== 'undefined' && params.car_id !== null) {
+            searchParams.append('car_id', String(params.car_id));
+        }
+        if (typeof params.start_date === 'string' && params.start_date.length > 0) {
+            searchParams.append('start_date', params.start_date);
+        }
+        if (typeof params.end_date === 'string' && params.end_date.length > 0) {
+            searchParams.append('end_date', params.end_date);
+        }
+        if (typeof params.from === 'string' && params.from.length > 0) {
+            searchParams.append('from', params.from);
+        }
+        if (typeof params.to === 'string' && params.to.length > 0) {
+            searchParams.append('to', params.to);
+        }
         const query = searchParams.toString();
         return this.request<ApiListResult<AdminBookingResource>>(
             `/bookings${query ? `?${query}` : ''}`,
@@ -2012,6 +2064,8 @@ export class ApiClient {
         limit?: number;
         active?: number | boolean;
         is_active?: number | boolean;
+        with?: string | readonly string[];
+        include?: string | readonly string[];
     } = {}): Promise<ApiListResult<WheelOfFortunePeriod>> {
         const searchParams = new URLSearchParams();
         if (params.page) searchParams.append('page', params.page.toString());
@@ -2029,6 +2083,14 @@ export class ApiClient {
         if (typeof params.is_active !== 'undefined') {
             appendBooleanParam('is_active', params.is_active);
         }
+        const withValue = resolveIncludeParam(params.with);
+        if (withValue) {
+            searchParams.append('with', withValue);
+        }
+        const includeValue = resolveIncludeParam(params.include);
+        if (includeValue) {
+            searchParams.append('include', includeValue);
+        }
         const query = searchParams.toString();
         return this.request<ApiListResult<WheelOfFortunePeriod>>(
             `/wheel-of-fortune-periods${query ? `?${query}` : ''}`,
@@ -2039,18 +2101,40 @@ export class ApiClient {
         name: string;
         start_at?: string | null;
         end_at?: string | null;
+        starts_at?: string | null;
+        ends_at?: string | null;
         active?: boolean;
         is_active?: boolean;
         description?: string | null;
+        active_months?: number[] | null;
     }): Promise<ApiItemResult<WheelOfFortunePeriod>> {
+        const normalizeActiveMonths = (value: number[] | null | undefined) => {
+            if (!Array.isArray(value)) {
+                return undefined;
+            }
+            const unique = Array.from(
+                new Set(
+                    value
+                        .map((entry) => Number(entry))
+                        .filter((entry) => Number.isFinite(entry) && entry >= 1 && entry <= 12),
+                ),
+            );
+            if (unique.length === 0) {
+                return [];
+            }
+            return unique.sort((a, b) => a - b);
+        };
         const body = sanitizePayload({
             ...payload,
+            starts_at: payload.starts_at ?? payload.start_at,
+            ends_at: payload.ends_at ?? payload.end_at,
             ...(typeof payload.active === 'boolean'
                 ? { active: payload.active }
                 : {}),
             ...(typeof payload.is_active === 'boolean'
                 ? { is_active: payload.is_active }
                 : {}),
+            active_months: normalizeActiveMonths(payload.active_months ?? null),
         });
         return this.request<ApiItemResult<WheelOfFortunePeriod>>(`/wheel-of-fortune-periods`, {
             method: 'POST',
@@ -2064,19 +2148,41 @@ export class ApiClient {
             name?: string;
             start_at?: string | null;
             end_at?: string | null;
+            starts_at?: string | null;
+            ends_at?: string | null;
             active?: boolean;
             is_active?: boolean;
             description?: string | null;
+            active_months?: number[] | null;
         },
     ): Promise<ApiItemResult<WheelOfFortunePeriod>> {
+        const normalizeActiveMonths = (value: number[] | null | undefined) => {
+            if (!Array.isArray(value)) {
+                return undefined;
+            }
+            const unique = Array.from(
+                new Set(
+                    value
+                        .map((entry) => Number(entry))
+                        .filter((entry) => Number.isFinite(entry) && entry >= 1 && entry <= 12),
+                ),
+            );
+            if (unique.length === 0) {
+                return [];
+            }
+            return unique.sort((a, b) => a - b);
+        };
         const body = sanitizePayload({
             ...payload,
+            starts_at: payload.starts_at ?? payload.start_at,
+            ends_at: payload.ends_at ?? payload.end_at,
             ...(typeof payload.active === 'boolean'
                 ? { active: payload.active }
                 : {}),
             ...(typeof payload.is_active === 'boolean'
                 ? { is_active: payload.is_active }
                 : {}),
+            active_months: normalizeActiveMonths(payload.active_months ?? null),
         });
         return this.request<ApiItemResult<WheelOfFortunePeriod>>(`/wheel-of-fortune-periods/${id}`, {
             method: 'PUT',
@@ -2097,6 +2203,7 @@ export class ApiClient {
         limit?: number;
         is_active?: boolean;
         language?: string;
+        include?: string | readonly string[];
     } = {}): Promise<ApiListResult<WheelPrize>> {
         const { language, ...filters } = params;
         const searchParams = new URLSearchParams();
@@ -2109,6 +2216,10 @@ export class ApiClient {
         if (typeof filters.is_active !== 'undefined') {
             const value = filters.is_active ? '1' : '0';
             searchParams.append('is_active', value);
+        }
+        const includeValue = resolveIncludeParam(filters.include);
+        if (includeValue) {
+            searchParams.append('include', includeValue);
         }
         const query = searchParams.toString();
         const basePath = appendOptionalLanguage(`/wheel-of-fortunes`, this.resolveLanguage(language));

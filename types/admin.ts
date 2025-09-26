@@ -1,6 +1,10 @@
 import type { ApiCar, CarLookup } from "@/types/car";
 import type { Offer, OfferIcon, OfferStatus } from "@/types/offer";
-import type { ReservationWheelPrizeSummary, ServiceStatus } from "@/types/reservation";
+import type {
+  ReservationAppliedOffer,
+  ReservationWheelPrizeSummary,
+  ServiceStatus,
+} from "@/types/reservation";
 
 export interface AdminReservation {
   id: string;
@@ -24,9 +28,12 @@ export interface AdminReservation {
   pricePerDay?: number;
   servicesPrice?: number;
   discount?: number;
+  offersDiscount?: number | null;
   totalBeforeWheelPrize?: number | null;
   wheelPrizeDiscount?: number | null;
   wheelPrize?: ReservationWheelPrizeSummary | null;
+  appliedOffers?: ReservationAppliedOffer[] | null;
+  depositWaived?: boolean | null;
   email?: string;
   days?: number;
   pickupTime?: string;
@@ -257,6 +264,9 @@ export interface AdminBookingResource {
   total_before_wheel_prize?: number | string | null;
   wheel_prize_discount?: number | string | null;
   wheel_prize?: ReservationWheelPrizeSummary | null;
+  offers_discount?: number | string | null;
+  deposit_waived?: boolean | number | string | null;
+  applied_offers?: ReservationAppliedOffer[] | null;
   discount?: number | string | null;
   discount_type?: string | null;
   location?: string | null;
@@ -328,6 +338,9 @@ export interface AdminBookingFormValues {
   total_before_wheel_prize: number | null;
   wheel_prize_discount: number;
   wheel_prize: ReservationWheelPrizeSummary | null;
+  offers_discount: number;
+  deposit_waived: boolean;
+  applied_offers: ReservationAppliedOffer[];
   discount_applied?: number | null;
   location?: string;
   tax_amount?: number;
@@ -373,6 +386,9 @@ export const createEmptyBookingForm = (): AdminBookingFormValues => ({
   total_before_wheel_prize: null,
   wheel_prize_discount: 0,
   wheel_prize: null,
+  offers_discount: 0,
+  deposit_waived: false,
+  applied_offers: [],
   discount_applied: null,
   location: "",
   tax_amount: 0,
