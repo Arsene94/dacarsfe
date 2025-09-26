@@ -484,7 +484,7 @@ export default function WheelOfFortuneAdminPage() {
             const response = await apiClient.getWheelOfFortunes({ period_id: periodId, per_page: 100 });
             const items = extractDataArray(response);
             const mapped = items
-                .map(mapPrize)
+                .map((item) => mapPrize(item))
                 .filter((item): item is WheelOfFortuneSlice => item !== null)
                 .map((item) => ({ ...item, period_id: item.period_id || periodId }))
                 .sort((a, b) => {

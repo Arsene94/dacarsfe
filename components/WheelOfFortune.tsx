@@ -308,7 +308,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 language: locale,
             });
             const prizeItems = extractArray(prizesResponse)
-                .map(mapPrize)
+                .map((item) => mapPrize(item))
                 .filter((item): item is WheelPrize => item !== null)
                 .map((item) => ({
                     ...item,
