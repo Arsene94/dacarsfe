@@ -464,7 +464,7 @@ export default function AdminMonthlyReportPage() {
                 ) : null}
               </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">
-                {data.customer_mix.map((item) => (
+                {data.customecheckr_mix.map((item) => (
                   <div key={item.label} className="flex justify-between">
                     <span>{item.label}</span>
                     <span className="font-medium text-berkeley">
@@ -512,7 +512,7 @@ export default function AdminMonthlyReportPage() {
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
-                  <Building2 className="h-4 w-4 text-jade" /> Orașe cu volum ridicat
+                  <Building2 className="h-4 w-4 text-jade" /> Cele mai închiriate mașini
                 </h3>
                 <ul className="space-y-2 text-sm text-slate-700">
                   {data.bookings.top_cities.map((city) => (

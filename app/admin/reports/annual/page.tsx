@@ -575,8 +575,8 @@ export default function AdminAnnualReportPage() {
 
           <div className="grid gap-6 lg:grid-cols-2">
             <ReportSection
-              title="Orașe cu volum ridicat"
-              description="Compară performanța orașelor principale."
+              title="Cele mai închiriate mașini"
+              description="Compară performanța celor mai închiriate mașini."
             >
               <ChartContainer heightClass="h-80">
                 {cityPerformanceData ? (
