@@ -28,7 +28,7 @@
     },
     "amount": {
       "percentage_discount": "Réduction de {{amount}}%",
-      "fixed_discount": "Réduction de {{amount}} RON",
+      "fixed_discount": "Réduction de {{amount}} EUR",
       "extra_rental_day": {
         "one": "Bonus de {{amount}} jour",
         "other": "Bonus de {{amount}} jours"

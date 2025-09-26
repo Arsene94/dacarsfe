@@ -84,7 +84,7 @@
     "savings": "Economisești {{amount}}€ la această rezervare.",
     "amount": {
       "percentage": "Reducere de {{amount}}%",
-      "fixed": "Discount de {{amount}} RON",
+      "fixed": "Discount de {{amount}} EUR",
       "extraDay": {
         "one": "Bonus de {{amount}} zi",
         "other": "Bonus de {{amount}} zile"

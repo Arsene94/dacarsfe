@@ -84,7 +84,7 @@
     "savings": "Vous économisez {{amount}}€ sur cette réservation.",
     "amount": {
       "percentage": "Réduction de {{amount}}%",
-      "fixed": "Réduction de {{amount}} RON",
+      "fixed": "Réduction de {{amount}} EUR",
       "extraDay": {
         "one": "Bonus de {{amount}} jour",
         "other": "Bonus de {{amount}} jours"
