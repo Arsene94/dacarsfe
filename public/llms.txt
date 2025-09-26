@@ -1,0 +1,39 @@
+# DaCars Rent a Car – Platformă digitală de închirieri auto
+> Experiență completă de rezervare mașini pentru București și Otopeni, construită cu Next.js 15, React 18 și Tailwind CSS și integrată cu backend-ul Laravel al companiei DaCars.
+
+## Note esențiale
+- Predare și preluare 24/7, flotă variată și opțiuni flexibile cu sau fără garanție pentru clienții din București și Aeroportul Otopeni.
+- Flux de rezervare end-to-end cu context persistent, verificări de disponibilitate, servicii suplimentare și calcul automat al tarifelor.
+- Roata Norocului și ofertele dinamice recompensează clienții fideli cu discounturi și upgrade-uri, sincronizate cu stocul din backend.
+- Consolă administrativă protejată pentru gestionarea flotei, rezervărilor, campaniilor și șabloanelor de email.
+
+## Pagini publice recomandate
+- [Landing page](https://dacars.ro/): prezentare completă a brandului DaCars, beneficii, flotă disponibilă și formular rapid de rezervare.
+- [Flotă auto](https://dacars.ro/cars): listare completă cu filtre după tip, transmisie, combustibil, căutare liberă și breadcrumb structural pentru navigare.
+- [Oferte speciale](https://dacars.ro/offers): promoții active, discounturi procentuale și pachete pentru grupuri cu etichete și perioade de valabilitate actualizate din API.
+- [Blog DaCars](https://dacars.ro/blog): ghiduri de călătorie, articole despre închirieri și noutăți din culisele DaCars, cu filtrare pe categorii și căutare.
+- [Contact și asistență 24/7](https://dacars.ro/contact): date complete de contact, suport în română și engleză și detalii despre disponibilitate non-stop.
+
+## Flux de rezervare și post-rezervare
+- [Selectează mașina și completează rezervarea](https://dacars.ro/checkout): formular bogat cu PhoneInput internațional, validări în timp real, integrare cu contextul Booking și sincronizare cu premiile câștigate la roata norocului.
+- [Confirmarea rezervării](https://dacars.ro/success): rezumat cu preluarea/returnarea, prețurile formatate pe locale, serviciile selectate și statusul premiului din Roata Norocului.
+
+## Beneficii și diferențiatori
+- Gestionarea rezervărilor include generare automată de contracte PDF și integrare strânsă cu API-ul Laravel pentru flotă, servicii și disponibilitate.
+- Motor de oferte și Roata Norocului cu stocare locală și termene de expirare pentru reduceri, încurajând fidelizarea clienților.
+- Conținut editorial (blog, ghiduri) care susține decizia de închiriere și explică avantajele serviciilor DaCars.
+
+## Zona administrativă (acces restricționat)
+- /admin: dashboard cu statistici zilnice, tabel sortabil al rezervărilor, calendar flotă cu drag & drop și module dedicate pentru marketing și email.
+- Gestionare avansată pentru categorii, servicii extra, tarife dinamice și șabloane de comunicare.
+
+## Date de contact și identitate
+- Telefon: +40 723 817 551
+- Email: contact@dacars.ro
+- Adresă: Calea Bucureștilor 305, Otopeni, Ilfov, 075100, România
+- Profiluri sociale: https://www.facebook.com/dacars.ro · https://www.instagram.com/dacars.ro
+
+## Metadate tehnice și sitemap
+- Stack principal: Next.js 15 (App Router), React 18, TypeScript strict, Tailwind CSS personalizat și componente UI proprii.
+- API REST Laravel pentru mașini, rezervări, servicii și roata norocului, accesat prin clientul centralizat `lib/api.ts`.
+- Fișier sitemap generat dinamic la https://dacars.ro/sitemap.xml pentru a facilita indexarea și sincronizat cu structura App Router.
