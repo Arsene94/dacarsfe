@@ -1,3 +1,4 @@
+import { API_BASE_URL, API_STATIC_KEY } from "@/lib/api/config";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { mapCarSearchFilters } from "@/lib/mapFilters";
 import { toQuery } from "@/lib/qs";
@@ -113,6 +114,10 @@ import type {
     WheelOfFortunePrizeWinner,
     WheelPrize,
 } from "@/types/wheel";
+import type {
+    MaintenanceSettingsPayload,
+    MaintenanceSettingsResponse,
+} from "@/types/settings";
 
 type CategoryPriceCalendarPayload = Omit<
     CategoryPriceCalendar,
@@ -143,8 +148,6 @@ type RolePayload = {
     is_default?: number | boolean;
     permissions?: string[];
 } & Record<string, unknown>;
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export const FORBIDDEN_EVENT = "dacars:api:forbidden";
 const FORBIDDEN_MESSAGE = "Forbidden";
@@ -285,7 +288,7 @@ export class ApiClient {
         const headers: Record<string, string> = {
             ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
             ...(this.token && { Authorization: `Bearer ${this.token}` }),
-            'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+            'X-API-KEY': API_STATIC_KEY,
         };
 
         const applyHeaders = (source?: HeadersInit) => {
@@ -2193,6 +2196,20 @@ export class ApiClient {
 
     async getMailBrandingSettings() {
         return this.request<MailBrandingResponse>(`/mail-branding-settings`);
+    }
+
+    async getMaintenanceSettings(): Promise<MaintenanceSettingsResponse> {
+        return this.request<MaintenanceSettingsResponse>(`/settings/maintenance`);
+    }
+
+    async updateMaintenanceSettings(
+        payload: MaintenanceSettingsPayload,
+    ): Promise<MaintenanceSettingsResponse> {
+        const body = sanitizePayload(payload);
+        return this.request<MaintenanceSettingsResponse>(`/settings/maintenance`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
     }
 
     async updateMailBrandingSettings(payload: MailBrandingUpdatePayload) {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CalendarClock, Home, Mail } from "lucide-react";
 import StatusPage from "@/components/StatusPage";
+import { fetchMaintenanceSettings } from "@/lib/maintenance";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 
@@ -20,12 +21,32 @@ export const metadata: Metadata = {
     },
 };
 
-const MaintenancePage = () => {
+const formatResumeLabel = (value: string | null | undefined): string | null => {
+    if (!value) {
+        return null;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+
+    return new Intl.DateTimeFormat("ro-RO", {
+        dateStyle: "long",
+        timeStyle: "short",
+    }).format(parsed);
+};
+
+const MaintenancePage = async () => {
+    const settings = await fetchMaintenanceSettings();
+    const heroDescription = settings?.message ?? description;
+    const resumeLabel = formatResumeLabel(settings?.resume_at ?? null);
+
     return (
         <StatusPage
             statusLabel="Mentenanță programată"
             title="Revenim imediat"
-            description={description}
+            description={heroDescription}
             icon={<CalendarClock className="h-10 w-10" aria-hidden="true" />}
             actions={[
                 {
@@ -55,9 +76,13 @@ const MaintenancePage = () => {
                 </a>
                 .
             </p>
-            <p>
-                Programul estimat de finalizare este astăzi, ora 23:00. Îți mulțumim pentru răbdare!
-            </p>
+            {resumeLabel ? (
+                <p>
+                    Revenim online în jurul datei {resumeLabel}. Îți mulțumim pentru răbdare și înțelegere!
+                </p>
+            ) : (
+                <p>Programul estimat de finalizare va fi comunicat cât mai curând posibil.</p>
+            )}
             <p className="text-xs text-gray-400">
                 Dacă ai o rezervare urgentă, te rugăm să ne suni pentru asistență imediată.
             </p>
