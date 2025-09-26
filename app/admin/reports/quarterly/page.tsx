@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChartData, ChartOptions } from "chart.js";
-import { Bar, Doughnut } from "react-chartjs-2";
 import { BriefcaseBusiness, RefreshCw, Sparkles } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { AdminReportQuarterlyResponse } from "@/types/reports";
@@ -16,6 +15,10 @@ import {
   ReportSection,
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
+import {
+  BarChart,
+  DoughnutChart,
+} from "@/components/admin/reports/ChartPrimitives";
 import "@/components/admin/reports/chartSetup";
 import { getColor } from "@/components/admin/reports/chartSetup";
 
@@ -478,7 +481,9 @@ export default function AdminQuarterlyReportPage() {
             description="Compară veniturile lunare cu perioada de referință."
           >
             <ChartContainer>
-              {revenueData ? <Bar options={revenueOptions} data={revenueData} /> : null}
+              {revenueData ? (
+                <BarChart options={revenueOptions} data={revenueData} />
+              ) : null}
             </ChartContainer>
           </ReportSection>
 
@@ -489,7 +494,7 @@ export default function AdminQuarterlyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {profitBySegmentData ? (
-                  <Bar options={profitBySegmentOptions} data={profitBySegmentData} />
+                  <BarChart options={profitBySegmentOptions} data={profitBySegmentData} />
                 ) : null}
               </ChartContainer>
             </ReportSection>
@@ -500,7 +505,7 @@ export default function AdminQuarterlyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {availabilityData ? (
-                  <Doughnut options={availabilityOptions} data={availabilityData} />
+                  <DoughnutChart options={availabilityOptions} data={availabilityData} />
                 ) : null}
               </ChartContainer>
             </ReportSection>

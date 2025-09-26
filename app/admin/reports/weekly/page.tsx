@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChartData, ChartOptions } from "chart.js";
-import { Doughnut, Line, Radar } from "react-chartjs-2";
 import { AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { AdminReportWeeklyResponse } from "@/types/reports";
@@ -16,6 +15,11 @@ import {
   ReportSection,
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
+import {
+  DoughnutChart,
+  LineChart,
+  RadarChart,
+} from "@/components/admin/reports/ChartPrimitives";
 import "@/components/admin/reports/chartSetup";
 import { getColor } from "@/components/admin/reports/chartSetup";
 
@@ -455,7 +459,9 @@ export default function AdminWeeklyReportPage() {
             description="Compară trendul zilnic cu intervalul de referință."
           >
             <ChartContainer>
-              {revenueChart ? <Line options={revenueChartOptions} data={revenueChart} /> : null}
+              {revenueChart ? (
+                <LineChart options={revenueChartOptions} data={revenueChart} />
+              ) : null}
             </ChartContainer>
           </ReportSection>
 
@@ -466,7 +472,7 @@ export default function AdminWeeklyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {channelMixData ? (
-                  <Doughnut options={channelMixOptions} data={channelMixData} />
+                  <DoughnutChart options={channelMixOptions} data={channelMixData} />
                 ) : null}
               </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">
@@ -490,7 +496,7 @@ export default function AdminWeeklyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {occupancyData ? (
-                  <Radar options={occupancyOptions} data={occupancyData} />
+                  <RadarChart options={occupancyOptions} data={occupancyData} />
                 ) : null}
               </ChartContainer>
             </ReportSection>

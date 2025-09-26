@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChartData, ChartOptions } from "chart.js";
-import { Bar, Doughnut, Line } from "react-chartjs-2";
 import { ArrowDownRight, ArrowUpRight, BarChart3, RefreshCw, Users } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { AdminReportAnnualResponse } from "@/types/reports";
@@ -16,6 +15,11 @@ import {
   ReportSection,
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
+import {
+  BarChart,
+  DoughnutChart,
+  LineChart,
+} from "@/components/admin/reports/ChartPrimitives";
 import "@/components/admin/reports/chartSetup";
 import { getColor } from "@/components/admin/reports/chartSetup";
 
@@ -508,7 +512,9 @@ export default function AdminAnnualReportPage() {
             description="Compară dinamica fiecărui trimestru cu anul de referință."
           >
             <ChartContainer>
-              {quarterTrend ? <Line options={quarterTrendOptions} data={quarterTrend} /> : null}
+              {quarterTrend ? (
+                <LineChart options={quarterTrendOptions} data={quarterTrend} />
+              ) : null}
             </ChartContainer>
           </ReportSection>
 
@@ -519,7 +525,7 @@ export default function AdminAnnualReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {segmentPerformanceData ? (
-                  <Bar options={segmentPerformanceOptions} data={segmentPerformanceData} />
+                  <BarChart options={segmentPerformanceOptions} data={segmentPerformanceData} />
                 ) : null}
               </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">
@@ -540,7 +546,7 @@ export default function AdminAnnualReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {channelMixData ? (
-                  <Doughnut options={channelMixOptions} data={channelMixData} />
+                  <DoughnutChart options={channelMixOptions} data={channelMixData} />
                 ) : null}
               </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">
@@ -580,7 +586,7 @@ export default function AdminAnnualReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {cityPerformanceData ? (
-                  <Bar options={cityPerformanceOptions} data={cityPerformanceData} />
+                  <BarChart options={cityPerformanceOptions} data={cityPerformanceData} />
                 ) : null}
               </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { ChartData, ChartOptions } from "chart.js";
-import { Bar } from "react-chartjs-2";
 import { ArrowRight, CalendarDays, RefreshCw } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { AdminReportOverviewResponse } from "@/types/reports";
@@ -16,6 +15,7 @@ import {
   ReportSection,
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
+import { BarChart } from "@/components/admin/reports/ChartPrimitives";
 import "@/components/admin/reports/chartSetup";
 import { getColor } from "@/components/admin/reports/chartSetup";
 
@@ -317,7 +317,7 @@ export default function AdminReportsOverviewPage() {
           >
             <ChartContainer>
               {quarterChartData ? (
-                <Bar options={quarterChartOptions} data={quarterChartData} />
+                <BarChart options={quarterChartOptions} data={quarterChartData} />
               ) : null}
             </ChartContainer>
           </ReportSection>

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChartData, ChartOptions } from "chart.js";
-import { Bar, Doughnut, Line } from "react-chartjs-2";
 import { Building2, RefreshCw, Target } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { AdminReportMonthlyResponse } from "@/types/reports";
@@ -16,6 +15,11 @@ import {
   ReportSection,
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
+import {
+  BarChart,
+  DoughnutChart,
+  LineChart,
+} from "@/components/admin/reports/ChartPrimitives";
 import "@/components/admin/reports/chartSetup";
 import { getColor } from "@/components/admin/reports/chartSetup";
 
@@ -449,7 +453,9 @@ export default function AdminMonthlyReportPage() {
             description="Evaluează traiectoria veniturilor și a profitului."
           >
             <ChartContainer>
-              {trendData ? <Line options={trendOptions} data={trendData} /> : null}
+              {trendData ? (
+                <LineChart options={trendOptions} data={trendData} />
+              ) : null}
             </ChartContainer>
           </ReportSection>
 
@@ -460,7 +466,7 @@ export default function AdminMonthlyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {customerMixData ? (
-                  <Doughnut options={customerMixOptions} data={customerMixData} />
+                  <DoughnutChart options={customerMixOptions} data={customerMixData} />
                 ) : null}
               </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">
@@ -484,7 +490,7 @@ export default function AdminMonthlyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {costStructureData ? (
-                  <Bar options={costStructureOptions} data={costStructureData} />
+                  <BarChart options={costStructureOptions} data={costStructureData} />
                 ) : null}
               </ChartContainer>
             </ReportSection>
