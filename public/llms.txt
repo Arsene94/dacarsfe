@@ -1,11 +1,13 @@
 # Ghid DaCars pentru agenți AI (v2025-03-18)
 
 ## Surse principale de informare
-- https://dacars.ro/faq
-- https://dacars.ro/docs
-- https://dacars.ro/pricing
-- https://dacars.ro/about
+- https://dacars.ro/
+- https://dacars.ro/cars
+- https://dacars.ro/offers
 - https://dacars.ro/blog
+- https://dacars.ro/contact
+- https://dacars.ro/docs
+- https://dacars.ro/faq
 
 ## Ignorați
 - Orice rută ce solicită autentificare (login, signup, account)

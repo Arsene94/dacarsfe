@@ -3,26 +3,27 @@ import Link from 'next/link';
 
 import { SEO } from '@/components/SEO';
 import { DOCS_PAGES } from '@/lib/seo/content';
-import { buildCanonicalUrl, buildHreflangLinks } from '@/lib/seo/url';
+import { SUPPORTED_LANGUAGES } from '@/lib/config';
+import { canonical, hreflangLinks } from '@/lib/seo/url';
 
 const TITLE = 'Documentație DaCars';
 const DESCRIPTION = 'Ghid complet cu procese, module și bune practici pentru administrarea flotei în DaCars.';
 
 export const generateMetadata = (): Metadata => {
-    const canonical = buildCanonicalUrl('/docs');
-    const hreflangEntries = buildHreflangLinks('/docs');
+    const canonicalUrl = canonical('/docs');
+    const hreflangEntries = hreflangLinks(Array.from(SUPPORTED_LANGUAGES), '/docs');
 
     return {
         title: TITLE,
         description: DESCRIPTION,
         alternates: {
-            canonical,
+            canonical: canonicalUrl,
             languages: Object.fromEntries(hreflangEntries.map((entry) => [entry.hrefLang, entry.href])),
         },
         openGraph: {
             title: TITLE,
             description: DESCRIPTION,
-            url: canonical,
+            url: canonicalUrl,
             type: 'website',
         },
         twitter: {
@@ -36,7 +37,12 @@ export const generateMetadata = (): Metadata => {
 export default function DocsIndexPage() {
     return (
         <div className="space-y-12">
-            <SEO title={TITLE} description={DESCRIPTION} path="/docs" hreflang />
+            <SEO
+                title={TITLE}
+                description={DESCRIPTION}
+                path="/docs"
+                hreflangLocales={Array.from(SUPPORTED_LANGUAGES)}
+            />
             <header className="rounded-2xl border border-berkeley-100 bg-berkeley-50 p-10 text-gray-900 shadow-sm">
                 <h1 className="text-3xl font-bold leading-tight sm:text-4xl">Manualul echipei DaCars</h1>
                 <p className="mt-4 max-w-2xl text-lg text-berkeley-900">

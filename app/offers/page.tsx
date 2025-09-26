@@ -1,359 +1,168 @@
-import Link from "next/link";
-import type { Metadata } from "next";
-import { Calendar, Gift, Heart, Sparkles, Users } from "lucide-react";
-import { ApiClient } from "@/lib/api";
-import { formatOfferBadge } from "@/lib/offers";
-import { extractList } from "@/lib/apiResponse";
-import { buildMetadata } from "@/lib/seo/meta";
-import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
-import { createBreadcrumbStructuredData } from "@/lib/seo/structuredData";
-import { formatDate } from "@/lib/datetime";
-import { Button } from "@/components/ui/button";
-import ApplyOfferButton from "@/components/offers/ApplyOfferButton";
-import JsonLd from "@/components/seo/JsonLd";
-import type { Offer, OfferKind } from "@/types/offer";
+import type { Metadata } from 'next';
+import Image from 'next/image';
+import Link from 'next/link';
 
-const PAGE_TITLE = "Oferte speciale DaCars";
-const PAGE_DESCRIPTION =
-  "Descoperă promoții active la închirieri auto DaCars: reduceri procentuale, pachete pentru grupuri și beneficii extra pentru clienți fideli.";
+import { SEO } from '@/components/SEO';
+import { SITE_NAME, SUPPORTED_LANGUAGES } from '@/lib/config';
+import { breadcrumbJsonLd, offerCatalogJsonLd } from '@/lib/seo/jsonld';
+import { absolute, canonical } from '@/lib/seo/url';
+import { CAR_LISTINGS, RENTAL_OFFERS } from '@/lib/seo/site-data';
 
-const offersMetadata = buildMetadata({
-  title: `${PAGE_TITLE} | Reduceri și promoții flexibile pentru închirieri auto`,
-  description: PAGE_DESCRIPTION,
-  path: "/offers",
-  openGraphTitle: `${PAGE_TITLE} – Promoții la închirieri auto DaCars`,
-});
+const PATH = '/offers';
+const TITLE = `Current Offers & Discounts | ${SITE_NAME}`;
+const DESCRIPTION =
+    'Reduceri temporare, pachete corporate și promoții pentru gama electrică. Actualizăm ofertele în timp real în funcție de cerere.';
 
-export const metadata: Metadata = {
-  ...offersMetadata,
-};
+export const generateMetadata = (): Metadata => {
+    const canonicalUrl = canonical(PATH);
 
-const getApiBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-
-const iconMap = {
-  heart: Heart,
-  users: Users,
-  gift: Gift,
-  calendar: Calendar,
-  sparkles: Sparkles,
-} as const;
-
-const collectStringValues = (raw: unknown): string[] => {
-  if (raw == null) {
-    return [];
-  }
-
-  if (typeof raw === "string") {
-    return raw
-      .split(/[,;\n]+/)
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0);
-  }
-
-  if (typeof raw === "number" || typeof raw === "boolean") {
-    const normalized = String(raw).trim();
-    return normalized.length > 0 ? [normalized] : [];
-  }
-
-  if (Array.isArray(raw)) {
-    return raw.flatMap((entry) => collectStringValues(entry));
-  }
-
-  if (typeof raw === "object") {
-    return collectStringValues(Object.values(raw as Record<string, unknown>));
-  }
-
-  return [];
-};
-
-const parseOptionalString = (value: unknown): string | undefined => {
-  if (value == null) {
-    return undefined;
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : undefined;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    const normalized = String(value).trim();
-    return normalized.length > 0 ? normalized : undefined;
-  }
-  return undefined;
-};
-
-const resolveIcon = (value: unknown): keyof typeof iconMap => {
-  const candidate = parseOptionalString(value);
-  if (!candidate) {
-    return "sparkles";
-  }
-  const normalized = candidate.toLowerCase();
-  if (normalized in iconMap) {
-    return normalized as keyof typeof iconMap;
-  }
-  return "sparkles";
-};
-
-const formatOfferPeriod = (startsAt?: string | null, endsAt?: string | null): string => {
-  if (!startsAt && !endsAt) {
-    return "Disponibilă permanent";
-  }
-  if (startsAt && endsAt) {
-    return `${formatDate(startsAt)} – ${formatDate(endsAt)}`;
-  }
-  if (startsAt) {
-    return `Valabilă din ${formatDate(startsAt)}`;
-  }
-  return `Valabilă până la ${formatDate(endsAt)}`;
-};
-
-type PublicOffer = {
-  id?: number;
-  title: string;
-  description?: string;
-  discount?: string;
-  features: string[];
-  backgroundClass?: string;
-  textClass?: string;
-  icon: keyof typeof iconMap;
-  startsAt?: string | null;
-  endsAt?: string | null;
-  ctaLabel?: string;
-  ctaHref?: string;
-  offerType?: OfferKind | null;
-  offerValue?: string | null;
-};
-
-const normalizeOffer = (entry: Offer | Record<string, unknown>): PublicOffer | null => {
-  const source = entry as Record<string, unknown>;
-  const idCandidate = source.id ?? (source as { offer_id?: unknown }).offer_id;
-  const id = typeof idCandidate === "number" ? idCandidate : Number(idCandidate);
-  const title = parseOptionalString(source.title ?? (source as { name?: unknown }).name);
-  if (!title) {
-    return null;
-  }
-
-  const description = parseOptionalString(source.description);
-  const offerType = parseOptionalString(
-    source.offer_type ?? (source as { offerType?: unknown }).offerType,
-  ) as OfferKind | undefined;
-  const offerValue = parseOptionalString(
-    source.offer_value ?? (source as { offerValue?: unknown }).offerValue,
-  );
-  const discount =
-    parseOptionalString(
-      source.discount_label ??
-        (source as { discountLabel?: unknown }).discountLabel ??
-        (source as { badge?: unknown }).badge,
-    ) ?? formatOfferBadge(offerType ?? null, offerValue ?? null) ?? undefined;
-  const backgroundClass = parseOptionalString(
-    source.background_class ?? (source as { backgroundClass?: unknown }).backgroundClass,
-  );
-  const textClass = parseOptionalString(source.text_class ?? (source as { textClass?: unknown }).textClass);
-  const ctaLabel = parseOptionalString(
-    source.primary_cta_label ?? (source as { primaryCtaLabel?: unknown }).primaryCtaLabel ?? (source as { cta_label?: unknown }).cta_label,
-  );
-  const ctaHref = parseOptionalString(
-    source.primary_cta_url ?? (source as { primaryCtaUrl?: unknown }).primaryCtaUrl ?? (source as { cta_url?: unknown }).cta_url,
-  );
-
-  const upgradeNote =
-    "Upgrade-ul gratuit este disponibil în limita stocului și se confirmă telefonic după trimiterea cererii de rezervare.";
-
-  const features = (() => {
-    const benefits = collectStringValues(
-      source.benefits ??
-        (source as { offer_benefits?: unknown }).offer_benefits ??
-        (source as { benefits_list?: unknown }).benefits_list,
-    );
-    const fallback = collectStringValues(
-      source.features ??
-        (source as { feature_list?: unknown }).feature_list ??
-        (source as { perks?: unknown }).perks ??
-        (source as { highlights?: unknown }).highlights,
-    );
-    const list = benefits.length > 0 ? benefits : fallback;
-    if ((offerType ?? null) === "free_service_upgrade") {
-      if (!list.some((entry) => entry.toLowerCase().includes("upgrade-ul gratuit"))) {
-        return [...list, upgradeNote];
-      }
-    }
-    return list;
-  })();
-
-  return {
-    id: Number.isFinite(id) ? Number(id) : undefined,
-    title,
-    description: description ?? undefined,
-    discount: discount ?? undefined,
-    features,
-    backgroundClass: backgroundClass ?? undefined,
-    textClass: textClass ?? undefined,
-    icon: resolveIcon(source.icon ?? (source as { icon_name?: unknown }).icon_name),
-    startsAt: parseOptionalString(source.starts_at ?? (source as { start_at?: unknown }).start_at),
-    endsAt: parseOptionalString(source.ends_at ?? (source as { end_at?: unknown }).end_at),
-    ctaLabel: ctaLabel ?? undefined,
-    ctaHref: ctaHref ?? undefined,
-    offerType: offerType ?? null,
-    offerValue: offerValue ?? null,
-  };
-};
-
-const OffersPage = async () => {
-  const api = new ApiClient(getApiBaseUrl());
-  let rawOffers: unknown[] = [];
-  try {
-    const response = await api.getOffers({
-      audience: "public",
-      status: "published",
-      sort: "-starts_at,-created_at",
-      limit: 20,
-    });
-    rawOffers = extractList(response);
-  } catch (error) {
-    console.error("Nu s-au putut încărca ofertele publice", error);
-    rawOffers = [];
-  }
-  const offers = rawOffers
-    .map((offer) => normalizeOffer(offer as Offer))
-    .filter((offer): offer is PublicOffer => offer !== null);
-
-  const pageUrl = absoluteUrl("/offers");
-  const breadcrumbStructuredData = createBreadcrumbStructuredData([
-    { name: "Acasă", item: siteMetadata.siteUrl },
-    { name: PAGE_TITLE, item: pageUrl },
-  ]);
-
-  const offerCatalogStructuredData =
-    offers.length > 0
-      ? {
-          "@context": "https://schema.org",
-          "@type": "OfferCatalog",
-          name: PAGE_TITLE,
-          url: pageUrl,
-          description: PAGE_DESCRIPTION,
-          itemListElement: offers.map((offer, index) => ({
-            "@type": "Offer",
-            position: index + 1,
-            name: offer.title,
-            description: offer.description,
-            availabilityStarts: offer.startsAt ?? undefined,
-            availabilityEnds: offer.endsAt ?? undefined,
-            priceCurrency: "EUR",
-            url: absoluteUrl(offer.ctaHref ?? "/checkout"),
-            itemOffered: {
-              "@type": "Service",
-              name: siteMetadata.siteName,
-              url: siteMetadata.siteUrl,
+    return {
+        title: TITLE,
+        description: DESCRIPTION,
+        alternates: {
+            canonical: canonicalUrl,
+            languages: {
+                'ro-RO': canonicalUrl,
+                en: canonical('/en/offers'),
             },
-          })),
-        }
-      : null;
-
-  return (
-    <div className="bg-slate-50">
-      {breadcrumbStructuredData && <JsonLd data={breadcrumbStructuredData} id="dacars-offers-breadcrumb" />}
-      {offerCatalogStructuredData && <JsonLd data={offerCatalogStructuredData} id="dacars-offers-catalog" />}
-
-      <section className="bg-berkeley text-white mt-8 py-16">
-        <div className="mx-auto flex max-w-4xl flex-col gap-6 px-6 text-center">
-          <div className="inline-flex items-center justify-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm uppercase tracking-wide">
-            <Sparkles className="h-4 w-4" /> Promoții active
-          </div>
-          <h1 className="text-3xl font-semibold leading-tight sm:text-4xl">{PAGE_TITLE}</h1>
-          <p className="text-base text-white/80">{PAGE_DESCRIPTION}</p>
-        </div>
-      </section>
-
-      <main className="mx-auto max-w-6xl space-y-10 px-6 py-12">
-        {offers.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-berkeley/30 bg-white p-10 text-center shadow-sm">
-            <h2 className="text-2xl font-semibold text-berkeley">Nu avem oferte active momentan</h2>
-            <p className="mt-3 text-sm text-gray-600">
-              Revino în curând sau contactează echipa DaCars pentru o ofertă personalizată.
-            </p>
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Button asChild>
-                <Link href="/checkout">Rezervă o mașină</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/contact">Contactează-ne</Link>
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            {offers.map((offer, index) => {
-              const Icon = iconMap[offer.icon] ?? Sparkles;
-              const periodLabel = formatOfferPeriod(offer.startsAt, offer.endsAt);
-              const ctaLabel = offer.ctaLabel ?? "Solicită oferta";
-              const ctaHref = offer.ctaHref ?? "/checkout";
-
-              return (
-                <article
-                  key={`${offer.id ?? offer.title}-${index}`}
-                  className={`group transform hover:scale-105 transition-all duration-300 animate-slide-up ${offer.backgroundClass ?? "bg-white"} ${offer.textClass ?? "text-berkeley"} relative overflow-hidden rounded-3xl p-8 shadow-lg hover:-translate-y-1`}
-                  style={{ animationDelay: "0s" }}
-                >
-                  <div className="absolute inset-0 bg-black/5 mix-blend-multiply" aria-hidden="true" />
-                  <div className="relative z-10 space-y-6">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-2xl bg-white/20 p-3">
-                          <Icon className="h-8 w-8" />
-                        </div>
-                        <div>
-                          <h2 className="text-2xl font-semibold">{offer.title}</h2>
-                          {offer.discount && (
-                            <p className="text-lg font-medium text-white/90">{offer.discount}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="rounded-full border border-white/40 px-3 py-1 text-xs uppercase tracking-wide">
-                        {periodLabel}
-                      </div>
-                    </div>
-
-                    {offer.description && (
-                      <p className="text-sm leading-relaxed text-white/90">{offer.description}</p>
-                    )}
-
-                    {offer.features.length > 0 && (
-                      <ul className="space-y-2 text-sm">
-                        {offer.features.map((feature, featureIndex) => (
-                          <li key={`${offer.title}-feature-${featureIndex}`} className="flex items-start gap-2">
-                            <Gift className="mt-1 h-4 w-4 text-yellow-300" />
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    <ApplyOfferButton
-                      className="mt-4 bg-white !text-berkeley hover:!bg-gray-100"
-                      href={ctaHref ?? "/checkout"}
-                      label={ctaLabel}
-                      ariaLabel={ctaLabel}
-                      offer={
-                        typeof offer.id === "number"
-                          ? {
-                              id: offer.id,
-                              title: offer.title,
-                              kind: offer.offerType ?? null,
-                              value: offer.offerValue ?? null,
-                              badge: offer.discount ?? null,
-                            }
-                          : null
-                      }
-                    />
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </main>
-    </div>
-  );
+        },
+        openGraph: {
+            title: TITLE,
+            description: DESCRIPTION,
+            url: canonicalUrl,
+            type: 'website',
+            images: [
+                {
+                    url: absolute('/images/bg-hero-520x380.webp'),
+                    width: 520,
+                    height: 380,
+                    alt: 'Ofertă promoțională DaCars pentru închirieri auto',
+                },
+            ],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: TITLE,
+            description: DESCRIPTION,
+            images: [absolute('/images/bg-hero-520x380.webp')],
+        },
+    };
 };
 
-export default OffersPage;
+const offersJsonLd = [
+    offerCatalogJsonLd({
+        name: TITLE,
+        description: DESCRIPTION,
+        path: PATH,
+        offers: RENTAL_OFFERS.map((offer) => ({
+            name: offer.name,
+            url: `/offers#${offer.slug}`,
+            priceCurrency: offer.priceCurrency,
+            price: offer.price,
+            validFrom: offer.validFrom,
+            validThrough: offer.validThrough,
+            category: offer.category,
+        })),
+    }),
+    breadcrumbJsonLd([
+        { name: 'Acasă', path: '/' },
+        { name: 'Oferte', path: PATH },
+    ]),
+];
+
+export default function OffersPage() {
+    return (
+        <div className="space-y-16">
+            <SEO
+                title={TITLE}
+                description={DESCRIPTION}
+                path={PATH}
+                jsonLd={offersJsonLd}
+                hreflangLocales={Array.from(SUPPORTED_LANGUAGES)}
+                openGraph={{
+                    images: [
+                        {
+                            url: absolute('/images/bg-hero-520x380.webp'),
+                            width: 520,
+                            height: 380,
+                            alt: 'Ofertă promoțională DaCars pentru închirieri auto',
+                        },
+                    ],
+                }}
+                twitter={{ images: [absolute('/images/bg-hero-520x380.webp')] }}
+            />
+
+            <nav aria-label="Breadcrumb" className="text-sm text-gray-500">
+                <ol className="flex flex-wrap items-center gap-2">
+                    <li>
+                        <Link href="/" className="hover:text-berkeley-600">
+                            Acasă
+                        </Link>
+                    </li>
+                    <li aria-hidden="true">/</li>
+                    <li className="font-semibold text-gray-900">Oferte</li>
+                </ol>
+            </nav>
+
+            <header className="space-y-4">
+                <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">Promoții și abonamente flexibile</h1>
+                <p className="max-w-2xl text-lg text-gray-600">
+                    Ajustăm campaniile în funcție de cerere: discounturi pentru weekend, abonamente corporate și stimulente pentru
+                    flota electrică. Rezervările online preiau automat tarifele actualizate.
+                </p>
+            </header>
+
+            <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {RENTAL_OFFERS.map((offer) => {
+                    const relatedCar = CAR_LISTINGS.find((car) => car.slug === offer.relatedCar);
+                    return (
+                        <article
+                            key={offer.slug}
+                            id={offer.slug}
+                            className="flex h-full flex-col justify-between rounded-3xl border border-berkeley-100 bg-white p-6 shadow-sm"
+                        >
+                            <div className="space-y-4">
+                                <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-berkeley-50">
+                                    <Image
+                                        src={relatedCar?.image.src ?? '/images/placeholder-car.svg'}
+                                        alt={relatedCar?.image.alt ?? 'Vehicul din flota DaCars'}
+                                        fill
+                                        sizes="(min-width: 1280px) 320px, 50vw"
+                                        className="object-contain"
+                                    />
+                                </div>
+                                <p className="text-xs uppercase tracking-[0.3em] text-berkeley-500">
+                                    Valabilă până la {new Date(offer.validThrough).toLocaleDateString('ro-RO')}
+                                </p>
+                                <h2 className="text-xl font-semibold text-gray-900">{offer.name}</h2>
+                                <p className="text-sm text-gray-600">{offer.description}</p>
+                            </div>
+                            <div className="mt-6 space-y-4">
+                                <div className="text-lg font-semibold text-berkeley-700">
+                                    {offer.price} {offer.priceCurrency}
+                                </div>
+                                <div className="text-xs uppercase tracking-[0.3em] text-gray-400">Categorie · {offer.category}</div>
+                                <div className="flex flex-wrap gap-3 text-sm">
+                                    <Link href={`/cars#${offer.relatedCar}`} className="font-semibold text-berkeley-600 hover:text-berkeley-500">
+                                        Vezi mașina recomandată
+                                    </Link>
+                                    <Link href="/blog" className="font-semibold text-berkeley-600 hover:text-berkeley-500">
+                                        Citește ghidul dedicat
+                                    </Link>
+                                </div>
+                            </div>
+                        </article>
+                    );
+                })}
+            </section>
+
+            <section className="rounded-2xl bg-berkeley-900 p-8 text-white">
+                <h2 className="text-xl font-semibold">Cum folosim datele pentru tarife dinamice</h2>
+                <p className="mt-3 max-w-2xl text-berkeley-100">
+                    Monitorizăm gradul de ocupare, evoluția costurilor de combustibil și calendarul de evenimente pentru a ajusta
+                    automat prețurile. Pentru clienți corporate pregătim rapoarte lunare cu economiile realizate.
+                </p>
+            </section>
+        </div>
+    );
+}

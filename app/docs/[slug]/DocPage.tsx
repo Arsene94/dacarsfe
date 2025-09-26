@@ -5,8 +5,9 @@ import type { JSX } from 'react';
 
 import { SEO } from '@/components/SEO';
 import { DOCS_PAGES, getDocNavigation } from '@/lib/seo/content';
+import { SUPPORTED_LANGUAGES } from '@/lib/config';
 import { buildBreadcrumbJsonLd } from '@/lib/seo/jsonld';
-import { buildCanonicalUrl } from '@/lib/seo/url';
+import { canonical } from '@/lib/seo/url';
 
 import IntroducereContent from './content/introducere.mdx';
 import WorkflowRezervariContent from './content/workflow-rezervari.mdx';
@@ -24,19 +25,19 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
         notFound();
     }
 
-    const canonical = buildCanonicalUrl(`/docs/${doc.slug}`);
+    const canonicalUrl = canonical(`/docs/${doc.slug}`);
 
     return {
         title: doc.title,
         description: doc.description,
         alternates: {
-            canonical,
+            canonical: canonicalUrl,
         },
         openGraph: {
             title: doc.title,
             description: doc.description,
             type: 'article',
-            url: canonical,
+            url: canonicalUrl,
         },
         twitter: {
             card: 'summary_large_image',
@@ -60,7 +61,7 @@ export function DocPage({ params }: { params: { slug: string } }) {
         notFound();
     }
 
-    const canonical = buildCanonicalUrl(`/docs/${doc.slug}`);
+    const canonicalUrl = canonical(`/docs/${doc.slug}`);
     const breadcrumb = buildBreadcrumbJsonLd([
         { name: 'Acasă', path: '/' },
         { name: 'Documentație', path: '/docs' },
@@ -76,7 +77,8 @@ export function DocPage({ params }: { params: { slug: string } }) {
                 description={doc.description}
                 path={`/docs/${doc.slug}`}
                 jsonLd={breadcrumb}
-                openGraph={{ type: 'article', url: canonical, title: doc.title, description: doc.description }}
+                hreflangLocales={Array.from(SUPPORTED_LANGUAGES)}
+                openGraph={{ type: 'article', url: canonicalUrl, title: doc.title, description: doc.description }}
                 twitter={{ card: 'summary_large_image', title: doc.title, description: doc.description }}
             />
             <nav aria-label="Breadcrumb" className="mb-6 text-sm text-gray-500">

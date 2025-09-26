@@ -90,16 +90,21 @@ async function main() {
 
         await fetchAndAssert('/robots.txt');
         await fetchAndAssert('/sitemap.xml');
-        await fetchAndAssert('/llms.txt');
         await fetchAndAssert('/feed.xml');
 
-        const faqHtml = await fetchAndAssert('/faq');
-        const docsHtml = await fetchAndAssert('/docs/introducere');
-        const blogHtml = await fetchAndAssert('/blog/strategii-dinamice-de-tarifare');
+        const homeHtml = await fetchAndAssert('/');
+        const carsHtml = await fetchAndAssert('/cars');
+        const blogHtml = await fetchAndAssert('/blog');
+        const postHtml = await fetchAndAssert('/blog/cum-optimizam-flota-in-sezonul-de-varf');
+        const contactHtml = await fetchAndAssert('/contact');
+        const offersHtml = await fetchAndAssert('/offers');
 
-        validateJsonLd(faqHtml, '/faq');
-        validateJsonLd(docsHtml, '/docs/[slug]');
-        validateJsonLd(blogHtml, '/blog/[slug]');
+        validateJsonLd(homeHtml, '/');
+        validateJsonLd(carsHtml, '/cars');
+        validateJsonLd(blogHtml, '/blog');
+        validateJsonLd(postHtml, '/blog/[slug]');
+        validateJsonLd(contactHtml, '/contact');
+        validateJsonLd(offersHtml, '/offers');
 
         console.log('✔ Verificările SEO au fost finalizate cu succes.');
     } finally {

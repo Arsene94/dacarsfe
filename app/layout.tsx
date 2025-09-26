@@ -55,6 +55,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ro" className={`${poppins.variable} ${dmSans.variable}`}>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           rel="preload"
           as="image"

@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 
 import { SEO } from '@/components/SEO';
+import { SUPPORTED_LANGUAGES } from '@/lib/config';
 import { buildFaqJsonLd } from '@/lib/seo/jsonld';
-import { buildCanonicalUrl, buildHreflangLinks } from '@/lib/seo/url';
+import { canonical, hreflangLinks } from '@/lib/seo/url';
 
 const FAQ_ENTRIES = [
     {
@@ -51,21 +52,21 @@ const TITLE = 'Întrebări frecvente despre DaCars';
 const DESCRIPTION = 'Răspunsuri clare despre platforma DaCars: tarife, automatizări, integrări și suportul oferit clienților.';
 
 export const generateMetadata = (): Metadata => {
-    const canonical = buildCanonicalUrl('/faq');
-    const hreflangEntries = buildHreflangLinks('/faq');
+    const canonicalUrl = canonical('/faq');
+    const hreflangEntries = hreflangLinks(Array.from(SUPPORTED_LANGUAGES), '/faq');
 
     return {
         title: TITLE,
         description: DESCRIPTION,
         alternates: {
-            canonical,
+            canonical: canonicalUrl,
             languages: Object.fromEntries(hreflangEntries.map((entry) => [entry.hrefLang, entry.href])),
         },
         openGraph: {
             title: TITLE,
             description: DESCRIPTION,
             type: 'website',
-            url: canonical,
+            url: canonicalUrl,
         },
         twitter: {
             card: 'summary_large_image',
@@ -80,7 +81,13 @@ export default function FAQPage() {
 
     return (
         <div className="mx-auto max-w-4xl space-y-10 px-4 py-12 lg:py-16">
-            <SEO title={TITLE} description={DESCRIPTION} path="/faq" jsonLd={faqSchema} hreflang />
+            <SEO
+                title={TITLE}
+                description={DESCRIPTION}
+                path="/faq"
+                jsonLd={faqSchema}
+                hreflangLocales={Array.from(SUPPORTED_LANGUAGES)}
+            />
             <header className="space-y-4 text-center">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-berkeley-500">Suport DaCars</p>
                 <h1 className="text-3xl font-bold leading-tight text-gray-900 sm:text-4xl">Întrebări frecvente</h1>
