@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import {useBooking} from "@/context/BookingContext";
+import { useBooking } from "@/context/BookingContext";
 import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 import { useTranslations } from "@/lib/i18n/useTranslations";
@@ -56,7 +56,7 @@ const HeroSection = () => {
         location: resolvedLocations[0]?.value ?? "otopeni",
         car_type: "",
     });
-    const { setBooking } = useBooking();
+    const { booking, setBooking } = useBooking();
 
     const [categories, setCategories] = useState<CarCategory[]>([]);
     const router = useRouter();
@@ -96,21 +96,23 @@ const HeroSection = () => {
         : formatDate(startOfDay(addDays(new Date(), 1)));
 
     useEffect(() => {
-        if (!formData.start_date) return;
-        const minReturn = startOfDay(addDays(new Date(formData.start_date), 1));
-        setFormData((prev) => {
-            if (
-                !prev.end_date ||
-                startOfDay(new Date(prev.end_date)) < minReturn
-            ) {
-                const current = prev.end_date ? new Date(prev.end_date) : new Date();
-                const adjusted = new Date(minReturn);
-                adjusted.setHours(current.getHours(), current.getMinutes());
-                return { ...prev, end_date: formatDate(adjusted) };
-            }
-            return prev;
+        if (!formData.start_date || !formData.end_date) {
+            return;
+        }
+
+        const pickup = formData.start_date;
+        const dropoff = formData.end_date;
+
+        if (booking.startDate === pickup && booking.endDate === dropoff) {
+            return;
+        }
+
+        setBooking({
+            ...booking,
+            startDate: pickup,
+            endDate: dropoff,
         });
-    }, [formData.start_date]);
+    }, [booking, formData.end_date, formData.start_date, setBooking]);
 
     useEffect(() => {
         let cancelled = false;

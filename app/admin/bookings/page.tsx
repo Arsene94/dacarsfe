@@ -28,7 +28,10 @@ import type {
   AdminReservation,
 } from "@/types/admin";
 import { createEmptyBookingForm } from "@/types/admin";
-import type { ReservationWheelPrizeSummary } from "@/types/reservation";
+import type {
+  ReservationAppliedOffer,
+  ReservationWheelPrizeSummary,
+} from "@/types/reservation";
 import { Input } from "@/components/ui/input";
 import DateRangePicker from "@/components/ui/date-range-picker";
 import { Popup } from "@/components/ui/popup";
@@ -112,6 +115,12 @@ const normalizeWheelPrizeSummary = (
     pickNonEmptyString(raw.prize_type) ??
     (wheelInfo ? pickNonEmptyString(wheelInfo.type) : undefined) ??
     "other";
+  const eligibleFlag =
+    typeof (raw as { eligible?: unknown }).eligible === "boolean"
+      ? (raw as { eligible: boolean }).eligible
+      : typeof (raw as { is_eligible?: unknown }).is_eligible === "boolean"
+        ? Boolean((raw as { is_eligible: boolean }).is_eligible)
+        : undefined;
 
   return {
     wheel_of_fortune_id: wheelId,
@@ -136,7 +145,61 @@ const normalizeWheelPrizeSummary = (
           ? (raw as { expiresAt: string }).expiresAt
           : null,
     discount_value: discountValue,
+    eligible: typeof eligibleFlag === "boolean" ? eligibleFlag : undefined,
   };
+};
+
+const normalizeAppliedOfferEntry = (
+  raw: unknown,
+): ReservationAppliedOffer | null => {
+  if (!isRecord(raw)) return null;
+  const idCandidate = parseOptionalNumber(
+    raw.id ?? (raw as { offer_id?: unknown }).offer_id,
+  );
+  if (typeof idCandidate !== "number" || Number.isNaN(idCandidate)) {
+    return null;
+  }
+  const titleSource =
+    typeof raw.title === "string" && raw.title.trim().length > 0
+      ? raw.title
+      : typeof raw.name === "string" && raw.name.trim().length > 0
+        ? raw.name
+        : null;
+  if (!titleSource) {
+    return null;
+  }
+  const offerType = pickNonEmptyString((raw as { offer_type?: unknown }).offer_type);
+  const offerValue = pickNonEmptyString((raw as { offer_value?: unknown }).offer_value);
+  const discountLabel =
+    pickNonEmptyString((raw as { discount_label?: unknown }).discount_label) ??
+    pickNonEmptyString((raw as { badge?: unknown }).badge);
+
+  return {
+    id: idCandidate,
+    title: titleSource,
+    offer_type: offerType ?? null,
+    offer_value: offerValue ?? null,
+    discount_label: discountLabel ?? null,
+  };
+};
+
+const normalizeAppliedOffersList = (
+  raw: unknown,
+): ReservationAppliedOffer[] => {
+  if (!Array.isArray(raw)) return [];
+  const normalized = raw
+    .map((entry) => normalizeAppliedOfferEntry(entry))
+    .filter((entry): entry is ReservationAppliedOffer => entry !== null);
+  if (normalized.length === 0) {
+    return [];
+  }
+  const unique = new Map<number, ReservationAppliedOffer>();
+  normalized.forEach((entry) => {
+    if (!unique.has(entry.id)) {
+      unique.set(entry.id, entry);
+    }
+  });
+  return Array.from(unique.values());
 };
 
 const extractWheelPrizeDisplay = (
@@ -158,13 +221,15 @@ const extractWheelPrizeDisplay = (
     typeof totalBefore === "number"
       ? (Number.isFinite(totalBefore) ? totalBefore : null)
       : parseOptionalNumber(totalBefore);
+  const eligible = normalizedPrize?.eligible !== false;
 
   return {
     prize: normalizedPrize,
     amountLabel,
     expiryLabel,
-    discountValue,
+    discountValue: eligible ? discountValue : 0,
     totalBefore: totalBeforeValue ?? null,
+    eligible,
   };
 };
 
@@ -179,6 +244,7 @@ const EMPTY_WHEEL_PRIZE_DETAILS: ReturnType<typeof extractWheelPrizeDisplay> = {
   expiryLabel: null,
   discountValue: 0,
   totalBefore: null,
+  eligible: true,
 };
 
 const toLocalDateTimeInput = (iso?: string | null) => {
@@ -253,6 +319,7 @@ const ReservationsPage = () => {
     expiryLabel: selectedWheelPrizeExpiry,
     discountValue: selectedWheelPrizeDiscount,
     totalBefore: selectedTotalBeforeWheelPrize,
+    eligible: selectedWheelPrizeEligible,
   } = selectedWheelPrizeDetails;
 
   const mapStatus = (status: string): AdminReservation["status"] => {
@@ -345,6 +412,12 @@ const ReservationsPage = () => {
         const discount =
           parseOptionalNumber(booking.discount ?? booking.coupon_amount) ??
           couponAmount;
+        const offersDiscount =
+          parseOptionalNumber(booking.offers_discount) ??
+          parseOptionalNumber((booking as { offersDiscount?: unknown }).offersDiscount) ??
+          null;
+        const appliedOffers = normalizeAppliedOffersList(booking.applied_offers);
+        const depositWaived = normalizeBoolean(booking.deposit_waived, false);
 
         return {
           id,
@@ -374,6 +447,9 @@ const ReservationsPage = () => {
           totalBeforeWheelPrize,
           wheelPrizeDiscount: normalizedDiscount ?? null,
           wheelPrize,
+          offersDiscount,
+          appliedOffers,
+          depositWaived,
         };
       });
       const listMeta = !Array.isArray(response)
@@ -476,6 +552,10 @@ const ReservationsPage = () => {
           parseOptionalNumber(info.tax_amount) ??
           parseOptionalNumber((info as { taxAmount?: unknown }).taxAmount) ??
           0;
+        const offersDiscount =
+          parseOptionalNumber(info.offers_discount ?? (info as { offersDiscount?: unknown }).offersDiscount) ?? 0;
+        const depositWaived = normalizeBoolean(info.deposit_waived, false);
+        const appliedOffers = normalizeAppliedOffersList(info.applied_offers);
 
         const carId = parseOptionalNumber(info?.car_id ?? info?.car?.id);
 
@@ -552,6 +632,9 @@ const ReservationsPage = () => {
           total_before_wheel_prize: totalBeforeWheelPrize,
           wheel_prize_discount: wheelPrizeDiscount ?? 0,
           wheel_prize: wheelPrize ?? null,
+          offers_discount: offersDiscount,
+          deposit_waived: depositWaived,
+          applied_offers: appliedOffers,
           advance_payment: advancePayment,
           note: info?.note ?? info?.notes ?? "",
           currency_id: info?.currency_id ?? info?.currencyId ?? "",
@@ -1323,6 +1406,11 @@ const ReservationsPage = () => {
                               Valabil până la {selectedWheelPrizeExpiry}
                             </p>
                           )}
+                          {selectedWheelPrize && selectedWheelPrizeEligible === false && (
+                            <p className="text-xs text-amber-600 font-medium">
+                              Premiul nu este eligibil pentru intervalul acestei rezervări.
+                            </p>
+                          )}
                         </div>
                       </div>
                       {selectedWheelPrizeDiscount > 0 && (
@@ -1332,6 +1420,25 @@ const ReservationsPage = () => {
                           </span>
                           <span className="font-dm-sans text-gray-900">
                             -{formatEuro(selectedWheelPrizeDiscount)}
+                          </span>
+                        </div>
+                      )}
+                      {typeof selectedReservation.offersDiscount === "number" &&
+                        selectedReservation.offersDiscount > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span className="font-dm-sans text-gray-600">
+                              Reduceri campanii:
+                            </span>
+                            <span className="font-dm-sans text-gray-900">
+                              -{formatEuro(selectedReservation.offersDiscount)}
+                            </span>
+                          </div>
+                        )}
+                      {selectedReservation.depositWaived && (
+                        <div className="flex items-center justify-between">
+                          <span className="font-dm-sans text-gray-600">Garanție:</span>
+                          <span className="font-dm-sans text-jade font-semibold">
+                            Eliminată prin promoție
                           </span>
                         </div>
                       )}
@@ -1354,6 +1461,24 @@ const ReservationsPage = () => {
                           {formatEuro(selectedReservation.total ?? 0)}
                         </span>
                       </div>
+                      {selectedReservation.appliedOffers &&
+                        selectedReservation.appliedOffers.length > 0 && (
+                          <div className="mt-3 text-left">
+                            <span className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                              Oferte aplicate
+                            </span>
+                            <ul className="mt-1 list-disc space-y-1 ps-5 text-xs text-gray-600">
+                              {selectedReservation.appliedOffers.map((offer) => (
+                                <li key={offer.id}>
+                                  <span className="font-medium text-gray-700">{offer.title}</span>
+                                  {offer.discount_label && (
+                                    <span className="ms-1 text-emerald-600">{offer.discount_label}</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                     </div>
                   </div>
 

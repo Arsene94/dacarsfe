@@ -544,10 +544,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
             ? Math.round(totalBeforeWheelPrizeValue * 100) / 100
             : null;
     const hasWheelPrize = Boolean(wheelPrizeSummary);
-    const hasWheelPrizeDiscount = wheelPrizeDiscountDisplay > 0;
+    const wheelPrizeEligible = wheelPrizeSummary?.eligible !== false;
+    const hasWheelPrizeDiscount = wheelPrizeDiscountDisplay > 0 && wheelPrizeEligible;
+    const wheelPrizeEligibilityWarning = hasWheelPrize && !wheelPrizeEligible
+        ? "Premiul nu este eligibil pentru intervalul curent."
+        : null;
     const wheelPrizeTitle = hasWheelPrize
         ? wheelPrizeSummary?.title ?? "Premiu DaCars"
         : "—";
+    const offersDiscountValue = toOptionalNumber(bookingInfo.offers_discount) ?? 0;
+    const depositWaived = bookingInfo.deposit_waived === true;
+    const appliedOffersList = Array.isArray(bookingInfo.applied_offers)
+        ? bookingInfo.applied_offers
+        : [];
 
     const handleUpdateBooking = async () => {
         if (!bookingInfo || bookingInfo.id == null) {
@@ -1088,6 +1097,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 <span className="text-right ms-2">{wheelPrizeAmountLabel}</span>
                             </div>
                         )}
+                        {wheelPrizeEligibilityWarning && (
+                            <div className="font-dm-sans text-xs text-amber-600 border-b border-b-1 mb-1">
+                                {wheelPrizeEligibilityWarning}
+                            </div>
+                        )}
                         {hasWheelPrizeDiscount && (
                             <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                 <span>Reducere premiu:</span>
@@ -1100,6 +1114,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 <span>{wheelPrizeExpiryLabel}</span>
                             </div>
                         )}
+                        {offersDiscountValue > 0 && (
+                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                <span>Reduceri campanii:</span>
+                                <span>-{Math.round(offersDiscountValue * 100) / 100}€</span>
+                            </div>
+                        )}
+                        {depositWaived && (
+                            <div className="font-dm-sans text-xs text-jade flex justify-between border-b border-b-1 mb-1">
+                                <span>Garanție:</span>
+                                <span>Eliminată prin promoție</span>
+                            </div>
+                        )}
                         {bookingInfo.advance_payment > 0 && (
                             <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                 <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
@@ -1109,6 +1135,23 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             <span>Total:</span>
                             <span>{originalTotal}€</span>
                         </div>
+                        {appliedOffersList.length > 0 && (
+                            <div className="mt-3">
+                                <span className="font-dm-sans text-xs font-semibold text-gray-600 uppercase">
+                                    Oferte aplicate
+                                </span>
+                                <ul className="mt-1 list-disc space-y-1 ps-5 text-xs text-gray-600">
+                                    {appliedOffersList.map((offer) => (
+                                        <li key={offer.id}>
+                                            <span className="font-medium text-gray-700">{offer.title}</span>
+                                            {offer.discount_label && (
+                                                <span className="ms-1 text-emerald-600">{offer.discount_label}</span>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                                 {discount !== 0 && discountedTotal > 0 && (
                                     <div className="font-dm-sans text-sm">
                                         Detalii discount:

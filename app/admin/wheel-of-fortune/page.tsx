@@ -63,6 +63,34 @@ const DEFAULT_PRIZE_COLOR = "#1E7149";
 const DEFAULT_PRIZE_TYPE: WheelOfFortuneType =
     WHEEL_OF_FORTUNE_TYPES[0] ?? "percentage_discount";
 
+const MONTHS: { value: number; label: string }[] = [
+    { value: 1, label: "Ianuarie" },
+    { value: 2, label: "Februarie" },
+    { value: 3, label: "Martie" },
+    { value: 4, label: "Aprilie" },
+    { value: 5, label: "Mai" },
+    { value: 6, label: "Iunie" },
+    { value: 7, label: "Iulie" },
+    { value: 8, label: "August" },
+    { value: 9, label: "Septembrie" },
+    { value: 10, label: "Octombrie" },
+    { value: 11, label: "Noiembrie" },
+    { value: 12, label: "Decembrie" },
+];
+
+const formatActiveMonths = (values?: number[] | null) => {
+    if (!Array.isArray(values) || values.length === 0) {
+        return null;
+    }
+    const labels = values
+        .map((value) => MONTHS.find((month) => month.value === value)?.label ?? null)
+        .filter((label): label is string => Boolean(label));
+    if (labels.length === 0) {
+        return null;
+    }
+    return labels.join(", ");
+};
+
 const amountFormatter = new Intl.NumberFormat("ro-RO", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 0,
@@ -266,16 +294,25 @@ const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
     const normalizedActive =
         typeof isActiveRaw !== "undefined" ? parseBoolean(isActiveRaw) : undefined;
 
+    const activeMonths = Array.isArray(item.active_months)
+        ? item.active_months
+              .map((entry) => Number(entry))
+              .filter((entry) => Number.isFinite(entry) && entry >= 1 && entry <= 12)
+        : [];
+
     return {
         id,
         name,
         start_at: typeof start === "string" ? start : null,
         end_at: typeof end === "string" ? end : null,
+        starts_at: typeof start === "string" ? start : null,
+        ends_at: typeof end === "string" ? end : null,
         active: normalizedActive,
         is_active: normalizedActive,
         description: typeof item.description === "string" ? item.description : null,
         created_at: typeof item.created_at === "string" ? item.created_at : null,
         updated_at: typeof item.updated_at === "string" ? item.updated_at : null,
+        active_months: activeMonths.length > 0 ? activeMonths : null,
     };
 };
 
@@ -378,6 +415,7 @@ export default function WheelOfFortuneAdminPage() {
         end: "",
         isActive: true,
         description: "",
+        activeMonths: [] as number[],
     });
 
     const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
@@ -446,7 +484,7 @@ export default function WheelOfFortuneAdminPage() {
             const response = await apiClient.getWheelOfFortunes({ period_id: periodId, per_page: 100 });
             const items = extractDataArray(response);
             const mapped = items
-                .map(mapPrize)
+                .map((item) => mapPrize(item))
                 .filter((item): item is WheelOfFortuneSlice => item !== null)
                 .map((item) => ({ ...item, period_id: item.period_id || periodId }))
                 .sort((a, b) => {
@@ -506,6 +544,7 @@ export default function WheelOfFortuneAdminPage() {
             end: "",
             isActive: periods.length === 0,
             description: "",
+            activeMonths: [],
         });
         setPeriodFormError(null);
         setIsPeriodModalOpen(true);
@@ -519,6 +558,11 @@ export default function WheelOfFortuneAdminPage() {
             end: toDateInputValue(period.end_at),
             isActive: isPeriodActive(period),
             description: period.description ?? "",
+            activeMonths: Array.isArray(period.active_months)
+                ? period.active_months
+                      .map((value) => Number(value))
+                      .filter((value) => Number.isFinite(value) && value >= 1 && value <= 12)
+                : [],
         });
         setPeriodFormError(null);
         setIsPeriodModalOpen(true);
@@ -549,6 +593,12 @@ export default function WheelOfFortuneAdminPage() {
         setPeriodFormError(null);
         setPeriodSaving(true);
 
+        const normalizedMonths = Array.from(
+            new Set(periodForm.activeMonths.map((value) => Number(value))),
+        )
+            .filter((value) => Number.isFinite(value) && value >= 1 && value <= 12)
+            .sort((a, b) => a - b);
+
         const payload = {
             name: trimmedName,
             start_at: periodForm.start || undefined,
@@ -556,6 +606,7 @@ export default function WheelOfFortuneAdminPage() {
             active: periodForm.isActive,
             is_active: periodForm.isActive,
             description: periodForm.description.trim() || undefined,
+            active_months: normalizedMonths,
         };
 
         try {
@@ -922,6 +973,7 @@ export default function WheelOfFortuneAdminPage() {
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {periods.map((period) => {
                             const isSelected = period.id === selectedPeriodId;
+                            const activeMonthsLabel = formatActiveMonths(period.active_months);
                             return (
                                 <div
                                     key={period.id}
@@ -946,6 +998,11 @@ export default function WheelOfFortuneAdminPage() {
                                             <p className="mt-2 text-sm text-gray-600">
                                                 {formatDateRange(period.start_at, period.end_at)}
                                             </p>
+                                            {activeMonthsLabel && (
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                    Lunile eligibile: {activeMonthsLabel}
+                                                </p>
+                                            )}
                                         </div>
                                         {isPeriodActive(period) ? (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-jade/10 px-3 py-1 text-xs font-semibold text-jade">
@@ -1136,6 +1193,46 @@ export default function WheelOfFortuneAdminPage() {
                                     setPeriodForm((prev) => ({ ...prev, end: event.target.value }))
                                 }
                             />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <span className="text-sm font-medium text-gray-700">Luni eligibile</span>
+                        <p className="text-xs text-gray-500">
+                            Selectează lunile pentru care premiile din această perioadă sunt valabile. Dacă nu selectezi nimic,
+                            premiile vor fi eligibile în orice lună.
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            {MONTHS.map((month) => {
+                                const isChecked = periodForm.activeMonths.includes(month.value);
+                                return (
+                                    <label
+                                        key={month.value}
+                                        className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            className="h-4 w-4 rounded border-gray-300 text-berkeley focus:ring-berkeley"
+                                            checked={isChecked}
+                                            onChange={(event) => {
+                                                setPeriodForm((prev) => {
+                                                    const next = new Set(prev.activeMonths);
+                                                    if (event.target.checked) {
+                                                        next.add(month.value);
+                                                    } else {
+                                                        next.delete(month.value);
+                                                    }
+                                                    return {
+                                                        ...prev,
+                                                        activeMonths: Array.from(next).sort((a, b) => a - b),
+                                                    };
+                                                });
+                                            }}
+                                        />
+                                        {month.label}
+                                    </label>
+                                );
+                            })}
                         </div>
                     </div>
 

@@ -74,6 +74,7 @@ export interface ReservationWheelPrizeSummary {
   description?: string | null;
   amount_label?: string | null;
   expires_at?: string | null;
+  eligible?: boolean | null;
   discount_value: number;
 }
 
@@ -82,6 +83,7 @@ export interface ReservationWheelPrizePayload {
   wheel_of_fortune_id?: number | string | null;
   wheel_of_fortune_prize_id?: number | string | null;
   discount_value: number | string;
+  eligible?: boolean | null;
   [key: string]: unknown;
 }
 
