@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChartData, ChartOptions } from "chart.js";
-import { BriefcaseBusiness, RefreshCw, Sparkles } from "lucide-react";
+import { Briefcase, RefreshCw, Sparkles } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { AdminReportQuarterlyResponse } from "@/types/reports";
 import { Input } from "@/components/ui/input";
@@ -22,35 +22,10 @@ import {
 import "@/components/admin/reports/chartSetup";
 import { getColor } from "@/components/admin/reports/chartSetup";
 import { formatCurrency } from "@/components/admin/reports/formatting";
+import { describeRelativeChange } from "@/components/admin/reports/trends";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
   `${(value * 100).toFixed(fractionDigits)}%`;
-
-const describeRelativeChange = (
-  current: number,
-  previous: number,
-  context: string,
-) => {
-  if (previous === 0) {
-    if (current === 0) {
-      return {
-        trend: "neutral" as const,
-        trendLabel: `Neschimbat față de ${context}`,
-      };
-    }
-    return { trend: "up" as const, trendLabel: `Creștere față de ${context}` };
-  }
-
-  const delta = current - previous;
-  const ratio = delta / Math.abs(previous);
-  if (!Number.isFinite(ratio) || Math.abs(ratio) < 0.0001) {
-    return { trend: "neutral" as const, trendLabel: `În linie cu ${context}` };
-  }
-  const percent = (ratio * 100).toFixed(1);
-  const trend = ratio > 0 ? "up" : ratio < 0 ? "down" : "neutral";
-  const sign = ratio > 0 ? "+" : "";
-  return { trend, trendLabel: `${sign}${percent}% față de ${context}` };
-};
 
 const comparisonOptions = [
   { value: "same_quarter_last_year", label: "Același trimestru anul trecut" },
@@ -512,7 +487,7 @@ export default function AdminQuarterlyReportPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
-                  <BriefcaseBusiness className="h-4 w-4 text-jade" /> Recomandări cheie
+                  <Briefcase className="h-4 w-4 text-jade" /> Recomandări cheie
                 </h3>
                 <InsightList items={data.strategic_insights} />
               </div>
