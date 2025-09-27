@@ -69,5 +69,3 @@ export function GET() {
         },
     });
 }
-
-export const robots = robotsConfig;
