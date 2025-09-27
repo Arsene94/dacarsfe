@@ -1,16 +1,38 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import Image from "next/image";
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { useTranslations } from "@/lib/i18n/useTranslations";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { apiClient } from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
+import { useTranslations } from "@/lib/i18n/useTranslations";
+
+const isOffersMenuHref = (href?: string) => {
+  if (!href) {
+    return false;
+  }
+
+  const normalized = href.trim().toLowerCase();
+  if (normalized.length === 0) {
+    return false;
+  }
+
+  if (normalized.startsWith('#offers') || normalized.startsWith('#oferte')) {
+    return true;
+  }
+
+  return normalized.includes('/offers');
+};
 
 const Header = () => {
+  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [hasOffers, setHasOffers] = useState<boolean | null>(null);
   const { messages, t } = useTranslations("layout");
 
   const headerMessages = (messages.header ?? {}) as {
@@ -28,6 +50,44 @@ const Header = () => {
     : mobileMenuMessages.open ?? t('header.mobileMenu.open', { fallback: 'Deschide meniul' });
 
   useEffect(() => {
+    let cancelled = false;
+
+    if (pathname !== '/') {
+      setHasOffers(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const checkOffers = async () => {
+      try {
+        const response = await apiClient.getOffers({
+          audience: 'public',
+          status: 'published',
+          limit: 1,
+          sort: '-starts_at,-created_at',
+        });
+        if (cancelled) {
+          return;
+        }
+        const list = extractList(response);
+        setHasOffers(list.length > 0);
+      } catch (error) {
+        console.error('Nu am putut verifica disponibilitatea ofertelor publice', error);
+        if (!cancelled) {
+          setHasOffers(true);
+        }
+      }
+    };
+
+    void checkOffers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
@@ -35,6 +95,11 @@ const Header = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const shouldHideOffersMenu = pathname === '/' && hasOffers === false;
+  const visibleMenuItems = shouldHideOffersMenu
+    ? menuItems.filter((item) => !isOffersMenuHref(item.href))
+    : menuItems;
 
   return (
     <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${
@@ -58,7 +123,7 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-8">
-            {menuItems.map((item) => (
+            {visibleMenuItems.map((item) => (
               <Link
                 key={`${item.href}-${item.label}`}
                 href={item.href ?? '#'}
@@ -100,7 +165,7 @@ const Header = () => {
         {isMobileMenuOpen && (
           <div className="lg:hidden border-t border-gray-200 bg-white">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              {menuItems.map((item) => (
+              {visibleMenuItems.map((item) => (
                 <Link
                   key={`${item.href}-${item.label}`}
                   href={item.href ?? '#'}
