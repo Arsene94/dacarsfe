@@ -5,29 +5,33 @@ import { STATIC_DOCS_PAGES, resolveStaticUrl } from "@/lib/content/staticEntries
 import { buildBreadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
+import { DOCS_HREFLANG_LOCALES, resolveDocsSeo } from "@/app/docs/seo";
 
-const PAGE_TITLE = "Documentație DaCars";
-const PAGE_DESCRIPTION = "Proceduri pas-cu-pas pentru configurarea flotei, tarifelor și raportării în platforma DaCars.";
+export const generateMetadata = (): Metadata => {
+    const { locale, copy } = resolveDocsSeo();
 
-export const generateMetadata = (): Metadata =>
-    buildMetadata({
-        title: `${PAGE_TITLE} | DaCars`,
-        description: PAGE_DESCRIPTION,
+    return buildMetadata({
+        title: copy.metaTitle,
+        description: copy.metaDescription,
         path: "/docs",
+        hreflangLocales: DOCS_HREFLANG_LOCALES,
+        locale,
     });
+};
 
 const DocsIndexPage = () => {
+    const { copy } = resolveDocsSeo();
     const breadcrumbJson = buildBreadcrumbJsonLd([
-        { name: "Acasă", url: siteMetadata.siteUrl },
-        { name: "Documentație", url: resolveStaticUrl("/docs") },
+        { name: copy.breadcrumbHome, url: siteMetadata.siteUrl },
+        { name: copy.breadcrumbDocs, url: resolveStaticUrl("/docs") },
     ]);
 
     return (
         <article className="space-y-10">
             {breadcrumbJson && <StructuredData data={breadcrumbJson} id="docs-breadcrumb" />}
             <header className="rounded-xl bg-berkeley px-6 py-10 text-white">
-                <h1 className="text-3xl font-semibold sm:text-4xl">{PAGE_TITLE}</h1>
-                <p className="mt-3 max-w-3xl text-base text-white/80">{PAGE_DESCRIPTION}</p>
+                <h1 className="text-3xl font-semibold sm:text-4xl">{copy.pageTitle}</h1>
+                <p className="mt-3 max-w-3xl text-base text-white/80">{copy.pageDescription}</p>
             </header>
 
             <section className="grid gap-6 md:grid-cols-2">

@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import StructuredData from "@/components/StructuredData";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { resolveRequestLocale } from "@/lib/i18n/server";
 import { STATIC_BLOG_POSTS } from "@/lib/content/staticEntries";
 import { buildMetadata } from "@/lib/seo/meta";
 import { blogPosting, breadcrumb } from "@/lib/seo/jsonld";
@@ -19,6 +21,61 @@ export function generateStaticParams() {
     return STATIC_BLOG_POSTS.map((post) => ({ slug: post.slug }));
 }
 
+type BlogPostSeoCopy = {
+    breadcrumbHome: string;
+    breadcrumbBlog: string;
+    notFoundTitle: string;
+    notFoundDescription: string;
+};
+
+const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
+const HREFLANG_LOCALES = ["ro", "en", "it", "es", "fr", "de"] as const;
+
+const BLOG_POST_SEO_COPY: Record<Locale, BlogPostSeoCopy> = {
+    ro: {
+        breadcrumbHome: "Acasă",
+        breadcrumbBlog: "Blog",
+        notFoundTitle: "Articolul nu a fost găsit | DaCars",
+        notFoundDescription: "Articolul căutat nu mai este disponibil sau a fost mutat.",
+    },
+    en: {
+        breadcrumbHome: "Home",
+        breadcrumbBlog: "Blog",
+        notFoundTitle: "Article not found | DaCars",
+        notFoundDescription: "The requested article is no longer available or has been moved.",
+    },
+    it: {
+        breadcrumbHome: "Pagina iniziale",
+        breadcrumbBlog: "Blog",
+        notFoundTitle: "Articolo non trovato | DaCars",
+        notFoundDescription: "L'articolo richiesto non è più disponibile o è stato spostato.",
+    },
+    es: {
+        breadcrumbHome: "Inicio",
+        breadcrumbBlog: "Blog",
+        notFoundTitle: "Artículo no encontrado | DaCars",
+        notFoundDescription: "El artículo solicitado ya no está disponible o se ha movido.",
+    },
+    fr: {
+        breadcrumbHome: "Accueil",
+        breadcrumbBlog: "Blog",
+        notFoundTitle: "Article introuvable | DaCars",
+        notFoundDescription: "L'article demandé n'est plus disponible ou a été déplacé.",
+    },
+    de: {
+        breadcrumbHome: "Startseite",
+        breadcrumbBlog: "Blog",
+        notFoundTitle: "Artikel nicht gefunden | DaCars",
+        notFoundDescription: "Der gewünschte Artikel ist nicht mehr verfügbar oder wurde verschoben.",
+    },
+};
+
+const resolveBlogPostSeo = () => {
+    const locale = resolveRequestLocale();
+    const copy = BLOG_POST_SEO_COPY[locale] ?? BLOG_POST_SEO_COPY[FALLBACK_LOCALE];
+    return { locale, copy };
+};
+
 const resolveDescription = (post: (typeof STATIC_BLOG_POSTS)[number]): string => {
     if (post.excerpt && post.excerpt.trim().length > 0) {
         return post.excerpt;
@@ -30,15 +87,17 @@ const resolveDescription = (post: (typeof STATIC_BLOG_POSTS)[number]): string =>
 
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
     const { slug } = await params;
+    const { locale, copy } = resolveBlogPostSeo();
     const post = findPost(slug);
 
     if (!post) {
         return buildMetadata({
-            title: `Article not found | ${SITE_NAME}`,
-            description: "The requested article is no longer available.",
+            title: copy.notFoundTitle,
+            description: copy.notFoundDescription,
             path: `/blog/${slug}`,
             noIndex: true,
-            hreflangLocales: ["en", "ro"],
+            hreflangLocales: HREFLANG_LOCALES,
+            locale,
         });
     }
 
@@ -49,12 +108,14 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
         description,
         path: `/blog/${post.slug}`,
         ogImage: undefined,
-        hreflangLocales: ["en", "ro"],
+        hreflangLocales: HREFLANG_LOCALES,
+        locale,
     });
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
     const { slug } = await params;
+    const { copy } = resolveBlogPostSeo();
     const post = findPost(slug);
 
     if (!post) {
@@ -73,8 +134,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             dateModified: post.updatedAt,
         }),
         breadcrumb([
-            { name: "Home", url: SITE_URL },
-            { name: "Blog", url: `${SITE_URL}/blog` },
+            { name: copy.breadcrumbHome, url: SITE_URL },
+            { name: copy.breadcrumbBlog, url: `${SITE_URL}/blog` },
             { name: post.title, url: `${SITE_URL}/blog/${post.slug}` },
         ]),
     ];
@@ -86,13 +147,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 <ol className="flex flex-wrap items-center gap-2">
                     <li>
                         <Link href="/" className="hover:text-berkeley">
-                            Acasă
+                            {copy.breadcrumbHome}
                         </Link>
                     </li>
                     <li aria-hidden="true">/</li>
                     <li>
                         <Link href="/blog" className="hover:text-berkeley">
-                            Blog
+                            {copy.breadcrumbBlog}
                         </Link>
                     </li>
                     <li aria-hidden="true">/</li>

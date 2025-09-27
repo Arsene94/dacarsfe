@@ -9,23 +9,111 @@ import { extractList } from "@/lib/apiResponse";
 import { formatDate } from "@/lib/datetime";
 import { formatOfferBadge } from "@/lib/offers";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { resolveRequestLocale } from "@/lib/i18n/server";
 import { buildMetadata } from "@/lib/seo/meta";
 import { offerCatalog, type OfferInput, breadcrumb } from "@/lib/seo/jsonld";
 import type { Offer, OfferKind } from "@/types/offer";
 
-const PAGE_TITLE = "Oferte speciale DaCars";
-const PAGE_DESCRIPTION =
-  "Descoperă promoții active la închirieri auto DaCars: reduceri procentuale, pachete pentru grupuri și beneficii extra pentru clienți fideli.";
-const META_TITLE = `Current Offers & Discounts | ${SITE_NAME}`;
-const META_DESCRIPTION =
-  "Unlock flexible rental savings, seasonal bundles, and loyalty rewards curated by the DaCars team.";
+type OffersSeoCopy = {
+  pageTitle: string;
+  pageDescription: string;
+  metaTitle: string;
+  metaDescription: string;
+  breadcrumbHome: string;
+  breadcrumbOffers: string;
+  promotionLabel: string;
+};
+
+const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
+const HREFLANG_LOCALES = ["ro", "en", "it", "es", "fr", "de"] as const;
+
+const OFFERS_SEO_COPY: Record<Locale, OffersSeoCopy> = {
+  ro: {
+    pageTitle: "Oferte speciale DaCars",
+    pageDescription:
+      "Descoperă promoții active la închirieri auto DaCars: reduceri procentuale, pachete pentru grupuri și beneficii extra pentru clienți fideli.",
+    metaTitle: `Oferte și reduceri active | ${SITE_NAME}`,
+    metaDescription:
+      "Activează economii flexibile, pachete sezoniere și beneficii dedicate clienților fideli DaCars.",
+    breadcrumbHome: "Acasă",
+    breadcrumbOffers: "Oferte",
+    promotionLabel: "Promoții active",
+  },
+  en: {
+    pageTitle: "DaCars Special Offers",
+    pageDescription:
+      "Explore live rental promotions from DaCars: percentage savings, group bundles, and loyalty extras for frequent drivers.",
+    metaTitle: `Current Offers & Discounts | ${SITE_NAME}`,
+    metaDescription:
+      "Unlock flexible rental savings, seasonal bundles, and loyalty rewards curated by the DaCars team.",
+    breadcrumbHome: "Home",
+    breadcrumbOffers: "Offers",
+    promotionLabel: "Active promotions",
+  },
+  it: {
+    pageTitle: "Offerte speciali DaCars",
+    pageDescription:
+      "Scopri promozioni attive per i noleggi DaCars: sconti percentuali, pacchetti per gruppi e vantaggi fedeltà dedicati.",
+    metaTitle: `Offerte e sconti attivi | ${SITE_NAME}`,
+    metaDescription:
+      "Attiva risparmi flessibili sul noleggio, pacchetti stagionali e vantaggi fedeltà curati dal team DaCars.",
+    breadcrumbHome: "Pagina iniziale",
+    breadcrumbOffers: "Offerte",
+    promotionLabel: "Promozioni attive",
+  },
+  es: {
+    pageTitle: "Ofertas especiales DaCars",
+    pageDescription:
+      "Descubre promociones activas de DaCars: descuentos porcentuales, paquetes para grupos y ventajas para clientes fieles.",
+    metaTitle: `Ofertas y descuentos vigentes | ${SITE_NAME}`,
+    metaDescription:
+      "Activa ahorros de alquiler flexibles, paquetes de temporada y recompensas de fidelidad creadas por el equipo DaCars.",
+    breadcrumbHome: "Inicio",
+    breadcrumbOffers: "Ofertas",
+    promotionLabel: "Promociones activas",
+  },
+  fr: {
+    pageTitle: "Offres spéciales DaCars",
+    pageDescription:
+      "Découvrez les promotions en cours chez DaCars : réductions pourcentages, offres de groupe et avantages fidélité.",
+    metaTitle: `Offres et réductions en cours | ${SITE_NAME}`,
+    metaDescription:
+      "Profitez d'économies flexibles, de packs saisonniers et d'avantages fidélité sélectionnés par l'équipe DaCars.",
+    breadcrumbHome: "Accueil",
+    breadcrumbOffers: "Offres",
+    promotionLabel: "Promotions en cours",
+  },
+  de: {
+    pageTitle: "DaCars Sonderangebote",
+    pageDescription:
+      "Entdecke aktuelle Mietaktionen von DaCars: prozentuale Rabatte, Gruppenpakete und Treuevorteile für Stammkunden.",
+    metaTitle: `Aktuelle Angebote & Rabatte | ${SITE_NAME}`,
+    metaDescription:
+      "Nutze flexible Mietrabatte, saisonale Bundles und Treuevorteile des DaCars-Teams.",
+    breadcrumbHome: "Startseite",
+    breadcrumbOffers: "Angebote",
+    promotionLabel: "Aktive Aktionen",
+  },
+};
+
+const resolveOffersSeo = () => {
+  const locale = resolveRequestLocale();
+  const copy = OFFERS_SEO_COPY[locale] ?? OFFERS_SEO_COPY[FALLBACK_LOCALE];
+  return { locale, copy };
+};
 
 export async function generateMetadata(): Promise<Metadata> {
+  const { locale, copy } = resolveOffersSeo();
+
   return buildMetadata({
-    title: META_TITLE,
-    description: META_DESCRIPTION,
+    title: copy.metaTitle,
+    description: copy.metaDescription,
     path: "/offers",
-    hreflangLocales: ["en", "ro"],
+    hreflangLocales: HREFLANG_LOCALES,
+    locale,
+    openGraphTitle: copy.metaTitle,
+    twitterTitle: copy.metaTitle,
   });
 }
 
@@ -252,6 +340,7 @@ const mapOfferToJsonLdInput = (offer: PublicOffer): OfferInput => ({
 });
 
 const OffersPage = async () => {
+  const { copy } = resolveOffersSeo();
   const api = new ApiClient(getApiBaseUrl());
   let rawOffers: unknown[] = [];
   try {
@@ -274,14 +363,14 @@ const OffersPage = async () => {
 
   const structuredData = [
     offerCatalog({
-      name: META_TITLE,
-      description: META_DESCRIPTION,
+      name: copy.metaTitle,
+      description: copy.metaDescription,
       url: `${SITE_URL}/offers`,
       offers: jsonLdOffers,
     }),
     breadcrumb([
-      { name: "Home", url: SITE_URL },
-      { name: PAGE_TITLE, url: `${SITE_URL}/offers` },
+      { name: copy.breadcrumbHome, url: SITE_URL },
+      { name: copy.breadcrumbOffers, url: `${SITE_URL}/offers` },
     ]),
   ];
 
@@ -292,10 +381,10 @@ const OffersPage = async () => {
       <section className="bg-berkeley text-white mt-8 py-16">
         <div className="mx-auto flex max-w-4xl flex-col gap-6 px-6 text-center">
           <div className="inline-flex items-center justify-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm uppercase tracking-wide">
-            <Sparkles className="h-4 w-4" /> Promoții active
+            <Sparkles className="h-4 w-4" /> {copy.promotionLabel}
           </div>
-          <h1 className="text-3xl font-semibold leading-tight sm:text-4xl">{PAGE_TITLE}</h1>
-          <p className="text-base text-white/80">{PAGE_DESCRIPTION}</p>
+          <h1 className="text-3xl font-semibold leading-tight sm:text-4xl">{copy.pageTitle}</h1>
+          <p className="text-base text-white/80">{copy.pageDescription}</p>
         </div>
       </section>
 

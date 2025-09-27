@@ -6,6 +6,7 @@ import {
     SITE_TWITTER,
     SITE_URL,
 } from "@/lib/config";
+import type { Locale } from "@/lib/i18n/config";
 import { canonical, hreflangLinks } from "@/lib/seo/url";
 
 export type BuildMetadataInput = {
@@ -18,6 +19,7 @@ export type BuildMetadataInput = {
     keywords?: readonly string[];
     openGraphTitle?: string;
     twitterTitle?: string;
+    locale?: Locale | string;
 };
 
 export const resolveOgImage = (value: string | undefined): string => {
@@ -27,6 +29,33 @@ export const resolveOgImage = (value: string | undefined): string => {
     } catch {
         return reference;
     }
+};
+
+const OPEN_GRAPH_LOCALE_MAP: Record<string, string> = {
+    ro: "ro_RO",
+    en: "en_US",
+    it: "it_IT",
+    es: "es_ES",
+    fr: "fr_FR",
+    de: "de_DE",
+};
+
+const resolveOpenGraphLocale = (locale?: Locale | string): string => {
+    if (!locale) {
+        return SITE_LOCALE;
+    }
+
+    const normalized = locale.toString().toLowerCase();
+    if (OPEN_GRAPH_LOCALE_MAP[normalized]) {
+        return OPEN_GRAPH_LOCALE_MAP[normalized];
+    }
+
+    const base = normalized.split(/[\-_]/)[0];
+    if (base && OPEN_GRAPH_LOCALE_MAP[base]) {
+        return OPEN_GRAPH_LOCALE_MAP[base];
+    }
+
+    return SITE_LOCALE;
 };
 
 export const buildMetadata = ({
@@ -39,6 +68,7 @@ export const buildMetadata = ({
     keywords,
     openGraphTitle,
     twitterTitle,
+    locale,
 }: BuildMetadataInput): Metadata => {
     const canonicalUrl = canonical(path);
     const alternates = hreflangLinks(path, hreflangLocales ?? undefined);
@@ -65,7 +95,7 @@ export const buildMetadata = ({
             description,
             url: canonicalUrl,
             siteName: SITE_NAME,
-            locale: SITE_LOCALE,
+            locale: resolveOpenGraphLocale(locale),
             type: "website",
             images: [{ url: imageUrl }],
         },

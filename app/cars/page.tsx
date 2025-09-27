@@ -2,25 +2,70 @@ import type { Metadata } from "next";
 import CarsPageClient from "@/components/cars/CarsPageClient";
 import StructuredData from "@/components/StructuredData";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { resolveRequestLocale } from "@/lib/i18n/server";
+import { getPageMessages } from "@/lib/i18n/translations";
 import { buildMetadata } from "@/lib/seo/meta";
 import { breadcrumb, collectionPage, itemList, type ItemListElementInput } from "@/lib/seo/jsonld";
 import carsMessagesRo from "@/messages/cars/ro.json";
 
 type CarsMessages = typeof carsMessagesRo;
 
-const PAGE_TITLE = `Browse Cars | ${SITE_NAME}`;
-const PAGE_DESCRIPTION =
-    "Explore compact, SUV, and premium rentals with transparent pricing and instant pick-up from DaCars.";
+type CarsSeoCopy = {
+    metaTitle: string;
+    pageTitle: string;
+    description: string;
+    keywords: readonly string[];
+    breadcrumbHome: string;
+    breadcrumbFleet: string;
+};
 
-const carsMessages: CarsMessages = carsMessagesRo;
-const { metadata: carsMetadataMessages } = carsMessages;
+const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
+const HREFLANG_LOCALES = ["ro", "en", "it", "es", "fr", "de"] as const;
+
+const FALLBACK_COPY: CarsSeoCopy = {
+    metaTitle: `Flota completă de mașini pentru închiriere | ${SITE_NAME}`,
+    pageTitle: `Flota completă de mașini pentru închiriere | ${SITE_NAME}`,
+    description:
+        "Explore compact, SUV, and premium rentals with transparent pricing and instant pick-up from DaCars.",
+    keywords: [
+        "car rental fleet",
+        "DaCars",
+        "rent a car",
+    ],
+    breadcrumbHome: "Home",
+    breadcrumbFleet: "Car fleet",
+};
+
+const resolveCarsSeo = () => {
+    const locale = resolveRequestLocale();
+    const messages = getPageMessages<CarsMessages>("cars", locale);
+    const metadataMessages = messages.metadata ?? getPageMessages<CarsMessages>("cars", FALLBACK_LOCALE).metadata;
+
+    const copy: CarsSeoCopy = {
+        metaTitle: metadataMessages?.openGraphTitle ?? metadataMessages?.title ?? FALLBACK_COPY.metaTitle,
+        pageTitle: metadataMessages?.title ?? FALLBACK_COPY.pageTitle,
+        description: metadataMessages?.description ?? FALLBACK_COPY.description,
+        keywords: metadataMessages?.keywords ?? FALLBACK_COPY.keywords,
+        breadcrumbHome: metadataMessages?.breadcrumb?.home ?? FALLBACK_COPY.breadcrumbHome,
+        breadcrumbFleet: metadataMessages?.breadcrumb?.fleet ?? FALLBACK_COPY.breadcrumbFleet,
+    };
+
+    return { locale, copy };
+};
 
 export async function generateMetadata(): Promise<Metadata> {
+    const { locale, copy } = resolveCarsSeo();
+
     return buildMetadata({
-        title: PAGE_TITLE,
-        description: PAGE_DESCRIPTION,
+        title: copy.metaTitle,
+        description: copy.description,
         path: "/cars",
-        hreflangLocales: ["en", "ro"],
+        hreflangLocales: HREFLANG_LOCALES,
+        keywords: copy.keywords,
+        locale,
+        openGraphTitle: copy.metaTitle,
+        twitterTitle: copy.metaTitle,
     });
 }
 
@@ -49,24 +94,28 @@ const CAR_ITEMS: ItemListElementInput[] = [
 ];
 // TODO: Înlocuiește lista de mai sus cu datele reale din flota publică atunci când devin disponibile.
 
-const structuredData = [
-    collectionPage({
-        name: `${SITE_NAME} Fleet`,
-        url: `${SITE_URL}/cars`,
-        description: PAGE_DESCRIPTION,
-        items: itemList(CAR_ITEMS),
-    }),
-    breadcrumb([
-        { name: carsMetadataMessages?.breadcrumb?.home ?? "Home", url: SITE_URL },
-        { name: carsMetadataMessages?.breadcrumb?.fleet ?? "Cars", url: `${SITE_URL}/cars` },
-    ]),
-];
+const CarsPage = () => {
+    const { copy } = resolveCarsSeo();
 
-const CarsPage = () => (
-    <>
-        <StructuredData data={structuredData} id="cars-structured-data" />
-        <CarsPageClient />
-    </>
-);
+    const structuredData = [
+        collectionPage({
+            name: copy.pageTitle,
+            url: `${SITE_URL}/cars`,
+            description: copy.description,
+            items: itemList(CAR_ITEMS),
+        }),
+        breadcrumb([
+            { name: copy.breadcrumbHome, url: SITE_URL },
+            { name: copy.breadcrumbFleet, url: `${SITE_URL}/cars` },
+        ]),
+    ];
+
+    return (
+        <>
+            <StructuredData data={structuredData} id="cars-structured-data" />
+            <CarsPageClient />
+        </>
+    );
+};
 
 export default CarsPage;
