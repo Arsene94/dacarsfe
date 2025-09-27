@@ -11,10 +11,10 @@ import { buildBreadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 
-type DocPageParams = {
-    params: {
+type DocPageProps = {
+    params: Promise<{
         slug: string;
-    };
+    }>;
 };
 
 export const dynamicParams = false;
@@ -23,15 +23,16 @@ export function generateStaticParams() {
     return STATIC_DOCS_PAGES.map((entry) => ({ slug: entry.slug }));
 }
 
-export async function generateMetadata({ params }: DocPageParams): Promise<Metadata> {
+export async function generateMetadata({ params }: DocPageProps): Promise<Metadata> {
+    const { slug } = await params;
     const { locale, copy } = await resolveDocsSeo();
-    const doc = findDocBySlug(params.slug);
+    const doc = findDocBySlug(slug);
 
     if (!doc) {
         return buildMetadata({
             title: copy.notFoundTitle,
             description: copy.notFoundDescription,
-            path: `/docs/${params.slug}`,
+            path: `/docs/${slug}`,
             noIndex: true,
             hreflangLocales: DOCS_HREFLANG_LOCALES,
             locale,
@@ -47,9 +48,10 @@ export async function generateMetadata({ params }: DocPageParams): Promise<Metad
     });
 }
 
-export default async function DocPage({ params }: DocPageParams) {
+export default async function DocPage({ params }: DocPageProps) {
+    const { slug } = await params;
     const { copy } = await resolveDocsSeo();
-    const doc = findDocBySlug(params.slug);
+    const doc = findDocBySlug(slug);
 
     if (!doc) {
         notFound();
