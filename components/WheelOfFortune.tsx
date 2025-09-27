@@ -89,6 +89,66 @@ const parseIpAddress = (payload: unknown): string | null => {
     return null;
 };
 
+const splitWordIntoChunks = (value: string, chunkSize: number): string[] => {
+    if (chunkSize <= 0) {
+        return [value];
+    }
+
+    const normalized = value.trim();
+    if (normalized.length <= chunkSize) {
+        return [normalized];
+    }
+
+    const pattern = new RegExp(`.{1,${chunkSize}}`, "g");
+    const matches = normalized.match(pattern);
+    return matches && matches.length > 0 ? matches : [normalized];
+};
+
+const wrapPrizeTitle = (title: string, maxCharsPerLine: number): string[] => {
+    if (maxCharsPerLine <= 0) {
+        return [title];
+    }
+
+    const words = title.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+        return [title];
+    }
+
+    const lines: string[] = [];
+    let currentLine = "";
+
+    for (const word of words) {
+        const nextLine = currentLine.length > 0 ? `${currentLine} ${word}` : word;
+
+        if (nextLine.length <= maxCharsPerLine) {
+            currentLine = nextLine;
+            continue;
+        }
+
+        if (currentLine.length > 0) {
+            lines.push(currentLine);
+            currentLine = "";
+        }
+
+        if (word.length > maxCharsPerLine) {
+            const segments = splitWordIntoChunks(word, maxCharsPerLine);
+            if (segments.length > 1) {
+                lines.push(...segments.slice(0, -1));
+                currentLine = segments[segments.length - 1] ?? "";
+                continue;
+            }
+        }
+
+        currentLine = word;
+    }
+
+    if (currentLine.length > 0) {
+        lines.push(currentLine);
+    }
+
+    return lines.length > 0 ? lines : [title];
+};
+
 const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClose }) => {
     const [prizes, setPrizes] = useState<WheelPrize[]>([]);
     const [activePeriod, setActivePeriod] = useState<WheelOfFortunePeriod | null>(null);
@@ -703,11 +763,19 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
 
     const segmentFontSize = isPopup
         ? prizes.length > 10
-            ? "2.8"
-            : "3.4"
+            ? "3.8"
+            : "5.4"
         : prizes.length > 10
-            ? "2.4"
-            : "3";
+            ? "4.4"
+            : "5";
+
+    const maxCharsPerLine = isPopup
+        ? prizes.length > 10
+            ? 10
+            : 14
+        : prizes.length > 10
+            ? 12
+            : 16;
 
     const wheelContent = (
         <div className="flex flex-col items-center justify-center gap-12 lg:flex-row">
@@ -746,6 +814,13 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
 
                             const pathData = `M 50 50 L ${startX} ${startY} A 50 50 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
 
+                            const lines = wrapPrizeTitle(prize.title, maxCharsPerLine);
+                            const numericFontSize = Number(segmentFontSize);
+                            const lineHeight = Number.isFinite(numericFontSize)
+                                ? numericFontSize * 1.2
+                                : 4.5;
+                            const firstLineDy = lines.length > 1 ? -((lines.length - 1) * lineHeight) / 2 : 0;
+
                             return (
                                 <div key={prize.id} className="absolute inset-0">
                                     <svg className="h-full w-full" viewBox="0 0 100 100">
@@ -765,7 +840,15 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                                             }}
                                             transform={`rotate(${textRotation}, ${textX}, ${textY})`}
                                         >
-                                            {prize.title}
+                                            {lines.map((line, lineIndex) => (
+                                                <tspan
+                                                    key={`${prize.id}-line-${lineIndex}`}
+                                                    x={textX}
+                                                    dy={lineIndex === 0 ? firstLineDy : lineHeight}
+                                                >
+                                                    {line}
+                                                </tspan>
+                                            ))}
                                         </text>
                                     </svg>
                                 </div>
