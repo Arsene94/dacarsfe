@@ -1,103 +1,94 @@
 import type { Metadata } from "next";
 import HomePageClient from "@/components/home/HomePageClient";
-import JsonLd from "@/components/seo/JsonLd";
+import StructuredData from "@/components/StructuredData";
+import { SITE_NAME, SITE_URL } from "@/lib/config";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { resolveRequestLocale } from "@/lib/i18n/server";
 import { buildMetadata } from "@/lib/seo/meta";
-import { siteMetadata } from "@/lib/seo/siteMetadata";
-import {
-    createOrganizationStructuredData,
-    createRentalServiceStructuredData,
-} from "@/lib/seo/structuredData";
+import { breadcrumb, organization, website } from "@/lib/seo/jsonld";
 
-const FALLBACK_DESCRIPTION =
-    "Închiriază rapid mașini moderne de la DaCars în București și Otopeni. " +
-    "Flotă variată, predare non-stop și oferte flexibile cu sau fără garanție.";
-
-const siteUrl = siteMetadata.siteUrl;
-
-const homeMetadata = buildMetadata({
-    title: "Închirieri auto rapide în București și Otopeni",
-    description: FALLBACK_DESCRIPTION,
-    keywords: [
-        "închirieri auto București",
-        "rent a car Otopeni",
-        "mașini fără garanție",
-        "închirieri auto aeroport",
-        "flotă auto premium",
-        "rezervare mașină online",
-    ],
-    path: "/",
-    openGraphTitle: "DaCars Rent a Car – Închirieri auto rapide în București și Otopeni",
-});
-
-export const metadata: Metadata = {
-    ...homeMetadata,
-    alternates: {
-        canonical: siteUrl,
-        languages: {
-            "ro-RO": siteUrl,
-        },
-    },
-    category: "travel",
-    authors: [{ name: siteMetadata.siteName }],
-    creator: siteMetadata.siteName,
-    publisher: siteMetadata.siteName,
+type HomeSeoCopy = {
+    metaTitle: string;
+    metaDescription: string;
+    breadcrumbHome: string;
 };
 
-const organizationStructuredData = createOrganizationStructuredData({
-    name: siteMetadata.siteName,
-    url: siteUrl,
-    logo: "/images/logo.svg",
-    description: FALLBACK_DESCRIPTION,
-    telephone: siteMetadata.contact.phone,
-    email: siteMetadata.contact.email,
-    sameAs: [...siteMetadata.socialProfiles],
-    address: {
-        streetAddress: siteMetadata.address.street,
-        addressLocality: siteMetadata.address.locality,
-        addressRegion: siteMetadata.address.region,
-        postalCode: siteMetadata.address.postalCode,
-        addressCountry: siteMetadata.address.country,
+const HOME_SEO_COPY: Record<Locale, HomeSeoCopy> = {
+    ro: {
+        metaTitle: `${SITE_NAME} — Închirieri auto fără stres & oferte personalizate`,
+        metaDescription:
+            "Descoperă închirieri auto flexibile, oferte verificate și suport rapid pentru fiecare călătorie DaCars.",
+        breadcrumbHome: "Acasă",
     },
-    contactPoints: [
-        {
-            contactType: "customer support",
-            telephone: siteMetadata.contact.phone,
-            areaServed: "RO",
-            availableLanguage: ["ro", "en"],
-            email: siteMetadata.contact.email,
-        },
-    ],
-    openingHours: [
-        {
-            dayOfWeek: [
-                "https://schema.org/Monday",
-                "https://schema.org/Tuesday",
-                "https://schema.org/Wednesday",
-                "https://schema.org/Thursday",
-                "https://schema.org/Friday",
-                "https://schema.org/Saturday",
-                "https://schema.org/Sunday",
-            ],
-            opens: "00:00",
-            closes: "23:59",
-        },
-    ],
-});
+    en: {
+        metaTitle: `${SITE_NAME} — Seamless Car Rentals & Offers`,
+        metaDescription:
+            "Discover flexible car rentals, curated deals, and responsive support for every DaCars journey.",
+        breadcrumbHome: "Home",
+    },
+    it: {
+        metaTitle: `${SITE_NAME} — Noleggi auto senza stress & offerte dedicate`,
+        metaDescription:
+            "Scopri noleggi auto flessibili, promozioni selezionate e assistenza rapida per ogni viaggio DaCars.",
+        breadcrumbHome: "Pagina iniziale",
+    },
+    es: {
+        metaTitle: `${SITE_NAME} — Alquiler de coches sin complicaciones & ofertas especiales`,
+        metaDescription:
+            "Descubre alquileres de coche flexibles, ofertas seleccionadas y soporte ágil para cada viaje con DaCars.",
+        breadcrumbHome: "Inicio",
+    },
+    fr: {
+        metaTitle: `${SITE_NAME} — Location de voitures fluide & offres avantageuses`,
+        metaDescription:
+            "Découvrez des locations de voiture flexibles, des offres sélectionnées et une assistance rapide pour chaque trajet DaCars.",
+        breadcrumbHome: "Accueil",
+    },
+    de: {
+        metaTitle: `${SITE_NAME} — Autovermietung ohne Stress & exklusive Angebote`,
+        metaDescription:
+            "Erlebe flexible Mietwagen, kuratierte Angebote und schnellen Support für jede DaCars-Reise.",
+        breadcrumbHome: "Startseite",
+    },
+};
 
-const serviceStructuredData = createRentalServiceStructuredData({
-    name: siteMetadata.siteName,
-    url: siteUrl,
-    description: "Servicii complete de închirieri auto, cu predare 24/7 în București și Otopeni.",
-    areaServed: ["RO", "BG", "HU"],
-    priceRange: "25-150 EUR",
-    serviceUrl: "/checkout",
-});
+const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
+const HREFLANG_LOCALES = ["ro", "en", "it", "es", "fr", "de"] as const;
 
-const HomePage = () => {
+const resolveHomeSeo = async () => {
+    const locale = await resolveRequestLocale();
+    const copy = HOME_SEO_COPY[locale] ?? HOME_SEO_COPY[FALLBACK_LOCALE];
+    return { locale, copy };
+};
+
+export async function generateMetadata(): Promise<Metadata> {
+    const { locale, copy } = await resolveHomeSeo();
+
+    return buildMetadata({
+        title: copy.metaTitle,
+        description: copy.metaDescription,
+        path: "/",
+        hreflangLocales: HREFLANG_LOCALES,
+        locale,
+    });
+}
+
+const HomePage = async () => {
+    const { copy } = await resolveHomeSeo();
+    const structuredData = [
+        organization({ description: copy.metaDescription }),
+        website({ description: copy.metaDescription }),
+        breadcrumb([
+            {
+                name: copy.breadcrumbHome,
+                url: SITE_URL,
+            },
+        ]),
+    ];
+
     return (
         <>
-            <JsonLd data={organizationStructuredData} id="dacars-organization" />
-            <JsonLd data={serviceStructuredData} id="dacars-service" />
+            <StructuredData data={structuredData} id="home-structured-data" />
             <HomePageClient />
         </>
     );

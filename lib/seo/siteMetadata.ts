@@ -1,7 +1,5 @@
-import { ensureAbsoluteUrl, resolveSiteUrl } from "@/lib/seo/structuredData";
-
-const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-const siteUrl = resolveSiteUrl(rawSiteUrl);
+import { SITE_URL } from "@/lib/config";
+import { ensureAbsoluteUrl } from "@/lib/seo/structuredData";
 
 const DEFAULT_SOCIAL_IMAGE = {
     src: "/images/bg-hero-1920x1080.webp",
@@ -11,7 +9,7 @@ const DEFAULT_SOCIAL_IMAGE = {
 };
 
 export const siteMetadata = {
-    siteUrl,
+    siteUrl: SITE_URL,
     siteName: "DaCars Rent a Car",
     defaultTitle: "DaCars Rent a Car | Mașini oneste pentru români onești",
     description:
@@ -54,4 +52,4 @@ export const siteMetadata = {
     } as const,
 } as const;
 
-export const absoluteUrl = (path = "/"): string => ensureAbsoluteUrl(path, siteUrl);
+export const absoluteUrl = (path = "/"): string => ensureAbsoluteUrl(path, SITE_URL);

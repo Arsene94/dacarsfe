@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const path = require('path');
+const withMDX = require('@next/mdx')({
+    extension: /\.mdx?$/,
+});
 
 const nextConfig = {
     // Performance optimizations
@@ -126,6 +129,7 @@ const nextConfig = {
 
     // Static export optimization
     trailingSlash: false,
+    pageExtensions: ['ts', 'tsx', 'mdx'],
 
     // Generate source maps for client bundles in production
     productionBrowserSourceMaps: true,
@@ -217,12 +221,7 @@ const nextConfig = {
 
     // Rewrites for better SEO
     async rewrites() {
-        return [
-            {
-                source: '/sitemap.xml',
-                destination: '/api/sitemap',
-            },
-        ];
+        return [];
     },
 };
 
@@ -231,4 +230,4 @@ const withBundleAnalyzer = process.env.ANALYZE === 'true'
     ? require('@next/bundle-analyzer')({ enabled: true })
     : (config) => config;
 
-module.exports = withBundleAnalyzer(nextConfig);
+module.exports = withBundleAnalyzer(withMDX(nextConfig));

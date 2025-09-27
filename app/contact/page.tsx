@@ -1,117 +1,115 @@
 import type { Metadata } from "next";
 import ContactSection from "@/components/ContactSection";
-import JsonLd from "@/components/seo/JsonLd";
+import StructuredData from "@/components/StructuredData";
+import { SITE_NAME, SITE_URL } from "@/lib/config";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { resolveRequestLocale } from "@/lib/i18n/server";
 import { buildMetadata } from "@/lib/seo/meta";
-import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
-import {
-    createBreadcrumbStructuredData,
-    createOrganizationStructuredData,
-} from "@/lib/seo/structuredData";
+import { contactPage, breadcrumb } from "@/lib/seo/jsonld";
+import { siteMetadata } from "@/lib/seo/siteMetadata";
 
-const CONTACT_TITLE = "Contact DaCars Rent a Car";
-const CONTACT_DESCRIPTION =
-    "Ai nevoie de ajutor pentru rezervarea mașinii? Contactează echipa DaCars telefonic," +
-    " pe WhatsApp sau pe email. Suntem disponibili 24/7 în București și Otopeni.";
-
-const contactMetadata = buildMetadata({
-    title: `${CONTACT_TITLE} | Asistență 24/7 în București și Otopeni`,
-    description: CONTACT_DESCRIPTION,
-    keywords: [
-        "contact DaCars",
-        "închirieri auto contact",
-        "telefon DaCars",
-        "WhatsApp DaCars",
-        "email închirieri auto",
-    ],
-    path: "/contact",
-    openGraphTitle: `${CONTACT_TITLE} | Asistență 24/7 în București și Otopeni`,
-});
-
-export const metadata: Metadata = {
-    ...contactMetadata,
+type ContactSeoCopy = {
+    metaTitle: string;
+    pageDescription: string;
+    breadcrumbHome: string;
+    breadcrumbContact: string;
 };
 
-const siteUrl = siteMetadata.siteUrl;
-const contactPageUrl = absoluteUrl("/contact");
+const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
+const HREFLANG_LOCALES = ["ro", "en", "it", "es", "fr", "de"] as const;
 
-const organizationStructuredData = createOrganizationStructuredData({
-    name: siteMetadata.siteName,
-    url: siteUrl,
-    logo: "/images/logo.svg",
-    description: CONTACT_DESCRIPTION,
-    telephone: siteMetadata.contact.phone,
-    email: siteMetadata.contact.email,
-    sameAs: [...siteMetadata.socialProfiles],
-    address: {
-        streetAddress: siteMetadata.address.street,
-        addressLocality: siteMetadata.address.locality,
-        addressRegion: siteMetadata.address.region,
-        postalCode: siteMetadata.address.postalCode,
-        addressCountry: siteMetadata.address.country,
+const CONTACT_SEO_COPY: Record<Locale, ContactSeoCopy> = {
+    ro: {
+        metaTitle: `Contact | ${SITE_NAME}`,
+        pageDescription:
+            "Contactează specialiștii DaCars prin telefon, WhatsApp sau e-mail și primești răspuns personalizat în maximum o zi lucrătoare.",
+        breadcrumbHome: "Acasă",
+        breadcrumbContact: "Contact",
     },
-    contactPoints: [
-        {
-            contactType: "customer support",
-            telephone: siteMetadata.contact.phone,
-            areaServed: "RO",
-            availableLanguage: ["ro", "en"],
-            email: siteMetadata.contact.email,
-        },
-    ],
-    openingHours: [
-        {
-            dayOfWeek: [
-                "https://schema.org/Monday",
-                "https://schema.org/Tuesday",
-                "https://schema.org/Wednesday",
-                "https://schema.org/Thursday",
-                "https://schema.org/Friday",
-                "https://schema.org/Saturday",
-                "https://schema.org/Sunday",
+    en: {
+        metaTitle: `Contact | ${SITE_NAME}`,
+        pageDescription:
+            "Reach our rental specialists via phone, WhatsApp, or email for a tailored reply within one business day.",
+        breadcrumbHome: "Home",
+        breadcrumbContact: "Contact",
+    },
+    it: {
+        metaTitle: `Contatto | ${SITE_NAME}`,
+        pageDescription:
+            "Parla con i consulenti DaCars via telefono, WhatsApp o e-mail e ricevi una risposta personalizzata entro un giorno lavorativo.",
+        breadcrumbHome: "Pagina iniziale",
+        breadcrumbContact: "Contatto",
+    },
+    es: {
+        metaTitle: `Contacto | ${SITE_NAME}`,
+        pageDescription:
+            "Escribe a los especialistas DaCars por teléfono, WhatsApp o correo y recibe respuesta personalizada en un día hábil.",
+        breadcrumbHome: "Inicio",
+        breadcrumbContact: "Contacto",
+    },
+    fr: {
+        metaTitle: `Contact | ${SITE_NAME}`,
+        pageDescription:
+            "Contactez les spécialistes DaCars par téléphone, WhatsApp ou e-mail pour une réponse personnalisée sous un jour ouvré.",
+        breadcrumbHome: "Accueil",
+        breadcrumbContact: "Contact",
+    },
+    de: {
+        metaTitle: `Kontakt | ${SITE_NAME}`,
+        pageDescription:
+            "Erreiche die DaCars-Spezialisten per Telefon, WhatsApp oder E-Mail und erhalte innerhalb eines Werktags eine persönliche Antwort.",
+        breadcrumbHome: "Startseite",
+        breadcrumbContact: "Kontakt",
+    },
+};
+
+const resolveContactSeo = async () => {
+    const locale = await resolveRequestLocale();
+    const copy = CONTACT_SEO_COPY[locale] ?? CONTACT_SEO_COPY[FALLBACK_LOCALE];
+    return { locale, copy };
+};
+
+export async function generateMetadata(): Promise<Metadata> {
+    const { locale, copy } = await resolveContactSeo();
+
+    return buildMetadata({
+        title: copy.metaTitle,
+        description: copy.pageDescription,
+        path: "/contact",
+        hreflangLocales: HREFLANG_LOCALES,
+        locale,
+    });
+}
+
+const ContactPage = async () => {
+    const { copy } = await resolveContactSeo();
+    const structuredData = [
+        contactPage({
+            name: copy.metaTitle,
+            description: copy.pageDescription,
+            url: `${SITE_URL}/contact`,
+            contactPoint: [
+                {
+                    telephone: siteMetadata.contact.phone,
+                    contactType: "customer support",
+                    areaServed: "EU",
+                    availableLanguage: ["en", "ro"],
+                    email: siteMetadata.contact.email,
+                },
             ],
-            opens: "00:00",
-            closes: "23:59",
-        },
-    ],
-});
+        }),
+        breadcrumb([
+            { name: copy.breadcrumbHome, url: SITE_URL },
+            { name: copy.breadcrumbContact, url: `${SITE_URL}/contact` },
+        ]),
+    ];
 
-const breadcrumbStructuredData = createBreadcrumbStructuredData([
-    { name: "Acasă", item: siteUrl },
-    { name: "Contact", item: contactPageUrl },
-]);
-
-const contactPageStructuredData = {
-    "@context": "https://schema.org",
-    "@type": "ContactPage",
-    name: `${CONTACT_TITLE} | DaCars`,
-    description: CONTACT_DESCRIPTION,
-    url: contactPageUrl,
-    mainEntity: {
-        "@type": "AutoRental",
-        name: siteMetadata.siteName,
-        url: siteUrl,
-        telephone: siteMetadata.contact.phone,
-        email: siteMetadata.contact.email,
-        address: {
-            "@type": "PostalAddress",
-            streetAddress: siteMetadata.address.street,
-            addressLocality: siteMetadata.address.locality,
-            addressRegion: siteMetadata.address.region,
-            postalCode: siteMetadata.address.postalCode,
-            addressCountry: siteMetadata.address.country,
-        },
-    },
+    return (
+        <>
+            <StructuredData data={structuredData} id="contact-structured-data" />
+            <ContactSection />
+        </>
+    );
 };
-
-const ContactPage = () => (
-    <>
-        <JsonLd data={organizationStructuredData} id="dacars-contact-organization" />
-        {breadcrumbStructuredData && (
-            <JsonLd data={breadcrumbStructuredData} id="dacars-contact-breadcrumb" />
-        )}
-        <JsonLd data={contactPageStructuredData} id="dacars-contact-page" />
-        <ContactSection />
-    </>
-);
 
 export default ContactPage;
