@@ -176,6 +176,8 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     const mountedRef = useRef(true);
     const spinTimeoutRef = useRef<number | null>(null);
     const ipFetchRef = useRef(false);
+    const nameInputRef = useRef<HTMLInputElement | null>(null);
+    const phoneInputRef = useRef<HTMLInputElement | null>(null);
 
     const { messages, t, locale } = useTranslations("home");
     const wheelMessages = (messages.wheel ?? {}) as Record<string, unknown>;
@@ -487,6 +489,12 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         }
     }, [clientIp, saveFallbackMessage]);
 
+    const focusField = useCallback((element: HTMLInputElement | null) => {
+        if (!element) return;
+        element.focus({ preventScroll: true });
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, []);
+
     const handleSpin = () => {
         if (isSpinning || spinsLeft <= 0) return;
         if (isLoading) return;
@@ -509,6 +517,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
             setFormError(
                 nameRequiredMessage,
             );
+            focusField(nameInputRef.current);
             return;
         }
 
@@ -516,6 +525,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
             setFormError(
                 phoneRequiredMessage,
             );
+            focusField(phoneInputRef.current);
             return;
         }
 
@@ -887,6 +897,12 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 </div>
 
                 <div className="mt-8 flex w-full flex-col items-center gap-4">
+                    {formError && (
+                        <div className="flex w-full max-w-xs items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>{formError}</span>
+                        </div>
+                    )}
                     <button
                         type="button"
                         onClick={handleSpin}
@@ -956,6 +972,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                                 </label>
                                 <input
                                     id="wheel-name"
+                                    ref={nameInputRef}
                                     value={customerName}
                                     onChange={(event) => {
                                         setCustomerName(event.target.value);
@@ -971,6 +988,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                                 </label>
                                 <input
                                     id="wheel-phone"
+                                    ref={phoneInputRef}
                                     value={customerPhone}
                                     onChange={(event) => {
                                         setCustomerPhone(event.target.value);
@@ -1005,13 +1023,6 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                                         )}
                                 </p>
                             </div>
-                        </div>
-                    )}
-
-                    {formError && (
-                        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                            <AlertCircle className="h-4 w-4" />
-                            <span>{formError}</span>
                         </div>
                     )}
 
