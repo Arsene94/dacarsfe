@@ -582,8 +582,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
             <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">
                 Editează rezervarea
             </h3>
-            <div className="flex items-start gap-6">
-                <div className="w-2/3 grid grid-cols-2 gap-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
+            <div className="flex flex-col lg:flex-row items-start gap-6">
+                <div className="w-full lg:w-2/3 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
                     <div>
                         <Label htmlFor="rental-start-date">Dată preluare</Label>
                         <Input
@@ -967,7 +967,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
                 </div>
 
-                <div className="w-1/3 h-fit space-y-2">
+                <div className="w-full lg:w-1/3 h-fit space-y-2">
                     <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
                         <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
                             Publicare
