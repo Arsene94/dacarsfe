@@ -1,54 +1,70 @@
 import type { Metadata } from "next";
 import CarsPageClient from "@/components/cars/CarsPageClient";
-import JsonLd from "@/components/seo/JsonLd";
+import StructuredData from "@/components/StructuredData";
+import { SITE_NAME, SITE_URL } from "@/lib/config";
 import { buildMetadata } from "@/lib/seo/meta";
-import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
-import {
-    createBreadcrumbStructuredData,
-    createSearchActionStructuredData,
-} from "@/lib/seo/structuredData";
+import { breadcrumb, collectionPage, itemList, type ItemListElementInput } from "@/lib/seo/jsonld";
 import carsMessagesRo from "@/messages/cars/ro.json";
 
 type CarsMessages = typeof carsMessagesRo;
 
-const siteUrl = siteMetadata.siteUrl;
-const pageUrl = absoluteUrl("/cars");
+const PAGE_TITLE = `Browse Cars | ${SITE_NAME}`;
+const PAGE_DESCRIPTION =
+    "Explore compact, SUV, and premium rentals with transparent pricing and instant pick-up from Example Rentals.";
 
 const carsMessages: CarsMessages = carsMessagesRo;
 const { metadata: carsMetadataMessages } = carsMessages;
 
-const carsMetadata = buildMetadata({
-    title: carsMetadataMessages.title,
-    description: carsMetadataMessages.description,
-    keywords: carsMetadataMessages.keywords,
-    path: "/cars",
-    openGraphTitle: carsMetadataMessages.openGraphTitle,
-});
+export async function generateMetadata(): Promise<Metadata> {
+    return buildMetadata({
+        title: PAGE_TITLE,
+        description: PAGE_DESCRIPTION,
+        path: "/cars",
+        hreflangLocales: ["en", "ro"],
+    });
+}
 
-export const metadata: Metadata = {
-    ...carsMetadata,
-};
+const CAR_ITEMS: ItemListElementInput[] = [
+    {
+        name: "Compact City",
+        url: `${SITE_URL}/cars#compact-city`,
+        image: `${SITE_URL}/images/cars/compact-city.jpg`,
+        brand: "Example Motors",
+        description: "Agile automatic hatchback ideal for urban escapes.",
+    },
+    {
+        name: "SUV Explorer",
+        url: `${SITE_URL}/cars#suv-explorer`,
+        image: `${SITE_URL}/images/cars/suv-explorer.jpg`,
+        brand: "Example Motors",
+        description: "Spacious SUV with all-wheel drive for weekend adventures.",
+    },
+    {
+        name: "Executive Sedan",
+        url: `${SITE_URL}/cars#executive-sedan`,
+        image: `${SITE_URL}/images/cars/executive-sedan.jpg`,
+        brand: "Example Motors",
+        description: "Premium sedan featuring leather interior and adaptive cruise.",
+    },
+];
+// TODO: Înlocuiește lista de mai sus cu datele reale din flota publică atunci când devin disponibile.
 
-const searchStructuredData = createSearchActionStructuredData({
-    siteUrl,
-    siteName: siteMetadata.siteName,
-    target: `${pageUrl}?search={search_term_string}`,
-    queryInput: "required name=search_term_string",
-});
-
-const breadcrumbMessages = carsMetadataMessages.breadcrumb ?? { home: "Acasă", fleet: "Flotă auto" };
-
-const breadcrumbStructuredData = createBreadcrumbStructuredData([
-    { name: breadcrumbMessages.home ?? "Acasă", item: siteUrl },
-    { name: breadcrumbMessages.fleet ?? "Flotă auto", item: pageUrl },
-]);
+const structuredData = [
+    collectionPage({
+        name: `${SITE_NAME} Fleet`,
+        url: `${SITE_URL}/cars`,
+        description: PAGE_DESCRIPTION,
+        items: itemList(CAR_ITEMS),
+    }),
+    breadcrumb([
+        { name: carsMetadataMessages?.breadcrumb?.home ?? "Home", url: SITE_URL },
+        { name: carsMetadataMessages?.breadcrumb?.fleet ?? "Cars", url: `${SITE_URL}/cars` },
+    ]),
+];
 
 const CarsPage = () => (
     <>
-        <JsonLd data={searchStructuredData} id="dacars-cars-search" />
-        {breadcrumbStructuredData && (
-            <JsonLd data={breadcrumbStructuredData} id="dacars-cars-breadcrumb" />
-        )}
+        <StructuredData data={structuredData} id="cars-structured-data" />
         <CarsPageClient />
     </>
 );

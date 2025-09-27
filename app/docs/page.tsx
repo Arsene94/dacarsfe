@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import SEO from "@/components/SEO";
+import StructuredData from "@/components/StructuredData";
 import { STATIC_DOCS_PAGES, resolveStaticUrl } from "@/lib/content/staticEntries";
 import { buildBreadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/meta";
@@ -24,7 +24,7 @@ const DocsIndexPage = () => {
 
     return (
         <article className="space-y-10">
-            <SEO title={PAGE_TITLE} description={PAGE_DESCRIPTION} path="/docs" jsonLd={breadcrumbJson ? [breadcrumbJson] : []} />
+            {breadcrumbJson && <StructuredData data={breadcrumbJson} id="docs-breadcrumb" />}
             <header className="rounded-xl bg-berkeley px-6 py-10 text-white">
                 <h1 className="text-3xl font-semibold sm:text-4xl">{PAGE_TITLE}</h1>
                 <p className="mt-3 max-w-3xl text-base text-white/80">{PAGE_DESCRIPTION}</p>

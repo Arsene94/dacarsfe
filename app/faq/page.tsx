@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import SEO from "@/components/SEO";
+import StructuredData from "@/components/StructuredData";
 import { buildFaqJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/meta";
 
@@ -64,7 +64,6 @@ export const generateMetadata = (): Metadata =>
         title: `${PAGE_TITLE} | DaCars`,
         description: PAGE_DESCRIPTION,
         path: "/faq",
-        openGraphTitle: PAGE_TITLE,
     });
 
 const FaqPage = () => {
@@ -72,7 +71,7 @@ const FaqPage = () => {
 
     return (
         <main className="mx-auto max-w-4xl px-6 py-16">
-            <SEO title={PAGE_TITLE} description={PAGE_DESCRIPTION} path="/faq" jsonLd={faqJsonLd ? [faqJsonLd] : []} />
+            {faqJsonLd && <StructuredData data={faqJsonLd} id="faq-structured-data" />}
             <header className="mb-10 text-center">
                 <h1 className="text-3xl font-semibold text-gray-900 sm:text-4xl">{PAGE_TITLE}</h1>
                 <p className="mt-4 text-base text-gray-600">{PAGE_DESCRIPTION}</p>

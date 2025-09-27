@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import SEO from "@/components/SEO";
+import StructuredData from "@/components/StructuredData";
 import { STATIC_DOCS_PAGES, resolveStaticUrl } from "@/lib/content/staticEntries";
 import { buildBreadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/meta";
@@ -28,7 +28,6 @@ export function generateMetadata({ params }) {
         title: `${doc.title} | Documentație DaCars`,
         description: doc.description,
         path: `/docs/${doc.slug}`,
-        openGraphTitle: doc.title,
     });
 }
 
@@ -48,12 +47,7 @@ export default function DocPage({ params }) {
 
     return (
         <article className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-            <SEO
-                title={`${doc.title} | Documentație DaCars`}
-                description={doc.description}
-                path={`/docs/${doc.slug}`}
-                jsonLd={breadcrumbJson ? [breadcrumbJson] : []}
-            />
+            {breadcrumbJson && <StructuredData data={breadcrumbJson} id="doc-breadcrumb" />}
             <nav aria-label="Breadcrumb" className="mb-6 text-sm text-gray-500">
                 <ol className="flex flex-wrap items-center gap-2">
                     <li>

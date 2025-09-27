@@ -2,74 +2,60 @@
 
 import Head from "next/head";
 import { useMemo } from "react";
-import type { JsonLd } from "@/lib/seo/jsonld";
-import { buildCanonicalUrl, buildHreflangAlternates } from "@/lib/seo/url";
-import { siteMetadata } from "@/lib/seo/siteMetadata";
+import {
+    SITE_LOCALE,
+    SITE_NAME,
+    SITE_TWITTER,
+} from "@/lib/config";
+import { canonical, hreflangLinks } from "@/lib/seo/url";
+import { buildMetadata, resolveOgImage, type BuildMetadataInput } from "@/lib/seo/metadata";
 
 export type SEOProps = {
     title: string;
     description: string;
-    path?: string;
-    image?: { src: string; alt?: string };
+    path: string;
+    ogImage?: string;
     noIndex?: boolean;
-    jsonLd?: JsonLd[];
-    hreflangs?: readonly string[];
+    hreflangLocales?: string[];
 };
 
-/**
- * Componentă de SEO care adaugă tag-urile critice în <head> pentru motoare de căutare și roboți AI.
- */
-const SEO = ({ title, description, path, image, noIndex = false, jsonLd = [], hreflangs }: SEOProps) => {
-    const canonicalUrl = useMemo(() => buildCanonicalUrl(path), [path]);
-    const alternates = useMemo(() => buildHreflangAlternates(path, hreflangs), [hreflangs, path]);
-    const robotsValue = noIndex ? "noindex, nofollow" : "index, follow";
-    const socialImage = image?.src ?? siteMetadata.defaultSocialImage.src;
-    const socialAlt = image?.alt ?? siteMetadata.defaultSocialImage.alt;
+const robotsValue = (noIndex: boolean): string => (noIndex ? "noindex, nofollow" : "index, follow");
+
+const SEO = ({ title, description, path, ogImage, noIndex = false, hreflangLocales }: SEOProps) => {
+    const canonicalUrl = useMemo(() => canonical(path), [path]);
+    const alternates = useMemo(
+        () => hreflangLinks(path, hreflangLocales ?? undefined),
+        [hreflangLocales, path],
+    );
+    const imageUrl = useMemo(() => resolveOgImage(ogImage), [ogImage]);
 
     return (
         <Head>
             <title>{title}</title>
             <meta name="description" content={description} />
-            <meta name="robots" content={robotsValue} />
+            <meta name="robots" content={robotsValue(noIndex)} />
             <link rel="canonical" href={canonicalUrl} />
             {alternates.map((alternate) => (
                 <link key={alternate.hrefLang} rel="alternate" hrefLang={alternate.hrefLang} href={alternate.href} />
             ))}
 
             <meta property="og:type" content="website" />
-            <meta property="og:locale" content={siteMetadata.locale} />
+            <meta property="og:locale" content={SITE_LOCALE} />
             <meta property="og:title" content={title} />
             <meta property="og:description" content={description} />
             <meta property="og:url" content={canonicalUrl} />
-            <meta property="og:site_name" content={siteMetadata.siteName} />
-            <meta property="og:image" content={socialImage} />
-            <meta property="og:image:alt" content={socialAlt} />
+            <meta property="og:site_name" content={SITE_NAME} />
+            <meta property="og:image" content={imageUrl} />
 
             <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:site" content={SITE_TWITTER} />
             <meta name="twitter:title" content={title} />
             <meta name="twitter:description" content={description} />
-            <meta name="twitter:image" content={socialImage} />
-
-            {jsonLd.map((schema, index) => {
-                if (!schema) {
-                    return null;
-                }
-                try {
-                    const payload = JSON.stringify(schema);
-                    return (
-                        <script
-                            key={`jsonld-${index}`}
-                            type="application/ld+json"
-                            dangerouslySetInnerHTML={{ __html: payload }}
-                            suppressHydrationWarning
-                        />
-                    );
-                } catch {
-                    return null;
-                }
-            })}
+            <meta name="twitter:image" content={imageUrl} />
         </Head>
     );
 };
 
+export type { BuildMetadataInput };
+export { buildMetadata };
 export default SEO;

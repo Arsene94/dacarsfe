@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import SEO from "@/components/SEO";
-import { STATIC_BLOG_POSTS, resolveStaticUrl } from "@/lib/content/staticEntries";
-import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/lib/seo/jsonld";
+import StructuredData from "@/components/StructuredData";
+import { SITE_NAME, SITE_URL } from "@/lib/config";
+import { STATIC_BLOG_POSTS } from "@/lib/content/staticEntries";
 import { buildMetadata } from "@/lib/seo/meta";
-import { siteMetadata } from "@/lib/seo/siteMetadata";
+import { blogPosting, breadcrumb } from "@/lib/seo/jsonld";
 
 const findPost = (slug: string) => STATIC_BLOG_POSTS.find((entry) => entry.slug === slug);
 
@@ -15,23 +15,36 @@ export function generateStaticParams() {
     return STATIC_BLOG_POSTS.map((post) => ({ slug: post.slug }));
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+const resolveDescription = (post: (typeof STATIC_BLOG_POSTS)[number]): string => {
+    if (post.excerpt && post.excerpt.trim().length > 0) {
+        return post.excerpt;
+    }
+
+    const raw = post.content.join(" ").trim();
+    return raw.length > 160 ? `${raw.slice(0, 157)}...` : raw;
+};
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
     const post = findPost(params.slug);
+
     if (!post) {
         return buildMetadata({
-            title: "Articolul nu a fost găsit",
-            description: "Conținutul solicitat nu mai este disponibil.",
+            title: `Article not found | ${SITE_NAME}`,
+            description: "The requested article is no longer available.",
             path: `/blog/${params.slug}`,
             noIndex: true,
+            hreflangLocales: ["en", "ro"],
         });
     }
 
+    const description = resolveDescription(post);
+
     return buildMetadata({
-        title: `${post.title} | Blog DaCars`,
-        description: post.excerpt,
+        title: `${post.title} | ${SITE_NAME}`,
+        description,
         path: `/blog/${post.slug}`,
-        openGraphTitle: post.title,
-        openGraphType: "article",
+        ogImage: undefined,
+        hreflangLocales: ["en", "ro"],
     });
 }
 
@@ -42,31 +55,27 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
         notFound();
     }
 
-    const breadcrumbJson = buildBreadcrumbJsonLd([
-        { name: "Acasă", url: siteMetadata.siteUrl },
-        { name: "Blog", url: resolveStaticUrl("/blog") },
-        { name: post.title, url: resolveStaticUrl(`/blog/${post.slug}`) },
-    ]);
+    const description = resolveDescription(post);
 
-    const articleJson = buildArticleJsonLd({
-        title: post.title,
-        description: post.excerpt,
-        slug: post.slug,
-        publishedAt: post.publishedAt,
-        updatedAt: post.updatedAt,
-        author: {
-            name: post.author,
-        },
-    });
+    const structuredData = [
+        blogPosting({
+            slug: post.slug,
+            title: post.title,
+            description,
+            author: { name: post.author },
+            datePublished: post.publishedAt,
+            dateModified: post.updatedAt,
+        }),
+        breadcrumb([
+            { name: "Home", url: SITE_URL },
+            { name: "Blog", url: `${SITE_URL}/blog` },
+            { name: post.title, url: `${SITE_URL}/blog/${post.slug}` },
+        ]),
+    ];
 
     return (
         <article className="mx-auto max-w-3xl space-y-8 px-6 py-12">
-            <SEO
-                title={`${post.title} | Blog DaCars`}
-                description={post.excerpt}
-                path={`/blog/${post.slug}`}
-                jsonLd={[articleJson, ...(breadcrumbJson ? [breadcrumbJson] : [])]}
-            />
+            <StructuredData data={structuredData} id="blog-post-structured-data" />
             <nav aria-label="Breadcrumb" className="text-sm text-gray-500">
                 <ol className="flex flex-wrap items-center gap-2">
                     <li>
@@ -90,7 +99,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
             <header className="space-y-3">
                 <p className="text-xs uppercase tracking-wide text-gray-500">Publicat la {post.publishedAt}</p>
                 <h1 className="text-3xl font-semibold text-gray-900 sm:text-4xl">{post.title}</h1>
-                <p className="text-base text-gray-600">{post.excerpt}</p>
+                <p className="text-base text-gray-600">{description}</p>
                 <p className="text-sm text-gray-500">Autor: {post.author}</p>
             </header>
 

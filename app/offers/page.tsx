@@ -1,32 +1,55 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Calendar, Gift, Heart, Sparkles, Users } from "lucide-react";
-import { ApiClient } from "@/lib/api";
-import { formatOfferBadge } from "@/lib/offers";
-import { extractList } from "@/lib/apiResponse";
-import { buildMetadata } from "@/lib/seo/meta";
-import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
-import { createBreadcrumbStructuredData } from "@/lib/seo/structuredData";
-import { formatDate } from "@/lib/datetime";
+import StructuredData from "@/components/StructuredData";
 import { Button } from "@/components/ui/button";
 import ApplyOfferButton from "@/components/offers/ApplyOfferButton";
-import JsonLd from "@/components/seo/JsonLd";
+import { ApiClient } from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
+import { formatDate } from "@/lib/datetime";
+import { formatOfferBadge } from "@/lib/offers";
+import { SITE_NAME, SITE_URL } from "@/lib/config";
+import { buildMetadata } from "@/lib/seo/meta";
+import { offerCatalog, type OfferInput, breadcrumb } from "@/lib/seo/jsonld";
 import type { Offer, OfferKind } from "@/types/offer";
 
 const PAGE_TITLE = "Oferte speciale DaCars";
 const PAGE_DESCRIPTION =
   "Descoperă promoții active la închirieri auto DaCars: reduceri procentuale, pachete pentru grupuri și beneficii extra pentru clienți fideli.";
+const META_TITLE = `Current Offers & Discounts | ${SITE_NAME}`;
+const META_DESCRIPTION =
+  "Unlock flexible rental savings, seasonal bundles, and loyalty rewards curated by the Example Rentals team.";
 
-const offersMetadata = buildMetadata({
-  title: `${PAGE_TITLE} | Reduceri și promoții flexibile pentru închirieri auto`,
-  description: PAGE_DESCRIPTION,
-  path: "/offers",
-  openGraphTitle: `${PAGE_TITLE} – Promoții la închirieri auto DaCars`,
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return buildMetadata({
+    title: META_TITLE,
+    description: META_DESCRIPTION,
+    path: "/offers",
+    hreflangLocales: ["en", "ro"],
+  });
+}
 
-export const metadata: Metadata = {
-  ...offersMetadata,
-};
+const STUB_JSONLD_OFFERS: OfferInput[] = [
+  {
+    name: "Weekend City Escape",
+    url: `${SITE_URL}/offers#weekend-city-escape`,
+    priceCurrency: "EUR",
+    price: "49",
+    validFrom: "2024-01-01",
+    validThrough: "2024-12-31",
+    description: "Sample weekend discount placeholder for structured data.",
+  },
+  {
+    name: "Corporate Fleet Bonus",
+    url: `${SITE_URL}/offers#corporate-fleet-bonus`,
+    priceCurrency: "EUR",
+    price: "75",
+    validFrom: "2024-01-01",
+    validThrough: "2024-12-31",
+    description: "Placeholder corporate bundle offer for future automation.",
+  },
+];
+// TODO: Înlocuiește ofertele stub cu date reale din API-ul public atunci când câmpurile sunt disponibile.
 
 const getApiBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -198,6 +221,36 @@ const normalizeOffer = (entry: Offer | Record<string, unknown>): PublicOffer | n
   };
 };
 
+const extractOfferPrice = (raw: string | null | undefined): string => {
+  if (!raw) {
+    return "0";
+  }
+  const match = String(raw).match(/[0-9]+(?:[.,][0-9]+)?/);
+  return match ? match[0].replace(",", ".") : "0";
+};
+
+const toAbsoluteOfferUrl = (href?: string): string => {
+  if (!href) {
+    return `${SITE_URL}/checkout`;
+  }
+
+  try {
+    return new URL(href, SITE_URL).toString();
+  } catch {
+    return `${SITE_URL}/checkout`;
+  }
+};
+
+const mapOfferToJsonLdInput = (offer: PublicOffer): OfferInput => ({
+  name: offer.title,
+  url: toAbsoluteOfferUrl(offer.ctaHref),
+  priceCurrency: "EUR",
+  price: extractOfferPrice(offer.offerValue ?? offer.discount ?? null),
+  validFrom: offer.startsAt ?? undefined,
+  validThrough: offer.endsAt ?? undefined,
+  description: offer.description,
+});
+
 const OffersPage = async () => {
   const api = new ApiClient(getApiBaseUrl());
   let rawOffers: unknown[] = [];
@@ -217,42 +270,24 @@ const OffersPage = async () => {
     .map((offer) => normalizeOffer(offer as Offer))
     .filter((offer): offer is PublicOffer => offer !== null);
 
-  const pageUrl = absoluteUrl("/offers");
-  const breadcrumbStructuredData = createBreadcrumbStructuredData([
-    { name: "Acasă", item: siteMetadata.siteUrl },
-    { name: PAGE_TITLE, item: pageUrl },
-  ]);
+  const jsonLdOffers = offers.length > 0 ? offers.map(mapOfferToJsonLdInput) : STUB_JSONLD_OFFERS;
 
-  const offerCatalogStructuredData =
-    offers.length > 0
-      ? {
-          "@context": "https://schema.org",
-          "@type": "OfferCatalog",
-          name: PAGE_TITLE,
-          url: pageUrl,
-          description: PAGE_DESCRIPTION,
-          itemListElement: offers.map((offer, index) => ({
-            "@type": "Offer",
-            position: index + 1,
-            name: offer.title,
-            description: offer.description,
-            availabilityStarts: offer.startsAt ?? undefined,
-            availabilityEnds: offer.endsAt ?? undefined,
-            priceCurrency: "EUR",
-            url: absoluteUrl(offer.ctaHref ?? "/checkout"),
-            itemOffered: {
-              "@type": "Service",
-              name: siteMetadata.siteName,
-              url: siteMetadata.siteUrl,
-            },
-          })),
-        }
-      : null;
+  const structuredData = [
+    offerCatalog({
+      name: META_TITLE,
+      description: META_DESCRIPTION,
+      url: `${SITE_URL}/offers`,
+      offers: jsonLdOffers,
+    }),
+    breadcrumb([
+      { name: "Home", url: SITE_URL },
+      { name: PAGE_TITLE, url: `${SITE_URL}/offers` },
+    ]),
+  ];
 
   return (
     <div className="bg-slate-50">
-      {breadcrumbStructuredData && <JsonLd data={breadcrumbStructuredData} id="dacars-offers-breadcrumb" />}
-      {offerCatalogStructuredData && <JsonLd data={offerCatalogStructuredData} id="dacars-offers-catalog" />}
+      <StructuredData data={structuredData} id="offers-structured-data" />
 
       <section className="bg-berkeley text-white mt-8 py-16">
         <div className="mx-auto flex max-w-4xl flex-col gap-6 px-6 text-center">
