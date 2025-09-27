@@ -237,45 +237,46 @@ const BlogCategoriesPage = () => {
           <h2 className="text-lg font-semibold text-berkeley">
             {editing ? "Editează categoria" : "Adaugă categorie"}
           </h2>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div>
+              <label
+                htmlFor="blog-category-name"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Nume categorie
+              </label>
+              <Input
+                id="blog-category-name"
+                value={formState.name}
+                onChange={(event) => {
+                  setFormState((prev) => ({ ...prev, name: event.target.value }));
+                  if (formError) {
+                    setFormError(null);
+                  }
+                }}
+                placeholder="Ex: Ghiduri de călătorie"
+                required
+              />
+            </div>
 
-          <div>
-            <label
-              htmlFor="blog-category-name"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Nume categorie
-            </label>
-            <Input
-              id="blog-category-name"
-              value={formState.name}
-              onChange={(event) => {
-                setFormState((prev) => ({ ...prev, name: event.target.value }));
-                if (formError) {
-                  setFormError(null);
-                }
-              }}
-              placeholder="Ex: Ghiduri de călătorie"
-              required
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="blog-category-description"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Descriere (opțional)
-            </label>
-            <Textarea
-              id="blog-category-description"
-              value={formState.description}
-              onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder="Descrie pe scurt ce tip de articole include categoria."
-              rows={4}
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Textul este afișat în zona publică lângă titlul categoriei.
-            </p>
+            <div className="lg:col-span-2">
+              <label
+                htmlFor="blog-category-description"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Descriere (opțional)
+              </label>
+              <Textarea
+                id="blog-category-description"
+                value={formState.description}
+                onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder="Descrie pe scurt ce tip de articole include categoria."
+                rows={4}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Textul este afișat în zona publică lângă titlul categoriei.
+              </p>
+            </div>
           </div>
 
           {formError && (
@@ -284,7 +285,7 @@ const BlogCategoriesPage = () => {
             </p>
           )}
 
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex flex-col items-stretch gap-3 pt-2 lg:flex-row lg:items-center lg:justify-end">
             <Button type="button" variant="secondary" onClick={closeModal}>
               Renunță
             </Button>

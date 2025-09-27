@@ -235,42 +235,43 @@ const BlogTagsPage = () => {
           <h2 className="text-lg font-semibold text-berkeley">
             {editing ? "Editează eticheta" : "Adaugă etichetă"}
           </h2>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div>
+              <label
+                htmlFor="blog-tag-name"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Nume etichetă
+              </label>
+              <Input
+                id="blog-tag-name"
+                value={formState.name}
+                onChange={(event) => {
+                  setFormState((prev) => ({ ...prev, name: event.target.value }));
+                  if (formError) {
+                    setFormError(null);
+                  }
+                }}
+                placeholder="Ex: promoții"
+                required
+              />
+            </div>
 
-          <div>
-            <label
-              htmlFor="blog-tag-name"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Nume etichetă
-            </label>
-            <Input
-              id="blog-tag-name"
-              value={formState.name}
-              onChange={(event) => {
-                setFormState((prev) => ({ ...prev, name: event.target.value }));
-                if (formError) {
-                  setFormError(null);
-                }
-              }}
-              placeholder="Ex: promoții"
-              required
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="blog-tag-description"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Descriere (opțional)
-            </label>
-            <Textarea
-              id="blog-tag-description"
-              value={formState.description}
-              onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder="Explică pe scurt când se folosește eticheta."
-              rows={4}
-            />
+            <div className="lg:col-span-2">
+              <label
+                htmlFor="blog-tag-description"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Descriere (opțional)
+              </label>
+              <Textarea
+                id="blog-tag-description"
+                value={formState.description}
+                onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder="Explică pe scurt când se folosește eticheta."
+                rows={4}
+              />
+            </div>
           </div>
 
           {formError && (
@@ -279,7 +280,7 @@ const BlogTagsPage = () => {
             </p>
           )}
 
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex flex-col items-stretch gap-3 pt-2 lg:flex-row lg:items-center lg:justify-end">
             <Button type="button" variant="secondary" onClick={closeModal}>
               Renunță
             </Button>

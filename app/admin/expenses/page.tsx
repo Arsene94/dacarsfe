@@ -947,7 +947,7 @@ const ExpensesPage = () => {
           <h2 className="text-lg font-semibold">
             {formState.id ? "Editează cheltuiala" : "Adaugă cheltuială"}
           </h2>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="expense-type">Tip cheltuială</Label>
               <Select
@@ -1056,7 +1056,7 @@ const ExpensesPage = () => {
               Cheltuială recurentă
             </label>
             {formState.isRecurring && (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 <div className="space-y-1">
                   <Label htmlFor="expense-ends-on">Generare până la</Label>
                   <Input
@@ -1077,7 +1077,7 @@ const ExpensesPage = () => {
               {formError}
             </div>
           )}
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col gap-2 lg:flex-row lg:justify-end">
             <Button
               type="button"
               variant="outline"

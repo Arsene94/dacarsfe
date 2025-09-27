@@ -387,7 +387,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       className="max-w-5xl max-h-[95vh] overflow-y-auto"
     >
       {reservation ? (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div>
             <Label htmlFor="cnp">CNP</Label>
             <Input id="cnp" value={form.cnp} onChange={handleChange("cnp")} />
@@ -396,13 +396,13 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
             <Label htmlFor="license">Număr permis</Label>
             <Input id="license" value={form.license} onChange={handleChange("license")} />
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={generateContract}>Generează contract</Button>
-              <Button variant="danger" onClick={onClose}>Închide</Button>
+          <div className="lg:col-span-2 flex flex-col gap-2 lg:flex-row lg:justify-end">
+            <Button variant="outline" onClick={generateContract}>Generează contract</Button>
+            <Button variant="danger" onClick={onClose}>Închide</Button>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div>
             <Label htmlFor="cnp">CNP</Label>
             <Input id="cnp" value={form.cnp} onChange={handleChange("cnp")} />
@@ -479,7 +479,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
               onChange={handleChange("end")}
             />
           </div>
-          <div className="col-span-2">
+          <div className="lg:col-span-2">
             <Label htmlFor="car-select">Mașină</Label>
             <SearchSelect<AdminBookingCarOption>
               id="car-select"
@@ -581,7 +581,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
             <Label htmlFor="services">Servicii suplimentare</Label>
             <Input id="services" value={form.services} onChange={handleChange("services")} />
           </div>
-          <div className="col-span-2">
+          <div className="lg:col-span-2">
             <Label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
               Plan de închiriere
             </Label>
@@ -624,10 +624,10 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
               </label>
             </div>
           </div>
-          <div className="col-span-2 flex justify-end gap-2">
-              <Button variant="outline" onClick={generateContract}>Generează contract</Button>
-              <Button variant="blue" onClick={storeAndGenerateContract}>Salvează rezervare & Generează contract</Button>
-              <Button variant="danger" onClick={onClose}>Închide</Button>
+          <div className="lg:col-span-2 flex flex-col gap-2 lg:flex-row lg:justify-end">
+            <Button variant="outline" onClick={generateContract}>Generează contract</Button>
+            <Button variant="blue" onClick={storeAndGenerateContract}>Salvează rezervare & Generează contract</Button>
+            <Button variant="danger" onClick={onClose}>Închide</Button>
           </div>
         </div>
       )}

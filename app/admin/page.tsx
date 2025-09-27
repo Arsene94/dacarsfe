@@ -1309,7 +1309,7 @@ const AdminDashboard = () => {
                     <div className="space-y-4">
                         <div>
                             <Label htmlFor="activity-arrival-date">Sosire</Label>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col gap-2 lg:flex-row">
                                 <Input
                                     id="activity-arrival-date"
                                     type="date"
@@ -1336,7 +1336,7 @@ const AdminDashboard = () => {
                         </div>
                         <div>
                             <Label htmlFor="activity-return-date">Retur</Label>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col gap-2 lg:flex-row">
                                 <Input
                                     id="activity-return-date"
                                     type="date"
@@ -1362,8 +1362,8 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="flex justify-between mt-6">
-                        <div className="space-x-2">
+                    <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-0 lg:space-x-2">
                             <Button className="!px-4 py-4" variant="danger" onClick={() => setPopupOpen(false)}>Anulează</Button>
                             <Button className="!px-4 py-4" onClick={() => updateDateTime()}>Salvează</Button>
                             <Button className="!px-4 py-4" variant="blue" onClick={handleEditBooking}>Editează</Button>

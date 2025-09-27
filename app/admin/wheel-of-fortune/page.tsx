@@ -1167,7 +1167,7 @@ export default function WheelOfFortuneAdminPage() {
                         />
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <div className="space-y-2">
                             <label htmlFor="period-start" className="text-sm font-medium text-gray-700">
                                 Dată început
@@ -1202,7 +1202,7 @@ export default function WheelOfFortuneAdminPage() {
                             Selectează lunile pentru care premiile din această perioadă sunt valabile. Dacă nu selectezi nimic,
                             premiile vor fi eligibile în orice lună.
                         </p>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
                             {MONTHS.map((month) => {
                                 const isChecked = periodForm.activeMonths.includes(month.value);
                                 return (
@@ -1252,7 +1252,7 @@ export default function WheelOfFortuneAdminPage() {
                         />
                     </div>
 
-                    <label className="flex items-center gap-3 text-sm font-medium text-gray-700">
+                    <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 lg:flex-row lg:items-center lg:gap-3">
                         <input
                             type="checkbox"
                             checked={periodForm.isActive}
@@ -1270,7 +1270,7 @@ export default function WheelOfFortuneAdminPage() {
                         </div>
                     )}
 
-                    <div className="flex justify-end gap-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:justify-end">
                         <Button type="button" variant="secondary" onClick={closePeriodModal}>
                             Anulează
                         </Button>
@@ -1313,7 +1313,7 @@ export default function WheelOfFortuneAdminPage() {
                         />
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <div className="space-y-2">
                             <label htmlFor="prize-type" className="text-sm font-medium text-gray-700">
                                 Tip premiu
@@ -1386,7 +1386,7 @@ export default function WheelOfFortuneAdminPage() {
                         <label htmlFor="prize-color" className="text-sm font-medium text-gray-700">
                             Culoare segment
                         </label>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-3">
                             <input
                                 id="prize-color"
                                 type="color"
@@ -1429,7 +1429,7 @@ export default function WheelOfFortuneAdminPage() {
                         </div>
                     )}
 
-                    <div className="flex justify-end gap-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:justify-end">
                         <Button type="button" variant="secondary" onClick={closePrizeModal}>
                             Anulează
                         </Button>

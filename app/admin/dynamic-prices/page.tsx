@@ -235,7 +235,7 @@ const DynamicPricesPage = () => {
       />
       <Popup open={showModal} onClose={() => setShowModal(false)} className="max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div>
               <label className="block mb-1 font-medium">Start</label>
               <Input
@@ -263,7 +263,7 @@ const DynamicPricesPage = () => {
             <label className="block mb-1 font-medium">Procentaje</label>
             <div className="space-y-2">
               {form.percentages.map((p, index) => (
-                <div key={index} className="flex items-center space-x-2">
+                <div key={index} className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-2">
                   <Select
                     value={p.percentage_start.toString()}
                     onValueChange={(v) =>
@@ -321,7 +321,7 @@ const DynamicPricesPage = () => {
               Adaugă procent
             </Button>
           </div>
-          <div className="flex justify-end space-x-2">
+          <div className="flex flex-col gap-2 lg:flex-row lg:justify-end lg:space-x-2">
             <Button
               type="button"
               variant="outline"

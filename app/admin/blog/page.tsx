@@ -689,7 +689,7 @@ const BlogPostsPage = () => {
                 {editing ? "Editează articolul" : "Adaugă articol"}
               </h2>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-title">
                     Titlu
@@ -732,7 +732,7 @@ const BlogPostsPage = () => {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-author">
                     Autor
@@ -776,7 +776,7 @@ const BlogPostsPage = () => {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="space-y-1">
                   <label
                     className="text-sm font-medium text-gray-700"
@@ -812,13 +812,13 @@ const BlogPostsPage = () => {
                 <p className="text-xs text-gray-500">
                   Se afișează pe pagina publică a articolului și în listările din blog.
                 </p>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
                   <div
                     className={`relative h-40 w-full overflow-hidden rounded-xl border ${
                       previewSource
                         ? "border-gray-200 bg-white"
                         : "border-dashed border-gray-300 bg-gray-50"
-                    } sm:max-w-xs`}
+                    } lg:max-w-xs`}
                   >
                     {previewSource ? (
                       <Image
@@ -881,7 +881,7 @@ const BlogPostsPage = () => {
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-meta-title">
                     Meta title
@@ -919,7 +919,7 @@ const BlogPostsPage = () => {
                     Nu există etichete disponibile. Adaugă etichete înainte de a le atașa articolelor.
                   </p>
                 ) : (
-                  <div className="grid gap-2 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                     {tags.map((tag) => {
                       const checked = formState.tagIds.includes(tag.id);
                       const inputId = `blog-tag-${tag.id}`;
@@ -947,7 +947,7 @@ const BlogPostsPage = () => {
               )}
             </div>
           </div>
-          <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-white p-6">
+            <div className="flex flex-col gap-3 border-t border-gray-100 bg-white p-6 lg:flex-row lg:items-center lg:justify-end">
             <Button type="button" variant="secondary" onClick={closeModal}>
               Renunță
             </Button>

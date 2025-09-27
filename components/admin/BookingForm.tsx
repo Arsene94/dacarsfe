@@ -613,7 +613,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             }
                         />
                     </div>
-                    <div className="col-span-2">
+                    <div className="lg:col-span-2">
                         <Label htmlFor="car-select">Mașină</Label>
                         <SearchSelect<AdminBookingCarOption>
                             id="car-select"
@@ -788,7 +788,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     </div>
 
 
-                    <div className="col-span-2">
+                    <div className="lg:col-span-2">
                         <Label htmlFor="coupon-type">Tip discount</Label>
                         <Select
                             id="coupon-type"
@@ -862,7 +862,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         />
                     </div>
 
-                    <div className="col-span-2">
+                    <div className="lg:col-span-2">
                         <h4 className="font-dm-sans text-base font-semibold text-gray-700 mb-2">
                             Servicii suplimentare
                         </h4>
@@ -886,7 +886,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         </div>
                     </div>
 
-                    <div className="col-span-2">
+                    <div className="lg:col-span-2">
                         <Label className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">
                             Plan de închiriere
                         </Label>
