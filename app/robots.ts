@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
-import { robots } from "@/app/api/robots/route";
+import { ROBOTS_CONFIG } from "@/app/api/robots/route";
 
 export const dynamic = "force-static";
 
-const robotsRoute = (): MetadataRoute.Robots => robots;
+const robotsRoute = (): MetadataRoute.Robots => ROBOTS_CONFIG;
 
 export default robotsRoute;

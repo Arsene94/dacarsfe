@@ -4,7 +4,7 @@ import { SITE_URL } from "@/lib/config";
 
 export const dynamic = "force-static";
 
-const robotsConfig: MetadataRoute.Robots = {
+export const ROBOTS_CONFIG: MetadataRoute.Robots = {
     rules: [
         {
             userAgent: "*",
@@ -36,7 +36,12 @@ const stringifyRobotsRuleValue = (value?: string | string[]): string[] => {
 
 const renderRobots = (config: MetadataRoute.Robots): string => {
     const lines: string[] = [];
-    for (const rule of config.rules ?? []) {
+    const ruleEntries = config.rules
+        ? Array.isArray(config.rules)
+            ? config.rules
+            : [config.rules]
+        : [];
+    for (const rule of ruleEntries) {
         const agents = stringifyRobotsRuleValue(rule.userAgent);
         agents.forEach((agent) => {
             lines.push(`User-agent: ${agent}`);
@@ -62,7 +67,7 @@ const renderRobots = (config: MetadataRoute.Robots): string => {
  * Expunem regulile robots.txt conform cerințelor de indexare și roboți AI.
  */
 export function GET() {
-    const body = renderRobots(robotsConfig);
+    const body = renderRobots(ROBOTS_CONFIG);
     return new NextResponse(`${body}\n`, {
         headers: {
             "Content-Type": "text/plain; charset=utf-8",
