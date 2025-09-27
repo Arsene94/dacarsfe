@@ -10,7 +10,7 @@ const PAGE_TITLE = "Blog DaCars";
 const PAGE_DESCRIPTION = "Informații fresh despre mobilitate, predare rapidă și optimizarea flotei DaCars.";
 const META_TITLE = `Blog | Tips, Guides & News | ${SITE_NAME}`;
 const META_DESCRIPTION =
-    "Read the latest mobility tips, rental best practices, and news updates curated by the Example Rentals team.";
+    "Read the latest mobility tips, rental best practices, and news updates curated by the DaCars team.";
 
 export async function generateMetadata(): Promise<Metadata> {
     return buildMetadata({

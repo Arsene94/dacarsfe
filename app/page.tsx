@@ -7,7 +7,7 @@ import { breadcrumb, organization, website } from "@/lib/seo/jsonld";
 
 const HOME_TITLE = `${SITE_NAME} — Seamless Car Rentals & Offers`;
 const HOME_DESCRIPTION =
-    "Discover flexible car rentals, curated offers, and fast support for every journey with Example Rentals.";
+    "Discover flexible car rentals, curated offers, and fast support for every journey with DaCars.";
 
 export async function generateMetadata(): Promise<Metadata> {
     return buildMetadata({

@@ -10,7 +10,7 @@ type CarsMessages = typeof carsMessagesRo;
 
 const PAGE_TITLE = `Browse Cars | ${SITE_NAME}`;
 const PAGE_DESCRIPTION =
-    "Explore compact, SUV, and premium rentals with transparent pricing and instant pick-up from Example Rentals.";
+    "Explore compact, SUV, and premium rentals with transparent pricing and instant pick-up from DaCars.";
 
 const carsMessages: CarsMessages = carsMessagesRo;
 const { metadata: carsMetadataMessages } = carsMessages;

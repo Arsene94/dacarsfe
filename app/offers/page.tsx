@@ -18,7 +18,7 @@ const PAGE_DESCRIPTION =
   "Descoperă promoții active la închirieri auto DaCars: reduceri procentuale, pachete pentru grupuri și beneficii extra pentru clienți fideli.";
 const META_TITLE = `Current Offers & Discounts | ${SITE_NAME}`;
 const META_DESCRIPTION =
-  "Unlock flexible rental savings, seasonal bundles, and loyalty rewards curated by the Example Rentals team.";
+  "Unlock flexible rental savings, seasonal bundles, and loyalty rewards curated by the DaCars team.";
 
 export async function generateMetadata(): Promise<Metadata> {
   return buildMetadata({
