@@ -14,8 +14,8 @@ export type BuildMetadataInput = {
     path: string;
     ogImage?: string;
     noIndex?: boolean;
-    hreflangLocales?: string[];
-    keywords?: string[];
+    hreflangLocales?: readonly string[];
+    keywords?: readonly string[];
     openGraphTitle?: string;
     twitterTitle?: string;
 };
@@ -47,7 +47,8 @@ export const buildMetadata = ({
         return acc;
     }, {});
     const imageUrl = resolveOgImage(ogImage);
-    const computedKeywords = keywords && keywords.length > 0 ? [...keywords] : undefined;
+    const computedKeywords =
+        keywords && keywords.length > 0 ? [...keywords] : undefined;
     const ogTitle = openGraphTitle ?? title;
     const twitterCardTitle = twitterTitle ?? ogTitle;
 
