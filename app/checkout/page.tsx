@@ -27,6 +27,7 @@ import {
     type ReservationAppliedOffer,
     type ReservationPayload,
 } from "@/types/reservation";
+import SelectedCarGallery from "@/components/checkout/SelectedCarGallery";
 import {Button} from "@/components/ui/button";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import checkoutMessagesRo from "@/messages/checkout/ro.json";
@@ -159,29 +160,32 @@ const resolveReservationIdentifier = (record: unknown): string | null => {
 
 const mapApiCarToCar = (apiCar: ApiCar, fallbackName: string): Car => {
     const extras = apiCar as Record<string, unknown>;
-    const imageCandidates: Array<unknown> = [
-        apiCar.image_preview,
-        apiCar.image,
-        apiCar.thumbnail,
-        apiCar.cover_image,
-    ];
+    const galleryCandidates: string[] = [];
+    const registerImage = (value: unknown) => {
+        if (typeof value !== "string") return;
+        const trimmed = value.trim();
+        if (!trimmed) return;
+        galleryCandidates.push(trimmed);
+    };
+    registerImage(apiCar.image_preview);
+    registerImage(apiCar.image);
+    registerImage(apiCar.thumbnail);
+    registerImage(apiCar.cover_image);
     if (Array.isArray(apiCar.images)) {
-        imageCandidates.push(
-            apiCar.images.find((value) => typeof value === "string" && value.trim().length > 0) ?? null,
-        );
+        apiCar.images.forEach(registerImage);
     } else if (apiCar.images && typeof apiCar.images === "object") {
-        imageCandidates.push(
-            Object.values(apiCar.images).find(
-                (value) => typeof value === "string" && value.trim().length > 0,
-            ) ?? null,
-        );
+        Object.values(apiCar.images).forEach(registerImage);
     }
     if (typeof apiCar.type?.image === "string") {
-        imageCandidates.push(apiCar.type.image);
+        registerImage(apiCar.type.image);
     }
-    const imageCandidate = imageCandidates.find(
-        (value): value is string => typeof value === "string" && value.trim().length > 0,
-    );
+    const gallery = Array.from(
+        new Set(galleryCandidates.map((candidate) => toImageUrl(candidate))),
+    ).filter((src) => src.trim().length > 0);
+    if (gallery.length === 0) {
+        gallery.push(toImageUrl(null));
+    }
+    const primaryImage = gallery[0];
 
     const typeName = resolveFirstString(apiCar.type?.name) ?? "—";
     const typeId = coerceId(apiCar.type?.id);
@@ -235,7 +239,8 @@ const mapApiCarToCar = (apiCar: ApiCar, fallbackName: string): Car => {
                 : fallbackName,
         type: typeName,
         typeId,
-        image: toImageUrl((imageCandidate as string | null | undefined) ?? null),
+        image: primaryImage,
+        gallery,
         price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
         rental_rate: rentalRateLabel,
         rental_rate_casco: rentalRateCascoLabel,
@@ -809,6 +814,19 @@ const ReservationPage = () => {
     );
 
     const selectedCar = booking.selectedCar;
+    const selectedCarGallery = useMemo(() => {
+        if (!selectedCar) {
+            return [] as string[];
+        }
+        const gallery = Array.isArray(selectedCar.gallery)
+            ? selectedCar.gallery.filter((src) => typeof src === "string" && src.trim().length > 0)
+            : [];
+        if (gallery.length > 0) {
+            return gallery;
+        }
+        const fallbackImage = typeof selectedCar.image === "string" ? selectedCar.image.trim() : "";
+        return fallbackImage.length > 0 ? [fallbackImage] : [];
+    }, [selectedCar]);
     const appliedOffersSummary = useMemo(() => {
         const quoteOffers = Array.isArray(quoteResult?.applied_offers)
             ? quoteResult?.applied_offers
@@ -1486,6 +1504,12 @@ const ReservationPage = () => {
                     <div className="lg:col-span-2">
                         <div className="bg-white rounded-2xl shadow-lg p-8">
                             <form onSubmit={handleSubmit} className="space-y-8">
+                                {selectedCarGallery.length > 0 && selectedCar ? (
+                                    <SelectedCarGallery
+                                        images={selectedCarGallery}
+                                        carName={selectedCar.name}
+                                    />
+                                ) : null}
                                 {/* Personal Information */}
                                 <div>
                                     <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">

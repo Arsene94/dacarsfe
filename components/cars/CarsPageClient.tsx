@@ -62,27 +62,30 @@ const FleetPage = () => {
 
     const mapCar = useCallback(
         (c: ApiCar): Car => {
-            const imageCandidates: Array<unknown> = [
-                c.image_preview,
-                c.image,
-                c.thumbnail,
-                c.cover_image,
-            ];
+            const galleryCandidates: string[] = [];
+            const registerImage = (value: unknown) => {
+                if (typeof value !== "string") return;
+                const trimmed = value.trim();
+                if (!trimmed) return;
+                galleryCandidates.push(trimmed);
+            };
+            registerImage(c.image_preview);
+            registerImage(c.image);
+            registerImage(c.thumbnail);
+            registerImage(c.cover_image);
             if (Array.isArray(c.images)) {
-                imageCandidates.push(
-                    c.images.find((value) => typeof value === "string" && value.trim().length > 0) ?? null,
-                );
+                c.images.forEach(registerImage);
             } else if (c.images && typeof c.images === "object") {
-                imageCandidates.push(
-                    Object.values(c.images).find(
-                        (value) => typeof value === "string" && value.trim().length > 0,
-                    ) ?? null,
-                );
+                Object.values(c.images).forEach(registerImage);
             }
 
-            const primaryImage = imageCandidates.find(
-                (value): value is string => typeof value === "string" && value.trim().length > 0,
-            );
+            const gallery = Array.from(
+                new Set(galleryCandidates.map((candidate) => toImageUrl(candidate))),
+            ).filter((src) => src.trim().length > 0);
+            if (gallery.length === 0) {
+                gallery.push(toImageUrl(null));
+            }
+            const primaryImage = gallery[0];
 
             const resolvedName =
                 typeof c.name === "string" && c.name.trim().length > 0
@@ -125,7 +128,8 @@ const FleetPage = () => {
                 name: resolvedName,
                 type: resolvedType,
                 typeId: c.type?.id ?? null,
-                image: toImageUrl(primaryImage ?? null),
+                image: primaryImage,
+                gallery,
                 price: parsePrice(
                     Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco)),
                 ),
