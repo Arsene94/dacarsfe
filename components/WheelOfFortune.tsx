@@ -698,8 +698,16 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     ) : null;
 
     const wheelSizeClass = isPopup
-        ? "w-[260px] sm:w-[320px] md:w-[420px] lg:w-[480px] xl:w-[520px]"
+        ? "w-[300px] sm:w-[360px] md:w-[440px] lg:w-[500px] xl:w-[540px]"
         : "w-[340px] sm:w-[480px] md:w-[620px] lg:w-[700px]";
+
+    const segmentFontSize = isPopup
+        ? prizes.length > 10
+            ? "2.8"
+            : "3.4"
+        : prizes.length > 10
+            ? "2.4"
+            : "3";
 
     const wheelContent = (
         <div className="flex flex-col items-center justify-center gap-12 lg:flex-row">
@@ -748,7 +756,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                                             textAnchor="middle"
                                             dominantBaseline="central"
                                             fill="white"
-                                            fontSize={prizes.length > 10 ? "2.4" : "3"}
+                                            fontSize={segmentFontSize}
                                             fontWeight="bold"
                                             fontFamily="DM Sans"
                                             style={{
