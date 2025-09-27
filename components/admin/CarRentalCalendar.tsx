@@ -1171,13 +1171,6 @@ const CarRentalCalendar: React.FC = () => {
                                             {car.model && (
                                                 <p className="text-xs text-gray-600 truncate">{car.model}</p>
                                             )}
-                                            {(car.year || car.type) && (
-                                                <div className="mt-1 flex items-center space-x-3 text-[11px] text-gray-500">
-                                                    {car.year && <span>{car.year}</span>}
-                                                    {car.type && car.year && <span>•</span>}
-                                                    {car.type && <span className="capitalize">{car.type}</span>}
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 </div>
