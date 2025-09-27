@@ -39,6 +39,9 @@ const MIN_ZOOM = 0.6;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.2;
 
+const clampZoom = (value: number): number => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+const normalizeZoom = (value: number): number => Math.round(clampZoom(value) * 100) / 100;
+
 const toNumericId = (value: unknown): number | null => {
     if (typeof value === 'number' && Number.isFinite(value)) {
         return value;
@@ -209,6 +212,7 @@ const CarRentalCalendar: React.FC = () => {
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
     const [viewMode, setViewMode] = useState<'month' | 'quarter' | 'year'>('year');
     const [zoomLevel, setZoomLevel] = useState(1);
+    const zoomLevelRef = useRef(zoomLevel);
     const [selectedItems, setSelectedItems] = useState<Selection[]>([]);
 
     const [bookingInfo, setBookingInfo] = useState<AdminBookingFormValues | null>(null);
@@ -424,6 +428,12 @@ const CarRentalCalendar: React.FC = () => {
     const rightPanelRef = useRef<HTMLDivElement>(null);
     const monthHeaderRef = useRef<HTMLDivElement>(null);
     const dateHeaderRef = useRef<HTMLDivElement>(null);
+    const calendarSurfaceRef = useRef<HTMLDivElement>(null);
+    const pinchStateRef = useRef<{ active: boolean; initialDistance: number; initialZoom: number }>({
+        active: false,
+        initialDistance: 0,
+        initialZoom: 1,
+    });
     const isScrolling = useRef(false);
 
     const rowDragRef = useRef<{ down: boolean; selecting: boolean; startIdx: number; startClientX: number }>({
@@ -926,11 +936,7 @@ const CarRentalCalendar: React.FC = () => {
     }, [viewMode, zoomLevel]);
 
     const changeZoom = (delta: number) => {
-        setZoomLevel((prev) => {
-            const next = Number((prev + delta).toFixed(2));
-            const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
-            return clamped;
-        });
+        setZoomLevel((prev) => normalizeZoom(prev + delta));
     };
 
     const handleZoomIn = () => changeZoom(ZOOM_STEP);
@@ -1049,6 +1055,84 @@ const CarRentalCalendar: React.FC = () => {
         }
         initialScrollDone.current = true;
     }, [cellWidth, indexByDateKey]);
+
+    useEffect(() => {
+        zoomLevelRef.current = zoomLevel;
+        if (!pinchStateRef.current.active) {
+            pinchStateRef.current.initialZoom = zoomLevel;
+        }
+    }, [zoomLevel]);
+
+    useEffect(() => {
+        const surface = calendarSurfaceRef.current;
+        if (!surface) return;
+
+        const getDistance = (touches: TouchList): number => {
+            if (touches.length < 2) return 0;
+            const first = touches[0];
+            const second = touches[1];
+            const dx = first.clientX - second.clientX;
+            const dy = first.clientY - second.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
+
+        const handleTouchStart = (event: TouchEvent) => {
+            if (event.touches.length < 2) return;
+            const distance = getDistance(event.touches);
+            if (distance <= 0) return;
+            pinchStateRef.current = {
+                active: true,
+                initialDistance: distance,
+                initialZoom: zoomLevelRef.current,
+            };
+        };
+
+        const endPinch = () => {
+            pinchStateRef.current = {
+                active: false,
+                initialDistance: 0,
+                initialZoom: zoomLevelRef.current,
+            };
+        };
+
+        const handleTouchMove = (event: TouchEvent) => {
+            if (!pinchStateRef.current.active) return;
+            if (event.touches.length < 2) {
+                endPinch();
+                return;
+            }
+
+            const distance = getDistance(event.touches);
+            if (distance <= 0 || pinchStateRef.current.initialDistance <= 0) return;
+            event.preventDefault();
+
+            const ratio = distance / pinchStateRef.current.initialDistance;
+            const targetZoom = normalizeZoom(pinchStateRef.current.initialZoom * ratio);
+            setZoomLevel((prev) => (prev === targetZoom ? prev : targetZoom));
+        };
+
+        const handleTouchEnd = (event: TouchEvent) => {
+            if (event.touches.length < 2) {
+                endPinch();
+            }
+        };
+
+        const handleTouchCancel = () => {
+            endPinch();
+        };
+
+        surface.addEventListener('touchstart', handleTouchStart, { passive: true });
+        surface.addEventListener('touchmove', handleTouchMove, { passive: false });
+        surface.addEventListener('touchend', handleTouchEnd);
+        surface.addEventListener('touchcancel', handleTouchCancel);
+
+        return () => {
+            surface.removeEventListener('touchstart', handleTouchStart);
+            surface.removeEventListener('touchmove', handleTouchMove);
+            surface.removeEventListener('touchend', handleTouchEnd);
+            surface.removeEventListener('touchcancel', handleTouchCancel);
+        };
+    }, [viewMode]);
 
     return (
         <div
@@ -1179,13 +1263,17 @@ const CarRentalCalendar: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 w-full flex flex-col bg-white overflow-x-hidden min-w-0">
+                <div
+                    ref={calendarSurfaceRef}
+                    className="flex-1 w-full flex flex-col bg-white overflow-x-hidden min-w-0"
+                    style={{ touchAction: 'pan-x pan-y' }}
+                >
                     {viewMode === 'year' && (
                         <div
                             ref={monthHeaderRef}
                             onScroll={handleScroll('header')}
                             className="w-full border-b border-gray-200 bg-gray-50 overflow-x-auto month-header-scroll"
-                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-x pan-y' }}
                         >
                             <div className="flex" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px` }}>
                                 {getMonthGroups().map((month, index) => (
@@ -1207,7 +1295,7 @@ const CarRentalCalendar: React.FC = () => {
                         ref={dateHeaderRef}
                         onScroll={handleScroll('header')}
                         className={`w-full border-b border-gray-200 bg-gray-50 ${getHeaderHeight()} overflow-x-auto date-header-scroll select-none`}
-                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-x pan-y' }}
                     >
                         <div className="flex h-full" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px`, ...weekBgStyle }}>
                             {dates.map((date, index) => (
@@ -1260,7 +1348,12 @@ const CarRentalCalendar: React.FC = () => {
                         </div>
                     </div>
 
-                    <div ref={rightPanelRef} className="flex-1 overflow-auto" onScroll={handleScroll('right')} style={{ scrollbarWidth: 'thin' }}>
+                    <div
+                        ref={rightPanelRef}
+                        className="flex-1 overflow-auto"
+                        onScroll={handleScroll('right')}
+                        style={{ scrollbarWidth: 'thin', touchAction: 'pan-x pan-y' }}
+                    >
                         <div style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px`, height: 'fit-content', ...weekBgStyle }}>
                             {cars.map((car) => {
                                 const carReservations = reservations.filter((r) => r.carId === car.id);
