@@ -240,7 +240,7 @@ const HeroSection = () => {
                         fill
                         priority
                         fetchPriority="high"
-                        sizes="100vw"
+                        sizes="(max-width: 639px) 360px, (max-width: 1023px) 768px, 100vw"
                         className="w-full h-full object-cover"
                     />
                 </picture>
