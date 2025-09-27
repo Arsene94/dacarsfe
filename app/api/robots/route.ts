@@ -1,31 +1,8 @@
 import type { MetadataRoute } from "next";
 import { NextResponse } from "next/server";
-import { SITE_URL } from "@/lib/config";
+import { ROBOTS_CONFIG } from "@/lib/seo/robots";
 
 export const dynamic = "force-static";
-
-export const ROBOTS_CONFIG: MetadataRoute.Robots = {
-    rules: [
-        {
-            userAgent: "*",
-            allow: "/",
-            disallow: ["/admin/", "/account/", "/checkout/", "/cart/", "/*?*utm_*"],
-        },
-        {
-            userAgent: "GPTBot",
-            allow: "/",
-        },
-        {
-            userAgent: "CCBot",
-            allow: "/",
-        },
-        {
-            userAgent: "ClaudeBot",
-            allow: "/",
-        },
-    ],
-    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/sitemap-posts.xml`],
-};
 
 const stringifyRobotsRuleValue = (value?: string | string[]): string[] => {
     if (!value) {
