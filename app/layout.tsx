@@ -13,14 +13,14 @@ import "./globals.css";
 
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["600", "700"],
   variable: "--font-poppins",
   display: "swap",
 });
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
   variable: "--font-dm-sans",
   display: "swap",
 });
@@ -62,6 +62,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="dns-prefetch" href="//vercel.app" />
+        <link rel="dns-prefetch" href="//fe.dacars.ro" />
+        <link rel="preconnect" href="https://fe.dacars.ro" crossOrigin="anonymous" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

@@ -1457,7 +1457,7 @@ const ReservationsPage = () => {
                         <span className="font-dm-sans text-gray-600">
                           Total:
                         </span>
-                        <span className="font-dm-sans font-bold text-berkeley text-lg">
+                        <span className="font-dm-sans font-semibold text-berkeley text-lg">
                           {formatEuro(selectedReservation.total ?? 0)}
                         </span>
                       </div>
