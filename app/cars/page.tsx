@@ -37,8 +37,8 @@ const FALLBACK_COPY: CarsSeoCopy = {
     breadcrumbFleet: "Car fleet",
 };
 
-const resolveCarsSeo = () => {
-    const locale = resolveRequestLocale();
+const resolveCarsSeo = async () => {
+    const locale = await resolveRequestLocale();
     const messages = getPageMessages<CarsMessages>("cars", locale);
     const metadataMessages = messages.metadata ?? getPageMessages<CarsMessages>("cars", FALLBACK_LOCALE).metadata;
 
@@ -55,7 +55,7 @@ const resolveCarsSeo = () => {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-    const { locale, copy } = resolveCarsSeo();
+    const { locale, copy } = await resolveCarsSeo();
 
     return buildMetadata({
         title: copy.metaTitle,
@@ -94,8 +94,8 @@ const CAR_ITEMS: ItemListElementInput[] = [
 ];
 // TODO: Înlocuiește lista de mai sus cu datele reale din flota publică atunci când devin disponibile.
 
-const CarsPage = () => {
-    const { copy } = resolveCarsSeo();
+const CarsPage = async () => {
+    const { copy } = await resolveCarsSeo();
 
     const structuredData = [
         collectionPage({

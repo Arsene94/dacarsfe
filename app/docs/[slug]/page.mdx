@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import StructuredData from "@/components/StructuredData";
@@ -15,8 +16,8 @@ export function generateStaticParams() {
     return STATIC_DOCS_PAGES.map((entry) => ({ slug: entry.slug }));
 }
 
-export function generateMetadata({ params }) {
-    const { locale, copy } = resolveDocsSeo();
+export async function generateMetadata({ params }): Promise<Metadata> {
+    const { locale, copy } = await resolveDocsSeo();
     const doc = findDocBySlug(params.slug);
     if (!doc) {
         return buildMetadata({
@@ -38,8 +39,8 @@ export function generateMetadata({ params }) {
     });
 }
 
-export default function DocPage({ params }) {
-    const { copy } = resolveDocsSeo();
+export default async function DocPage({ params }) {
+    const { copy } = await resolveDocsSeo();
     const doc = findDocBySlug(params.slug);
 
     if (!doc) {

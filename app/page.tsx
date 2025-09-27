@@ -55,14 +55,14 @@ const HOME_SEO_COPY: Record<Locale, HomeSeoCopy> = {
 const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
 const HREFLANG_LOCALES = ["ro", "en", "it", "es", "fr", "de"] as const;
 
-const resolveHomeSeo = () => {
-    const locale = resolveRequestLocale();
+const resolveHomeSeo = async () => {
+    const locale = await resolveRequestLocale();
     const copy = HOME_SEO_COPY[locale] ?? HOME_SEO_COPY[FALLBACK_LOCALE];
     return { locale, copy };
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-    const { locale, copy } = resolveHomeSeo();
+    const { locale, copy } = await resolveHomeSeo();
 
     return buildMetadata({
         title: copy.metaTitle,
@@ -73,8 +73,8 @@ export async function generateMetadata(): Promise<Metadata> {
     });
 }
 
-const HomePage = () => {
-    const { copy } = resolveHomeSeo();
+const HomePage = async () => {
+    const { copy } = await resolveHomeSeo();
     const structuredData = [
         organization({ description: copy.metaDescription }),
         website({ description: copy.metaDescription }),

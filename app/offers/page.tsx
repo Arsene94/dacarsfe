@@ -97,14 +97,14 @@ const OFFERS_SEO_COPY: Record<Locale, OffersSeoCopy> = {
   },
 };
 
-const resolveOffersSeo = () => {
-  const locale = resolveRequestLocale();
+const resolveOffersSeo = async () => {
+  const locale = await resolveRequestLocale();
   const copy = OFFERS_SEO_COPY[locale] ?? OFFERS_SEO_COPY[FALLBACK_LOCALE];
   return { locale, copy };
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { locale, copy } = resolveOffersSeo();
+  const { locale, copy } = await resolveOffersSeo();
 
   return buildMetadata({
     title: copy.metaTitle,
@@ -340,7 +340,7 @@ const mapOfferToJsonLdInput = (offer: PublicOffer): OfferInput => ({
 });
 
 const OffersPage = async () => {
-  const { copy } = resolveOffersSeo();
+  const { copy } = await resolveOffersSeo();
   const api = new ApiClient(getApiBaseUrl());
   let rawOffers: unknown[] = [];
   try {

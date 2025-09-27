@@ -102,8 +102,8 @@ export const getDocsSeoCopy = (locale: Locale): DocsSeoCopy => {
     return DOCS_SEO_COPY[locale] ?? DOCS_SEO_COPY[FALLBACK_LOCALE];
 };
 
-export const resolveDocsSeo = () => {
-    const locale = resolveRequestLocale();
+export const resolveDocsSeo = async () => {
+    const locale = await resolveRequestLocale();
     const copy = getDocsSeoCopy(locale);
     return { locale, copy };
 };

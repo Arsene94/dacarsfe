@@ -375,14 +375,14 @@ const FAQ_COPY: Record<Locale, FaqSeoCopy> = {
     },
 };
 
-const resolveFaqSeo = () => {
-    const locale = resolveRequestLocale();
+const resolveFaqSeo = async () => {
+    const locale = await resolveRequestLocale();
     const copy = FAQ_COPY[locale] ?? FAQ_COPY[FALLBACK_LOCALE];
     return { locale, copy };
 };
 
-export const generateMetadata = (): Metadata => {
-    const { locale, copy } = resolveFaqSeo();
+export async function generateMetadata(): Promise<Metadata> {
+    const { locale, copy } = await resolveFaqSeo();
 
     return buildMetadata({
         title: copy.metaTitle,
@@ -393,10 +393,10 @@ export const generateMetadata = (): Metadata => {
         openGraphTitle: copy.metaTitle,
         twitterTitle: copy.metaTitle,
     });
-};
+}
 
-const FaqPage = () => {
-    const { copy } = resolveFaqSeo();
+const FaqPage = async () => {
+    const { copy } = await resolveFaqSeo();
     const faqJsonLd = buildFaqJsonLd(copy.items);
 
     return (

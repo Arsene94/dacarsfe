@@ -7,8 +7,8 @@ import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { DOCS_HREFLANG_LOCALES, resolveDocsSeo } from "@/app/docs/seo";
 
-export const generateMetadata = (): Metadata => {
-    const { locale, copy } = resolveDocsSeo();
+export async function generateMetadata(): Promise<Metadata> {
+    const { locale, copy } = await resolveDocsSeo();
 
     return buildMetadata({
         title: copy.metaTitle,
@@ -17,10 +17,10 @@ export const generateMetadata = (): Metadata => {
         hreflangLocales: DOCS_HREFLANG_LOCALES,
         locale,
     });
-};
+}
 
-const DocsIndexPage = () => {
-    const { copy } = resolveDocsSeo();
+const DocsIndexPage = async () => {
+    const { copy } = await resolveDocsSeo();
     const breadcrumbJson = buildBreadcrumbJsonLd([
         { name: copy.breadcrumbHome, url: siteMetadata.siteUrl },
         { name: copy.breadcrumbDocs, url: resolveStaticUrl("/docs") },

@@ -63,14 +63,14 @@ const CONTACT_SEO_COPY: Record<Locale, ContactSeoCopy> = {
     },
 };
 
-const resolveContactSeo = () => {
-    const locale = resolveRequestLocale();
+const resolveContactSeo = async () => {
+    const locale = await resolveRequestLocale();
     const copy = CONTACT_SEO_COPY[locale] ?? CONTACT_SEO_COPY[FALLBACK_LOCALE];
     return { locale, copy };
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-    const { locale, copy } = resolveContactSeo();
+    const { locale, copy } = await resolveContactSeo();
 
     return buildMetadata({
         title: copy.metaTitle,
@@ -81,8 +81,8 @@ export async function generateMetadata(): Promise<Metadata> {
     });
 }
 
-const ContactPage = () => {
-    const { copy } = resolveContactSeo();
+const ContactPage = async () => {
+    const { copy } = await resolveContactSeo();
     const structuredData = [
         contactPage({
             name: copy.metaTitle,

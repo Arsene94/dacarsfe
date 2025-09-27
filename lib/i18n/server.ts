@@ -69,8 +69,8 @@ const parseAcceptLanguage = (headerValue: string | null): Locale | null => {
     return null;
 };
 
-export const resolveRequestLocale = (): Locale => {
-    const cookieStore = cookies();
+export const resolveRequestLocale = async (): Promise<Locale> => {
+    const cookieStore = await cookies();
     for (const key of LOCALE_COOKIE_KEYS) {
         const value = cookieStore.get(key)?.value;
         const locale = normalizeLocaleCandidate(value);
@@ -79,7 +79,8 @@ export const resolveRequestLocale = (): Locale => {
         }
     }
 
-    const headerLocale = parseAcceptLanguage(headers().get("accept-language"));
+    const headerList = await headers();
+    const headerLocale = parseAcceptLanguage(headerList.get("accept-language"));
     if (headerLocale) {
         return headerLocale;
     }
