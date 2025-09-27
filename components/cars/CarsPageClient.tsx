@@ -13,7 +13,7 @@ import { apiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { createVehicleItemListStructuredData } from "@/lib/seo/structuredData";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
-import { useBooking } from "@/context/BookingContext";
+import { useBooking } from "@/context/useBooking";
 import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 

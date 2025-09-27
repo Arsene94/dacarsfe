@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useBooking } from "@/context/BookingContext";
+import { useBooking } from "@/context/useBooking";
 import type { BookingAppliedOffer } from "@/types/booking";
 import type { ButtonProps } from "@/types/ui";
 

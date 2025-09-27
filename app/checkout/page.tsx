@@ -5,7 +5,7 @@ import {useRouter} from "next/navigation";
 import {Calendar, Gift, Plane, User,} from "lucide-react";
 import {Label} from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
-import {useBooking} from "@/context/BookingContext";
+import {useBooking} from "@/context/useBooking";
 import { apiClient } from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";

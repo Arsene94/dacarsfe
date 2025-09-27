@@ -3,7 +3,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import PageTransition from "../components/PageTransition";
 import type { ReactNode } from "react";
-import { BookingProvider } from "@/context/BookingContext";
+import { BookingProvider } from "@/context/BookingProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { LocaleProvider } from "@/context/LocaleContext";
 import { DM_Sans, Poppins } from "next/font/google";
