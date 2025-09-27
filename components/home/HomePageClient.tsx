@@ -11,7 +11,7 @@ import ProcessSection from "@/components/ProcessSection";
 import WheelOfFortune from "@/components/WheelOfFortune";
 import apiClient from "@/lib/api";
 import { extractArray, isPeriodActive, mapPeriod } from "@/lib/wheelNormalization";
-import { useBooking } from "@/context/BookingContext";
+import { useBooking } from "@/context/useBooking";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
 
 const ElfsightWidget = dynamic(() => import("@/components/ElfsightWidget"), {

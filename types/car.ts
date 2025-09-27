@@ -96,6 +96,7 @@ export type Car = {
   type: string;
   typeId: number | null;
   image: string;
+  gallery: string[];
   price: number;
   rental_rate: string;
   rental_rate_casco: string;

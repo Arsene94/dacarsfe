@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { useBooking } from "@/context/BookingContext";
+import { useBooking } from "@/context/useBooking";
 import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 import { useTranslations } from "@/lib/i18n/useTranslations";
@@ -240,7 +240,7 @@ const HeroSection = () => {
                         fill
                         priority
                         fetchPriority="high"
-                        sizes="100vw"
+                        sizes="(max-width: 639px) 360px, (max-width: 1023px) 768px, 100vw"
                         className="w-full h-full object-cover"
                     />
                 </picture>

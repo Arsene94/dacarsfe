@@ -39,7 +39,7 @@ const BlogPostCard = ({ post }: BlogPostCardProps) => {
             src={imageUrl}
             alt={post.title}
             fill
-            sizes="(min-width: 1024px) 320px, 100vw"
+            sizes="(max-width: 767px) 320px, (max-width: 1023px) 50vw, 320px"
             className="object-cover"
           />
         ) : (
