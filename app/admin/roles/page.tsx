@@ -850,7 +850,7 @@ const RolesAdminPage = () => {
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div>
               <label
                 htmlFor="role-name"
@@ -902,7 +902,7 @@ const RolesAdminPage = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+            <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 lg:flex-row lg:items-center lg:gap-2">
               <input
                 type="checkbox"
                 checked={formState.isDefault}
@@ -952,7 +952,7 @@ const RolesAdminPage = () => {
                     key={group.group}
                     className="rounded-lg border border-gray-200 p-3"
                   >
-                    <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                    <div className="mb-2 flex flex-col gap-1 lg:flex-row lg:items-baseline lg:justify-between">
                       <span className="text-sm font-semibold text-gray-900">
                         {formatGroupTitle(group.group)}
                       </span>
@@ -960,7 +960,7 @@ const RolesAdminPage = () => {
                         {formatGroupRoute(group.group)}
                       </span>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                       {group.permissions.map((permission) => {
                         const normalizedName = permission.name.toLowerCase();
                         const isChecked =
@@ -1006,7 +1006,7 @@ const RolesAdminPage = () => {
             </div>
           )}
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <button
               type="button"
               onClick={closeModal}
@@ -1056,7 +1056,7 @@ const RolesAdminPage = () => {
               {deleteError}
             </div>
           )}
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <div className="flex flex-col gap-2 lg:flex-row lg:justify-end">
             <button
               type="button"
               onClick={closeDeleteModal}

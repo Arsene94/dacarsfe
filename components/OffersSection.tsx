@@ -180,11 +180,15 @@ const OffersSection = () => {
     const secondaryButton = offers.cta?.secondaryButton ?? "Rezervă cu reducere";
 
     const [remoteOffers, setRemoteOffers] = useState<OfferCard[]>([]);
+    const [remoteState, setRemoteState] = useState<"idle" | "loading" | "success" | "empty" | "error">(
+        "idle",
+    );
 
     useEffect(() => {
         let cancelled = false;
 
         const fetchOffers = async () => {
+            setRemoteState("loading");
             try {
                 const response = await apiClient.getOffers({
                     audience: "public",
@@ -201,9 +205,15 @@ const OffersSection = () => {
                     .filter((item): item is OfferCard => item !== null);
                 if (mapped.length > 0) {
                     setRemoteOffers(mapped);
+                    setRemoteState("success");
+                } else {
+                    setRemoteState("empty");
                 }
             } catch (error) {
                 console.error("Nu am putut încărca ofertele publice", error);
+                if (!cancelled) {
+                    setRemoteState("error");
+                }
             }
         };
 
@@ -214,7 +224,20 @@ const OffersSection = () => {
         };
     }, []);
 
-    const displayedCards = remoteOffers.length > 0 ? remoteOffers : cards;
+    const hasRemoteOffers = remoteState === "success" && remoteOffers.length > 0;
+    const shouldUseFallback =
+        remoteState === "idle" || remoteState === "loading" || remoteState === "error";
+    const displayedCards = hasRemoteOffers
+        ? remoteOffers
+        : shouldUseFallback
+            ? cards
+            : [];
+    const hasAnyOffer = displayedCards.length > 0;
+
+    if (!hasAnyOffer) {
+        return null;
+    }
+
     const remotePrimaryCtaLabel = remoteOffers.find((card) => card.ctaLabel)?.ctaLabel ?? null;
     const remotePrimaryHref = remoteOffers.find((card) => card.ctaHref)?.ctaHref ?? null;
     const primaryCtaLabel = remotePrimaryCtaLabel ?? offers.cta?.primary ?? "Profită acum";

@@ -682,8 +682,8 @@ const OffersAdminPage = () => {
                         </p>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div className="md:col-span-2">
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        <div className="lg:col-span-2">
                             <Label htmlFor="offer-title">Titlu</Label>
                             <Input
                                 id="offer-title"
@@ -706,7 +706,7 @@ const OffersAdminPage = () => {
                                 valoarea selectate.
                             </p>
                         </div>
-                        <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
+                        <div className="lg:col-span-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
                             <div>
                                 <Label htmlFor="offer-type">Tip ofertă</Label>
                                 <Select
@@ -738,7 +738,7 @@ const OffersAdminPage = () => {
                                     placeholder={selectedOfferType?.valuePlaceholder ?? "Ex: 20"}
                                 />
                             </div>
-                            <p className="md:col-span-2 text-xs text-slate-500">
+                            <p className="lg:col-span-2 text-xs text-slate-500">
                                 {selectedOfferType
                                     ? `${selectedOfferType.description} ${selectedOfferType.requiresValue ? "Valoarea este obligatorie pentru acest tip." : "Valoarea este opțională, dar ajută la afișarea badge-ului și logica backend."}`
                                     : "Alege un tip de ofertă pentru a vedea cum este calculată promoția și ce parametri sunt trimiși către backend."}
@@ -774,13 +774,13 @@ const OffersAdminPage = () => {
                                 ))}
                             </Select>
                         </div>
-                        <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
+                        <div className="lg:col-span-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
                             <fieldset className="h-full">
                                 <legend className="text-sm font-semibold text-slate-900">Stil fundal</legend>
                                 <p className="mt-1 text-xs text-slate-500">
                                     Selectează rapid fundalul promoției. Poți reveni oricând la varianta implicită.
                                 </p>
-                                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
                                     {backgroundClassOptions.map((option) => {
                                         const isSelected = backgroundClass === option.value;
                                         return (
@@ -824,7 +824,7 @@ const OffersAdminPage = () => {
                                 <p className="mt-1 text-xs text-slate-500">
                                     Ajustează culoarea mesajului pentru a avea lizibilitate excelentă pe fundalul ales.
                                 </p>
-                                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
                                     {textClassOptions.map((option) => {
                                         const isSelected = textClass === option.value;
                                         return (
@@ -898,7 +898,7 @@ const OffersAdminPage = () => {
                                 onChange={(event) => setEndsAt(event.target.value)}
                             />
                         </div>
-                        <div className="md:col-span-2">
+                        <div className="lg:col-span-2">
                             <Label htmlFor="offer-description">Descriere</Label>
                             <Textarea
                                 id="offer-description"
@@ -908,7 +908,7 @@ const OffersAdminPage = () => {
                                 placeholder="Detalii despre condițiile promoției"
                             />
                         </div>
-                        <div className="md:col-span-2 space-y-4">
+                        <div className="lg:col-span-2 space-y-4">
                             <div>
                                 <span className="text-sm font-semibold text-slate-900">Beneficii</span>
                                 <p className="mt-1 text-xs text-slate-500">
@@ -919,8 +919,8 @@ const OffersAdminPage = () => {
                             <div className="space-y-3">
                                 {benefits.map((benefit, index) => (
                                     <div key={benefit.id} className="space-y-3 rounded-lg border border-slate-200 p-4">
-                                        <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
-                                            <div className="md:flex-1">
+                                        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-4">
+                                            <div className="lg:flex-1">
                                                 <Label htmlFor={`benefit-value-${benefit.id}`}>
                                                     Beneficiu {index + 1}
                                                 </Label>
@@ -943,7 +943,7 @@ const OffersAdminPage = () => {
                                     </div>
                                 ))}
                             </div>
-                            <Button type="button" variant="outline" onClick={addBenefit} className="w-full sm:w-auto">
+                            <Button type="button" variant="outline" onClick={addBenefit} className="w-full lg:w-auto">
                                 + Adaugă beneficiu
                             </Button>
                         </div>
@@ -955,7 +955,7 @@ const OffersAdminPage = () => {
                         </p>
                     )}
 
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-col gap-2 lg:flex-row lg:justify-end">
                         <Button type="button" variant="outline" onClick={closeModal} disabled={isSaving}>
                             Anulează
                         </Button>

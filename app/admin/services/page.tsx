@@ -230,37 +230,39 @@ const AdditionalServicesPage = () => {
                     <h2 className="text-lg font-semibold">
                         {editing ? "Editează serviciul" : "Adaugă serviciu"}
                     </h2>
-                    <div>
-                        <label htmlFor="service-name" className="mb-1 block font-medium">
-                            Nume
-                        </label>
-                        <Input
-                            id="service-name"
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
-                            placeholder="Ex: Scaun copil"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="service-price" className="mb-1 block font-medium">
-                            Preț (EUR)
-                        </label>
-                        <Input
-                            id="service-price"
-                            value={price}
-                            onChange={(event) => setPrice(event.target.value)}
-                            placeholder="Ex: 50"
-                            inputMode="decimal"
-                            required
-                        />
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        <div>
+                            <label htmlFor="service-name" className="mb-1 block font-medium">
+                                Nume
+                            </label>
+                            <Input
+                                id="service-name"
+                                value={name}
+                                onChange={(event) => setName(event.target.value)}
+                                placeholder="Ex: Scaun copil"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="service-price" className="mb-1 block font-medium">
+                                Preț (EUR)
+                            </label>
+                            <Input
+                                id="service-price"
+                                value={price}
+                                onChange={(event) => setPrice(event.target.value)}
+                                placeholder="Ex: 50"
+                                inputMode="decimal"
+                                required
+                            />
+                        </div>
                     </div>
                     {formError && (
                         <p className="text-sm text-red-500" role="alert">
                             {formError}
                         </p>
                     )}
-                    <div className="flex justify-end space-x-2">
+                    <div className="flex flex-col gap-2 lg:flex-row lg:justify-end lg:space-x-2">
                         <Button
                             type="button"
                             variant="outline"

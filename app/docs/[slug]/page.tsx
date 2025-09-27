@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+
 import StructuredData from "@/components/StructuredData";
+import { DOCS_HREFLANG_LOCALES, resolveDocsSeo } from "@/app/docs/seo";
+import { buildAnchorId, findDocBySlug, resolveNeighbours } from "@/app/docs/helpers";
 import { STATIC_DOCS_PAGES, resolveStaticUrl } from "@/lib/content/staticEntries";
+import { SITE_NAME } from "@/lib/config";
 import { buildBreadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
-import { DOCS_HREFLANG_LOCALES, resolveDocsSeo } from "@/app/docs/seo";
-import { buildAnchorId, findDocBySlug, resolveNeighbours } from "@/app/docs/helpers";
-import { SITE_NAME } from "@/lib/config";
+
+type DocPageProps = {
+    params: Promise<{
+        slug: string;
+    }>;
+};
 
 export const dynamicParams = false;
 
@@ -16,14 +23,16 @@ export function generateStaticParams() {
     return STATIC_DOCS_PAGES.map((entry) => ({ slug: entry.slug }));
 }
 
-export async function generateMetadata({ params }): Promise<Metadata> {
+export async function generateMetadata({ params }: DocPageProps): Promise<Metadata> {
+    const { slug } = await params;
     const { locale, copy } = await resolveDocsSeo();
-    const doc = findDocBySlug(params.slug);
+    const doc = findDocBySlug(slug);
+
     if (!doc) {
         return buildMetadata({
             title: copy.notFoundTitle,
             description: copy.notFoundDescription,
-            path: `/docs/${params.slug}`,
+            path: `/docs/${slug}`,
             noIndex: true,
             hreflangLocales: DOCS_HREFLANG_LOCALES,
             locale,
@@ -39,9 +48,10 @@ export async function generateMetadata({ params }): Promise<Metadata> {
     });
 }
 
-export default async function DocPage({ params }) {
+export default async function DocPage({ params }: DocPageProps) {
+    const { slug } = await params;
     const { copy } = await resolveDocsSeo();
-    const doc = findDocBySlug(params.slug);
+    const doc = findDocBySlug(slug);
 
     if (!doc) {
         notFound();

@@ -13,6 +13,8 @@ describe('mapCarSearchFilters', () => {
       seats: 5,
       year: 2022,
       search: 'SUV',
+      status: 'available',
+      price_range: '100-200',
     });
 
     expect(result).toStrictEqual({
@@ -30,6 +32,8 @@ describe('mapCarSearchFilters', () => {
       year: 2022,
       name_like: 'SUV',
       include: 'make,type,transmission,fuel,categories,colors',
+      status: 'available',
+      price_range: '100-200',
     });
   });
 
@@ -44,6 +48,10 @@ describe('mapCarSearchFilters', () => {
       make_id: 12,
       vehicle_type: 7,
       include: 'make',
+      status: '  pending  ',
+      location: '  OTP  ',
+      pickup_location: '',
+      tags: ['featured', null, undefined, 'vip'],
     });
 
     expect(result).toStrictEqual({
@@ -61,6 +69,9 @@ describe('mapCarSearchFilters', () => {
       year: undefined,
       name_like: undefined,
       include: 'make',
+      status: 'pending',
+      location: 'OTP',
+      tags: ['featured', 'vip'],
     });
   });
 });
