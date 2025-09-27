@@ -199,4 +199,5 @@ export interface CarFilterParams extends Record<string, unknown> {
   year?: number;
   name_like?: string;
   include?: string;
+  status?: string;
 }

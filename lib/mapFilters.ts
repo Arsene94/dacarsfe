@@ -33,10 +33,37 @@ const resolveString = (value: unknown): string | undefined => {
     return trimmed.length > 0 ? trimmed : undefined;
 };
 
+const handledCarFilterKeys = new Set([
+    "start_date",
+    "startDate",
+    "end_date",
+    "endDate",
+    "page",
+    "per_page",
+    "perPage",
+    "limit",
+    "sort_by",
+    "sortBy",
+    "make_id",
+    "vehicle_type_id",
+    "vehicle_type",
+    "car_type",
+    "transmission",
+    "fuel",
+    "fuel_type",
+    "number_of_seats",
+    "seats",
+    "year",
+    "search",
+    "include",
+    "status",
+]);
+
 export function mapCarSearchFilters(payload: CarSearchUiPayload): CarFilterParams {
     const include = resolveString(payload.include);
+    const status = resolveString(payload.status ?? undefined);
 
-    return {
+    const mapped: CarFilterParams = {
         start_date: resolveDate(payload.start_date, payload.startDate),
         end_date: resolveDate(payload.end_date, payload.endDate),
         page: toOptionalNumber(payload.page),
@@ -53,5 +80,47 @@ export function mapCarSearchFilters(payload: CarSearchUiPayload): CarFilterParam
         year: toOptionalNumber(payload.year),
         name_like: resolveString(payload.search),
         include: include ?? "make,type,transmission,fuel,categories,colors",
+        status,
     };
+
+    Object.entries(payload).forEach(([key, value]) => {
+        if (handledCarFilterKeys.has(key)) {
+            return;
+        }
+
+        if (value === undefined || value === null) {
+            return;
+        }
+
+        if (typeof value === "string") {
+            const trimmed = value.trim();
+            if (!trimmed) {
+                return;
+            }
+            mapped[key] = trimmed;
+            return;
+        }
+
+        if (typeof value === "number") {
+            if (!Number.isFinite(value)) {
+                return;
+            }
+            mapped[key] = value;
+            return;
+        }
+
+        if (typeof value === "boolean") {
+            mapped[key] = value;
+            return;
+        }
+
+        if (Array.isArray(value)) {
+            if (value.length === 0) {
+                return;
+            }
+            mapped[key] = value.filter((entry) => entry !== undefined && entry !== null);
+        }
+    });
+
+    return mapped;
 }
