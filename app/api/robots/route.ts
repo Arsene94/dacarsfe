@@ -27,6 +27,8 @@ const robotsConfig: MetadataRoute.Robots = {
     sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/sitemap-posts.xml`],
 };
 
+export const robots: MetadataRoute.Robots = robotsConfig;
+
 const stringifyRobotsRuleValue = (value?: string | string[]): string[] => {
     if (!value) {
         return [];

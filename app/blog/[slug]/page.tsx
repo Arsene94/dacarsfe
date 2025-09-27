@@ -7,6 +7,10 @@ import { STATIC_BLOG_POSTS } from "@/lib/content/staticEntries";
 import { buildMetadata } from "@/lib/seo/meta";
 import { blogPosting, breadcrumb } from "@/lib/seo/jsonld";
 
+type BlogPostPageProps = {
+    params: Promise<{ slug: string }>;
+};
+
 const findPost = (slug: string) => STATIC_BLOG_POSTS.find((entry) => entry.slug === slug);
 
 export const dynamicParams = false;
@@ -24,14 +28,15 @@ const resolveDescription = (post: (typeof STATIC_BLOG_POSTS)[number]): string =>
     return raw.length > 160 ? `${raw.slice(0, 157)}...` : raw;
 };
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-    const post = findPost(params.slug);
+export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
+    const { slug } = await params;
+    const post = findPost(slug);
 
     if (!post) {
         return buildMetadata({
             title: `Article not found | ${SITE_NAME}`,
             description: "The requested article is no longer available.",
-            path: `/blog/${params.slug}`,
+            path: `/blog/${slug}`,
             noIndex: true,
             hreflangLocales: ["en", "ro"],
         });
@@ -48,8 +53,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     });
 }
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-    const post = findPost(params.slug);
+export default async function BlogPostPage({ params }: BlogPostPageProps) {
+    const { slug } = await params;
+    const post = findPost(slug);
 
     if (!post) {
         notFound();
