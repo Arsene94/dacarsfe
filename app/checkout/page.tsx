@@ -1501,15 +1501,15 @@ const ReservationPage = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Reservation Form */}
-                    <div className="lg:col-span-2">
+                    <div className="lg:col-span-2 space-y-8">
+                        {selectedCarGallery.length > 0 && selectedCar ? (
+                            <SelectedCarGallery
+                                images={selectedCarGallery}
+                                carName={selectedCar.name}
+                            />
+                        ) : null}
                         <div className="bg-white rounded-2xl shadow-lg p-8">
                             <form onSubmit={handleSubmit} className="space-y-8">
-                                {selectedCarGallery.length > 0 && selectedCar ? (
-                                    <SelectedCarGallery
-                                        images={selectedCarGallery}
-                                        carName={selectedCar.name}
-                                    />
-                                ) : null}
                                 {/* Personal Information */}
                                 <div>
                                     <h3 className="text-2xl font-poppins font-semibold text-berkeley mb-6 flex items-center">
