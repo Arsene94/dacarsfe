@@ -779,7 +779,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
 
     const wheelContent = (
         <div className="flex flex-col items-center justify-center gap-12 lg:flex-row">
-            <div className="relative">
+            <div className="relative flex flex-col items-center">
                 <div className="pointer-events-none absolute -top-0 left-1/2 z-20 -translate-x-1/2">
                     <div
                         className="h-0 w-0 border-l-[16px] border-r-[16px] border-t-[28px] border-l-transparent border-r-transparent border-t-black drop-shadow-md"
@@ -885,6 +885,47 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         )}
                     </div>
                 </div>
+
+                <div className="mt-8 flex w-full flex-col items-center gap-4">
+                    <button
+                        type="button"
+                        onClick={handleSpin}
+                        disabled={!canSpin}
+                        className={`flex w-full max-w-xs items-center justify-center rounded-2xl px-8 py-4 font-['DM Sans'] text-lg font-bold text-white transition-all duration-200 ${
+                            canSpin
+                                ? "bg-[#1E7149] hover:scale-105 hover:bg-[#195C3B] hover:shadow-xl"
+                                : "cursor-not-allowed bg-[#1E7149]/50"
+                        }`}
+                    >
+                        {isSpinning ? (
+                            <>
+                                <RotateCcw className="mr-3 h-6 w-6 animate-spin" /> {spinningLabel}
+                            </>
+                        ) : hasStoredPrize ? (
+                            <>
+                                <Gift className="mr-3 h-6 w-6" /> {activePrizeLabel}
+                            </>
+                        ) : spinsLeft <= 0 ? (
+                            <>
+                                <Gift className="mr-3 h-6 w-6" /> {outOfSpinsLabel}
+                            </>
+                        ) : (
+                            <>
+                                <Gift className="mr-3 h-6 w-6" /> {spinButtonLabel}
+                            </>
+                        )}
+                    </button>
+
+                    {spinsLeft <= 0 && !hasStoredPrize && (
+                        <button
+                            type="button"
+                            onClick={resetSpins}
+                            className="flex w-full max-w-xs items-center justify-center rounded-xl bg-white/20 px-6 py-3 font-['DM Sans'] font-semibold text-white transition hover:bg-white/30"
+                        >
+                            <RotateCcw className="mr-2 h-5 w-5" /> {resetLabel}
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="max-w-md text-center lg:text-left">
@@ -981,45 +1022,6 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         </div>
                     )}
                 </div>
-
-                <button
-                    type="button"
-                    onClick={handleSpin}
-                    disabled={!canSpin}
-                    className={`mx-auto mb-4 flex items-center justify-center rounded-2xl px-8 py-4 font-['DM Sans'] text-lg font-bold text-white transition-all duration-200 lg:mx-0 ${
-                        canSpin
-                            ? "bg-[#1E7149] hover:scale-105 hover:bg-[#195C3B] hover:shadow-xl"
-                            : "cursor-not-allowed bg-[#1E7149]/50"
-                    }`}
-                >
-                    {isSpinning ? (
-                        <>
-                            <RotateCcw className="mr-3 h-6 w-6 animate-spin" /> {spinningLabel}
-                        </>
-                    ) : hasStoredPrize ? (
-                        <>
-                            <Gift className="mr-3 h-6 w-6" /> {activePrizeLabel}
-                        </>
-                    ) : spinsLeft <= 0 ? (
-                        <>
-                            <Gift className="mr-3 h-6 w-6" /> {outOfSpinsLabel}
-                        </>
-                    ) : (
-                        <>
-                            <Gift className="mr-3 h-6 w-6" /> {spinButtonLabel}
-                        </>
-                    )}
-                </button>
-
-                {spinsLeft <= 0 && !hasStoredPrize && (
-                    <button
-                        type="button"
-                        onClick={resetSpins}
-                        className="mx-auto flex items-center justify-center rounded-xl bg-white/20 px-6 py-3 font-['DM Sans'] font-semibold text-white transition hover:bg-white/30 lg:mx-0"
-                    >
-                        <RotateCcw className="mr-2 h-5 w-5" /> {resetLabel}
-                    </button>
-                )}
 
                 <div className="mt-6 rounded-2xl bg-white/10 p-6 backdrop-blur-sm">
                     <h4 className="mb-3 font-['Poppins'] text-lg font-semibold text-white">{regulationTitle}</h4>
