@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Car as CarIcon, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Car as CarIcon, Plus, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BookingForm from '@/components/admin/BookingForm';
 import apiClient from '@/lib/api';
@@ -33,6 +33,14 @@ interface Reservation {
     status: 'confirmed' | 'pending' | 'completed';
     totalDays: number;
 }
+
+const ROMANIAN_LOCALE = 'ro-RO';
+const MIN_ZOOM = 0.6;
+const MAX_ZOOM = 2;
+const ZOOM_STEP = 0.2;
+
+const clampZoom = (value: number): number => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+const normalizeZoom = (value: number): number => Math.round(clampZoom(value) * 100) / 100;
 
 const toNumericId = (value: unknown): number | null => {
     if (typeof value === 'number' && Number.isFinite(value)) {
@@ -135,6 +143,57 @@ const toNumberOrString = (value: unknown): number | string | null => {
     return null;
 };
 
+const parseDateValue = (value: unknown): Date | null => {
+    if (!value) return null;
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : new Date(value.getTime());
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const isoLike = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
+    const isoDate = new Date(isoLike);
+    if (!Number.isNaN(isoDate.getTime())) {
+        return isoDate;
+    }
+
+    const match = trimmed.match(
+        /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2})(?::(\d{2})(?::(\d{2}))?)?)?$/,
+    );
+    if (!match) return null;
+    const [, year, month, day, hour = '0', minute = '0', second = '0'] = match;
+    const parsed = new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hour),
+        Number(minute),
+        Number(second),
+    );
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const capitalize = (value: string): string => {
+    if (!value) return value;
+    return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
+const formatWeekdayShort = (date: Date): string => {
+    const formatted = date.toLocaleDateString(ROMANIAN_LOCALE, { weekday: 'short' });
+    const cleaned = formatted.replace('.', '');
+    return capitalize(cleaned);
+};
+
+const formatMonthText = (date: Date, options: Intl.DateTimeFormatOptions): string => {
+    const formatted = date.toLocaleDateString(ROMANIAN_LOCALE, options);
+    return capitalize(formatted);
+};
+
 interface Selection {
     type: 'car' | 'date' | 'reservation' | 'cell';
     carId?: string;
@@ -152,6 +211,8 @@ const BOOKINGS_SCROLL_THRESHOLD = 0.8;
 const CarRentalCalendar: React.FC = () => {
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
     const [viewMode, setViewMode] = useState<'month' | 'quarter' | 'year'>('year');
+    const [zoomLevel, setZoomLevel] = useState(1);
+    const zoomLevelRef = useRef(zoomLevel);
     const [selectedItems, setSelectedItems] = useState<Selection[]>([]);
 
     const [bookingInfo, setBookingInfo] = useState<AdminBookingFormValues | null>(null);
@@ -271,8 +332,20 @@ const CarRentalCalendar: React.FC = () => {
                                 ? String(booking.booking_number)
                                 : null;
                     if (!id) return null;
-                    const startDate = booking.rental_start_date ? new Date(booking.rental_start_date) : null;
-                    const endDate = booking.rental_end_date ? new Date(booking.rental_end_date) : null;
+                    const startDate =
+                        parseDateValue(
+                            booking.rental_start_date ??
+                            (booking as { start_date?: unknown }).start_date ??
+                            (booking as { rental_start?: unknown }).rental_start ??
+                            (booking as { rental_start_at?: unknown }).rental_start_at,
+                        );
+                    const endDate =
+                        parseDateValue(
+                            booking.rental_end_date ??
+                            (booking as { end_date?: unknown }).end_date ??
+                            (booking as { rental_end?: unknown }).rental_end ??
+                            (booking as { rental_end_at?: unknown }).rental_end_at,
+                        );
                     if (!startDate || Number.isNaN(startDate.getTime()) || !endDate || Number.isNaN(endDate.getTime())) {
                         return null;
                     }
@@ -355,6 +428,12 @@ const CarRentalCalendar: React.FC = () => {
     const rightPanelRef = useRef<HTMLDivElement>(null);
     const monthHeaderRef = useRef<HTMLDivElement>(null);
     const dateHeaderRef = useRef<HTMLDivElement>(null);
+    const calendarSurfaceRef = useRef<HTMLDivElement>(null);
+    const pinchStateRef = useRef<{ active: boolean; initialDistance: number; initialZoom: number }>({
+        active: false,
+        initialDistance: 0,
+        initialZoom: 1,
+    });
     const isScrolling = useRef(false);
 
     const rowDragRef = useRef<{ down: boolean; selecting: boolean; startIdx: number; startClientX: number }>({
@@ -825,9 +904,9 @@ const CarRentalCalendar: React.FC = () => {
     };
 
     const formatDate = (date: Date) => {
-        if (viewMode === 'year') return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        if (viewMode === 'quarter') return `W${Math.ceil(date.getDate() / 7)}`;
-        return date.toLocaleDateString('en-US', { month: 'short' });
+        if (viewMode === 'year') return formatMonthText(date, { month: 'short', day: 'numeric' });
+        if (viewMode === 'quarter') return `S${Math.ceil(date.getDate() / 7)}`;
+        return formatMonthText(date, { month: 'short' });
     };
 
     const getStatusColor = (status: string) => {
@@ -850,14 +929,18 @@ const CarRentalCalendar: React.FC = () => {
     const isReservationSelected = (reservationId: string) => selectedReservationIds.has(reservationId);
     const isCellSelected = (carId: string, date: Date) => selectedCellKeys.has(`${carId}-${date.toISOString().split('T')[0]}`);
 
-    const getCellWidth = () => {
-        switch (viewMode) {
-            case 'year': return 40;
-            case 'quarter': return 80;
-            case 'month': return 120;
-            default: return 40;
-        }
+    const getCellWidth = React.useCallback(() => {
+        const baseWidth = viewMode === 'year' ? 40 : viewMode === 'quarter' ? 80 : 120;
+        const scaled = baseWidth * zoomLevel;
+        return Math.max(24, Math.min(360, scaled));
+    }, [viewMode, zoomLevel]);
+
+    const changeZoom = (delta: number) => {
+        setZoomLevel((prev) => normalizeZoom(prev + delta));
     };
+
+    const handleZoomIn = () => changeZoom(ZOOM_STEP);
+    const handleZoomOut = () => changeZoom(-ZOOM_STEP);
 
     const getHeaderHeight = () => (viewMode === 'year' ? 'h-20' : 'h-16');
 
@@ -868,7 +951,7 @@ const CarRentalCalendar: React.FC = () => {
             const monthEnd = new Date(currentYear, month + 1, 0);
             const daysInMonth = monthEnd.getDate();
             months.push({
-                name: monthStart.toLocaleDateString('en-US', { month: 'long' }),
+                name: formatMonthText(monthStart, { month: 'long' }),
                 daysCount: viewMode === 'year' ? daysInMonth : viewMode === 'quarter' ? Math.ceil(daysInMonth / 7) : 1,
             });
         }
@@ -877,6 +960,9 @@ const CarRentalCalendar: React.FC = () => {
 
     const cellWidth = getCellWidth();
     const totalWidth = dates.length * cellWidth;
+    const zoomPercentage = Math.round(zoomLevel * 100);
+    const canZoomIn = zoomLevel < MAX_ZOOM - 0.01;
+    const canZoomOut = zoomLevel > MIN_ZOOM + 0.01;
 
     const weekBgStyle = React.useMemo(() => {
         const A = '#fdecc8';
@@ -970,6 +1056,84 @@ const CarRentalCalendar: React.FC = () => {
         initialScrollDone.current = true;
     }, [cellWidth, indexByDateKey]);
 
+    useEffect(() => {
+        zoomLevelRef.current = zoomLevel;
+        if (!pinchStateRef.current.active) {
+            pinchStateRef.current.initialZoom = zoomLevel;
+        }
+    }, [zoomLevel]);
+
+    useEffect(() => {
+        const surface = calendarSurfaceRef.current;
+        if (!surface) return;
+
+        const getDistance = (touches: TouchList): number => {
+            if (touches.length < 2) return 0;
+            const first = touches[0];
+            const second = touches[1];
+            const dx = first.clientX - second.clientX;
+            const dy = first.clientY - second.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
+
+        const handleTouchStart = (event: TouchEvent) => {
+            if (event.touches.length < 2) return;
+            const distance = getDistance(event.touches);
+            if (distance <= 0) return;
+            pinchStateRef.current = {
+                active: true,
+                initialDistance: distance,
+                initialZoom: zoomLevelRef.current,
+            };
+        };
+
+        const endPinch = () => {
+            pinchStateRef.current = {
+                active: false,
+                initialDistance: 0,
+                initialZoom: zoomLevelRef.current,
+            };
+        };
+
+        const handleTouchMove = (event: TouchEvent) => {
+            if (!pinchStateRef.current.active) return;
+            if (event.touches.length < 2) {
+                endPinch();
+                return;
+            }
+
+            const distance = getDistance(event.touches);
+            if (distance <= 0 || pinchStateRef.current.initialDistance <= 0) return;
+            event.preventDefault();
+
+            const ratio = distance / pinchStateRef.current.initialDistance;
+            const targetZoom = normalizeZoom(pinchStateRef.current.initialZoom * ratio);
+            setZoomLevel((prev) => (prev === targetZoom ? prev : targetZoom));
+        };
+
+        const handleTouchEnd = (event: TouchEvent) => {
+            if (event.touches.length < 2) {
+                endPinch();
+            }
+        };
+
+        const handleTouchCancel = () => {
+            endPinch();
+        };
+
+        surface.addEventListener('touchstart', handleTouchStart, { passive: true });
+        surface.addEventListener('touchmove', handleTouchMove, { passive: false });
+        surface.addEventListener('touchend', handleTouchEnd);
+        surface.addEventListener('touchcancel', handleTouchCancel);
+
+        return () => {
+            surface.removeEventListener('touchstart', handleTouchStart);
+            surface.removeEventListener('touchmove', handleTouchMove);
+            surface.removeEventListener('touchend', handleTouchEnd);
+            surface.removeEventListener('touchcancel', handleTouchCancel);
+        };
+    }, [viewMode]);
+
     return (
         <div
             className="h-screen w-full flex flex-col bg-gray-50 overflow-hidden"
@@ -1002,6 +1166,31 @@ const CarRentalCalendar: React.FC = () => {
                                     {mode.charAt(0).toUpperCase() + mode.slice(1)}
                                 </button>
                             ))}
+                        </div>
+                        <div className="flex items-center bg-gray-100 rounded-lg px-2 py-1 space-x-2">
+                            <button
+                                onClick={handleZoomOut}
+                                disabled={!canZoomOut}
+                                className={`p-1 rounded-md transition-colors ${
+                                    canZoomOut ? 'text-gray-600 hover:text-gray-900 hover:bg-white/70' : 'text-gray-400'
+                                }`}
+                                aria-label="Micșorează zoom"
+                            >
+                                <ZoomOut className="h-4 w-4" />
+                            </button>
+                            <span className="min-w-[44px] text-center text-sm font-medium text-gray-700">
+                                {zoomPercentage}%
+                            </span>
+                            <button
+                                onClick={handleZoomIn}
+                                disabled={!canZoomIn}
+                                className={`p-1 rounded-md transition-colors ${
+                                    canZoomIn ? 'text-gray-600 hover:text-gray-900 hover:bg-white/70' : 'text-gray-400'
+                                }`}
+                                aria-label="Mărește zoom"
+                            >
+                                <ZoomIn className="h-4 w-4" />
+                            </button>
                         </div>
                         <button
                             onClick={goToCurrentYear}
@@ -1060,12 +1249,12 @@ const CarRentalCalendar: React.FC = () => {
                                             <div className={`w-3 h-3 rounded-full ${isCarSelected(car.id) ? 'bg-blue-600' : 'bg-gradient-to-r from-blue-500 to-blue-600'}`} />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-sm font-medium text-gray-900 truncate">{car.model}</p>
-                                            <div className="flex items-center space-x-3 text-xs text-gray-500">
-                                                {car.license && <span>{car.license}</span>}
-                                                {car.year && <><span>•</span><span>{car.year}</span></>}
-                                                {car.type && <><span>•</span><span className="capitalize">{car.type}</span></>}
-                                            </div>
+                                            <p className="text-sm font-semibold text-gray-900 truncate uppercase">
+                                                {car.license?.trim() ? car.license.trim().toUpperCase() : 'Fără număr'}
+                                            </p>
+                                            {car.model && (
+                                                <p className="text-xs text-gray-600 truncate">{car.model}</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1074,13 +1263,17 @@ const CarRentalCalendar: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 w-full flex flex-col bg-white overflow-x-hidden min-w-0">
+                <div
+                    ref={calendarSurfaceRef}
+                    className="flex-1 w-full flex flex-col bg-white overflow-x-hidden min-w-0"
+                    style={{ touchAction: 'pan-x pan-y' }}
+                >
                     {viewMode === 'year' && (
                         <div
                             ref={monthHeaderRef}
                             onScroll={handleScroll('header')}
                             className="w-full border-b border-gray-200 bg-gray-50 overflow-x-auto month-header-scroll"
-                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-x pan-y' }}
                         >
                             <div className="flex" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px` }}>
                                 {getMonthGroups().map((month, index) => (
@@ -1102,7 +1295,7 @@ const CarRentalCalendar: React.FC = () => {
                         ref={dateHeaderRef}
                         onScroll={handleScroll('header')}
                         className={`w-full border-b border-gray-200 bg-gray-50 ${getHeaderHeight()} overflow-x-auto date-header-scroll select-none`}
-                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-x pan-y' }}
                     >
                         <div className="flex h-full" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px`, ...weekBgStyle }}>
                             {dates.map((date, index) => (
@@ -1140,7 +1333,7 @@ const CarRentalCalendar: React.FC = () => {
                                         {viewMode === 'year' && (
                                             <>
                                                 <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                                    {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                                                    {formatWeekdayShort(date)}
                                                 </div>
                                                 <div className={`text-sm font-semibold mt-1 ${date.toDateString() === new Date().toDateString() ? 'text-blue-600' : 'text-gray-900'}`}>
                                                     {date.getDate()}
@@ -1148,14 +1341,19 @@ const CarRentalCalendar: React.FC = () => {
                                             </>
                                         )}
                                         {viewMode === 'quarter' && <div className="text-sm font-medium text-gray-700">{formatDate(date)}</div>}
-                                        {viewMode === 'month' && <div className="text-sm font-medium text-gray-700">{date.toLocaleDateString('en-US', { month: 'short' })}</div>}
+                                        {viewMode === 'month' && <div className="text-sm font-medium text-gray-700">{formatMonthText(date, { month: 'short' })}</div>}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div ref={rightPanelRef} className="flex-1 overflow-auto" onScroll={handleScroll('right')} style={{ scrollbarWidth: 'thin' }}>
+                    <div
+                        ref={rightPanelRef}
+                        className="flex-1 overflow-auto"
+                        onScroll={handleScroll('right')}
+                        style={{ scrollbarWidth: 'thin', touchAction: 'pan-x pan-y' }}
+                    >
                         <div style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px`, height: 'fit-content', ...weekBgStyle }}>
                             {cars.map((car) => {
                                 const carReservations = reservations.filter((r) => r.carId === car.id);
