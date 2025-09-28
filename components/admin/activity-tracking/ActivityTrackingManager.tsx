@@ -55,6 +55,15 @@ interface NormalizedActivity {
   updatedAt: string | null;
 }
 
+interface DailyPaymentStats {
+  totalAmount: number;
+  totalCount: number;
+  paidAmount: number;
+  paidCount: number;
+  unpaidAmount: number;
+  unpaidCount: number;
+}
+
 interface ActivityFormState {
   performedAt: string;
   type: ActivityType;
@@ -159,6 +168,19 @@ const safeParseDate = (value: string | null | undefined): Date | null => {
   }
   const fallback = new Date(value);
   return Number.isNaN(fallback.getTime()) ? null : fallback;
+};
+
+const getActivityDayKey = (activity: NormalizedActivity): string | null => {
+  if (activity.performedAtDate) {
+    return toDateInputValue(activity.performedAtDate);
+  }
+  if (activity.performedAt) {
+    const match = /^(\d{4}-\d{2}-\d{2})/.exec(activity.performedAt);
+    if (match) {
+      return match[1];
+    }
+  }
+  return null;
 };
 
 const normalizeActivity = (
@@ -317,35 +339,8 @@ const ActivityTrackingManager = () => {
   }, [paidBySearch, userOptions]);
 
   const aggregated = useMemo(() => {
-    const paidCount = activities.reduce((acc, activity) => acc + (activity.isPaid ? 1 : 0), 0);
-    const unpaidCount = activities.length - paidCount;
-
-    if (weeklySummary) {
-      const byType = weeklySummary.breakdown_by_type ?? {};
-      const cleaning = byType.cleaning ?? {
-        count: 0,
-        amount: 0,
-      };
-      const delivery = byType.delivery ?? {
-        count: 0,
-        amount: 0,
-      };
-      return {
-        count: weeklySummary.activities_count,
-        amount: weeklySummary.total_amount,
-        amountPerActivity: weeklySummary.amount_per_activity,
-        cleaning,
-        delivery,
-        paidCount,
-        unpaidCount,
-      };
-    }
-
-    const base = activities.reduce(
-      (
-        acc,
-        activity,
-      ) => {
+    const totals = activities.reduce(
+      (acc, activity) => {
         acc.count += 1;
         acc.amount += activity.amount;
         if (activity.type === "cleaning") {
@@ -355,6 +350,15 @@ const ActivityTrackingManager = () => {
           acc.delivery.count += 1;
           acc.delivery.amount += activity.amount;
         }
+
+        if (activity.isPaid) {
+          acc.paidCount += 1;
+          acc.paidAmount += activity.amount;
+        } else {
+          acc.unpaidCount += 1;
+          acc.unpaidAmount += activity.amount;
+        }
+
         return acc;
       },
       {
@@ -363,15 +367,72 @@ const ActivityTrackingManager = () => {
         amountPerActivity: activities[0]?.amount ?? 25,
         cleaning: { count: 0, amount: 0 },
         delivery: { count: 0, amount: 0 },
+        paidCount: 0,
+        unpaidCount: 0,
+        paidAmount: 0,
+        unpaidAmount: 0,
       },
     );
 
+    if (!weeklySummary) {
+      return totals;
+    }
+
+    const byType = weeklySummary.breakdown_by_type ?? {};
+    const cleaning = byType.cleaning
+      ? { count: byType.cleaning.count, amount: byType.cleaning.amount }
+      : { count: 0, amount: 0 };
+    const delivery = byType.delivery
+      ? { count: byType.delivery.count, amount: byType.delivery.amount }
+      : { count: 0, amount: 0 };
+
     return {
-      ...base,
-      paidCount,
-      unpaidCount,
+      count: weeklySummary.activities_count,
+      amount: weeklySummary.total_amount,
+      amountPerActivity: weeklySummary.amount_per_activity,
+      cleaning,
+      delivery,
+      paidCount: totals.paidCount,
+      unpaidCount: totals.unpaidCount,
+      paidAmount: totals.paidAmount,
+      unpaidAmount: totals.unpaidAmount,
     };
   }, [activities, weeklySummary]);
+
+  const dailyPaymentStats = useMemo(() => {
+    const map = new Map<string, DailyPaymentStats>();
+
+    activities.forEach((activity) => {
+      const key = getActivityDayKey(activity);
+      if (!key) {
+        return;
+      }
+
+      const current = map.get(key) ?? {
+        totalAmount: 0,
+        totalCount: 0,
+        paidAmount: 0,
+        paidCount: 0,
+        unpaidAmount: 0,
+        unpaidCount: 0,
+      };
+
+      current.totalAmount += activity.amount;
+      current.totalCount += 1;
+
+      if (activity.isPaid) {
+        current.paidAmount += activity.amount;
+        current.paidCount += 1;
+      } else {
+        current.unpaidAmount += activity.amount;
+        current.unpaidCount += 1;
+      }
+
+      map.set(key, current);
+    });
+
+    return map;
+  }, [activities]);
 
   const selectableActivities = useMemo(
     () => activities.filter((activity) => !activity.isPaid),
@@ -680,17 +741,47 @@ const ActivityTrackingManager = () => {
         is_paid: selectedPaidById !== null ? true : undefined,
         per_page: 100,
       };
-      const [listResponse, summaryResponse] = await Promise.all([
-        apiClient.getActivities(params),
-        apiClient
-          .getActivityWeeklySummary({ week: params.week, car_id: params.car_id })
-          .catch(() => null),
-      ]);
+      const summaryPromise = apiClient
+        .getActivityWeeklySummary({ week: params.week, car_id: params.car_id })
+        .catch(() => null);
 
-      const list = extractList(listResponse);
+      const listResponse = await apiClient.getActivities(params);
       const meta = deriveMeta(listResponse);
-      setListMeta(meta);
-      const normalized = list.map((activity) => normalizeActivity(activity, carLookup));
+
+      let records = extractList(listResponse);
+      const hasMorePages = typeof meta?.last_page === "number" && meta.last_page > 1;
+
+      if (hasMorePages) {
+        const additionalResponses = await Promise.all(
+          Array.from({ length: meta.last_page - 1 }, (_, index) =>
+            apiClient.getActivities({ ...params, page: index + 2 }),
+          ),
+        );
+
+        additionalResponses.forEach((response) => {
+          const pageItems = extractList(response);
+          if (pageItems.length > 0) {
+            records = records.concat(pageItems);
+          }
+        });
+      }
+
+      const normalized = records.map((activity) => normalizeActivity(activity, carLookup));
+      const summaryResponse = await summaryPromise;
+
+      setListMeta(
+        meta
+          ? {
+              ...meta,
+              total: typeof meta.total === "number" ? meta.total : normalized.length,
+              count: typeof meta.count === "number" ? meta.count : normalized.length,
+            }
+          : {
+              total: normalized.length,
+              count: normalized.length,
+              last_page: 1,
+            },
+      );
       setActivities(normalized);
       setWeeklySummary(summaryResponse ?? null);
       setSelectedActivityIds(new Set());
@@ -1129,7 +1220,21 @@ const ActivityTrackingManager = () => {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-sm font-medium text-gray-600">Total săptămânal</p>
+          <p className="mt-2 text-2xl font-semibold text-gray-900">
+            {currencyFormatter.format(aggregated.amount)}
+          </p>
+          <div className="mt-1 space-y-0.5 text-xs">
+            <p className="text-emerald-600">
+              {currencyFormatter.format(aggregated.paidAmount)} achitate
+            </p>
+            <p className="text-amber-600">
+              {currencyFormatter.format(aggregated.unpaidAmount)} de plată
+            </p>
+          </div>
+        </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-sm font-medium text-gray-600">Curățări</p>
           <p className="mt-2 text-2xl font-semibold text-gray-900">
@@ -1165,6 +1270,14 @@ const ActivityTrackingManager = () => {
               ? `${aggregated.unpaidCount} activități în așteptare`
               : "Toate activitățile listate sunt achitate"}
           </p>
+          <div className="mt-1 space-y-0.5 text-xs">
+            <p className="text-emerald-600">
+              {currencyFormatter.format(aggregated.paidAmount)} achitate
+            </p>
+            <p className="text-amber-600">
+              {currencyFormatter.format(aggregated.unpaidAmount)} de plată
+            </p>
+          </div>
         </div>
       </div>
 
@@ -1191,12 +1304,34 @@ const ActivityTrackingManager = () => {
               const formatted = entryDate
                 ? dateWithWeekdayFormatter.format(entryDate)
                 : entry.date;
+              const fallbackKey = entryDate ? toDateInputValue(entryDate) : null;
+              const paymentStats =
+                dailyPaymentStats.get(entry.date)
+                  ?? (fallbackKey ? dailyPaymentStats.get(fallbackKey) : undefined)
+                  ?? {
+                    totalAmount: entry.amount,
+                    totalCount: entry.count,
+                    paidAmount: 0,
+                    paidCount: 0,
+                    unpaidAmount: entry.amount,
+                    unpaidCount: entry.count,
+                  };
               return (
                 <div key={entry.date} className="rounded-lg border border-gray-100 p-3">
                   <p className="text-sm font-medium text-gray-900 capitalize">{formatted}</p>
                   <p className="text-xs text-gray-500">
                     {currencyFormatter.format(entry.amount)} · {entry.count} activități
                   </p>
+                  <div className="mt-1 space-y-0.5 text-xs">
+                    <p className="text-emerald-600">
+                      {currencyFormatter.format(paymentStats.paidAmount)} achitate
+                      {paymentStats.paidCount > 0 ? ` (${paymentStats.paidCount})` : ""}
+                    </p>
+                    <p className="text-amber-600">
+                      {currencyFormatter.format(paymentStats.unpaidAmount)} de plată
+                      {paymentStats.unpaidCount > 0 ? ` (${paymentStats.unpaidCount})` : ""}
+                    </p>
+                  </div>
                 </div>
               );
             })}
