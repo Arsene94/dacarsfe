@@ -80,14 +80,12 @@ export type ActivityMarkPaidPayload =
     }
   | {
       activity_ids: number[];
-      week: string;
       until?: never;
       car_id?: number;
     }
   | {
       activity_ids: number[];
       until: string;
-      week?: never;
       car_id?: number;
     };
 
