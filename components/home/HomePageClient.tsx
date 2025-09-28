@@ -8,13 +8,17 @@ import FleetSection from "@/components/FleetSection";
 import HeroSection from "@/components/HeroSection";
 import OffersSection from "@/components/OffersSection";
 import ProcessSection from "@/components/ProcessSection";
-import WheelOfFortune from "@/components/WheelOfFortune";
 import apiClient from "@/lib/api";
 import { extractArray, isPeriodActive, mapPeriod } from "@/lib/wheelNormalization";
 import { useBooking } from "@/context/useBooking";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
 
 const ElfsightWidget = dynamic(() => import("@/components/ElfsightWidget"), {
+    ssr: false,
+});
+
+const LazyWheelOfFortune = dynamic(() => import("@/components/WheelOfFortune"), {
+    loading: () => null,
     ssr: false,
 });
 
@@ -172,7 +176,7 @@ const HomePageClient = () => {
             <ContactSection />
 
             {showWheelPopup && !periodError && (
-                <WheelOfFortune
+                <LazyWheelOfFortune
                     isPopup={true}
                     onClose={handleWheelClose}
                 />
