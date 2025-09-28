@@ -523,33 +523,21 @@ const ActivityTrackingManager = () => {
         accessor: (row) => (row.isPaid ? 1 : 0),
         cell: (row) => (
           <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+            className={`inline-flex flex-col gap-0.5 rounded-full px-3 py-1 text-xs font-medium ${
               row.isPaid
                 ? "bg-emerald-50 text-emerald-700"
                 : "bg-amber-50 text-amber-700"
             }`}
           >
-            {row.isPaid ? "Achitată" : "Neachitată"}
+            <span>{row.isPaid ? "Achitată" : "Neachitată"}</span>
+            {row.isPaid && row.paidByName && (
+              <span className="text-[11px] font-semibold">
+                Plătit de {row.paidByName}
+              </span>
+            )}
           </span>
         ),
         sortable: true,
-      },
-      {
-        id: "paidBy",
-        header: "Plătit de",
-        accessor: (row) => row.paidByName ?? "",
-        cell: (row) => (
-          <div className="flex flex-col">
-            <span className="font-medium text-gray-900">
-              {row.isPaid ? row.paidByName ?? "—" : "—"}
-            </span>
-            {row.isPaid && row.paidAtDate && (
-              <span className="text-xs text-gray-500">
-                {dateTimeFormatter.format(row.paidAtDate)}
-              </span>
-            )}
-          </div>
-        ),
       },
       {
         id: "amount",
