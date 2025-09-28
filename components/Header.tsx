@@ -107,11 +107,15 @@ const Header = () => {
     }`}>
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center h-16 lg:h-20">
-            <Link href="/" className="flex items-center space-x-2 group" aria-label="DaCars — închirieri auto rapide și oneste">
+            <Link
+                href="/"
+                className="flex h-full items-center space-x-2 group"
+                aria-label="DaCars — închirieri auto rapide și oneste"
+            >
                     {/* Eager + fetchpriority=high ajută LCP pe homepage */}
                     <Image
                         src="/images/logo-308x154.webp"
-                        className="relative w-auto"
+                        className="relative h-10 w-auto lg:h-12"
                         alt="DaCars logo"
                         width={466}
                         height={154}
