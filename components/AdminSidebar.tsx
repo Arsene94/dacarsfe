@@ -314,7 +314,7 @@ const filterMenuItems = (
 
       if (item.subItems && item.subItems.length > 0) {
         const allowedSubItems = item.subItems.filter((subItem) =>
-          isUserAllowed(user, subItem.restrictedToUserIds ?? item.restrictedToUserIds) &&
+          // isUserAllowed(user, subItem.restrictedToUserIds ?? item.restrictedToUserIds) &&
           hasAccess(user, subItem.requiredPermissions ?? item.requiredPermissions),
         );
 
