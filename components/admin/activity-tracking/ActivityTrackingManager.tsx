@@ -749,11 +749,12 @@ const ActivityTrackingManager = () => {
       const meta = deriveMeta(listResponse);
 
       let records = extractList(listResponse);
-      const hasMorePages = typeof meta?.last_page === "number" && meta.last_page > 1;
+      const lastPage = typeof meta?.last_page === "number" ? meta.last_page : null;
+      const hasMorePages = lastPage !== null && lastPage > 1;
 
-      if (hasMorePages) {
+      if (hasMorePages && lastPage !== null) {
         const additionalResponses = await Promise.all(
-          Array.from({ length: meta.last_page - 1 }, (_, index) =>
+          Array.from({ length: lastPage - 1 }, (_, index) =>
             apiClient.getActivities({ ...params, page: index + 2 }),
           ),
         );
