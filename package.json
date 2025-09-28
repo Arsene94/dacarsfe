@@ -54,9 +54,18 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0"
   },
-  "browserslist": [
-    "last 1 version",
-    "> 1%",
-    "not dead"
-  ]
+  "browserslist": {
+    "production": [
+      "chrome >= 102",
+      "edge >= 102",
+      "firefox >= 102",
+      "safari >= 15.4",
+      "ios_saf >= 15.4"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
 }
