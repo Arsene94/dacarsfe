@@ -741,17 +741,47 @@ const ActivityTrackingManager = () => {
         is_paid: selectedPaidById !== null ? true : undefined,
         per_page: 100,
       };
-      const [listResponse, summaryResponse] = await Promise.all([
-        apiClient.getActivities(params),
-        apiClient
-          .getActivityWeeklySummary({ week: params.week, car_id: params.car_id })
-          .catch(() => null),
-      ]);
+      const summaryPromise = apiClient
+        .getActivityWeeklySummary({ week: params.week, car_id: params.car_id })
+        .catch(() => null);
 
-      const list = extractList(listResponse);
+      const listResponse = await apiClient.getActivities(params);
       const meta = deriveMeta(listResponse);
-      setListMeta(meta);
-      const normalized = list.map((activity) => normalizeActivity(activity, carLookup));
+
+      let records = extractList(listResponse);
+      const hasMorePages = typeof meta?.last_page === "number" && meta.last_page > 1;
+
+      if (hasMorePages) {
+        const additionalResponses = await Promise.all(
+          Array.from({ length: meta.last_page - 1 }, (_, index) =>
+            apiClient.getActivities({ ...params, page: index + 2 }),
+          ),
+        );
+
+        additionalResponses.forEach((response) => {
+          const pageItems = extractList(response);
+          if (pageItems.length > 0) {
+            records = records.concat(pageItems);
+          }
+        });
+      }
+
+      const normalized = records.map((activity) => normalizeActivity(activity, carLookup));
+      const summaryResponse = await summaryPromise;
+
+      setListMeta(
+        meta
+          ? {
+              ...meta,
+              total: typeof meta.total === "number" ? meta.total : normalized.length,
+              count: typeof meta.count === "number" ? meta.count : normalized.length,
+            }
+          : {
+              total: normalized.length,
+              count: normalized.length,
+              last_page: 1,
+            },
+      );
       setActivities(normalized);
       setWeeklySummary(summaryResponse ?? null);
       setSelectedActivityIds(new Set());
