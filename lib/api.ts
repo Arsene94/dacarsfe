@@ -3,6 +3,17 @@ import { mapCarSearchFilters } from "@/lib/mapFilters";
 import { toQuery } from "@/lib/qs";
 import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 import type { WidgetActivityResponse } from "@/types/activity";
+import type {
+    ActivityRecord,
+    ActivityListParams,
+    ActivityPayload,
+    ActivityWeeklySummary,
+    ActivityWeeklySummaryDispatchPayload,
+    ActivityWeeklySummaryDispatchResponse,
+    ActivityWeeklySummaryParams,
+    ActivityMarkPaidPayload,
+    ActivityMarkPaidResponse,
+} from "@/types/activity-tracking";
 import type { ActivityLog, ActivityLogListParams } from "@/types/activity-log";
 import { ensureUser } from "@/types/auth";
 import type {
@@ -2925,6 +2936,87 @@ export class ApiClient {
         return this.request<ApiDeleteResponse>(`/dynamic-prices/${id}`, {
             method: 'DELETE',
         });
+    }
+
+    async getActivities(params: ActivityListParams = {}): Promise<ApiListResult<ActivityRecord>> {
+        const query = toQuery(params);
+        return this.request<ApiListResult<ActivityRecord>>(
+            query ? `/activities?${query}` : `/activities`,
+        );
+    }
+
+    async getActivity(id: number | string): Promise<ApiItemResult<ActivityRecord>> {
+        return this.request<ApiItemResult<ActivityRecord>>(`/activities/${id}`);
+    }
+
+    async createActivity(payload: ActivityPayload): Promise<ApiItemResult<ActivityRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<ActivityRecord>>(`/activities`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateActivity(
+        id: number | string,
+        payload: ActivityPayload,
+    ): Promise<ApiItemResult<ActivityRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<ActivityRecord>>(`/activities/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteActivity(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/activities/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getActivityWeeklySummary(
+        params: ActivityWeeklySummaryParams = {},
+    ): Promise<ActivityWeeklySummary | null> {
+        const query = toQuery(params);
+        const response = await this.request<ApiItemResult<ActivityWeeklySummary>>(
+            query ? `/activities/weekly-summary?${query}` : `/activities/weekly-summary`,
+        );
+        return extractItem(response);
+    }
+
+    async dispatchActivityWeeklySummary(
+        payload: ActivityWeeklySummaryDispatchPayload,
+    ): Promise<ActivityWeeklySummaryDispatchResponse> {
+        const body = sanitizePayload(payload);
+        const response = await this.request<
+            ApiItemResult<ActivityWeeklySummaryDispatchResponse>
+        >(`/activities/weekly-summary/dispatch`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+        const dispatchPayload = extractItem(response);
+        if (!dispatchPayload) {
+            throw new Error('Răspuns invalid pentru dispatch-ul sumarului săptămânal.');
+        }
+        return dispatchPayload;
+    }
+
+    async markActivitiesPaid(
+        payload: ActivityMarkPaidPayload,
+    ): Promise<ActivityMarkPaidResponse> {
+        const body = sanitizePayload(payload);
+        const response = await this.request<ApiItemResult<ActivityMarkPaidResponse>>(
+            `/activities/mark-paid`,
+            {
+                method: 'POST',
+                body: JSON.stringify(body),
+            },
+        );
+        const markPayload = extractItem(response);
+        if (!markPayload) {
+            throw new Error('Răspuns invalid pentru marcarea activităților ca achitate.');
+        }
+        return markPayload;
     }
 
 }
