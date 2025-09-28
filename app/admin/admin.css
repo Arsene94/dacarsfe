@@ -1,0 +1,36 @@
+.rich-text-editor {
+    @apply rounded-lg border border-gray-300 bg-white shadow-sm;
+}
+
+.rich-text-editor .ck.ck-editor {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.rich-text-editor .ck.ck-toolbar {
+    border: none !important;
+    border-bottom: 1px solid rgb(209 213 219 / 1) !important;
+    background-color: rgb(249 250 251 / 1);
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.rich-text-editor .ck.ck-editor__main > .ck-editor__editable {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.75rem 1rem;
+    font-family: var(--font-dm-sans, var(--font-sans));
+    color: rgb(55 65 81 / 1);
+}
+
+.rich-text-editor .ck.ck-editor__editable:not(.ck-editor__nested-editable).ck-focused {
+    border: none !important;
+    box-shadow: 0 0 0 2px rgb(20 184 166 / 0.35) !important;
+}
+
+.rich-text-editor--description .ck.ck-editor__editable:not(.ck-editor__nested-editable) {
+    min-height: 120px;
+}
+
+.rich-text-editor--content .ck.ck-editor__editable:not(.ck-editor__nested-editable) {
+    min-height: 160px;
+}

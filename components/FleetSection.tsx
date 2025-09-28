@@ -202,7 +202,7 @@ const FleetSection = () => {
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
                     loading={index < 2 ? "eager" : "lazy"}
                     priority={index < 2}
-                    sizes="(max-width: 767px) 320px, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw"
+                    sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc((100vw - 5rem) / 2), (max-width: 1439px) calc((100vw - 10rem) / 4), 288px"
                 />
                 <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
                     {car.categories.name}

@@ -33,6 +33,7 @@ const nextConfig = {
             canvas: './lib/empty.js',
             '@ckeditor/ckeditor5-react': './lib/vendors/ckeditor/react.tsx',
             '@ckeditor/ckeditor5-build-classic': './lib/vendors/ckeditor/classic-editor.ts',
+            'next/dist/build/polyfills/polyfill-module.js': './lib/polyfills/modern-runtime.ts',
         },
     },
 
@@ -143,6 +144,10 @@ const nextConfig = {
                 __dirname,
                 'lib/vendors/ckeditor/classic-editor.ts'
             ),
+            'next/dist/build/polyfills/polyfill-module.js': path.resolve(
+                __dirname,
+                'lib/polyfills/modern-runtime.ts'
+            ),
         };
         return config;
     },
@@ -153,6 +158,10 @@ const nextConfig = {
             {
                 source: '/(.*)',
                 headers: [
+                    {
+                        key: 'Link',
+                        value: '<https://fe.dacars.ro>; rel=preconnect; crossorigin, <https://backend.dacars.ro>; rel=preconnect; crossorigin, <https://images.pexels.com>; rel=preconnect',
+                    },
                     {
                         key: 'X-Frame-Options',
                         value: 'DENY',
