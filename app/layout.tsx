@@ -9,7 +9,7 @@ import { LocaleProvider } from "@/context/LocaleContext";
 import { DM_Sans, Poppins } from "next/font/google";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
-import "./globals.css";
+import { GlobalStyles } from "./global-styles";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -55,6 +55,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ro" className={`${poppins.variable} ${dmSans.variable}`}>
       <head>
+        <GlobalStyles />
         <link
           rel="preload"
           as="image"
