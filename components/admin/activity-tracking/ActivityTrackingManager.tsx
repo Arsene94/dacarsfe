@@ -535,6 +535,23 @@ const ActivityTrackingManager = () => {
         sortable: true,
       },
       {
+        id: "paidBy",
+        header: "Plătit de",
+        accessor: (row) => row.paidByName ?? "",
+        cell: (row) => (
+          <div className="flex flex-col">
+            <span className="font-medium text-gray-900">
+              {row.isPaid ? row.paidByName ?? "—" : "—"}
+            </span>
+            {row.isPaid && row.paidAtDate && (
+              <span className="text-xs text-gray-500">
+                {dateTimeFormatter.format(row.paidAtDate)}
+              </span>
+            )}
+          </div>
+        ),
+      },
+      {
         id: "amount",
         header: "Valoare",
         accessor: (row) => row.amount,
