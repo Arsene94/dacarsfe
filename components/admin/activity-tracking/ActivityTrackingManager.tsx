@@ -18,6 +18,7 @@ import type {
   ActivityWeeklySummary,
 } from "@/types/activity-tracking";
 import type { ApiListResult, ApiMeta } from "@/types/api";
+import type { ApiCar } from "@/types/car";
 
 interface CarOption {
   id: number;
@@ -86,6 +87,14 @@ const getIsoWeekInfo = (date: Date): { year: number; week: number } => {
 const formatIsoWeek = (date: Date): string => {
   const { year, week } = getIsoWeekInfo(date);
   return `${year}-W${String(week).padStart(2, "0")}`;
+};
+
+const coerceNonEmptyString = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 };
 
 const parseIsoWeekRange = (
@@ -447,25 +456,20 @@ const ActivityTrackingManager = () => {
     try {
       setCarError(null);
       const response = await apiClient.getCars({ perPage: 200 });
-      const list = extractList(response);
+      const list = extractList<ApiCar>(response);
       const normalized = list
         .map((car) => {
+          const record = car as Record<string, unknown>;
           const nameCandidate =
-            typeof car.name === "string" && car.name.trim().length > 0
-              ? car.name.trim()
-              : typeof (car as { title?: unknown }).title === "string"
-              ? ((car as { title: string }).title.trim())
-              : typeof (car as { label?: unknown }).label === "string"
-              ? ((car as { label: string }).label.trim())
-              : `Mașină #${car.id}`;
+            coerceNonEmptyString(car?.name) ??
+            coerceNonEmptyString(record.title) ??
+            coerceNonEmptyString(record.label) ??
+            `Mașină #${car.id}`;
           const plateCandidate =
-            typeof car.license_plate === "string" && car.license_plate.trim().length > 0
-              ? car.license_plate.trim()
-              : typeof (car as { licensePlate?: unknown }).licensePlate === "string"
-              ? ((car as { licensePlate: string }).licensePlate.trim())
-              : typeof (car as { plate?: unknown }).plate === "string"
-              ? ((car as { plate: string }).plate.trim())
-              : null;
+            coerceNonEmptyString(car?.license_plate) ??
+            coerceNonEmptyString(record.licensePlate) ??
+            coerceNonEmptyString(record.plate) ??
+            null;
           return {
             id: car.id,
             name: nameCandidate,

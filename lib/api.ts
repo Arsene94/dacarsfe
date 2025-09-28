@@ -2994,7 +2994,11 @@ export class ApiClient {
             method: 'POST',
             body: JSON.stringify(body),
         });
-        return extractItem(response);
+        const dispatchPayload = extractItem(response);
+        if (!dispatchPayload) {
+            throw new Error('Răspuns invalid pentru dispatch-ul sumarului săptămânal.');
+        }
+        return dispatchPayload;
     }
 
     async markActivitiesPaid(
@@ -3008,7 +3012,11 @@ export class ApiClient {
                 body: JSON.stringify(body),
             },
         );
-        return extractItem(response);
+        const markPayload = extractItem(response);
+        if (!markPayload) {
+            throw new Error('Răspuns invalid pentru marcarea activităților ca achitate.');
+        }
+        return markPayload;
     }
 
 }

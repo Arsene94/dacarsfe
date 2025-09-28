@@ -23,7 +23,7 @@ export interface ActivityPayload {
   notes?: string | null;
 }
 
-export interface ActivityListParams {
+export interface ActivityListParams extends Record<string, unknown> {
   week?: string;
   from?: string;
   to?: string;
@@ -55,7 +55,7 @@ export interface ActivityWeeklySummary {
   breakdown_by_day: ActivityWeeklySummaryDayEntry[];
 }
 
-export interface ActivityWeeklySummaryParams {
+export interface ActivityWeeklySummaryParams extends Record<string, unknown> {
   week?: string;
   car_id?: number;
 }
