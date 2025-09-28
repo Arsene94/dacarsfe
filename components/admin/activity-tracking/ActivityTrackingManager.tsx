@@ -791,8 +791,8 @@ const ActivityTrackingManager = () => {
       if (weekFilter) {
         requestedWeek = weekFilter;
         payload = selectedCar
-          ? { activity_ids: ids, week: weekFilter, car_id: selectedCar.id }
-          : { activity_ids: ids, week: weekFilter };
+          ? { activity_ids: ids, car_id: selectedCar.id }
+          : { activity_ids: ids };
       } else {
         const selectedActivities = activities.filter((activity) =>
           selectedActivityIds.has(activity.id),
