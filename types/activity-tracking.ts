@@ -69,17 +69,25 @@ export type ActivityMarkPaidPayload =
   | {
       week: string;
       until?: never;
+      activity_ids?: never;
       car_id?: number;
     }
   | {
       until: string;
       week?: never;
+      activity_ids?: never;
       car_id?: number;
     }
   | {
       activity_ids: number[];
-      week?: never;
+      week: string;
       until?: never;
+      car_id?: number;
+    }
+  | {
+      activity_ids: number[];
+      until: string;
+      week?: never;
       car_id?: number;
     };
 
@@ -91,7 +99,7 @@ export interface ActivityMarkPaidResponse {
     start_date: string | null;
     end_date: string | null;
     week: string | null;
-  };
+  } | null;
   car_id?: number;
 }
 

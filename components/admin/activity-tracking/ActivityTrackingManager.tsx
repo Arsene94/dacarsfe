@@ -13,6 +13,7 @@ import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import type { Column } from "@/types/ui";
 import type {
+  ActivityMarkPaidPayload,
   ActivityRecord,
   ActivityType,
   ActivityWeeklySummary,
@@ -752,11 +753,12 @@ const ActivityTrackingManager = () => {
       const result = await apiClient.markActivitiesPaid(payload);
       const paidAt = safeParseDate(result.paid_at);
       const paidAtLabel = paidAt ? dateTimeFormatter.format(paidAt) : result.paid_at;
-      const rangeStart = safeParseDate(result.range.start_date);
-      const rangeEnd = safeParseDate(result.range.end_date);
+      const rangeStart = safeParseDate(result.range?.start_date ?? null);
+      const rangeEnd = safeParseDate(result.range?.end_date ?? null);
+      const rangeWeek = result.range?.week;
       const rangeLabel = rangeStart && rangeEnd
         ? `${dateFormatter.format(rangeStart)} – ${dateFormatter.format(rangeEnd)}`
-        : result.range.week ?? weekFilter;
+        : rangeWeek ?? weekFilter;
       const carLabel = selectedCar ? ` pentru ${selectedCar.name}` : "";
       setSuccessMessage(
         `Au fost marcate ${result.marked_count} activități${carLabel} ca achitate (${rangeLabel}). Confirmare: ${paidAtLabel}.`,
@@ -780,20 +782,58 @@ const ActivityTrackingManager = () => {
 
     const ids = Array.from(selectedActivityIds);
     const selectedCount = ids.length;
+    let requestedWeek: string | null = null;
+    let requestedUntilDate: Date | null = null;
     setIsMarkingSelected(true);
     setMarkPaidError(null);
     try {
-      const payload = selectedCar
-        ? { activity_ids: ids, car_id: selectedCar.id }
-        : { activity_ids: ids };
+      let payload: ActivityMarkPaidPayload;
+      if (weekFilter) {
+        requestedWeek = weekFilter;
+        payload = selectedCar
+          ? { activity_ids: ids, week: weekFilter, car_id: selectedCar.id }
+          : { activity_ids: ids, week: weekFilter };
+      } else {
+        const selectedActivities = activities.filter((activity) =>
+          selectedActivityIds.has(activity.id),
+        );
+        const latestDate = selectedActivities.reduce<Date | null>((acc, activity) => {
+          const activityDate = activity.performedAtDate ?? safeParseDate(activity.performedAt);
+          if (!activityDate) {
+            return acc;
+          }
+          if (!acc || activityDate > acc) {
+            return activityDate;
+          }
+          return acc;
+        }, null);
+
+        if (!latestDate) {
+          setMarkPaidError(
+            "Nu s-a putut determina perioada selecției. Selectează săptămâna sau asigură-te că activitățile au dată validă.",
+          );
+          setIsMarkingSelected(false);
+          return;
+        }
+
+        requestedUntilDate = latestDate;
+        const until = toDateInputValue(latestDate);
+        payload = selectedCar
+          ? { activity_ids: ids, until, car_id: selectedCar.id }
+          : { activity_ids: ids, until };
+      }
       const result = await apiClient.markActivitiesPaid(payload);
       const paidAt = safeParseDate(result.paid_at);
       const paidAtLabel = paidAt ? dateTimeFormatter.format(paidAt) : result.paid_at;
-      const rangeStart = safeParseDate(result.range.start_date);
-      const rangeEnd = safeParseDate(result.range.end_date);
+      const rangeStart = safeParseDate(result.range?.start_date ?? null);
+      const rangeEnd = safeParseDate(result.range?.end_date ?? null);
+      const rangeWeek = result.range?.week;
+      const fallbackRangeLabel = rangeWeek
+        ?? requestedWeek
+        ?? (requestedUntilDate ? dateFormatter.format(requestedUntilDate) : null);
       const rangeLabel = rangeStart && rangeEnd
         ? `${dateFormatter.format(rangeStart)} – ${dateFormatter.format(rangeEnd)}`
-        : result.range.week ?? null;
+        : fallbackRangeLabel;
       const carLabel = selectedCar ? ` pentru ${selectedCar.name}` : "";
       const selectionLabel =
         result.marked_count === selectedCount
