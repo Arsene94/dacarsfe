@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import Image from "next/image";
@@ -30,6 +30,7 @@ const isOffersMenuHref = (href?: string) => {
 
 const Header = () => {
   const pathname = usePathname();
+  const headerRef = useRef<HTMLElement | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hasOffers, setHasOffers] = useState<boolean | null>(null);
@@ -101,21 +102,49 @@ const Header = () => {
     ? menuItems.filter((item) => !isOffersMenuHref(item.href))
     : menuItems;
 
+  const handleLogoClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
+      return;
+    }
+
+    const element = headerRef.current;
+    if (!element) {
+      return;
+    }
+
+    const { bottom } = element.getBoundingClientRect();
+    if (event.clientY > bottom) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
   return (
-    <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+    <header
+      ref={headerRef}
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
       isScrolled ? 'bg-white shadow-lg' : 'bg-white/95 backdrop-blur-sm'
-    }`}>
+    }`}
+    >
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center h-16 lg:h-20">
             <Link
                 href="/"
-                className="flex h-full items-center space-x-2 group"
+                className="flex items-center space-x-2 group"
                 aria-label="DaCars — închirieri auto rapide și oneste"
+                onClick={handleLogoClick}
             >
                     {/* Eager + fetchpriority=high ajută LCP pe homepage */}
                     <Image
                         src="/images/logo-308x154.webp"
-                        className="relative h-10 w-auto lg:h-12"
+                        className="relative w-auto select-none pointer-events-none"
                         alt="DaCars logo"
                         width={466}
                         height={154}
