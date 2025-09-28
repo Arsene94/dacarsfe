@@ -36,6 +36,7 @@ import {
   Fuel,
   Languages,
   LogOut,
+  ClipboardList,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -44,6 +45,7 @@ type AdminSidebarSubItem = {
   href: string;
   icon: LucideIcon;
   requiredPermissions?: readonly string[];
+  restrictedToUserIds?: readonly number[];
 };
 
 type AdminSidebarItem = {
@@ -52,6 +54,7 @@ type AdminSidebarItem = {
   href?: string;
   subItems?: readonly AdminSidebarSubItem[];
   requiredPermissions?: readonly string[];
+  restrictedToUserIds?: readonly number[];
 };
 
 const ACTION_TOKENS = new Set([
@@ -229,6 +232,21 @@ const hasAccess = (
   );
 };
 
+const isUserAllowed = (
+  user: User | null,
+  restrictedToUserIds?: readonly number[],
+): boolean => {
+  if (!restrictedToUserIds || restrictedToUserIds.length === 0) {
+    return true;
+  }
+
+  if (!user) {
+    return false;
+  }
+
+  return restrictedToUserIds.includes(user.id);
+};
+
 const resourceVariants = (value: string): string[] => {
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) {
@@ -290,8 +308,13 @@ const filterMenuItems = (
 ): AdminSidebarItem[] =>
   items
     .map((item) => {
+      if (!isUserAllowed(user, item.restrictedToUserIds)) {
+        return null;
+      }
+
       if (item.subItems && item.subItems.length > 0) {
         const allowedSubItems = item.subItems.filter((subItem) =>
+          isUserAllowed(user, subItem.restrictedToUserIds ?? item.restrictedToUserIds) &&
           hasAccess(user, subItem.requiredPermissions ?? item.requiredPermissions),
         );
 
@@ -541,6 +564,12 @@ const menuItems: readonly AdminSidebarItem[] = [
       "service_reports",
       "maintenance",
     ]),
+  },
+  {
+    name: "Activități operaționale",
+    href: "/admin/activity-tracking",
+    icon: ClipboardList,
+    restrictedToUserIds: [1],
   },
   {
     name: "Mail Branding",
