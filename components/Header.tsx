@@ -137,21 +137,23 @@ const Header = () => {
         <div className="flex justify-between items-center h-16 lg:h-20">
             <Link
                 href="/"
-                className="flex items-center space-x-2 group"
+                className="group flex h-full items-center space-x-2"
                 aria-label="DaCars — închirieri auto rapide și oneste"
                 onClick={handleLogoClick}
             >
-                    {/* Eager + fetchpriority=high ajută LCP pe homepage */}
+                {/* Eager + fetchpriority=high ajută LCP pe homepage */}
+                <span className="relative block h-14 aspect-[566.93/283.46] sm:h-16 lg:h-20">
                     <Image
-                        src="/images/logo-308x154.webp"
-                        className="relative w-auto select-none pointer-events-none"
+                        src="/images/logo.svg"
                         alt="DaCars logo"
-                        width={466}
-                        height={154}
+                        fill
                         priority
                         loading="eager"
                         fetchPriority="high"
+                        className="pointer-events-none select-none object-contain"
+                        sizes="(min-width: 1024px) 160px, (min-width: 640px) 128px, 112px"
                     />
+                </span>
             </Link>
 
           {/* Desktop Navigation */}
