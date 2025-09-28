@@ -532,7 +532,7 @@ const ActivityTrackingManager = () => {
             <span>{row.isPaid ? "Achitată" : "Neachitată"}</span>
             {row.isPaid && row.paidByName && (
               <span className="text-[11px] font-semibold">
-                Plătit de {row.paidByName}
+                de {row.paidByName}
               </span>
             )}
           </span>
