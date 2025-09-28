@@ -63,7 +63,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="dns-prefetch" href="//vercel.app" />
         <link rel="dns-prefetch" href="//fe.dacars.ro" />
-        <link rel="preconnect" href="https://fe.dacars.ro" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="//backend.dacars.ro" />
+        <link rel="dns-prefetch" href="//images.pexels.com" />
+        <link
+          rel="preconnect"
+          href="https://fe.dacars.ro"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://backend.dacars.ro"
+          crossOrigin="anonymous"
+        />
+        <link rel="preconnect" href="https://images.pexels.com" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

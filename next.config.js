@@ -154,6 +154,10 @@ const nextConfig = {
                 source: '/(.*)',
                 headers: [
                     {
+                        key: 'Link',
+                        value: '<https://fe.dacars.ro>; rel=preconnect; crossorigin, <https://backend.dacars.ro>; rel=preconnect; crossorigin, <https://images.pexels.com>; rel=preconnect',
+                    },
+                    {
                         key: 'X-Frame-Options',
                         value: 'DENY',
                     },
