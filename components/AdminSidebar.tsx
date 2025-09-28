@@ -728,7 +728,7 @@ export default function AdminSidebar() {
       {isMobile && collapsed && (
         <button
           onClick={() => setCollapsed(false)}
-          className="fixed top-20 left-4 z-40 p-2 rounded-md bg-white shadow-md"
+          className="fixed top-20 left-4 p-2 rounded-md bg-white shadow-md z-[99999]"
           aria-label="Deschide meniul de administrare"
         >
           <Menu className="h-5 w-5 text-gray-700" />
