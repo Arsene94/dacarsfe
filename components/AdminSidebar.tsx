@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import type { User } from "@/types/auth";
 import {
@@ -35,6 +35,7 @@ import {
   Palette,
   Fuel,
   Languages,
+  LogOut,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -615,14 +616,55 @@ const menuItems: readonly AdminSidebarItem[] = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
-  const { user } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const { user, logout } = useAuth();
   const accessibleMenuItems = useMemo(
     () => filterMenuItems(menuItems, user ?? null),
     [user],
   );
+
+  const displayName = useMemo(() => {
+    if (!user) {
+      return null;
+    }
+
+    const fullName = [user.first_name, user.last_name]
+      .filter((value): value is string => {
+        if (typeof value !== "string") {
+          return false;
+        }
+
+        return value.trim().length > 0;
+      })
+      .join(" ")
+      .trim();
+
+    if (fullName.length > 0) {
+      return fullName;
+    }
+
+    return user.username ?? user.email ?? null;
+  }, [user]);
+
+  const secondaryIdentifier = useMemo(() => {
+    if (!user) {
+      return null;
+    }
+
+    if (typeof user.email === "string" && user.email.trim().length > 0) {
+      return user.email;
+    }
+
+    if (typeof user.username === "string" && user.username.trim().length > 0) {
+      return user.username;
+    }
+
+    return null;
+  }, [user]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -660,6 +702,25 @@ export default function AdminSidebar() {
 
   const toggleMenu = (name: string) => {
     setOpenMenus((prev) => ({ ...prev, [name]: !prev[name] }));
+  };
+
+  const handleLogout = async () => {
+    if (loggingOut) {
+      return;
+    }
+
+    setLoggingOut(true);
+    try {
+      await logout();
+      router.replace("/admin/login");
+    } catch (error) {
+      console.error("Deconectarea a eșuat", error);
+    } finally {
+      setLoggingOut(false);
+      if (isMobile) {
+        setCollapsed(true);
+      }
+    }
   };
 
   return (
@@ -792,6 +853,40 @@ export default function AdminSidebar() {
           );
         })}
         </nav>
+        <div
+          className={`border-t border-gray-200 ${
+            collapsed ? "p-2" : "p-4 space-y-2"
+          }`}
+        >
+          {!collapsed && displayName && (
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {displayName}
+              </p>
+              {secondaryIdentifier && (
+                <p className="text-xs text-gray-500 truncate">
+                  {secondaryIdentifier}
+                </p>
+              )}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className={`flex w-full items-center rounded-md px-2 py-2 text-sm font-medium text-red-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-jade focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+              collapsed ? "justify-center" : "justify-start gap-2"
+            } ${
+              collapsed
+                ? "focus-visible:ring-offset-0"
+                : "hover:bg-red-50"
+            }`}
+            aria-label="Deconectează-te din contul de administrare"
+          >
+            <LogOut className="h-5 w-5" />
+            {!collapsed && (loggingOut ? "Se deconectează..." : "Deconectare")}
+          </button>
+        </div>
       </aside>
     </>
   );
