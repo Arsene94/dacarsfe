@@ -1107,6 +1107,11 @@ const AdminDashboard = () => {
                                                 const isDeparture =
                                                     startStr === activityDay &&
                                                     r.start_hour_group.slice(0, 5) === hour;
+                                                const hasDeposit = normalizeBoolean(r.with_deposit, false);
+                                                const depositLabel = hasDeposit ? 'Cu garanție' : 'Fără garanție';
+                                                const depositBadgeClass = hasDeposit
+                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                    : 'bg-amber-100 text-amber-800';
                                                 return (
                                                     <div
                                                         key={r.id + (isDeparture ? 'start' : 'end')}
@@ -1138,6 +1143,13 @@ const AdminDashboard = () => {
                                                                     <span className="text-sm font-dm-sans font-semibold text-gray-900">
                                                                         {r.car?.license_plate}
                                                                     </span>
+                                                                    {!isDeparture && (
+                                                                        <span
+                                                                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${depositBadgeClass}`}
+                                                                        >
+                                                                            {depositLabel}
+                                                                        </span>
+                                                                    )}
                                                                     {r.child_seat_service_name && (
                                                                         <span className="text-sm text-red-500 font-bold">
                                                                             - {r.child_seat_service_name}
