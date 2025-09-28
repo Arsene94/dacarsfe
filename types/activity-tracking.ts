@@ -12,6 +12,8 @@ export interface ActivityRecord {
   paid_at: string | null;
   paid_by: number | null;
   paid_by_name: string | null;
+  created_by: number | null;
+  created_by_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +31,9 @@ export interface ActivityListParams extends Record<string, unknown> {
   to?: string;
   car_id?: number;
   type?: ActivityType;
+  created_by?: number;
+  paid_by?: number;
+  is_paid?: boolean;
   page?: number;
   per_page?: number;
 }
@@ -69,6 +74,12 @@ export type ActivityMarkPaidPayload =
   | {
       until: string;
       week?: never;
+      car_id?: number;
+    }
+  | {
+      activity_ids: number[];
+      week?: never;
+      until?: never;
       car_id?: number;
     };
 

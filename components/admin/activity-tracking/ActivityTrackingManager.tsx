@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Plus, RefreshCw } from "lucide-react";
+import { CheckCircle2, ListChecks, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -19,11 +19,17 @@ import type {
 } from "@/types/activity-tracking";
 import type { ApiListResult, ApiMeta } from "@/types/api";
 import type { ApiCar } from "@/types/car";
+import type { User } from "@/types/auth";
 
 interface CarOption {
   id: number;
   name: string;
   licensePlate: string | null;
+}
+
+interface UserOption {
+  id: number;
+  name: string;
 }
 
 interface NormalizedActivity {
@@ -41,6 +47,9 @@ interface NormalizedActivity {
   paidAt: string | null;
   paidAtDate: Date | null;
   paidByName: string | null;
+  paidById: number | null;
+  createdById: number | null;
+  createdByName: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -175,6 +184,9 @@ const normalizeActivity = (
     paidAt: activity.paid_at,
     paidAtDate,
     paidByName: activity.paid_by_name ?? null,
+    paidById: activity.paid_by ?? null,
+    createdById: activity.created_by ?? null,
+    createdByName: activity.created_by_name ?? null,
     createdAt: activity.created_at ?? null,
     updatedAt: activity.updated_at ?? null,
   };
@@ -215,6 +227,16 @@ const ActivityTrackingManager = () => {
   const [carSearch, setCarSearch] = useState("");
   const [selectedCar, setSelectedCar] = useState<CarOption | null>(null);
   const [carError, setCarError] = useState<string | null>(null);
+
+  const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [creatorSearch, setCreatorSearch] = useState("");
+  const [paidBySearch, setPaidBySearch] = useState("");
+  const [selectedCreatorId, setSelectedCreatorId] = useState<number | null>(null);
+  const [selectedPaidById, setSelectedPaidById] = useState<number | null>(null);
+
+  const [selectedActivityIds, setSelectedActivityIds] = useState<Set<number>>(() => new Set());
+  const [isMarkingSelected, setIsMarkingSelected] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formState, setFormState] = useState<ActivityFormState>(() => ({
@@ -266,6 +288,32 @@ const ActivityTrackingManager = () => {
       return nameMatch || Boolean(plateMatch);
     });
   }, [carOptions, formCarSearch]);
+
+  const selectedCreator = useMemo(
+    () => userOptions.find((option) => option.id === selectedCreatorId) ?? null,
+    [selectedCreatorId, userOptions],
+  );
+
+  const selectedPaidBy = useMemo(
+    () => userOptions.find((option) => option.id === selectedPaidById) ?? null,
+    [selectedPaidById, userOptions],
+  );
+
+  const filteredCreators = useMemo(() => {
+    const query = creatorSearch.trim().toLowerCase();
+    if (!query) {
+      return userOptions;
+    }
+    return userOptions.filter((user) => user.name.toLowerCase().includes(query));
+  }, [creatorSearch, userOptions]);
+
+  const filteredPaidByUsers = useMemo(() => {
+    const query = paidBySearch.trim().toLowerCase();
+    if (!query) {
+      return userOptions;
+    }
+    return userOptions.filter((user) => user.name.toLowerCase().includes(query));
+  }, [paidBySearch, userOptions]);
 
   const aggregated = useMemo(() => {
     const paidCount = activities.reduce((acc, activity) => acc + (activity.isPaid ? 1 : 0), 0);
@@ -324,6 +372,45 @@ const ActivityTrackingManager = () => {
     };
   }, [activities, weeklySummary]);
 
+  const selectableActivities = useMemo(
+    () => activities.filter((activity) => !activity.isPaid),
+    [activities],
+  );
+
+  const allSelectableSelected = useMemo(() => {
+    if (selectableActivities.length === 0) {
+      return false;
+    }
+    return selectableActivities.every((activity) => selectedActivityIds.has(activity.id));
+  }, [selectableActivities, selectedActivityIds]);
+
+  const selectedActivitiesCount = selectedActivityIds.size;
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedActivityIds((prev) => {
+      if (allSelectableSelected) {
+        return new Set<number>();
+      }
+      const next = new Set<number>();
+      selectableActivities.forEach((activity) => {
+        next.add(activity.id);
+      });
+      return next;
+    });
+  }, [allSelectableSelected, selectableActivities]);
+
+  const toggleActivitySelection = useCallback((activityId: number) => {
+    setSelectedActivityIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(activityId)) {
+        next.delete(activityId);
+      } else {
+        next.add(activityId);
+      }
+      return next;
+    });
+  }, []);
+
   const weekRange = useMemo(() => parseIsoWeekRange(weekFilter), [weekFilter]);
   const summaryRangeLabel = useMemo(() => {
     if (!weeklySummary) {
@@ -343,6 +430,39 @@ const ActivityTrackingManager = () => {
 
   const columns: Column<NormalizedActivity>[] = useMemo(
     () => [
+      {
+        id: "select",
+        header: (
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+              checked={allSelectableSelected && selectableActivities.length > 0}
+              onChange={(event) => {
+                event.stopPropagation();
+                toggleSelectAll();
+              }}
+              disabled={selectableActivities.length === 0}
+              aria-label="Selectează toate activitățile neachitate afișate"
+            />
+          </div>
+        ),
+        accessor: (row) => row.id,
+        cell: (row) => (
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+            checked={selectedActivityIds.has(row.id)}
+            onChange={(event) => {
+              event.stopPropagation();
+              toggleActivitySelection(row.id);
+            }}
+            onClick={(event) => event.stopPropagation()}
+            disabled={row.isPaid}
+            aria-label={`Selectează activitatea ${row.typeLabel}`}
+          />
+        ),
+      },
       {
         id: "performedAt",
         header: "Data activității",
@@ -381,6 +501,23 @@ const ActivityTrackingManager = () => {
         ),
       },
       {
+        id: "createdBy",
+        header: "Adăugat de",
+        accessor: (row) => row.createdByName ?? "",
+        cell: (row) => (
+          <div className="flex flex-col">
+            <span className="font-medium text-gray-900">
+              {row.createdByName ?? "—"}
+            </span>
+            {row.createdAt && (
+              <span className="text-xs text-gray-500">
+                {dateTimeFormatter.format(new Date(row.createdAt))}
+              </span>
+            )}
+          </div>
+        ),
+      },
+      {
         id: "paid",
         header: "Plată",
         accessor: (row) => (row.isPaid ? 1 : 0),
@@ -405,7 +542,13 @@ const ActivityTrackingManager = () => {
         sortable: true,
       },
     ],
-    [],
+    [
+      allSelectableSelected,
+      selectableActivities.length,
+      selectedActivityIds,
+      toggleActivitySelection,
+      toggleSelectAll,
+    ],
   );
 
   const renderRowDetails = useCallback(
@@ -418,6 +561,17 @@ const ActivityTrackingManager = () => {
           {row.updatedAt && row.updatedAt !== row.createdAt && (
             <span>Actualizată: {dateTimeFormatter.format(new Date(row.updatedAt))}</span>
           )}
+        </div>
+        <div>
+          <p className="font-medium text-gray-900">Adăugare</p>
+          <div className="mt-1 space-y-1 text-xs text-gray-600">
+            <p>
+              Înregistrată de {row.createdByName ?? "—"}
+            </p>
+            {row.createdAt && (
+              <p>La {dateTimeFormatter.format(new Date(row.createdAt))}</p>
+            )}
+          </div>
         </div>
         <div>
           <p className="font-medium text-gray-900">Status plată</p>
@@ -484,6 +638,30 @@ const ActivityTrackingManager = () => {
     }
   }, []);
 
+  const loadUsers = useCallback(async () => {
+    try {
+      setUsersError(null);
+      const response = await apiClient.getUsers({ limit: 200, includeRoles: false });
+      const list = extractList<User>(response);
+      const normalized = list
+        .map((user) => {
+          const firstName = user.first_name?.trim() ?? "";
+          const lastName = user.last_name?.trim() ?? "";
+          const fullName = [firstName, lastName].filter(Boolean).join(" ");
+          const fallback = user.username?.trim() ?? user.email?.trim() ?? `Utilizator #${user.id}`;
+          return {
+            id: user.id,
+            name: fullName || fallback,
+          } satisfies UserOption;
+        })
+        .sort((a, b) => a.name.localeCompare(b.name, "ro"));
+      setUserOptions(normalized);
+    } catch (error) {
+      console.error("Nu s-au putut încărca utilizatorii", error);
+      setUsersError("Nu s-au putut încărca utilizatorii responsabili. Încearcă din nou mai târziu.");
+    }
+  }, []);
+
   const loadActivities = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
@@ -491,6 +669,9 @@ const ActivityTrackingManager = () => {
       const params = {
         week: weekFilter || undefined,
         car_id: selectedCar?.id,
+        created_by: selectedCreatorId ?? undefined,
+        paid_by: selectedPaidById ?? undefined,
+        is_paid: selectedPaidById !== null ? true : undefined,
         per_page: 100,
       };
       const [listResponse, summaryResponse] = await Promise.all([
@@ -506,6 +687,7 @@ const ActivityTrackingManager = () => {
       const normalized = list.map((activity) => normalizeActivity(activity, carLookup));
       setActivities(normalized);
       setWeeklySummary(summaryResponse ?? null);
+      setSelectedActivityIds(new Set());
     } catch (error) {
       console.error("Nu s-au putut încărca activitățile", error);
       setLoadError("Nu s-au putut încărca activitățile. Încearcă să reîncarci pagina.");
@@ -514,11 +696,15 @@ const ActivityTrackingManager = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [carLookup, selectedCar, weekFilter]);
+  }, [carLookup, selectedCar, selectedCreatorId, selectedPaidById, weekFilter]);
 
   useEffect(() => {
     loadCars();
   }, [loadCars]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   useEffect(() => {
     loadActivities();
@@ -526,7 +712,7 @@ const ActivityTrackingManager = () => {
 
   useEffect(() => {
     setMarkPaidError(null);
-  }, [selectedCar, weekFilter]);
+  }, [selectedCar, selectedCreatorId, selectedPaidById, weekFilter]);
 
   const openModal = () => {
     setFormState({
@@ -578,6 +764,49 @@ const ActivityTrackingManager = () => {
       );
     } finally {
       setIsMarkingPaid(false);
+    }
+  };
+
+  const handleMarkSelectedPaid = async () => {
+    if (selectedActivityIds.size === 0) {
+      setMarkPaidError("Selectează activitățile pe care dorești să le marchezi ca achitate.");
+      return;
+    }
+
+    const ids = Array.from(selectedActivityIds);
+    const selectedCount = ids.length;
+    setIsMarkingSelected(true);
+    setMarkPaidError(null);
+    try {
+      const payload = selectedCar
+        ? { activity_ids: ids, car_id: selectedCar.id }
+        : { activity_ids: ids };
+      const result = await apiClient.markActivitiesPaid(payload);
+      const paidAt = safeParseDate(result.paid_at);
+      const paidAtLabel = paidAt ? dateTimeFormatter.format(paidAt) : result.paid_at;
+      const rangeStart = safeParseDate(result.range.start_date);
+      const rangeEnd = safeParseDate(result.range.end_date);
+      const rangeLabel = rangeStart && rangeEnd
+        ? `${dateFormatter.format(rangeStart)} – ${dateFormatter.format(rangeEnd)}`
+        : result.range.week ?? null;
+      const carLabel = selectedCar ? ` pentru ${selectedCar.name}` : "";
+      const selectionLabel =
+        result.marked_count === selectedCount
+          ? `Activitățile selectate${carLabel}`
+          : `${result.marked_count} activități${carLabel}`;
+      const scopeLabel = rangeLabel ? ` (${rangeLabel})` : "";
+      setSuccessMessage(
+        `${selectionLabel} au fost marcate ca achitate${scopeLabel}. Confirmare: ${paidAtLabel}.`,
+      );
+      setSelectedActivityIds(new Set());
+      await loadActivities();
+    } catch (error) {
+      console.error("Nu s-au putut marca activitățile selectate ca achitate", error);
+      setMarkPaidError(
+        "Nu s-au putut marca activitățile selectate ca achitate. Încearcă din nou sau verifică selecția.",
+      );
+    } finally {
+      setIsMarkingSelected(false);
     }
   };
 
@@ -640,6 +869,16 @@ const ActivityTrackingManager = () => {
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
+            onClick={handleMarkSelectedPaid}
+            disabled={
+              isLoading || isMarkingSelected || selectedActivitiesCount === 0 || isMarkingPaid
+            }
+          >
+            <ListChecks className={`mr-2 h-4 w-4 ${isMarkingSelected ? "animate-spin" : ""}`} />
+            {isMarkingSelected ? "Se confirmă selecția..." : "Marchează selecția"}
+          </Button>
+          <Button
+            type="button"
             variant="outline"
             onClick={handleMarkWeekPaid}
             disabled={isLoading || isMarkingPaid || !weekFilter}
@@ -674,6 +913,18 @@ const ActivityTrackingManager = () => {
           {markPaidError}
         </div>
       )}
+
+      <div className="flex flex-col gap-1 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
+        <span>
+          Activități selectate pentru plată:
+          <span className="ml-1 font-medium text-gray-900">{selectedActivitiesCount}</span>
+        </span>
+        {selectableActivities.length === 0 && !isLoading && (
+          <span className="text-xs text-gray-500">
+            Nu există activități neachitate în lista curentă.
+          </span>
+        )}
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-[repeat(3,minmax(0,1fr))]">
         <div className="space-y-1">
@@ -753,6 +1004,85 @@ const ActivityTrackingManager = () => {
           </div>
         </div>
       </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-1">
+          <Label htmlFor="creator-filter">Adăugat de</Label>
+          <SearchSelect<UserOption>
+            id="creator-filter"
+            value={selectedCreator}
+            search={creatorSearch}
+            items={filteredCreators}
+            onSearch={setCreatorSearch}
+            onSelect={(item) => {
+              setSelectedCreatorId(item.id);
+              setCreatorSearch("");
+            }}
+            placeholder="Selectează persoana care a adăugat"
+            onOpen={() => {
+              if (userOptions.length === 0) {
+                loadUsers();
+              }
+            }}
+            renderItem={(item) => (
+              <span className="font-medium text-gray-900">{item.name}</span>
+            )}
+            renderValue={(item) => (
+              <span className="font-medium text-gray-900">{item.name}</span>
+            )}
+          />
+          {selectedCreator && (
+            <button
+              type="button"
+              onClick={() => setSelectedCreatorId(null)}
+              className="mt-1 text-xs text-jade underline"
+            >
+              Elimină filtrul
+            </button>
+          )}
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="paid-by-filter">Plătit de</Label>
+          <SearchSelect<UserOption>
+            id="paid-by-filter"
+            value={selectedPaidBy}
+            search={paidBySearch}
+            items={filteredPaidByUsers}
+            onSearch={setPaidBySearch}
+            onSelect={(item) => {
+              setSelectedPaidById(item.id);
+              setPaidBySearch("");
+            }}
+            placeholder="Selectează persoana care a plătit"
+            onOpen={() => {
+              if (userOptions.length === 0) {
+                loadUsers();
+              }
+            }}
+            renderItem={(item) => (
+              <span className="font-medium text-gray-900">{item.name}</span>
+            )}
+            renderValue={(item) => (
+              <span className="font-medium text-gray-900">{item.name}</span>
+            )}
+          />
+          {selectedPaidBy && (
+            <button
+              type="button"
+              onClick={() => setSelectedPaidById(null)}
+              className="mt-1 text-xs text-jade underline"
+            >
+              Elimină filtrul
+            </button>
+          )}
+        </div>
+      </div>
+
+      {usersError && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          {usersError}
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-lg border border-gray-200 bg-white p-4">
