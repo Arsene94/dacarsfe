@@ -267,6 +267,108 @@ const normalizeBoolean = (value: unknown, defaultValue = false) => {
   return defaultValue;
 };
 
+const buildBookingFormFromReservation = (
+  reservation: AdminReservation,
+): AdminBookingFormValues => {
+  const base = createEmptyBookingForm();
+  const rentalStart = toLocalDateTimeInput(reservation.startDate);
+  const rentalEnd = toLocalDateTimeInput(reservation.endDate);
+
+  const pricePerDay =
+    typeof reservation.pricePerDay === "number"
+      ? reservation.pricePerDay
+      : base.price_per_day;
+  const servicesTotal =
+    typeof reservation.servicesPrice === "number"
+      ? reservation.servicesPrice
+      : base.total_services;
+  const couponAmount =
+    typeof reservation.couponAmount === "number"
+      ? reservation.couponAmount
+      : base.coupon_amount;
+  const reservationPlan = reservation.plan;
+  const withDeposit =
+    reservationPlan === 1
+      ? true
+      : reservationPlan === 0
+        ? false
+        : base.with_deposit;
+
+  return {
+    ...base,
+    id: reservation.id ?? base.id,
+    booking_number:
+      reservation.bookingNumber ?? reservation.id ?? base.booking_number,
+    rental_start_date: rentalStart || base.rental_start_date,
+    rental_end_date: rentalEnd || base.rental_end_date,
+    customer_name: reservation.customerName || base.customer_name,
+    customer_phone: reservation.phone || base.customer_phone,
+    customer_email: reservation.email || base.customer_email,
+    car_id: reservation.carId ?? base.car_id,
+    car_name: reservation.carName || base.car_name,
+    car_license_plate:
+      reservation.carLicensePlate || base.car_license_plate,
+    price_per_day: pricePerDay,
+    original_price_per_day:
+      typeof reservation.pricePerDay === "number"
+        ? reservation.pricePerDay
+        : base.original_price_per_day,
+    base_price:
+      typeof reservation.pricePerDay === "number"
+        ? reservation.pricePerDay
+        : base.base_price,
+    base_price_casco:
+      typeof reservation.pricePerDay === "number"
+        ? reservation.pricePerDay
+        : base.base_price_casco,
+    total_services: servicesTotal,
+    sub_total:
+      typeof reservation.subTotal === "number"
+        ? reservation.subTotal
+        : base.sub_total,
+    total:
+      typeof reservation.total === "number"
+        ? reservation.total
+        : base.total,
+    tax_amount:
+      typeof reservation.taxAmount === "number"
+        ? reservation.taxAmount
+        : base.tax_amount,
+    coupon_amount: couponAmount,
+    coupon_code: reservation.discountCode || base.coupon_code,
+    discount_applied:
+      typeof reservation.discount === "number"
+        ? reservation.discount
+        : base.discount_applied,
+    days:
+      typeof reservation.days === "number"
+        ? reservation.days
+        : base.days,
+    offers_discount:
+      typeof reservation.offersDiscount === "number"
+        ? reservation.offersDiscount
+        : base.offers_discount,
+    total_before_wheel_prize:
+      typeof reservation.totalBeforeWheelPrize === "number"
+        ? reservation.totalBeforeWheelPrize
+        : base.total_before_wheel_prize,
+    wheel_prize_discount:
+      typeof reservation.wheelPrizeDiscount === "number"
+        ? reservation.wheelPrizeDiscount
+        : base.wheel_prize_discount,
+    wheel_prize: reservation.wheelPrize ?? base.wheel_prize,
+    applied_offers: reservation.appliedOffers ?? base.applied_offers,
+    deposit_waived:
+      typeof reservation.depositWaived === "boolean"
+        ? reservation.depositWaived
+        : base.deposit_waived,
+    with_deposit: withDeposit,
+    status: reservation.status ?? base.status,
+    note: reservation.notes || base.note,
+    location: reservation.location || base.location,
+  };
+};
+
 const ReservationsPage = () => {
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -486,6 +588,17 @@ const ReservationsPage = () => {
 
   const handleEditReservation = useCallback(
     async (reservationId: string) => {
+      const fallbackReservation = reservations.find(
+        (reservation) => reservation.id === reservationId,
+      );
+      const fallbackForm = fallbackReservation
+        ? buildBookingFormFromReservation(fallbackReservation)
+        : createEmptyBookingForm();
+
+      setBookingInfo(fallbackForm);
+      setEditPopupOpen(true);
+      setShowModal(false);
+
       try {
         const response = await apiClient.getBookingInfo(reservationId);
         const info = extractItem(response);
@@ -642,13 +755,11 @@ const ReservationsPage = () => {
         };
 
         setBookingInfo(formatted);
-        setEditPopupOpen(true);
-        setShowModal(false);
       } catch (error) {
         console.error("Error fetching booking info", error);
       }
     },
-    [],
+    [reservations],
   );
 
   const clearAllFilters = useCallback(() => {

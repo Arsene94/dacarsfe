@@ -290,6 +290,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
         : null;
 
     useEffect(() => {
+        setQuote(null);
+        lastQuoteKeyRef.current = null;
+    }, [bookingInfo?.id]);
+
+    useEffect(() => {
         if (!bookingInfo) {
             return;
         }
