@@ -58,7 +58,7 @@ interface NormalizedCashflow {
 
 interface CashflowFormState {
   direction: CarCashflowDirection;
-  paymentMethod: CarCashflowPaymentMethod;
+  paymentMethod: CarCashflowPaymentMethod | null;
   cashAmount: string;
   cardAmount: string;
   occurredOn: string;
@@ -308,7 +308,7 @@ const normalizeCashflow = (
 
 const createDefaultFormState = (): CashflowFormState => ({
   direction: "income",
-  paymentMethod: "cash",
+  paymentMethod: null,
   cashAmount: "",
   cardAmount: "",
   occurredOn: toDateTimeInputValue(new Date()),
@@ -354,6 +354,9 @@ const CarCashflowManager = () => {
   );
 
   const totalAmountNumber = useMemo(() => {
+    if (!formState.paymentMethod) {
+      return 0;
+    }
     if (formState.paymentMethod === "cash_card") {
       return parseAmount(formState.cashAmount) + parseAmount(formState.cardAmount);
     }
@@ -663,7 +666,12 @@ const CarCashflowManager = () => {
         const nextCardSelected = method === "card" ? checked : isCardSelected;
 
         if (!nextCashSelected && !nextCardSelected) {
-          return prev;
+          return {
+            ...prev,
+            paymentMethod: null,
+            cashAmount: "",
+            cardAmount: "",
+          };
         }
 
         let paymentMethod: CarCashflowPaymentMethod;
@@ -690,11 +698,17 @@ const CarCashflowManager = () => {
       setFormError("Selectează mașina pentru care înregistrezi tranzacția.");
       return;
     }
+    if (!formState.paymentMethod) {
+      setFormError("Selectează cel puțin o metodă de plată pentru tranzacție.");
+      return;
+    }
+
+    const paymentMethod = formState.paymentMethod;
     let cashAmount: number | undefined;
     let cardAmount: number | undefined;
     let totalAmount: number;
 
-    if (formState.paymentMethod === "cash_card") {
+    if (paymentMethod === "cash_card") {
       const cash = parseAmount(formState.cashAmount);
       const card = parseAmount(formState.cardAmount);
       if (cash <= 0 || card <= 0) {
@@ -704,7 +718,7 @@ const CarCashflowManager = () => {
       totalAmount = cash + card;
       cashAmount = cash;
       cardAmount = card;
-    } else if (formState.paymentMethod === "cash") {
+    } else if (paymentMethod === "cash") {
       const cash = parseAmount(formState.cashAmount);
       if (cash <= 0) {
         setFormError("Introdu o sumă cash mai mare decât 0.");
@@ -713,7 +727,7 @@ const CarCashflowManager = () => {
       totalAmount = cash;
       cashAmount = cash;
       cardAmount = undefined;
-    } else if (formState.paymentMethod === "card") {
+    } else if (paymentMethod === "card") {
       const card = parseAmount(formState.cardAmount);
       if (card <= 0) {
         setFormError("Introdu o sumă card mai mare decât 0.");
@@ -739,7 +753,7 @@ const CarCashflowManager = () => {
     const payload = {
       car_id: formCar.id,
       direction: formState.direction,
-      payment_method: formState.paymentMethod,
+      payment_method: paymentMethod,
       total_amount: totalAmount,
       occurred_on: formatDateTimeForApi(formState.occurredOn),
       description: coerceNonEmptyString(formState.description),
