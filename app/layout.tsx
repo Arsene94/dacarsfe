@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import PageTransition from "../components/PageTransition";
+import Script from "next/script";
 import type { ReactNode } from "react";
 import { BookingProvider } from "@/context/BookingProvider";
 import { AuthProvider } from "@/context/AuthContext";
@@ -10,6 +11,7 @@ import { DM_Sans, Poppins } from "next/font/google";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { GlobalStyles } from "./global-styles";
+import { LOCALE_STORAGE_KEY } from "@/lib/i18n/config";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -53,7 +55,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ro" className={`${poppins.variable} ${dmSans.variable}`}>
+    <html
+      lang="ro"
+      data-locale="ro"
+      className={`${poppins.variable} ${dmSans.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <GlobalStyles />
         <link
@@ -90,6 +97,26 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-screen bg-white">
+        <Script id="prefill-locale" strategy="beforeInteractive">
+          {`
+            (function() {
+              try {
+                var stored = window.localStorage.getItem('${LOCALE_STORAGE_KEY}');
+                if (stored) {
+                  document.documentElement.lang = stored;
+                  document.documentElement.setAttribute('data-locale', stored);
+                  return;
+                }
+              } catch (error) {
+                console.warn('Nu am putut citi limba salvată înainte de hidratare', error);
+              }
+              var current = document.documentElement.getAttribute('data-locale');
+              if (!current) {
+                document.documentElement.setAttribute('data-locale', 'ro');
+              }
+            })();
+          `}
+        </Script>
         <LocaleProvider>
           <AuthProvider>
             <BookingProvider>

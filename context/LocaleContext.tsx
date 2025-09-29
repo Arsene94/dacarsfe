@@ -21,19 +21,18 @@ type LocaleContextValue = {
 
 const LocaleContext = createContext<LocaleContextValue | undefined>(undefined);
 
-export const LocaleProvider = ({ children }: { children: ReactNode }) => {
-    const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
+const getInitialLocale = (): Locale => {
+    if (typeof document !== "undefined") {
+        const dataLocale = document.documentElement.getAttribute("data-locale");
+        if (dataLocale && isLocale(dataLocale)) {
+            return dataLocale;
+        }
+    }
+    return DEFAULT_LOCALE;
+};
 
-    useEffect(() => {
-        if (typeof window === "undefined") {
-            return;
-        }
-        const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
-        if (stored && isLocale(stored)) {
-            setLocaleState(stored);
-            document.documentElement.lang = stored;
-        }
-    }, []);
+export const LocaleProvider = ({ children }: { children: ReactNode }) => {
+    const [locale, setLocaleState] = useState<Locale>(getInitialLocale);
 
     useEffect(() => {
         apiClient.setLanguage(locale);
@@ -44,6 +43,7 @@ export const LocaleProvider = ({ children }: { children: ReactNode }) => {
         if (typeof window !== "undefined") {
             window.localStorage.setItem(LOCALE_STORAGE_KEY, nextLocale);
             document.documentElement.lang = nextLocale;
+            document.documentElement.setAttribute("data-locale", nextLocale);
         }
     }, []);
 
