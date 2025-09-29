@@ -121,6 +121,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         subtotal: 0,
         total: 0,
     });
+    const lastQuoteKeyRef = useRef<string | null>(null);
 
     const updateBookingInfo = useCallback(
         (updater: (prev: AdminBookingFormValues) => AdminBookingFormValues) => {
@@ -182,8 +183,44 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return;
         }
 
+        const normalizedServiceIds = Array.isArray(bookingInfo.service_ids)
+            ? bookingInfo.service_ids
+                  .map((id) => (typeof id === "number" ? id : Number(id)))
+                  .filter((id) => Number.isFinite(id))
+                  .sort((a, b) => a - b)
+            : [];
+
+        if (
+            !bookingInfo.car_id ||
+            !bookingInfo.rental_start_date ||
+            !bookingInfo.rental_end_date
+        ) {
+            return;
+        }
+
+        const quoteKey = JSON.stringify({
+            car: bookingInfo.car_id,
+            start: bookingInfo.rental_start_date,
+            end: bookingInfo.rental_end_date,
+            base: bookingInfo.base_price ?? null,
+            casco: bookingInfo.base_price_casco ?? null,
+            original: bookingInfo.original_price_per_day ?? null,
+            couponType: bookingInfo.coupon_type ?? null,
+            couponAmount: bookingInfo.coupon_amount ?? null,
+            couponCode: bookingInfo.coupon_code ?? null,
+            services: normalizedServiceIds,
+            deposit: bookingInfo.with_deposit ? 1 : 0,
+        });
+
+        if (lastQuoteKeyRef.current === quoteKey) {
+            return;
+        }
+
+        let cancelled = false;
+
         const quotePrice = async () => {
             try {
+                lastQuoteKeyRef.current = quoteKey;
                 const data = await apiClient.quotePrice({
                     car_id: bookingInfo.car_id ?? 0,
                     rental_start_date: bookingInfo.rental_start_date,
@@ -194,9 +231,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     coupon_type: bookingInfo.coupon_type,
                     coupon_amount: bookingInfo.coupon_amount ?? undefined,
                     coupon_code: bookingInfo.coupon_code ?? undefined,
-                    service_ids: bookingInfo.service_ids ?? [],
+                    service_ids: normalizedServiceIds,
                     with_deposit: bookingInfo.with_deposit,
                 });
+                if (cancelled) {
+                    return;
+                }
                 setQuote(data);
                 updateBookingInfo((prev) => ({
                     ...prev,
@@ -218,22 +258,26 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     total_services: data.total_services ?? prev.total_services,
                 }));
             } catch (error) {
+                if (lastQuoteKeyRef.current === quoteKey) {
+                    lastQuoteKeyRef.current = null;
+                }
                 console.error("Error quoting price:", error);
             }
         };
 
-        if (
-            bookingInfo.car_id &&
-            bookingInfo.rental_start_date &&
-            bookingInfo.rental_end_date
-        ) {
-            quotePrice();
-        }
+        quotePrice();
+
+        return () => {
+            cancelled = true;
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         bookingInfo?.car_id,
         bookingInfo?.rental_start_date,
         bookingInfo?.rental_end_date,
+        bookingInfo?.base_price,
+        bookingInfo?.base_price_casco,
+        bookingInfo?.original_price_per_day,
         bookingInfo?.coupon_type,
         bookingInfo?.coupon_amount,
         bookingInfo?.coupon_code,
