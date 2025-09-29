@@ -676,9 +676,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const discountedTotal = bookingInfo.with_deposit
         ? quote?.total ?? 0
         : quote?.total_casco ?? 0;
-    const originalSubtotal =
-        originalTotals.current.subtotal || discountedSubtotal;
-    const originalTotal = originalTotals.current.total || discountedTotal;
+    const subtotalDisplay = quote ? discountedSubtotal : originalTotals.current.subtotal;
+    const totalDisplay = quote ? discountedTotal : originalTotals.current.total;
     const restToPay = discountedTotal - (bookingInfo.advance_payment || 0);
 
     const wheelPrizeSummary = bookingInfo.wheel_prize ?? null;
@@ -1237,7 +1236,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 )}
                         <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                             <span>Subtotal:</span>
-                            <span>{originalSubtotal}€</span>
+                            <span>{subtotalDisplay}€</span>
                         </div>
                         <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                             <span>Premiu Roata Norocului:</span>
@@ -1291,7 +1290,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         )}
                         <div className="font-dm-sans text-sm font-semibold flex justify-between">
                             <span>Total:</span>
-                            <span>{originalTotal}€</span>
+                            <span>{totalDisplay}€</span>
                         </div>
                         {appliedOffersList.length > 0 && (
                             <div className="mt-3">
