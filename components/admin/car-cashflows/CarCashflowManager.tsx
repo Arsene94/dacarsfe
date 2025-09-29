@@ -344,6 +344,15 @@ const CarCashflowManager = () => {
   const [formCar, setFormCar] = useState<CarOption | null>(null);
   const [formCarSearch, setFormCarSearch] = useState("");
 
+  const isCashSelected = useMemo(
+    () => formState.paymentMethod === "cash" || formState.paymentMethod === "cash_card",
+    [formState.paymentMethod],
+  );
+  const isCardSelected = useMemo(
+    () => formState.paymentMethod === "card" || formState.paymentMethod === "cash_card",
+    [formState.paymentMethod],
+  );
+
   const totalAmountNumber = useMemo(() => {
     if (formState.paymentMethod === "cash_card") {
       return parseAmount(formState.cashAmount) + parseAmount(formState.cardAmount);
@@ -641,17 +650,39 @@ const CarCashflowManager = () => {
       setFormState((prev) => ({ ...prev, [key]: value }));
     };
 
-const handlePaymentMethodChange = (value: string) => {
-  setFormState((prev) => {
-    const paymentMethod = value as CarCashflowPaymentMethod;
-    return {
-      ...prev,
-      paymentMethod,
-      cashAmount: paymentMethod === "card" ? "" : prev.cashAmount,
-      cardAmount: paymentMethod === "cash" ? "" : prev.cardAmount,
+  const handlePaymentOptionToggle = (method: "cash" | "card") =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const { checked } = event.target;
+      setFormState((prev) => {
+        const isCashSelected =
+          prev.paymentMethod === "cash" || prev.paymentMethod === "cash_card";
+        const isCardSelected =
+          prev.paymentMethod === "card" || prev.paymentMethod === "cash_card";
+
+        const nextCashSelected = method === "cash" ? checked : isCashSelected;
+        const nextCardSelected = method === "card" ? checked : isCardSelected;
+
+        if (!nextCashSelected && !nextCardSelected) {
+          return prev;
+        }
+
+        let paymentMethod: CarCashflowPaymentMethod;
+        if (nextCashSelected && nextCardSelected) {
+          paymentMethod = "cash_card";
+        } else if (nextCashSelected) {
+          paymentMethod = "cash";
+        } else {
+          paymentMethod = "card";
+        }
+
+        return {
+          ...prev,
+          paymentMethod,
+          cashAmount: nextCashSelected ? prev.cashAmount : "",
+          cardAmount: nextCardSelected ? prev.cardAmount : "",
+        };
+      });
     };
-  });
-};
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1103,18 +1134,32 @@ const handlePaymentMethodChange = (value: string) => {
                 required
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2">
               <Label htmlFor="form-payment-method">Metodă plată</Label>
-              <Select
+              <div
                 id="form-payment-method"
-                value={formState.paymentMethod}
-                onValueChange={handlePaymentMethodChange}
-                required
+                className="space-y-2 rounded-lg border border-gray-200 p-3"
               >
-                <option value="cash">Numerar</option>
-                <option value="card">Card</option>
-                <option value="cash_card">Numerar + card</option>
-              </Select>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={isCashSelected}
+                    onChange={handlePaymentOptionToggle("cash")}
+                    className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+                  />
+                  Numerar
+                </label>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={isCardSelected}
+                    onChange={handlePaymentOptionToggle("card")}
+                    className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+                  />
+                  Card
+                </label>
+              </div>
+              <p className="text-xs text-gray-500">Selectează cel puțin o metodă de plată.</p>
             </div>
             <div className="space-y-1 md:col-span-2">
               <Label htmlFor="form-car">Mașină</Label>
@@ -1140,7 +1185,7 @@ const handlePaymentMethodChange = (value: string) => {
                 )}
               />
             </div>
-            {formState.paymentMethod !== "card" && (
+            {isCashSelected && (
               <div className="space-y-1">
                 <Label htmlFor="form-cash-amount">Sumă cash</Label>
                 <Input
@@ -1149,14 +1194,11 @@ const handlePaymentMethodChange = (value: string) => {
                   onChange={handleFormChange("cashAmount")}
                   placeholder="0"
                   inputMode="decimal"
-                  required={
-                    formState.paymentMethod === "cash" ||
-                    formState.paymentMethod === "cash_card"
-                  }
+                  required={isCashSelected}
                 />
               </div>
             )}
-            {formState.paymentMethod !== "cash" && (
+            {isCardSelected && (
               <div className="space-y-1">
                 <Label htmlFor="form-card-amount">Sumă card</Label>
                 <Input
@@ -1165,10 +1207,7 @@ const handlePaymentMethodChange = (value: string) => {
                   onChange={handleFormChange("cardAmount")}
                   placeholder="0"
                   inputMode="decimal"
-                  required={
-                    formState.paymentMethod === "card" ||
-                    formState.paymentMethod === "cash_card"
-                  }
+                  required={isCardSelected}
                 />
               </div>
             )}
