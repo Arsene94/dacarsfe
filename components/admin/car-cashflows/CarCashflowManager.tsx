@@ -1149,7 +1149,10 @@ const handlePaymentMethodChange = (value: string) => {
                   onChange={handleFormChange("cashAmount")}
                   placeholder="0"
                   inputMode="decimal"
-                  required={formState.paymentMethod !== "card"}
+                  required={
+                    formState.paymentMethod === "cash" ||
+                    formState.paymentMethod === "cash_card"
+                  }
                 />
               </div>
             )}
@@ -1162,7 +1165,10 @@ const handlePaymentMethodChange = (value: string) => {
                   onChange={handleFormChange("cardAmount")}
                   placeholder="0"
                   inputMode="decimal"
-                  required={formState.paymentMethod !== "cash"}
+                  required={
+                    formState.paymentMethod === "card" ||
+                    formState.paymentMethod === "cash_card"
+                  }
                 />
               </div>
             )}
