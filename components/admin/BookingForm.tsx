@@ -440,11 +440,22 @@ const BookingForm: React.FC<BookingFormProps> = ({
             basePriceCasco = original;
         }
 
+        const nextBasePrice = basePrice ?? 0;
+        const nextBasePriceCasco = basePriceCasco ?? 0;
+
+        if (
+            info.coupon_type === type &&
+            info.base_price === nextBasePrice &&
+            info.base_price_casco === nextBasePriceCasco
+        ) {
+            return info;
+        }
+
         return {
             ...info,
             coupon_type: type,
-            base_price: basePrice ?? 0,
-            base_price_casco: basePriceCasco ?? 0,
+            base_price: nextBasePrice,
+            base_price_casco: nextBasePriceCasco,
         };
     }, []);
 
