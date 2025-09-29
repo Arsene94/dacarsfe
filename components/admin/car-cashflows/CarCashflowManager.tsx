@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Popup } from "@/components/ui/popup";
 import { SearchSelect } from "@/components/ui/search-select";
 import { Select } from "@/components/ui/select";
+import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import type { Column } from "@/types/ui";
@@ -315,6 +316,7 @@ const createDefaultFormState = (): CashflowFormState => ({
 });
 
 const CarCashflowManager = () => {
+  const { user } = useAuth();
   const [entries, setEntries] = useState<NormalizedCashflow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -341,8 +343,6 @@ const CarCashflowManager = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [formCar, setFormCar] = useState<CarOption | null>(null);
   const [formCarSearch, setFormCarSearch] = useState("");
-  const [formCreatedById, setFormCreatedById] = useState<number | null>(null);
-  const [formCreatedBySearch, setFormCreatedBySearch] = useState("");
 
   const totalAmountNumber = useMemo(() => {
     if (formState.paymentMethod === "cash_card") {
@@ -424,19 +424,6 @@ const CarCashflowManager = () => {
     () => (selectedCreatorId !== null ? userOptions.find((user) => user.id === selectedCreatorId) ?? null : null),
     [selectedCreatorId, userOptions],
   );
-
-  const formCreatedByOption = useMemo(
-    () => (formCreatedById !== null ? userOptions.find((user) => user.id === formCreatedById) ?? null : null),
-    [formCreatedById, userOptions],
-  );
-
-  const filteredFormCreators = useMemo(() => {
-    const query = formCreatedBySearch.trim().toLowerCase();
-    if (!query) {
-      return userOptions;
-    }
-    return userOptions.filter((user) => user.name.toLowerCase().includes(query));
-  }, [formCreatedBySearch, userOptions]);
 
   const monthLabel = useMemo(() => {
     if (!createdMonthFilter) {
@@ -623,8 +610,6 @@ const CarCashflowManager = () => {
     setFormError(null);
     setFormCar(selectedCar);
     setFormCarSearch("");
-    setFormCreatedById(null);
-    setFormCreatedBySearch("");
     setIsModalOpen(true);
   };
 
@@ -715,6 +700,11 @@ const handlePaymentMethodChange = (value: string) => {
       return;
     }
 
+    if (!user?.id) {
+      setFormError("Nu am putut identifica utilizatorul curent. Reîncearcă după autentificare.");
+      return;
+    }
+
     const payload = {
       car_id: formCar.id,
       direction: formState.direction,
@@ -724,7 +714,7 @@ const handlePaymentMethodChange = (value: string) => {
       description: coerceNonEmptyString(formState.description),
       cash_amount: cashAmount,
       card_amount: cardAmount,
-      created_by: formCreatedById ?? undefined,
+      created_by: user.id,
     };
 
     setIsSaving(true);
@@ -735,7 +725,6 @@ const handlePaymentMethodChange = (value: string) => {
       setSuccessMessage("Tranzacția a fost înregistrată cu succes.");
       setFormState(createDefaultFormState());
       setFormCar(null);
-      setFormCreatedById(null);
       loadEntries();
     } catch (error) {
       console.error("Nu s-a putut salva tranzacția", error);
@@ -1191,28 +1180,6 @@ const handlePaymentMethodChange = (value: string) => {
                 rows={3}
                 placeholder="Detaliază tranzacția în câteva cuvinte"
               />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <Label htmlFor="form-created-by">Responsabil</Label>
-              <SearchSelect<UserOption>
-                id="form-created-by"
-                value={formCreatedByOption}
-                search={formCreatedBySearch}
-                items={filteredFormCreators}
-                onSearch={setFormCreatedBySearch}
-                onSelect={(item) => setFormCreatedById(item.id)}
-                placeholder="Selectează utilizatorul care adaugă tranzacția"
-                renderItem={(item) => <span>{item.name}</span>}
-              />
-              {formCreatedById !== null && (
-                <button
-                  type="button"
-                  onClick={() => setFormCreatedById(null)}
-                  className="text-xs text-jade underline"
-                >
-                  Folosește utilizatorul curent
-                </button>
-              )}
             </div>
           </div>
 
