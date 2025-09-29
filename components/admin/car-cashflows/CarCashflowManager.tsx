@@ -994,7 +994,7 @@ const handlePaymentMethodChange = (value: string) => {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button type="button" variant="ghost" onClick={handleResetFilters}>
+          <Button type="button" variant="outline" onClick={handleResetFilters}>
             Reset filtre
           </Button>
         </div>
