@@ -6,6 +6,7 @@ import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveRequestLocale } from "@/lib/i18n/server";
 import { buildMetadata } from "@/lib/seo/meta";
 import { breadcrumb, organization, website } from "@/lib/seo/jsonld";
+import { cache } from "react";
 
 type HomeSeoCopy = {
     metaTitle: string;
@@ -55,11 +56,11 @@ const HOME_SEO_COPY: Record<Locale, HomeSeoCopy> = {
 const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
 const HREFLANG_LOCALES = ["ro", "en", "it", "es", "fr", "de"] as const;
 
-const resolveHomeSeo = async () => {
+const resolveHomeSeo = cache(async () => {
     const locale = await resolveRequestLocale();
     const copy = HOME_SEO_COPY[locale] ?? HOME_SEO_COPY[FALLBACK_LOCALE];
     return { locale, copy };
-};
+});
 
 export async function generateMetadata(): Promise<Metadata> {
     const { locale, copy } = await resolveHomeSeo();
