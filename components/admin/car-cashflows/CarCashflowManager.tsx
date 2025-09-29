@@ -656,20 +656,17 @@ const CarCashflowManager = () => {
       setFormState((prev) => ({ ...prev, [key]: value }));
     };
 
-  const handleFormSelectChange = (key: "direction" | "paymentMethod") => (value: string) => {
-    setFormState((prev) => {
-      if (key === "paymentMethod") {
-        const paymentMethod = value as CarCashflowPaymentMethod;
-        return {
-          ...prev,
-          paymentMethod,
-          cashAmount: paymentMethod === "card" ? "" : prev.cashAmount,
-          cardAmount: paymentMethod === "cash" ? "" : prev.cardAmount,
-        };
-      }
-      return { ...prev, [key]: value as CarCashflowDirection };
-    });
-  };
+const handlePaymentMethodChange = (value: string) => {
+  setFormState((prev) => {
+    const paymentMethod = value as CarCashflowPaymentMethod;
+    return {
+      ...prev,
+      paymentMethod,
+      cashAmount: paymentMethod === "card" ? "" : prev.cashAmount,
+      cardAmount: paymentMethod === "cash" ? "" : prev.cardAmount,
+    };
+  });
+};
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1099,7 +1096,12 @@ const CarCashflowManager = () => {
 
       <Popup open={isModalOpen} onClose={closeModal} className="max-w-3xl">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Adaugă tranzacție</h2>
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-semibold text-gray-900">Adaugă tranzacție</h2>
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium uppercase tracking-wide text-gray-600">
+              Tip tranzacție: {directionLabels[formState.direction]}
+            </span>
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="form-occurred-on">Data și ora tranzacției</Label>
@@ -1113,23 +1115,11 @@ const CarCashflowManager = () => {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="form-direction">Tip</Label>
-              <Select
-                id="form-direction"
-                value={formState.direction}
-                onValueChange={handleFormSelectChange("direction")}
-                required
-              >
-                <option value="income">Încasare</option>
-                <option value="expense">Cheltuială</option>
-              </Select>
-            </div>
-            <div className="space-y-1">
               <Label htmlFor="form-payment-method">Metodă plată</Label>
               <Select
                 id="form-payment-method"
                 value={formState.paymentMethod}
-                onValueChange={handleFormSelectChange("paymentMethod")}
+                onValueChange={handlePaymentMethodChange}
                 required
               >
                 <option value="cash">Numerar</option>
