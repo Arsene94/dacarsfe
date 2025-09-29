@@ -1279,118 +1279,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         </h4>
                         {quote && (
                             <>
-                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                    <span>Preț per zi:</span>
-                                    <span>{baseRate}€ x {days} zile</span>
-                                </div>
-                                {typeof quote.total_services === "number" && quote.total_services > 0 && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Total Servicii:</span> <span>{quote.total_services}€</span>
-                                    </div>
-                                )}
-                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                            <span>Subtotal:</span>
-                            <span>{subtotalDisplay}€</span>
-                        </div>
-                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                            <span>Premiu Roata Norocului:</span>
-                            <span>{wheelPrizeTitle}</span>
-                        </div>
-                        {typeof totalBeforeWheelPrizeDisplay === "number" && (
-                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                <span>Total înainte de premiu:</span>
-                                <span>{totalBeforeWheelPrizeDisplay}€</span>
-                            </div>
-                        )}
-                        {hasWheelPrize && wheelPrizeAmountLabel && (
-                            <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
-                                <span>Detalii premiu:</span>
-                                <span className="text-right ms-2">{wheelPrizeAmountLabel}</span>
-                            </div>
-                        )}
-                        {wheelPrizeEligibilityWarning && (
-                            <div className="font-dm-sans text-xs text-amber-600 border-b border-b-1 mb-1">
-                                {wheelPrizeEligibilityWarning}
-                            </div>
-                        )}
-                        {hasWheelPrizeDiscount && (
-                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                <span>Reducere premiu:</span>
-                                <span>-{wheelPrizeDiscountDisplay}€</span>
-                            </div>
-                        )}
-                        {hasWheelPrize && wheelPrizeExpiryLabel && (
-                            <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
-                                <span>Valabil până la:</span>
-                                <span>{wheelPrizeExpiryLabel}</span>
-                            </div>
-                        )}
-                        {offersDiscountValue > 0 && (
-                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                <span>Reduceri campanii:</span>
-                                <span>-{offersDiscountDisplay}€</span>
-                            </div>
-                        )}
-                        {depositWaived && (
-                            <div className="font-dm-sans text-xs text-jade flex justify-between border-b border-b-1 mb-1">
-                                <span>Garanție:</span>
-                                <span>Eliminată prin promoție</span>
-                            </div>
-                        )}
-                        {bookingInfo.advance_payment > 0 && (
-                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
-                            </div>
-                        )}
-                        <div className="font-dm-sans text-sm font-semibold flex justify-between">
-                            <span>Total:</span>
-                            <span>{totalDisplay}€</span>
-                        </div>
-                        {appliedOffersList.length > 0 && (
-                            <div className="mt-3">
-                                <span className="font-dm-sans text-xs font-semibold text-gray-600 uppercase">
-                                    Oferte aplicate
-                                </span>
-                                <ul className="mt-1 list-disc space-y-1 ps-5 text-xs text-gray-600">
-                                    {appliedOffersList.map((offer) => (
-                                        <li key={offer.id}>
-                                            <span className="font-medium text-gray-700">{offer.title}</span>
-                                            {offer.discount_label && (
-                                                <span className="ms-1 text-emerald-600">{offer.discount_label}</span>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                                {discount !== 0 && discountedTotal > 0 && (
-                                    <div className="font-dm-sans text-sm">
-                                        Detalii discount:
-                                        <ul className="list-disc">
-                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Preț nou pe zi:</span>
-                                                <span>{Math.round(discountedRate)}€ x {days} zile</span>
-                                            </li>
-                                            {discount > 0 && (
-                                                <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                    <span>Discount aplicat:</span>
-                                                    <span>{discount}€</span>
-                                                </li>
-                                            )}
-                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Total:</span>
-                                                <span>{discountedTotal}€</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                )}
-                                {bookingInfo.advance_payment !== 0 && (
-                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
-                                        <span>Rest de plată:</span>
-                                        <span>{restToPay}€</span>
-                                    </div>
-                                )}
-                                <div className="mt-4 pt-4 border-t border-gray-300">
+                                <div>
                                     <h5 className="font-dm-sans text-sm font-semibold text-gray-700 mb-2">
                                         Rezumat în lei
                                     </h5>
@@ -1513,6 +1402,119 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
                                             <span>Rest de plată:</span>
                                             <span>{restToPayLei ?? "—"}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-gray-300">
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Preț per zi:</span>
+                                        <span>{baseRate}€ x {days} zile</span>
+                                    </div>
+                                    {typeof quote.total_services === "number" && quote.total_services > 0 && (
+                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                            <span>Total Servicii:</span> <span>{quote.total_services}€</span>
+                                        </div>
+                                    )}
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Subtotal:</span>
+                                        <span>{subtotalDisplay}€</span>
+                                    </div>
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Premiu Roata Norocului:</span>
+                                        <span>{wheelPrizeTitle}</span>
+                                    </div>
+                                    {typeof totalBeforeWheelPrizeDisplay === "number" && (
+                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                            <span>Total înainte de premiu:</span>
+                                            <span>{totalBeforeWheelPrizeDisplay}€</span>
+                                        </div>
+                                    )}
+                                    {hasWheelPrize && wheelPrizeAmountLabel && (
+                                        <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
+                                            <span>Detalii premiu:</span>
+                                            <span className="text-right ms-2">{wheelPrizeAmountLabel}</span>
+                                        </div>
+                                    )}
+                                    {wheelPrizeEligibilityWarning && (
+                                        <div className="font-dm-sans text-xs text-amber-600 border-b border-b-1 mb-1">
+                                            {wheelPrizeEligibilityWarning}
+                                        </div>
+                                    )}
+                                    {hasWheelPrizeDiscount && (
+                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                            <span>Reducere premiu:</span>
+                                            <span>-{wheelPrizeDiscountDisplay}€</span>
+                                        </div>
+                                    )}
+                                    {hasWheelPrize && wheelPrizeExpiryLabel && (
+                                        <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
+                                            <span>Valabil până la:</span>
+                                            <span>{wheelPrizeExpiryLabel}</span>
+                                        </div>
+                                    )}
+                                    {offersDiscountValue > 0 && (
+                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                            <span>Reduceri campanii:</span>
+                                            <span>-{offersDiscountDisplay}€</span>
+                                        </div>
+                                    )}
+                                    {depositWaived && (
+                                        <div className="font-dm-sans text-xs text-jade flex justify-between border-b border-b-1 mb-1">
+                                            <span>Garanție:</span>
+                                            <span>Eliminată prin promoție</span>
+                                        </div>
+                                    )}
+                                    {bookingInfo.advance_payment > 0 && (
+                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                            <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
+                                        </div>
+                                    )}
+                                    <div className="font-dm-sans text-sm font-semibold flex justify-between">
+                                        <span>Total:</span>
+                                        <span>{totalDisplay}€</span>
+                                    </div>
+                                    {appliedOffersList.length > 0 && (
+                                        <div className="mt-3">
+                                            <span className="font-dm-sans text-xs font-semibold text-gray-600 uppercase">
+                                                Oferte aplicate
+                                            </span>
+                                            <ul className="mt-1 list-disc space-y-1 ps-5 text-xs text-gray-600">
+                                                {appliedOffersList.map((offer) => (
+                                                    <li key={offer.id}>
+                                                        <span className="font-medium text-gray-700">{offer.title}</span>
+                                                        {offer.discount_label && (
+                                                            <span className="ms-1 text-emerald-600">{offer.discount_label}</span>
+                                                        )}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {discount !== 0 && discountedTotal > 0 && (
+                                        <div className="font-dm-sans text-sm">
+                                            Detalii discount:
+                                            <ul className="list-disc">
+                                                <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                    <span>Preț nou pe zi:</span>
+                                                    <span>{Math.round(discountedRate)}€ x {days} zile</span>
+                                                </li>
+                                                {discount > 0 && (
+                                                    <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                        <span>Discount aplicat:</span>
+                                                        <span>{discount}€</span>
+                                                    </li>
+                                                )}
+                                                <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                    <span>Total:</span>
+                                                    <span>{discountedTotal}€</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {bookingInfo.advance_payment !== 0 && (
+                                        <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
+                                            <span>Rest de plată:</span>
+                                            <span>{restToPay}€</span>
                                         </div>
                                     )}
                                 </div>
