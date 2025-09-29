@@ -458,19 +458,28 @@ const BookingForm: React.FC<BookingFormProps> = ({
     };
 
     useEffect(() => {
-        if (!bookingInfo) return;
+        if (!hasBookingInfo) return;
         const total = selectedServices.reduce((sum, id) => {
             const svc = services.find((service) => service.id === id);
             return sum + (svc?.price ?? 0);
         }, 0);
-        updateBookingInfo((prev) =>
-            recalcTotals({
+        updateBookingInfo((prev) => {
+            const currentServiceIds = Array.isArray(prev.service_ids) ? prev.service_ids : [];
+            const sameServices =
+                currentServiceIds.length === selectedServices.length &&
+                currentServiceIds.every((id) => selectedServices.includes(id));
+            const previousTotal = typeof prev.total_services === "number" ? prev.total_services : 0;
+            if (sameServices && Math.abs(previousTotal - total) < 0.01) {
+                return prev;
+            }
+
+            return recalcTotals({
                 ...prev,
                 service_ids: selectedServices,
                 total_services: total,
-            }),
-        );
-    }, [bookingInfo, selectedServices, services, recalcTotals, updateBookingInfo]);
+            });
+        });
+    }, [hasBookingInfo, selectedServices, services, recalcTotals, updateBookingInfo]);
 
     useEffect(() => {
         if (!open || !bookingInfo) return;
