@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -92,6 +92,74 @@ const toOptionalNumber = (value: unknown): number | null => {
     return null;
 };
 
+const normalizeServiceIds = (values: unknown): number[] => {
+    if (!Array.isArray(values)) return [];
+
+    const parsed = values
+        .map((raw) => {
+            if (typeof raw === "number") {
+                return Number.isFinite(raw) ? raw : null;
+            }
+            if (typeof raw === "string") {
+                return toOptionalNumber(raw);
+            }
+            return null;
+        })
+        .filter((value): value is number => value != null)
+        .sort((a, b) => a - b);
+
+    return parsed.filter((value, index) => index === 0 || value !== parsed[index - 1]);
+};
+
+const extractLinkedServiceIds = (
+    services: AdminBookingLinkedService[] | null | undefined,
+): number[] => {
+    if (!Array.isArray(services)) {
+        return [];
+    }
+
+    const rawIds = services
+        .map((service) => {
+            if (!service) return null;
+            if (typeof service.id === "number" || typeof service.id === "string") {
+                return service.id;
+            }
+            const fallback = (service as { service_id?: number | string | null }).service_id;
+            if (typeof fallback === "number" || typeof fallback === "string") {
+                return fallback;
+            }
+            return null;
+        })
+        .filter((value): value is number | string => value != null);
+
+    return normalizeServiceIds(rawIds);
+};
+
+const resolveServiceSelection = (
+    info: Pick<AdminBookingFormValues, "service_ids" | "services"> | null | undefined,
+): number[] => {
+    if (!info) return [];
+
+    const explicitIds = normalizeServiceIds(info.service_ids);
+    const linkedIds = extractLinkedServiceIds(info.services ?? null);
+
+    if (explicitIds.length === 0) {
+        return linkedIds;
+    }
+
+    if (linkedIds.length === 0) {
+        return explicitIds;
+    }
+
+    const merged = [...explicitIds];
+    linkedIds.forEach((id) => {
+        if (!merged.includes(id)) {
+            merged.push(id);
+        }
+    });
+    return merged.sort((a, b) => a - b);
+};
+
 interface BookingFormProps {
     open: boolean;
     onClose: () => void;
@@ -111,7 +179,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [carResults, setCarResults] = useState<AdminBookingCarOption[]>([]);
     const [carSearchActive, setCarSearchActive] = useState(false);
     const [services, setServices] = useState<Service[]>([]);
-    const [selectedServices, setSelectedServices] = useState<number[]>([]);
 
     const [customerSearch, setCustomerSearch] = useState("");
     const [customerResults, setCustomerResults] = useState<AdminBookingCustomerSummary[]>([]);
@@ -121,6 +188,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         subtotal: 0,
         total: 0,
     });
+    const lastQuoteKeyRef = useRef<string | null>(null);
 
     const updateBookingInfo = useCallback(
         (updater: (prev: AdminBookingFormValues) => AdminBookingFormValues) => {
@@ -159,6 +227,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }, []);
 
     const hasBookingInfo = Boolean(bookingInfo);
+    const selectedServiceIds = useMemo(
+        () => resolveServiceSelection(bookingInfo),
+        [bookingInfo],
+    );
     const rentalStart = bookingInfo?.rental_start_date ?? "";
     const rentalEnd = bookingInfo?.rental_end_date ?? "";
     const bookingCarId = bookingInfo?.car_id ?? null;
@@ -182,8 +254,44 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return;
         }
 
+        const normalizedServiceIds = Array.isArray(bookingInfo.service_ids)
+            ? bookingInfo.service_ids
+                  .map((id) => (typeof id === "number" ? id : Number(id)))
+                  .filter((id) => Number.isFinite(id))
+                  .sort((a, b) => a - b)
+            : [];
+
+        if (
+            !bookingInfo.car_id ||
+            !bookingInfo.rental_start_date ||
+            !bookingInfo.rental_end_date
+        ) {
+            return;
+        }
+
+        const quoteKey = JSON.stringify({
+            car: bookingInfo.car_id,
+            start: bookingInfo.rental_start_date,
+            end: bookingInfo.rental_end_date,
+            base: bookingInfo.base_price ?? null,
+            casco: bookingInfo.base_price_casco ?? null,
+            original: bookingInfo.original_price_per_day ?? null,
+            couponType: bookingInfo.coupon_type ?? null,
+            couponAmount: bookingInfo.coupon_amount ?? null,
+            couponCode: bookingInfo.coupon_code ?? null,
+            services: normalizedServiceIds,
+            deposit: bookingInfo.with_deposit ? 1 : 0,
+        });
+
+        if (lastQuoteKeyRef.current === quoteKey) {
+            return;
+        }
+
+        let cancelled = false;
+
         const quotePrice = async () => {
             try {
+                lastQuoteKeyRef.current = quoteKey;
                 const data = await apiClient.quotePrice({
                     car_id: bookingInfo.car_id ?? 0,
                     rental_start_date: bookingInfo.rental_start_date,
@@ -194,9 +302,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     coupon_type: bookingInfo.coupon_type,
                     coupon_amount: bookingInfo.coupon_amount ?? undefined,
                     coupon_code: bookingInfo.coupon_code ?? undefined,
-                    service_ids: bookingInfo.service_ids ?? [],
+                    service_ids: normalizedServiceIds,
                     with_deposit: bookingInfo.with_deposit,
                 });
+                if (cancelled) {
+                    return;
+                }
                 setQuote(data);
                 updateBookingInfo((prev) => ({
                     ...prev,
@@ -218,22 +329,26 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     total_services: data.total_services ?? prev.total_services,
                 }));
             } catch (error) {
+                if (lastQuoteKeyRef.current === quoteKey) {
+                    lastQuoteKeyRef.current = null;
+                }
                 console.error("Error quoting price:", error);
             }
         };
 
-        if (
-            bookingInfo.car_id &&
-            bookingInfo.rental_start_date &&
-            bookingInfo.rental_end_date
-        ) {
-            quotePrice();
-        }
+        quotePrice();
+
+        return () => {
+            cancelled = true;
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         bookingInfo?.car_id,
         bookingInfo?.rental_start_date,
         bookingInfo?.rental_end_date,
+        bookingInfo?.base_price,
+        bookingInfo?.base_price_casco,
+        bookingInfo?.original_price_per_day,
         bookingInfo?.coupon_type,
         bookingInfo?.coupon_amount,
         bookingInfo?.coupon_code,
@@ -247,11 +362,22 @@ const BookingForm: React.FC<BookingFormProps> = ({
             try {
                 const res = await apiClient.getServices();
                 const list = Array.isArray(res) ? res : extractList(res);
-                const mapped: Service[] = list.map((service) => ({
-                    id: service.id,
-                    name: service.name ?? "",
-                    price: parsePrice(service.price),
-                }));
+                const mapped: Service[] = list
+                    .map((service) => {
+                        const id =
+                            typeof service.id === "number"
+                                ? service.id
+                                : toOptionalNumber(service.id) ?? null;
+                        if (id == null) {
+                            return null;
+                        }
+                        return {
+                            id,
+                            name: service.name ?? "",
+                            price: parsePrice(service.price),
+                        } satisfies Service;
+                    })
+                    .filter((service): service is Service => service != null);
                 setServices(mapped);
             } catch (error) {
                 console.error("Error fetching services:", error);
@@ -314,11 +440,22 @@ const BookingForm: React.FC<BookingFormProps> = ({
             basePriceCasco = original;
         }
 
+        const nextBasePrice = basePrice ?? 0;
+        const nextBasePriceCasco = basePriceCasco ?? 0;
+
+        if (
+            info.coupon_type === type &&
+            info.base_price === nextBasePrice &&
+            info.base_price_casco === nextBasePriceCasco
+        ) {
+            return info;
+        }
+
         return {
             ...info,
             coupon_type: type,
-            base_price: basePrice ?? 0,
-            base_price_casco: basePriceCasco ?? 0,
+            base_price: nextBasePrice,
+            base_price_casco: nextBasePriceCasco,
         };
     }, []);
 
@@ -451,46 +588,67 @@ const BookingForm: React.FC<BookingFormProps> = ({
         setCustomerSearchActive(true);
     }, []);
 
-    const toggleService = (id: number) => {
-        setSelectedServices((prev) =>
-            prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id],
-        );
-    };
+    const toggleService = useCallback(
+        (id: number) => {
+            if (!hasBookingInfo) return;
+
+            updateBookingInfo((prev) => {
+                const currentServiceIds = resolveServiceSelection(prev);
+                const hasId = currentServiceIds.includes(id);
+                const nextIds = hasId
+                    ? currentServiceIds.filter((serviceId) => serviceId !== id)
+                    : [...currentServiceIds, id].sort((a, b) => a - b);
+
+                const total = nextIds.reduce((sum, serviceId) => {
+                    const svc = services.find((service) => service.id === serviceId);
+                    return sum + (svc?.price ?? 0);
+                }, 0);
+
+                return recalcTotals({
+                    ...prev,
+                    service_ids: nextIds,
+                    total_services: total,
+                });
+            });
+        },
+        [hasBookingInfo, services, updateBookingInfo, recalcTotals],
+    );
 
     useEffect(() => {
-        if (!bookingInfo) return;
-        const total = selectedServices.reduce((sum, id) => {
+        if (!hasBookingInfo) return;
+
+        const total = selectedServiceIds.reduce((sum, id) => {
             const svc = services.find((service) => service.id === id);
             return sum + (svc?.price ?? 0);
         }, 0);
-        updateBookingInfo((prev) =>
-            recalcTotals({
-                ...prev,
-                service_ids: selectedServices,
-                total_services: total,
-            }),
-        );
-    }, [bookingInfo, selectedServices, services, recalcTotals, updateBookingInfo]);
 
-    useEffect(() => {
-        if (!open || !bookingInfo) return;
-        const ids = Array.isArray(bookingInfo.service_ids)
-            ? bookingInfo.service_ids
-            : Array.isArray(bookingInfo.services)
-                ? bookingInfo.services
-                      .map((service: AdminBookingLinkedService) => {
-                          if (typeof service.id === "number") return service.id;
-                          const parsed = toOptionalNumber(service.id);
-                          return parsed ?? undefined;
-                      })
-                      .filter((value): value is number => typeof value === "number")
-                : [];
-        setSelectedServices((prev) =>
-            ids.length === prev.length && ids.every((id) => prev.includes(id))
-                ? prev
-                : ids,
-        );
-    }, [open, bookingInfo, bookingInfo?.service_ids, bookingInfo?.services]);
+        updateBookingInfo((prev) => {
+            const currentServiceIds = resolveServiceSelection(prev);
+            const sameServices =
+                currentServiceIds.length === selectedServiceIds.length &&
+                currentServiceIds.every((id, index) => id === selectedServiceIds[index]);
+            const previousTotal =
+                typeof prev.total_services === "number"
+                    ? prev.total_services
+                    : toOptionalNumber(prev.total_services) ?? 0;
+
+            if (sameServices && Math.abs(previousTotal - total) < 0.01) {
+                return prev;
+            }
+
+            return recalcTotals({
+                ...prev,
+                service_ids: selectedServiceIds,
+                total_services: total,
+            });
+        });
+    }, [
+        hasBookingInfo,
+        selectedServiceIds,
+        services,
+        recalcTotals,
+        updateBookingInfo,
+    ]);
 
     useEffect(() => {
         if (!open || !bookingInfo) return;
@@ -518,9 +676,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const discountedTotal = bookingInfo.with_deposit
         ? quote?.total ?? 0
         : quote?.total_casco ?? 0;
-    const originalSubtotal =
-        originalTotals.current.subtotal || discountedSubtotal;
-    const originalTotal = originalTotals.current.total || discountedTotal;
+    const subtotalDisplay = quote ? discountedSubtotal : originalTotals.current.subtotal;
+    const totalDisplay = quote ? discountedTotal : originalTotals.current.total;
     const restToPay = discountedTotal - (bookingInfo.advance_payment || 0);
 
     const wheelPrizeSummary = bookingInfo.wheel_prize ?? null;
@@ -872,7 +1029,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <input
                                         type="checkbox"
                                         className="h-4 w-4 rounded border-gray-300 text-jade"
-                                        checked={selectedServices.includes(s.id)}
+                                        checked={selectedServiceIds.includes(s.id)}
                                         onChange={() => toggleService(s.id)}
                                     />
                                     <span className="text-sm text-gray-700">
@@ -1079,7 +1236,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 )}
                         <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                             <span>Subtotal:</span>
-                            <span>{originalSubtotal}€</span>
+                            <span>{subtotalDisplay}€</span>
                         </div>
                         <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                             <span>Premiu Roata Norocului:</span>
@@ -1133,7 +1290,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         )}
                         <div className="font-dm-sans text-sm font-semibold flex justify-between">
                             <span>Total:</span>
-                            <span>{originalTotal}€</span>
+                            <span>{totalDisplay}€</span>
                         </div>
                         {appliedOffersList.length > 0 && (
                             <div className="mt-3">
