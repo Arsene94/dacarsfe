@@ -21,7 +21,7 @@ import {
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
-import { extractItem, extractList } from "@/lib/apiResponse";
+import { extractList } from "@/lib/apiResponse";
 import type {
   AdminBookingFormValues,
   AdminBookingResource,
@@ -60,6 +60,113 @@ const parseOptionalNumber = (value: unknown): number | null => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+
+const toIdString = (value: unknown): string | null => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? String(value) : null;
+  }
+  return null;
+};
+
+const mergeBookingRecord = (
+  record: Record<string, unknown>,
+): Record<string, unknown> => {
+  const {
+    booking,
+    bookings: _bookings,
+    reservations: _reservations,
+    data: _data,
+    item: _item,
+    result: _result,
+    resource: _resource,
+    ...rest
+  } = record;
+
+  return {
+    ...rest,
+    ...(isRecord(booking) ? booking : {}),
+  };
+};
+
+const findBookingInCollection = (
+  collection: unknown,
+  reservationId: string,
+): Record<string, unknown> | null => {
+  if (!Array.isArray(collection)) {
+    return null;
+  }
+
+  for (const entry of collection) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+    const merged = mergeBookingRecord(entry);
+    const candidateId =
+      toIdString(merged.id) ??
+      toIdString((merged as { booking_id?: unknown }).booking_id) ??
+      toIdString((merged as { bookingId?: unknown }).bookingId) ??
+      toIdString((merged as { booking_number?: unknown }).booking_number);
+
+    if (!candidateId || candidateId === reservationId) {
+      return merged;
+    }
+  }
+
+  return null;
+};
+
+const resolveBookingResourcePayload = (
+  raw: unknown,
+  reservationId: string,
+): AdminBookingResource | null => {
+  const targetId = reservationId.trim();
+
+  const visit = (value: unknown): Record<string, unknown> | null => {
+    if (!value) return null;
+
+    if (Array.isArray(value)) {
+      return findBookingInCollection(value, targetId);
+    }
+
+    if (!isRecord(value)) {
+      return null;
+    }
+
+    const merged = mergeBookingRecord(value);
+    const candidateId =
+      toIdString(merged.id) ??
+      toIdString((merged as { booking_id?: unknown }).booking_id) ??
+      toIdString((merged as { bookingId?: unknown }).bookingId) ??
+      toIdString((merged as { booking_number?: unknown }).booking_number);
+
+    if (!candidateId || candidateId === targetId) {
+      const { bookings: _bookings, reservations: _reservations, booking: _booking, ...rest } = merged;
+      return rest;
+    }
+
+    return (
+      visit(value.data) ??
+      visit(value.item) ??
+      visit(value.resource) ??
+      visit(value.result) ??
+      visit((value as { booking?: unknown }).booking) ??
+      visit((value as { reservation?: unknown }).reservation) ??
+      visit((value as { reservations?: unknown }).reservations) ??
+      visit((value as { booking_data?: unknown }).booking_data)
+    );
+  };
+
+  const resolved = visit(raw);
+  if (!resolved) {
+    return null;
+  }
+
+  return resolved as AdminBookingResource;
+};
 
 const formatTimeLabel = (iso?: string | null): string | undefined => {
   if (!iso) return undefined;
@@ -601,7 +708,7 @@ const ReservationsPage = () => {
 
       try {
         const response = await apiClient.getBookingInfo(reservationId);
-        const info = extractItem(response);
+        const info = resolveBookingResourcePayload(response, reservationId);
         if (!info) {
           throw new Error("Nu am putut găsi rezervarea solicitată.");
         }
