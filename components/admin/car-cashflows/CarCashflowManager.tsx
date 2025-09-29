@@ -52,18 +52,15 @@ interface NormalizedCashflow {
   createdAtDate: Date | null;
   createdById: number | null;
   createdByName: string | null;
-  category: string | null;
   description: string | null;
 }
 
 interface CashflowFormState {
   direction: CarCashflowDirection;
   paymentMethod: CarCashflowPaymentMethod;
-  totalAmount: string;
   cashAmount: string;
   cardAmount: string;
   occurredOn: string;
-  category: string;
   description: string;
 }
 
@@ -304,7 +301,6 @@ const normalizeCashflow = (
     createdAtDate,
     createdById: createdByCandidate,
     createdByName,
-    category: coerceNonEmptyString(record.category),
     description: coerceNonEmptyString(record.description),
   };
 };
@@ -312,11 +308,9 @@ const normalizeCashflow = (
 const createDefaultFormState = (): CashflowFormState => ({
   direction: "income",
   paymentMethod: "cash",
-  totalAmount: "",
   cashAmount: "",
   cardAmount: "",
   occurredOn: toDateTimeInputValue(new Date()),
-  category: "",
   description: "",
 });
 
@@ -349,6 +343,26 @@ const CarCashflowManager = () => {
   const [formCarSearch, setFormCarSearch] = useState("");
   const [formCreatedById, setFormCreatedById] = useState<number | null>(null);
   const [formCreatedBySearch, setFormCreatedBySearch] = useState("");
+
+  const totalAmountNumber = useMemo(() => {
+    if (formState.paymentMethod === "cash_card") {
+      return parseAmount(formState.cashAmount) + parseAmount(formState.cardAmount);
+    }
+    if (formState.paymentMethod === "cash") {
+      return parseAmount(formState.cashAmount);
+    }
+    return parseAmount(formState.cardAmount);
+  }, [formState.cardAmount, formState.cashAmount, formState.paymentMethod]);
+
+  const totalAmountDisplay = useMemo(() => {
+    if (!Number.isFinite(totalAmountNumber) || totalAmountNumber <= 0) {
+      return "0";
+    }
+    return totalAmountNumber.toLocaleString("ro-RO", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }, [totalAmountNumber]);
 
   useEffect(() => {
     if (!successMessage) {
@@ -604,8 +618,8 @@ const CarCashflowManager = () => {
     loadEntries();
   }, [loadEntries]);
 
-  const openModal = () => {
-    setFormState(createDefaultFormState());
+  const openModal = (direction: CarCashflowDirection) => {
+    setFormState((prev) => ({ ...createDefaultFormState(), direction }));
     setFormError(null);
     setFormCar(selectedCar);
     setFormCarSearch("");
@@ -642,8 +656,19 @@ const CarCashflowManager = () => {
       setFormState((prev) => ({ ...prev, [key]: value }));
     };
 
-  const handleFormSelectChange = (key: keyof CashflowFormState) => (value: string) => {
-    setFormState((prev) => ({ ...prev, [key]: value }));
+  const handleFormSelectChange = (key: "direction" | "paymentMethod") => (value: string) => {
+    setFormState((prev) => {
+      if (key === "paymentMethod") {
+        const paymentMethod = value as CarCashflowPaymentMethod;
+        return {
+          ...prev,
+          paymentMethod,
+          cashAmount: paymentMethod === "card" ? "" : prev.cashAmount,
+          cardAmount: paymentMethod === "cash" ? "" : prev.cardAmount,
+        };
+      }
+      return { ...prev, [key]: value as CarCashflowDirection };
+    });
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -652,14 +677,9 @@ const CarCashflowManager = () => {
       setFormError("Selectează mașina pentru care înregistrezi tranzacția.");
       return;
     }
-    const totalAmount = parseAmount(formState.totalAmount);
-    if (totalAmount <= 0) {
-      setFormError("Introdu o sumă totală mai mare decât 0.");
-      return;
-    }
-
     let cashAmount: number | undefined;
     let cardAmount: number | undefined;
+    let totalAmount: number;
 
     if (formState.paymentMethod === "cash_card") {
       const cash = parseAmount(formState.cashAmount);
@@ -668,19 +688,34 @@ const CarCashflowManager = () => {
         setFormError("Pentru plățile mixte completează sumele pe cash și card.");
         return;
       }
-      const difference = Math.abs(totalAmount - (cash + card));
-      if (difference > 0.01) {
-        setFormError("Suma totală trebuie să fie egală cu suma cash + sumă card.");
-        return;
-      }
+      totalAmount = cash + card;
       cashAmount = cash;
       cardAmount = card;
     } else if (formState.paymentMethod === "cash") {
-      cashAmount = totalAmount;
+      const cash = parseAmount(formState.cashAmount);
+      if (cash <= 0) {
+        setFormError("Introdu o sumă cash mai mare decât 0.");
+        return;
+      }
+      totalAmount = cash;
+      cashAmount = cash;
       cardAmount = undefined;
     } else if (formState.paymentMethod === "card") {
-      cardAmount = totalAmount;
+      const card = parseAmount(formState.cardAmount);
+      if (card <= 0) {
+        setFormError("Introdu o sumă card mai mare decât 0.");
+        return;
+      }
+      totalAmount = card;
+      cardAmount = card;
       cashAmount = undefined;
+    } else {
+      totalAmount = 0;
+    }
+
+    if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+      setFormError("Introdu sume mai mari decât 0 pentru tranzacție.");
+      return;
     }
 
     const payload = {
@@ -689,7 +724,6 @@ const CarCashflowManager = () => {
       payment_method: formState.paymentMethod,
       total_amount: totalAmount,
       occurred_on: formatDateTimeForApi(formState.occurredOn),
-      category: coerceNonEmptyString(formState.category),
       description: coerceNonEmptyString(formState.description),
       cash_amount: cashAmount,
       card_amount: cardAmount,
@@ -793,12 +827,6 @@ const CarCashflowManager = () => {
           <span>{row.createdAtDate ? dateTimeFormatter.format(row.createdAtDate) : row.createdAt ?? "—"}</span>
         ),
       },
-      {
-        id: "category",
-        header: "Categorie",
-        accessor: (row) => row.category ?? "",
-        sortable: true,
-      },
     ],
     [],
   );
@@ -812,9 +840,6 @@ const CarCashflowManager = () => {
           </p>
         ) : (
           <p className="italic text-gray-400">Nu există detalii suplimentare.</p>
-        )}
-        {row.category && (
-          <p className="text-xs text-gray-500">Categorie setată: {row.category}</p>
         )}
       </div>
     ),
@@ -835,8 +860,11 @@ const CarCashflowManager = () => {
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
             Reîncarcă
           </Button>
-          <Button onClick={openModal}>
-            <Plus className="mr-2 h-4 w-4" /> Adaugă tranzacție
+          <Button onClick={() => openModal("income")}>
+            <Plus className="mr-2 h-4 w-4" /> Adaugă încasare
+          </Button>
+          <Button variant="danger" onClick={() => openModal("expense")}>
+            <Plus className="mr-2 h-4 w-4" /> Adaugă cheltuială
           </Button>
         </div>
       </div>
@@ -1109,15 +1137,6 @@ const CarCashflowManager = () => {
                 <option value="cash_card">Numerar + card</option>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="form-category">Categorie</Label>
-              <Input
-                id="form-category"
-                value={formState.category}
-                onChange={handleFormChange("category")}
-                placeholder="ex: chirii, service, taxe"
-              />
-            </div>
             <div className="space-y-1 md:col-span-2">
               <Label htmlFor="form-car">Mașină</Label>
               <SearchSelect<CarOption>
@@ -1142,43 +1161,36 @@ const CarCashflowManager = () => {
                 )}
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="form-total-amount">Sumă totală</Label>
-              <Input
-                id="form-total-amount"
-                value={formState.totalAmount}
-                onChange={handleFormChange("totalAmount")}
-                placeholder="0"
-                inputMode="decimal"
-                required
-              />
-            </div>
-            {formState.paymentMethod === "cash_card" && (
-              <>
-                <div className="space-y-1">
-                  <Label htmlFor="form-cash-amount">Sumă cash</Label>
-                  <Input
-                    id="form-cash-amount"
-                    value={formState.cashAmount}
-                    onChange={handleFormChange("cashAmount")}
-                    placeholder="0"
-                    inputMode="decimal"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="form-card-amount">Sumă card</Label>
-                  <Input
-                    id="form-card-amount"
-                    value={formState.cardAmount}
-                    onChange={handleFormChange("cardAmount")}
-                    placeholder="0"
-                    inputMode="decimal"
-                    required
-                  />
-                </div>
-              </>
+            {formState.paymentMethod !== "card" && (
+              <div className="space-y-1">
+                <Label htmlFor="form-cash-amount">Sumă cash</Label>
+                <Input
+                  id="form-cash-amount"
+                  value={formState.cashAmount}
+                  onChange={handleFormChange("cashAmount")}
+                  placeholder="0"
+                  inputMode="decimal"
+                  required={formState.paymentMethod !== "card"}
+                />
+              </div>
             )}
+            {formState.paymentMethod !== "cash" && (
+              <div className="space-y-1">
+                <Label htmlFor="form-card-amount">Sumă card</Label>
+                <Input
+                  id="form-card-amount"
+                  value={formState.cardAmount}
+                  onChange={handleFormChange("cardAmount")}
+                  placeholder="0"
+                  inputMode="decimal"
+                  required={formState.paymentMethod !== "cash"}
+                />
+              </div>
+            )}
+            <div className="space-y-1 md:col-span-2">
+              <Label htmlFor="form-total-amount">Sumă totală</Label>
+              <Input id="form-total-amount" value={totalAmountDisplay} disabled readOnly />
+            </div>
             <div className="space-y-1 md:col-span-2">
               <Label htmlFor="form-description">Descriere</Label>
               <textarea
