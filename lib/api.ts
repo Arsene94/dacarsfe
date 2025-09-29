@@ -53,6 +53,11 @@ import type {
     CarTranslation,
 } from "@/types/car";
 import type {
+    CarCashflowListParams,
+    CarCashflowPayload,
+    CarCashflowRecord,
+} from "@/types/car-cashflow";
+import type {
     BlogCategory,
     BlogCategoryListParams,
     BlogCategoryPayload,
@@ -1404,6 +1409,51 @@ export class ApiClient {
 
     async deleteExpense(id: number | string): Promise<ApiDeleteResponse> {
         return this.request<ApiDeleteResponse>(`/expenses/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getCarCashflows(
+        params: CarCashflowListParams = {},
+    ): Promise<ApiListResult<CarCashflowRecord>> {
+        const query = toQuery(params);
+        return this.request<ApiListResult<CarCashflowRecord>>(
+            query ? `/car-cashflows?${query}` : `/car-cashflows`,
+        );
+    }
+
+    async getCarCashflow(
+        id: number | string,
+        params: { include?: string | readonly string[] } = {},
+    ): Promise<ApiItemResult<CarCashflowRecord>> {
+        const includeValue = resolveIncludeParam(params.include);
+        const query = includeValue ? `?include=${encodeURIComponent(includeValue)}` : '';
+        return this.request<ApiItemResult<CarCashflowRecord>>(`/car-cashflows/${id}${query}`);
+    }
+
+    async createCarCashflow(
+        payload: CarCashflowPayload,
+    ): Promise<ApiItemResult<CarCashflowRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<CarCashflowRecord>>(`/car-cashflows`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateCarCashflow(
+        id: number | string,
+        payload: CarCashflowPayload,
+    ): Promise<ApiItemResult<CarCashflowRecord>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<CarCashflowRecord>>(`/car-cashflows/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteCarCashflow(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/car-cashflows/${id}`, {
             method: 'DELETE',
         });
     }

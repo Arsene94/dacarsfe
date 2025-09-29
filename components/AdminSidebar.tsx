@@ -37,6 +37,7 @@ import {
   Languages,
   LogOut,
   ClipboardList,
+  Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -545,6 +546,17 @@ const menuItems: readonly AdminSidebarItem[] = [
         ]),
       },
     ],
+  },
+  {
+    name: "Fluxuri financiare",
+    href: "/admin/car-cashflows",
+    icon: Wallet,
+    requiredPermissions: buildPermissionList("car-cashflows", [
+      "car_cashflows",
+      "car-cashflows",
+      "car-cashflow",
+      "cashflows",
+    ]),
   },
   {
     name: "Cheltuieli flotă",
