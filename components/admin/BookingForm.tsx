@@ -639,8 +639,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 ? data.base_price_casco
                                 : toOptionalNumber(prev.base_price_casco);
                     const selectedRateCandidate = preferCasco
-                        ? cascoRateCandidate ?? depositRateCandidate ?? prevPricePerDay
-                        : depositRateCandidate ?? cascoRateCandidate ?? prevPricePerDay;
+                        ? cascoRateCandidate ?? prevPricePerDay ?? depositRateCandidate
+                        : depositRateCandidate ?? prevPricePerDay ?? cascoRateCandidate;
                     const normalizedSelectedRate =
                         typeof selectedRateCandidate === "number" && Number.isFinite(selectedRateCandidate)
                             ? Math.round(selectedRateCandidate * 100) / 100
@@ -654,6 +654,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             ? Math.round(cascoRateCandidate * 100) / 100
                             : null;
 
+                    const nextSubtotal = preferCasco
+                        ? data.sub_total_casco ?? data.sub_total ?? prev.sub_total
+                        : data.sub_total ?? data.sub_total_casco ?? prev.sub_total;
+                    const nextTotal = preferCasco
+                        ? data.total_casco ?? data.total ?? prev.total
+                        : data.total ?? data.total_casco ?? prev.total;
+
                     return {
                         ...prev,
                         days: typeof data.days === "number" ? data.days : prev.days ?? 0,
@@ -662,12 +669,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             normalizedSelectedRate ?? prevOriginalPrice ?? prev.original_price_per_day ?? prev.price_per_day ?? null,
                         base_price: normalizedDepositRate ?? prev.base_price ?? data.base_price ?? null,
                         base_price_casco: normalizedCascoRate ?? prev.base_price_casco ?? data.base_price_casco ?? null,
-                        sub_total: prev.with_deposit
-                            ? data.sub_total
-                            : data.sub_total_casco ?? data.sub_total,
-                        total: prev.with_deposit
-                            ? data.total
-                            : data.total_casco ?? data.total,
+                        sub_total: typeof nextSubtotal === "number" ? nextSubtotal : prev.sub_total,
+                        total: typeof nextTotal === "number" ? nextTotal : prev.total,
                         discount_applied: data.discount ?? null,
                         total_services: data.total_services ?? prev.total_services,
                     };
