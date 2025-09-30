@@ -226,7 +226,7 @@ const mapActivityStatus = (status: string): AdminReservation["status"] => {
 const mapActivityReservationToAdmin = (
     reservation: ActivityReservation,
 ): AdminReservation => ({
-    id: reservation.booking_number || String(reservation.id),
+    id: String(reservation.id) || reservation.booking_number,
     bookingNumber: reservation.booking_number,
     customerName: reservation.customer_name ?? "",
     phone: reservation.customer_phone ?? "",
