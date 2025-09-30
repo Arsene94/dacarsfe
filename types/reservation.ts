@@ -162,6 +162,10 @@ export interface QuotePricePayload {
   wheel_prize_discount?: number | string;
   wheel_of_fortune_prize_id?: number | string | null;
   wheel_prize?: ReservationWheelPrizePayload | null;
+  total_before_wheel_prize?: number | string;
+  offers_discount?: number | string;
+  deposit_waived?: boolean;
+  applied_offers?: ReservationAppliedOffer[];
   [key: string]: unknown;
 }
 

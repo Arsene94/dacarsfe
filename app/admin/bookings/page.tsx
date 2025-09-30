@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useState, useEffect, useCallback} from "react";
+import React, {useState, useEffect, useCallback, useRef} from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -21,7 +21,7 @@ import {
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
-import { extractItem, extractList } from "@/lib/apiResponse";
+import { extractList } from "@/lib/apiResponse";
 import type {
   AdminBookingFormValues,
   AdminBookingResource,
@@ -60,6 +60,256 @@ const parseOptionalNumber = (value: unknown): number | null => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+
+const toIdString = (value: unknown): string | null => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? String(value) : null;
+  }
+  return null;
+};
+
+const mergeBookingRecord = (
+  record: Record<string, unknown>,
+): Record<string, unknown> => {
+  const {
+    booking,
+    bookings: _bookings,
+    reservations: _reservations,
+    data: _data,
+    item: _item,
+    result: _result,
+    resource: _resource,
+    ...rest
+  } = record;
+
+  return {
+    ...rest,
+    ...(isRecord(booking) ? booking : {}),
+  };
+};
+
+const resolveBookingResourcePayload = (
+  raw: unknown,
+  reservationId: string,
+): AdminBookingResource | null => {
+  const targetId = reservationId.trim();
+  if (!targetId) {
+    return null;
+  }
+
+  const visit = (value: unknown): Record<string, unknown> | null => {
+    if (!value) return null;
+
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        const found = visit(entry);
+        if (found) {
+          return found;
+        }
+      }
+      return null;
+    }
+
+    if (!isRecord(value)) {
+      return null;
+    }
+
+    const merged = mergeBookingRecord(value);
+    const candidateId =
+      toIdString(merged.id) ??
+      toIdString((merged as { booking_id?: unknown }).booking_id) ??
+      toIdString((merged as { bookingId?: unknown }).bookingId);
+    const candidateNumber =
+      toIdString((merged as { booking_number?: unknown }).booking_number) ??
+      toIdString((merged as { bookingNumber?: unknown }).bookingNumber);
+
+    if (
+      (candidateId && candidateId === targetId) ||
+      (candidateNumber && candidateNumber === targetId)
+    ) {
+      const {
+        bookings: _bookings,
+        reservations: _reservations,
+        booking: _booking,
+        ...rest
+      } = merged;
+      return rest;
+    }
+
+    const nestedSources: unknown[] = [
+      (value as { data?: unknown }).data,
+      (value as { item?: unknown }).item,
+      (value as { resource?: unknown }).resource,
+      (value as { result?: unknown }).result,
+      (value as { booking?: unknown }).booking,
+      (value as { reservation?: unknown }).reservation,
+      (value as { reservations?: unknown }).reservations,
+      (value as { booking_data?: unknown }).booking_data,
+    ];
+
+    for (const source of nestedSources) {
+      const found = visit(source);
+      if (found) {
+        return found;
+      }
+    }
+
+    return null;
+  };
+
+  const resolved = visit(raw);
+  if (!resolved) {
+    return null;
+  }
+
+  return resolved as AdminBookingResource;
+};
+
+const mergeBookingResourceIntoForm = (
+  info: AdminBookingResource,
+  base: AdminBookingFormValues,
+): AdminBookingFormValues => {
+  const rawServiceIds = Array.isArray(info.service_ids)
+    ? info.service_ids
+    : Array.isArray(info.services)
+      ? info.services.map((service) =>
+          service?.id ?? (service?.pivot ? (service.pivot as { service_id?: unknown }).service_id : null),
+        )
+      : [];
+  const normalizedServiceIds = rawServiceIds
+    .map((value) => parseOptionalNumber(value))
+    .filter((value): value is number => value != null);
+
+  const pricePerDayRaw = parseOptionalNumber(info?.price_per_day ?? info?.pricePerDay);
+  const originalPricePerDayRaw = parseOptionalNumber(
+    info?.original_price_per_day ?? info?.price_per_day ?? info?.pricePerDay,
+  );
+  const basePriceRaw = parseOptionalNumber(info?.base_price);
+  const basePriceCascoRaw = parseOptionalNumber(info?.base_price_casco ?? info?.rental_rate_casco);
+  let totalServicesRaw = parseOptionalNumber(info.total_services);
+  if (totalServicesRaw == null && Array.isArray(info.services)) {
+    totalServicesRaw = info.services.reduce((sum, svc) => {
+      const directPrice = parseOptionalNumber(svc?.price);
+      const pivotPrice = svc?.pivot ? parseOptionalNumber((svc.pivot as { price?: unknown }).price) : null;
+      return sum + (directPrice ?? pivotPrice ?? 0);
+    }, 0);
+  }
+  const totalBeforeWheelPrize =
+    parseOptionalNumber(info.total_before_wheel_prize ?? (info as { totalBeforeWheelPrize?: unknown }).totalBeforeWheelPrize) ??
+    null;
+  const wheelPrize = normalizeWheelPrizeSummary(info.wheel_prize);
+  const wheelPrizeDiscountRaw =
+    parseOptionalNumber(info.wheel_prize_discount) ?? (wheelPrize?.discount_value ?? null);
+  const advancePaymentRaw = parseOptionalNumber(
+    info.advance_payment ?? (info as { advancePayment?: unknown }).advancePayment,
+  );
+  const couponAmountRaw = parseOptionalNumber(info.coupon_amount ?? info.discount);
+  const subTotalRaw =
+    parseOptionalNumber(info.sub_total) ?? parseOptionalNumber((info as { subTotal?: unknown }).subTotal);
+  const totalRaw = parseOptionalNumber(info.total) ?? parseOptionalNumber(info.total_price);
+  const taxAmountRaw =
+    parseOptionalNumber(info.tax_amount) ?? parseOptionalNumber((info as { taxAmount?: unknown }).taxAmount);
+  const offersDiscountRaw = parseOptionalNumber(
+    info.offers_discount ?? (info as { offersDiscount?: unknown }).offersDiscount,
+  );
+  const depositWaived = normalizeBoolean(info.deposit_waived, base.deposit_waived ?? false);
+  const appliedOffers = normalizeAppliedOffersList(info.applied_offers);
+
+  const carId = parseOptionalNumber(info?.car_id ?? info?.car?.id);
+
+  const couponType =
+    pickNonEmptyString(info?.coupon_type) ?? pickNonEmptyString(info?.discount_type) ?? base.coupon_type ?? "";
+
+  const carImage =
+    pickNonEmptyString((info as { car_image?: unknown }).car_image) ??
+    pickNonEmptyString(info?.car?.image_preview) ??
+    pickNonEmptyString(info?.image_preview) ??
+    pickNonEmptyString(info?.car?.image) ??
+    null;
+  const carLicensePlate =
+    pickNonEmptyString(info?.car?.license_plate) ??
+    pickNonEmptyString((info as { license_plate?: unknown }).license_plate) ??
+    pickNonEmptyString(info?.car?.plate) ??
+    null;
+  const carTransmission =
+    pickLookupName(info?.car?.transmission) ??
+    pickNonEmptyString((info as { transmission_name?: unknown }).transmission_name) ??
+    null;
+  const carFuel =
+    pickLookupName(info?.car?.fuel) ?? pickNonEmptyString((info as { fuel_name?: unknown }).fuel_name) ?? null;
+  const carDeposit = parseOptionalNumber((info as { car_deposit?: unknown }).car_deposit ?? info?.car?.deposit);
+  const locationValue = pickNonEmptyString(info?.location ?? null) ?? undefined;
+
+  const pricePerDayResolved = pricePerDayRaw ?? base.price_per_day ?? EMPTY_BOOKING.price_per_day;
+  const originalPricePerDayResolved = originalPricePerDayRaw ?? base.original_price_per_day ?? pricePerDayResolved;
+  const basePriceResolved = basePriceRaw ?? base.base_price ?? pricePerDayResolved;
+  const basePriceCascoResolved = basePriceCascoRaw ?? base.base_price_casco ?? basePriceResolved;
+
+  return {
+    ...base,
+    id: info?.id ?? base.id,
+    booking_number:
+      toIdString(info?.booking_number) ?? toIdString(info?.id) ?? base.booking_number ?? EMPTY_BOOKING.booking_number,
+    rental_start_date: toLocalDateTimeInput(info?.rental_start_date) ?? base.rental_start_date,
+    rental_end_date: toLocalDateTimeInput(info?.rental_end_date) ?? base.rental_end_date,
+    coupon_amount: couponAmountRaw ?? base.coupon_amount,
+    coupon_type: pickNonEmptyString(couponType) ?? base.coupon_type,
+    coupon_code: pickNonEmptyString(info?.coupon_code) ?? base.coupon_code,
+    customer_name:
+      pickNonEmptyString(info?.customer_name) ?? pickNonEmptyString(info?.customer?.name) ?? base.customer_name,
+    customer_email:
+      pickNonEmptyString(info?.customer_email) ?? pickNonEmptyString(info?.customer?.email) ?? base.customer_email,
+    customer_phone:
+      pickNonEmptyString(info?.customer_phone) ?? pickNonEmptyString(info?.customer?.phone) ?? base.customer_phone,
+    customer_age:
+      pickNonEmptyString(info?.customer_age) ??
+      toIdString(info?.customer_age) ??
+      pickNonEmptyString(info?.customer?.age) ??
+      toIdString(info?.customer?.age) ??
+      base.customer_age,
+    customer_id: toIdString(info?.customer_id) ?? toIdString(info?.customer?.id) ?? base.customer_id,
+    car_id: carId ?? base.car_id,
+    car_name: pickNonEmptyString(info?.car_name) ?? info?.car?.name ?? base.car_name,
+    car_image: pickNonEmptyString(carImage) ?? base.car_image,
+    car_license_plate: pickNonEmptyString(carLicensePlate) ?? base.car_license_plate,
+    car_transmission: pickNonEmptyString(carTransmission) ?? base.car_transmission,
+    car_fuel: pickNonEmptyString(carFuel) ?? base.car_fuel,
+    car_deposit: carDeposit ?? base.car_deposit,
+    service_ids: normalizedServiceIds.length > 0 ? normalizedServiceIds : base.service_ids ?? [],
+    services: Array.isArray(info?.services) ? info.services : base.services,
+    total_services: totalServicesRaw ?? base.total_services,
+    sub_total: subTotalRaw ?? base.sub_total,
+    total: totalRaw ?? base.total,
+    tax_amount: taxAmountRaw ?? base.tax_amount,
+    price_per_day: pricePerDayResolved,
+    original_price_per_day: originalPricePerDayResolved,
+    base_price: basePriceResolved,
+    base_price_casco: basePriceCascoResolved,
+    days:
+      parseOptionalNumber(info?.days) ??
+      parseOptionalNumber((info as { total_days?: unknown }).total_days) ??
+      base.days,
+    keep_old_price: normalizeBoolean(info?.keep_old_price, base.keep_old_price ?? true),
+    send_email: normalizeBoolean(info?.send_email, base.send_email ?? false),
+    with_deposit: normalizeBoolean(info?.with_deposit, base.with_deposit ?? true),
+    status: pickNonEmptyString(info?.status) ?? base.status,
+    total_before_wheel_prize: totalBeforeWheelPrize ?? base.total_before_wheel_prize,
+    wheel_prize_discount: wheelPrizeDiscountRaw ?? base.wheel_prize_discount,
+    wheel_prize: wheelPrize ?? base.wheel_prize,
+    offers_discount: offersDiscountRaw ?? base.offers_discount,
+    deposit_waived: depositWaived,
+    applied_offers: appliedOffers.length > 0 ? appliedOffers : base.applied_offers,
+    advance_payment: advancePaymentRaw ?? base.advance_payment,
+    note: pickNonEmptyString(info?.note) ?? pickNonEmptyString(info?.notes) ?? base.note,
+    currency_id:
+      toIdString(info?.currency_id) ?? toIdString((info as { currencyId?: unknown }).currencyId) ?? base.currency_id,
+    location: locationValue ?? base.location,
+  } as AdminBookingFormValues;
+};
 
 const formatTimeLabel = (iso?: string | null): string | undefined => {
   if (!iso) return undefined;
@@ -247,12 +497,31 @@ const EMPTY_WHEEL_PRIZE_DETAILS: ReturnType<typeof extractWheelPrizeDisplay> = {
   eligible: true,
 };
 
-const toLocalDateTimeInput = (iso?: string | null) => {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  const tzOffset = date.getTimezoneOffset();
-  const local = new Date(date.getTime() - tzOffset * 60000);
+const toLocalDateTimeInput = (value?: string | null): string | null => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed.replace(" ", "T").replace(/\.\d+/, "");
+  const hasTimezone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(normalized);
+
+  if (!hasTimezone) {
+    const match = normalized.match(
+      /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+    );
+    if (match) {
+      const [, datePart, hours = "00", minutes = "00"] = match;
+      return `${datePart}T${hours}:${minutes}`;
+    }
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  const tzOffset = parsed.getTimezoneOffset();
+  const local = new Date(parsed.getTime() - tzOffset * 60000);
   return local.toISOString().slice(0, 16);
 };
 
@@ -265,6 +534,108 @@ const normalizeBoolean = (value: unknown, defaultValue = false) => {
     if (["0", "false", "nu", "no"].includes(normalized)) return false;
   }
   return defaultValue;
+};
+
+const buildBookingFormFromReservation = (
+  reservation: AdminReservation,
+): AdminBookingFormValues => {
+  const base = createEmptyBookingForm();
+  const rentalStart = toLocalDateTimeInput(reservation.startDate);
+  const rentalEnd = toLocalDateTimeInput(reservation.endDate);
+
+  const pricePerDay =
+    typeof reservation.pricePerDay === "number"
+      ? reservation.pricePerDay
+      : base.price_per_day;
+  const servicesTotal =
+    typeof reservation.servicesPrice === "number"
+      ? reservation.servicesPrice
+      : base.total_services;
+  const couponAmount =
+    typeof reservation.couponAmount === "number"
+      ? reservation.couponAmount
+      : base.coupon_amount;
+  const reservationPlan = reservation.plan;
+  const withDeposit =
+    reservationPlan === 1
+      ? true
+      : reservationPlan === 0
+        ? false
+        : base.with_deposit;
+
+  return {
+    ...base,
+    id: reservation.id ?? base.id,
+    booking_number:
+      reservation.bookingNumber ?? reservation.id ?? base.booking_number,
+    rental_start_date: rentalStart || base.rental_start_date,
+    rental_end_date: rentalEnd || base.rental_end_date,
+    customer_name: reservation.customerName || base.customer_name,
+    customer_phone: reservation.phone || base.customer_phone,
+    customer_email: reservation.email || base.customer_email,
+    car_id: reservation.carId ?? base.car_id,
+    car_name: reservation.carName || base.car_name,
+    car_license_plate:
+      reservation.carLicensePlate || base.car_license_plate,
+    price_per_day: pricePerDay,
+    original_price_per_day:
+      typeof reservation.pricePerDay === "number"
+        ? reservation.pricePerDay
+        : base.original_price_per_day,
+    base_price:
+      typeof reservation.pricePerDay === "number"
+        ? reservation.pricePerDay
+        : base.base_price,
+    base_price_casco:
+      typeof reservation.pricePerDay === "number"
+        ? reservation.pricePerDay
+        : base.base_price_casco,
+    total_services: servicesTotal,
+    sub_total:
+      typeof reservation.subTotal === "number"
+        ? reservation.subTotal
+        : base.sub_total,
+    total:
+      typeof reservation.total === "number"
+        ? reservation.total
+        : base.total,
+    tax_amount:
+      typeof reservation.taxAmount === "number"
+        ? reservation.taxAmount
+        : base.tax_amount,
+    coupon_amount: couponAmount,
+    coupon_code: reservation.discountCode || base.coupon_code,
+    discount_applied:
+      typeof reservation.discount === "number"
+        ? reservation.discount
+        : base.discount_applied,
+    days:
+      typeof reservation.days === "number"
+        ? reservation.days
+        : base.days,
+    offers_discount:
+      typeof reservation.offersDiscount === "number"
+        ? reservation.offersDiscount
+        : base.offers_discount,
+    total_before_wheel_prize:
+      typeof reservation.totalBeforeWheelPrize === "number"
+        ? reservation.totalBeforeWheelPrize
+        : base.total_before_wheel_prize,
+    wheel_prize_discount:
+      typeof reservation.wheelPrizeDiscount === "number"
+        ? reservation.wheelPrizeDiscount
+        : base.wheel_prize_discount,
+    wheel_prize: reservation.wheelPrize ?? base.wheel_prize,
+    applied_offers: reservation.appliedOffers ?? base.applied_offers,
+    deposit_waived:
+      typeof reservation.depositWaived === "boolean"
+        ? reservation.depositWaived
+        : base.deposit_waived,
+    with_deposit: withDeposit,
+    status: reservation.status ?? base.status,
+    note: reservation.notes || base.note,
+    location: reservation.location || base.location,
+  };
 };
 
 const ReservationsPage = () => {
@@ -292,6 +663,8 @@ const ReservationsPage = () => {
   const [bookingInfo, setBookingInfo] = useState<AdminBookingFormValues | null>(
     null,
   );
+  const editingReservationIdRef = useRef<string | null>(null);
+  const fallbackBookingRef = useRef<AdminBookingFormValues | null>(null);
 
   const formatEuro = (value: number | string | null | undefined) => {
     if (typeof value === "string") {
@@ -367,17 +740,20 @@ const ReservationsPage = () => {
         const totalBeforeWheelPrize = parseOptionalNumber(
           booking.total_before_wheel_prize,
         );
-        const identifier =
-          booking.booking_number ??
-          booking.bookingNumber ??
+        const rawId =
           booking.id ??
+          (booking as { booking_id?: unknown }).booking_id ??
+          (booking as { bookingId?: unknown }).bookingId ??
           null;
         const id =
-          typeof identifier === "string"
-            ? identifier
-            : identifier != null
-            ? String(identifier)
-            : "";
+          toIdString(rawId) ??
+          toIdString(booking.booking_number) ??
+          toIdString((booking as { bookingNumber?: unknown }).bookingNumber) ??
+          "";
+        const bookingNumber =
+          toIdString(booking.booking_number) ??
+          toIdString((booking as { bookingNumber?: unknown }).bookingNumber) ??
+          undefined;
         const customerName =
           booking.customer_name ?? booking.customer?.name ?? "";
         const phone = booking.customer_phone ?? booking.customer?.phone ?? "";
@@ -421,6 +797,7 @@ const ReservationsPage = () => {
 
         return {
           id,
+          bookingNumber,
           customerName,
           email,
           phone,
@@ -486,169 +863,54 @@ const ReservationsPage = () => {
 
   const handleEditReservation = useCallback(
     async (reservationId: string) => {
+      const trimmedId = reservationId.trim();
+      const fallbackReservation = reservations.find(
+        (reservation) => reservation.id === trimmedId,
+      );
+      const fallbackForm = fallbackReservation
+        ? buildBookingFormFromReservation(fallbackReservation)
+        : createEmptyBookingForm();
+
+      const lookupId =
+        trimmedId.length > 0
+          ? trimmedId
+          : toIdString(fallbackReservation?.bookingNumber) ?? "";
+
+      if (!lookupId) {
+        console.error("ID rezervare invalid pentru editare.");
+        return;
+      }
+
+      const requestId = /^(?:\d+)$/.test(lookupId) ? Number(lookupId) : lookupId;
+
+      editingReservationIdRef.current = lookupId;
+      fallbackBookingRef.current = fallbackForm;
+
+      setBookingInfo({ ...fallbackForm });
+      setEditPopupOpen(true);
+      setShowModal(false);
+
       try {
-        const response = await apiClient.getBookingInfo(reservationId);
-        const info = extractItem(response);
+        const response = await apiClient.getBookingInfo(requestId);
+        const info = resolveBookingResourcePayload(response, lookupId);
         if (!info) {
           throw new Error("Nu am putut găsi rezervarea solicitată.");
         }
 
-        const rawServiceIds = Array.isArray(info.service_ids)
-          ? info.service_ids
-          : Array.isArray(info.services)
-            ? info.services.map((service) =>
-                service?.id ?? (service?.pivot ? (service.pivot as { service_id?: unknown }).service_id : null),
-              )
-            : [];
-        const normalizedServiceIds = rawServiceIds
-          .map((value) => parseOptionalNumber(value))
-          .filter((value): value is number => value != null);
-
-        const pricePerDay =
-          parseOptionalNumber(info?.price_per_day ?? info?.pricePerDay) ?? 0;
-        const originalPricePerDay =
-          parseOptionalNumber(
-            info?.original_price_per_day ?? info?.price_per_day ?? info?.pricePerDay,
-          ) ?? pricePerDay;
-        const basePrice =
-          parseOptionalNumber(info?.base_price ?? pricePerDay) ?? pricePerDay;
-        const basePriceCasco =
-          parseOptionalNumber(
-            info?.base_price_casco ?? info?.rental_rate_casco ?? basePrice,
-          ) ?? basePrice;
-        const totalServices =
-          parseOptionalNumber(info.total_services) ??
-          (Array.isArray(info.services)
-            ? info.services.reduce((sum, svc) => {
-                const directPrice = parseOptionalNumber(svc?.price);
-                const pivotPrice = svc?.pivot
-                  ? parseOptionalNumber((svc.pivot as { price?: unknown }).price)
-                  : null;
-                return sum + (directPrice ?? pivotPrice ?? 0);
-              }, 0)
-            : 0);
-        const totalBeforeWheelPrize =
-          parseOptionalNumber(
-            info.total_before_wheel_prize ??
-              (info as { totalBeforeWheelPrize?: unknown }).totalBeforeWheelPrize,
-          ) ?? null;
-        const wheelPrize = normalizeWheelPrizeSummary(info.wheel_prize);
-        const wheelPrizeDiscount =
-          parseOptionalNumber(info.wheel_prize_discount) ??
-          (wheelPrize?.discount_value ?? null);
-        const advancePayment =
-          parseOptionalNumber(info.advance_payment ?? (info as { advancePayment?: unknown }).advancePayment) ?? 0;
-        const couponAmount =
-          parseOptionalNumber(info.coupon_amount ?? info.discount) ?? 0;
-        const subTotal =
-          parseOptionalNumber(info.sub_total) ??
-          parseOptionalNumber((info as { subTotal?: unknown }).subTotal) ??
-          0;
-        const total =
-          parseOptionalNumber(info.total) ??
-          parseOptionalNumber(info.total_price) ??
-          0;
-        const taxAmount =
-          parseOptionalNumber(info.tax_amount) ??
-          parseOptionalNumber((info as { taxAmount?: unknown }).taxAmount) ??
-          0;
-        const offersDiscount =
-          parseOptionalNumber(info.offers_discount ?? (info as { offersDiscount?: unknown }).offersDiscount) ?? 0;
-        const depositWaived = normalizeBoolean(info.deposit_waived, false);
-        const appliedOffers = normalizeAppliedOffersList(info.applied_offers);
-
-        const carId = parseOptionalNumber(info?.car_id ?? info?.car?.id);
-
-        const couponType =
-          pickNonEmptyString(info?.coupon_type) ??
-          pickNonEmptyString(info?.discount_type) ??
-          "";
-
-        const carImage =
-          pickNonEmptyString((info as { car_image?: unknown }).car_image) ??
-          pickNonEmptyString(info?.car?.image_preview) ??
-          pickNonEmptyString(info?.image_preview) ??
-          pickNonEmptyString(info?.car?.image) ??
-          "";
-        const carLicensePlate =
-          pickNonEmptyString(info?.car?.license_plate) ??
-          pickNonEmptyString((info as { license_plate?: unknown }).license_plate) ??
-          pickNonEmptyString(info?.car?.plate) ??
-          "";
-        const carTransmission =
-          pickLookupName(info?.car?.transmission) ??
-          pickNonEmptyString((info as { transmission_name?: unknown }).transmission_name) ??
-          "";
-        const carFuel =
-          pickLookupName(info?.car?.fuel) ??
-          pickNonEmptyString((info as { fuel_name?: unknown }).fuel_name) ??
-          "";
-        const carDeposit =
-          parseOptionalNumber(
-            (info as { car_deposit?: unknown }).car_deposit ?? info?.car?.deposit,
-          ) ?? null;
-        const locationValue = pickNonEmptyString(info?.location ?? null) ?? undefined;
-
-        const formatted = {
-          ...EMPTY_BOOKING,
-          ...info,
-          id: info?.id ?? reservationId,
-          booking_number: info?.booking_number ?? info?.id ?? reservationId,
-          rental_start_date: toLocalDateTimeInput(info?.rental_start_date),
-          rental_end_date: toLocalDateTimeInput(info?.rental_end_date),
-          coupon_amount: couponAmount,
-          coupon_type: couponType,
-          coupon_code: info?.coupon_code ?? "",
-          customer_name: info?.customer_name ?? info?.customer?.name ?? "",
-          customer_email: info?.customer_email ?? info?.customer?.email ?? "",
-          customer_phone: info?.customer_phone ?? info?.customer?.phone ?? "",
-          customer_age: info?.customer_age ?? info?.customer?.age ?? "",
-          customer_id: info?.customer_id ?? info?.customer?.id ?? "",
-          car_id: carId ?? null,
-          car_name: info?.car_name ?? info?.car?.name ?? "",
-          car_image: carImage,
-          car_license_plate: carLicensePlate,
-          car_transmission: carTransmission,
-          car_fuel: carFuel,
-          car_deposit: carDeposit,
-          service_ids: normalizedServiceIds,
-          services: Array.isArray(info?.services) ? info.services : [],
-          total_services: totalServices ?? 0,
-          sub_total: subTotal,
-          total,
-          tax_amount: taxAmount,
-          price_per_day: pricePerDay,
-          original_price_per_day: originalPricePerDay,
-          base_price: basePrice,
-          base_price_casco: basePriceCasco,
-          days:
-            parseOptionalNumber(info?.days) ??
-            parseOptionalNumber((info as { total_days?: unknown }).total_days) ??
-            0,
-          keep_old_price: normalizeBoolean(info?.keep_old_price, true),
-          send_email: normalizeBoolean(info?.send_email, false),
-          with_deposit: normalizeBoolean(info?.with_deposit, true),
-          status: info?.status ?? "",
-          total_before_wheel_prize: totalBeforeWheelPrize,
-          wheel_prize_discount: wheelPrizeDiscount ?? 0,
-          wheel_prize: wheelPrize ?? null,
-          offers_discount: offersDiscount,
-          deposit_waived: depositWaived,
-          applied_offers: appliedOffers,
-          advance_payment: advancePayment,
-          note: info?.note ?? info?.notes ?? "",
-          currency_id: info?.currency_id ?? info?.currencyId ?? "",
-          location: locationValue,
-        };
-
-        setBookingInfo(formatted);
-        setEditPopupOpen(true);
-        setShowModal(false);
+        setBookingInfo((prev) => {
+          if (editingReservationIdRef.current !== lookupId) {
+            return prev;
+          }
+          const base = prev ?? fallbackBookingRef.current ?? fallbackForm;
+          const next = mergeBookingResourceIntoForm(info, base);
+          fallbackBookingRef.current = next;
+          return next;
+        });
       } catch (error) {
         console.error("Error fetching booking info", error);
       }
     },
-    [],
+    [reservations],
   );
 
   const clearAllFilters = useCallback(() => {
@@ -975,6 +1237,8 @@ const ReservationsPage = () => {
               </Button>
               <Button
                 onClick={() => {
+                  editingReservationIdRef.current = "new";
+                  fallbackBookingRef.current = { ...EMPTY_BOOKING };
                   setBookingInfo({ ...EMPTY_BOOKING });
                   setEditPopupOpen(true);
                 }}
@@ -1527,6 +1791,8 @@ const ReservationsPage = () => {
             onClose={() => {
               setEditPopupOpen(false);
               setBookingInfo(null);
+              editingReservationIdRef.current = null;
+              fallbackBookingRef.current = null;
             }}
             bookingInfo={bookingInfo}
             setBookingInfo={setBookingInfo}

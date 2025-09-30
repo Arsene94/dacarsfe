@@ -148,7 +148,28 @@ Full update endpoint that validates the payload with `UpdateBookingRequest`, rec
   "coupon_code": "SPRING15",
   "coupon_amount": 15,
   "with_deposit": false,
-  "wheel_prize_discount": 0,
+  "wheel_prize_discount": 20,
+  "wheel_of_fortune_prize_id": 4,
+  "total_before_wheel_prize": 231,
+  "wheel_prize": {
+    "wheel_of_fortune_prize_id": 4,
+    "wheel_of_fortune_id": 2,
+    "prize_id": 4,
+    "title": "Reducere 20 €",
+    "type": "fixed_discount",
+    "discount_value": 20,
+    "eligible": true
+  },
+  "offers_discount": 30,
+  "applied_offers": [
+    {
+      "id": 12,
+      "title": "Weekend fără garanție",
+      "offer_type": "percentage_discount",
+      "offer_value": "20",
+      "discount_label": "-20% reducere"
+    }
+  ],
   "status": "reserved"
 }
 ```
@@ -169,13 +190,34 @@ Full update endpoint that validates the payload with `UpdateBookingRequest`, rec
     "coupon_amount": 15.0,
     "with_deposit": false,
     "status": "reserved",
-    "wheel_prize_discount": 0.0
+    "wheel_prize_discount": 20.0,
+    "total_before_wheel_prize": 231.0,
+    "offers_discount": 30.0,
+    "wheel_prize": {
+      "wheel_of_fortune_prize_id": 4,
+      "wheel_of_fortune_id": 2,
+      "title": "Reducere 20 €",
+      "type": "fixed_discount",
+      "discount_value": 20,
+      "eligible": true
+    },
+    "applied_offers": [
+      {
+        "id": 12,
+        "title": "Weekend fără garanție",
+        "offer_type": "percentage_discount",
+        "offer_value": "20",
+        "discount_label": "-20% reducere"
+      }
+    ]
   },
   "message": "Booking updated"
 }
 ```
 
 Availability conflicts or invalid ranges result in HTTP 422 with details such as `"car_id": "Car not available in the selected interval."`.
+
+`wheel_prize`, `wheel_of_fortune_prize_id` și `wheel_prize_discount` trebuie trimise împreună atunci când operatorul selectează un premiu din roata norocului pentru perioada aleasă. Pentru oferte, payload-ul acceptă `applied_offers` (lista ofertelor aplicate în admin) și suma totală `offers_discount`; backend-ul sincronizează aceste valori cu promoțiile active și setează `deposit_waived` dacă oferta elimină garanția.
 
 ---
 

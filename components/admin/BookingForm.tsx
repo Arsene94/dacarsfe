@@ -10,15 +10,12 @@ import { Popup } from "@/components/ui/popup";
 import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
+import { mapPeriod } from "@/lib/wheelNormalization";
 import {
     extractFirstCar,
     mapCustomerSearchResults,
     normalizeAdminCarOption,
 } from "@/lib/adminBookingHelpers";
-import {
-    describeWheelPrizeSummaryAmount,
-    formatWheelPrizeExpiry,
-} from "@/lib/wheelFormatting";
 import type {
     AdminBookingCarOption,
     AdminBookingCustomerSummary,
@@ -26,10 +23,39 @@ import type {
     AdminBookingLinkedService,
 } from "@/types/admin";
 import type { ApiCar } from "@/types/car";
-import type { QuotePriceResponse, Service } from "@/types/reservation";
+import type {
+    QuotePricePayload,
+    QuotePriceResponse,
+    ReservationAppliedOffer,
+    ReservationWheelPrizePayload,
+    ReservationWheelPrizeSummary,
+    Service,
+} from "@/types/reservation";
+import type { Offer, OfferStatus } from "@/types/offer";
+import type { WheelOfFortunePeriod } from "@/types/wheel";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
+
+const EURO_TO_RON = 5;
+
+const leiFormatter = new Intl.NumberFormat("ro-RO", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+});
+
+const convertEuroToLei = (value: number | null | undefined): number | null => {
+    if (typeof value !== "number" || Number.isNaN(value)) {
+        return null;
+    }
+    return Math.round(value * EURO_TO_RON * 100) / 100;
+};
+
+const formatLeiAmount = (value: number | null | undefined): string | null => {
+    const converted = convertEuroToLei(value);
+    if (converted == null) return null;
+    return `${leiFormatter.format(converted)} lei`;
+};
 
 const parsePrice = (raw: unknown): number => {
     if (raw == null) return 0;
@@ -79,6 +105,24 @@ const resolveRelationLabel = (relation: CarRelation, fallback = ""): string => {
 
     return fallback;
 };
+
+type AdminOfferOption = Pick<
+    Offer,
+    "id" | "title" | "status" | "starts_at" | "ends_at" | "discount_label" | "badge" | "offer_type" | "offer_value"
+>;
+
+interface WheelPrizeSelectOption {
+    id: number;
+    value: string;
+    label: string;
+    summary: ReservationWheelPrizeSummary;
+    inactive?: boolean;
+}
+
+interface OfferSelectOption extends AdminOfferOption {
+    label: string;
+    inactive?: boolean;
+}
 
 const toOptionalNumber = (value: unknown): number | null => {
     if (value == null || value === "") return null;
@@ -160,6 +204,663 @@ const resolveServiceSelection = (
     return merged.sort((a, b) => a - b);
 };
 
+const normalizeCouponTypeValue = (raw: unknown): string => {
+    if (typeof raw !== "string") {
+        return "";
+    }
+    const trimmed = raw.trim();
+    if (trimmed === "from_total") {
+        return "per_total";
+    }
+    return trimmed;
+};
+
+const toApiDateTime = (value: string | null | undefined): string | undefined => {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+        return undefined;
+    }
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) {
+        return `${trimmed}:00`;
+    }
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(trimmed)) {
+        return `${trimmed.replace(" ", "T")}:00`;
+    }
+    return trimmed;
+};
+
+const trimmedOrNull = (value: unknown): string | null => {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null;
+
+const normalizeDateTimeString = (value: string): string => {
+    const trimmed = value.trim().replace(" ", "T");
+    if (/T\d{2}:\d{2}$/.test(trimmed)) {
+        return `${trimmed}:00`;
+    }
+    return trimmed;
+};
+
+const parseDateTimeValue = (value: string | null | undefined): Date | null => {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+        return null;
+    }
+    const normalized = normalizeDateTimeString(trimmed);
+    const parsed = new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+    return parsed;
+};
+
+const parsePeriodDate = (value: string | null | undefined): Date | null => {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+        return null;
+    }
+    const normalized = trimmed.includes("T") ? trimmed : `${trimmed}T00:00:00`;
+    const parsed = new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+    return parsed;
+};
+
+const collectMonthsInRange = (start: Date, end: Date): number[] => {
+    const months: number[] = [];
+    const cursor = new Date(start.getTime());
+    cursor.setHours(12, 0, 0, 0);
+    const boundary = new Date(end.getTime());
+    boundary.setHours(12, 0, 0, 0);
+    while (cursor <= boundary) {
+        const monthIndex = cursor.getMonth() + 1;
+        if (!months.includes(monthIndex)) {
+            months.push(monthIndex);
+        }
+        cursor.setMonth(cursor.getMonth() + 1, 1);
+    }
+    return months;
+};
+
+const isPeriodActiveForRange = (
+    period: WheelOfFortunePeriod,
+    startDate: Date | null,
+    endDate: Date | null,
+): boolean => {
+    const hasPrizeList = Array.isArray(period.wheel_of_fortunes) && period.wheel_of_fortunes.length > 0;
+    if (!hasPrizeList) {
+        return false;
+    }
+    if (period.active === false || period.is_active === false) {
+        return false;
+    }
+    const rangeStart = startDate ?? endDate;
+    const rangeEnd = endDate ?? startDate;
+    if (!rangeStart) {
+        return false;
+    }
+    const periodStart = parsePeriodDate(period.start_at ?? period.starts_at);
+    const periodEnd = parsePeriodDate(period.end_at ?? period.ends_at);
+    if (periodStart && rangeEnd && rangeEnd < periodStart) {
+        return false;
+    }
+    if (periodEnd && rangeStart && rangeStart > periodEnd) {
+        return false;
+    }
+    const activeMonths = Array.isArray(period.active_months) ? period.active_months : null;
+    if (activeMonths && activeMonths.length > 0 && rangeStart) {
+        const monthsInRange = collectMonthsInRange(rangeStart, rangeEnd ?? rangeStart);
+        const hasOverlap = monthsInRange.some((month) => activeMonths.includes(month));
+        if (!hasOverlap) {
+            return false;
+        }
+    }
+    return true;
+};
+
+const normalizeWheelPrizeSummary = (
+    raw: unknown,
+): ReservationWheelPrizeSummary | null => {
+    if (!isRecord(raw)) {
+        return null;
+    }
+    const prizeId = toOptionalNumber(
+        raw.wheel_of_fortune_prize_id ?? raw.prize_id ?? raw.id ?? (raw as { prizeId?: unknown }).prizeId,
+    );
+    const wheelId = toOptionalNumber(
+        raw.wheel_of_fortune_id ?? raw.period_id ?? (raw as { wheelId?: unknown }).wheelId,
+    );
+    const titleSource =
+        typeof raw.title === "string" && raw.title.trim().length > 0
+            ? raw.title.trim()
+            : typeof raw.name === "string" && raw.name.trim().length > 0
+                ? raw.name.trim()
+                : null;
+    const amount = toOptionalNumber(
+        raw.amount ?? raw.discount_value ?? (raw as { value?: unknown }).value,
+    );
+    const discountValue = toOptionalNumber(
+        raw.discount_value ?? raw.discount ?? (raw as { value?: unknown }).value,
+    );
+    const description =
+        typeof raw.description === "string" && raw.description.trim().length > 0
+            ? raw.description
+            : null;
+    const typeSource =
+        typeof raw.type === "string" && raw.type.trim().length > 0
+            ? raw.type.trim()
+            : typeof (raw as { prize_type?: unknown }).prize_type === "string"
+                ? String((raw as { prize_type: unknown }).prize_type)
+                : undefined;
+    const amountLabel =
+        typeof (raw as { amount_label?: unknown }).amount_label === "string"
+            ? ((raw as { amount_label: string }).amount_label.trim() || null)
+            : typeof (raw as { amountLabel?: unknown }).amountLabel === "string"
+                ? ((raw as { amountLabel: string }).amountLabel.trim() || null)
+                : null;
+    const eligible =
+        typeof (raw as { eligible?: unknown }).eligible === "boolean"
+            ? Boolean((raw as { eligible: boolean }).eligible)
+            : typeof (raw as { is_eligible?: unknown }).is_eligible === "boolean"
+                ? Boolean((raw as { is_eligible: boolean }).is_eligible)
+                : undefined;
+
+    return {
+        wheel_of_fortune_id: wheelId ?? null,
+        prize_id: toOptionalNumber(raw.prize_id ?? raw.id) ?? null,
+        wheel_of_fortune_prize_id: prizeId ?? null,
+        title: titleSource ?? "Premiu DaCars",
+        type: typeof typeSource === "string" ? typeSource : undefined,
+        type_label:
+            typeof (raw as { type_label?: unknown }).type_label === "string"
+                ? ((raw as { type_label: string }).type_label.trim() || undefined)
+                : undefined,
+        amount: typeof amount === "number" ? amount : null,
+        description,
+        amount_label: amountLabel,
+        discount_value: typeof discountValue === "number" ? discountValue : 0,
+        eligible,
+    };
+};
+
+const sanitizeWheelPrizePayload = (
+    prize: ReservationWheelPrizeSummary | null | undefined,
+): ReservationWheelPrizePayload | null => {
+    if (!prize) {
+        return null;
+    }
+    const pivotId = toOptionalNumber(prize.wheel_of_fortune_prize_id);
+    const rawPrizeId = toOptionalNumber(prize.prize_id) ?? pivotId;
+    if (rawPrizeId == null) {
+        return null;
+    }
+    const wheelId = toOptionalNumber(prize.wheel_of_fortune_id);
+    const discountValue = toOptionalNumber(prize.discount_value) ?? 0;
+    const payload: ReservationWheelPrizePayload = {
+        prize_id: rawPrizeId,
+        wheel_of_fortune_id: wheelId ?? null,
+        wheel_of_fortune_prize_id: pivotId ?? null,
+        discount_value: discountValue,
+    };
+    if (typeof prize.eligible === "boolean") {
+        payload.eligible = prize.eligible;
+    }
+    if (typeof prize.title === "string" && prize.title.trim().length > 0) {
+        payload.title = prize.title.trim();
+    }
+    if (typeof prize.type === "string" && prize.type.trim().length > 0) {
+        payload.type = prize.type.trim();
+    }
+    if (typeof prize.type_label === "string") {
+        payload.type_label = prize.type_label;
+    }
+    const amount = toOptionalNumber(prize.amount);
+    if (amount != null) {
+        payload.amount = amount;
+    }
+    if (typeof prize.description === "string") {
+        payload.description = prize.description;
+    }
+    if (typeof prize.amount_label === "string") {
+        payload.amount_label = prize.amount_label;
+    }
+    return payload;
+};
+
+const normalizeAppliedOfferEntry = (raw: unknown): ReservationAppliedOffer | null => {
+    if (!isRecord(raw)) {
+        return null;
+    }
+    const id = toOptionalNumber(raw.id ?? (raw as { offer_id?: unknown }).offer_id);
+    if (typeof id !== "number" || Number.isNaN(id)) {
+        return null;
+    }
+    const titleSource =
+        typeof raw.title === "string" && raw.title.trim().length > 0
+            ? raw.title.trim()
+            : typeof raw.name === "string" && raw.name.trim().length > 0
+                ? raw.name.trim()
+                : null;
+    if (!titleSource) {
+        return null;
+    }
+    const offerType =
+        typeof (raw as { offer_type?: unknown }).offer_type === "string"
+            ? String((raw as { offer_type: unknown }).offer_type)
+            : null;
+    const offerValue =
+        typeof (raw as { offer_value?: unknown }).offer_value === "string"
+            ? String((raw as { offer_value: unknown }).offer_value)
+            : null;
+    const discountLabel =
+        typeof (raw as { discount_label?: unknown }).discount_label === "string"
+            ? String((raw as { discount_label: unknown }).discount_label)
+            : typeof (raw as { badge?: unknown }).badge === "string"
+                ? String((raw as { badge: unknown }).badge)
+                : null;
+
+    return {
+        id,
+        title: titleSource,
+        offer_type: offerType,
+        offer_value: offerValue,
+        discount_label: discountLabel,
+    };
+};
+
+const normalizeAppliedOffers = (raw: unknown): ReservationAppliedOffer[] => {
+    if (!Array.isArray(raw)) {
+        return [];
+    }
+    const mapped = raw
+        .map((entry) => normalizeAppliedOfferEntry(entry))
+        .filter((entry): entry is ReservationAppliedOffer => entry != null);
+    if (mapped.length === 0) {
+        return [];
+    }
+    const unique = new Map<number, ReservationAppliedOffer>();
+    mapped.forEach((entry) => {
+        if (!unique.has(entry.id)) {
+            unique.set(entry.id, entry);
+        }
+    });
+    return Array.from(unique.values());
+};
+
+const sanitizeAppliedOffersPayload = (
+    offers: ReservationAppliedOffer[] | null | undefined,
+): ReservationAppliedOffer[] | null => {
+    if (!Array.isArray(offers) || offers.length === 0) {
+        return null;
+    }
+    const sanitized = offers
+        .map((offer) => {
+            if (!offer || typeof offer.id !== "number" || Number.isNaN(offer.id)) {
+                return null;
+            }
+            const title = typeof offer.title === "string" ? offer.title.trim() : "";
+            if (!title) {
+                return null;
+            }
+            const normalized: ReservationAppliedOffer = {
+                id: offer.id,
+                title,
+                offer_type: offer.offer_type ?? null,
+                offer_value: offer.offer_value ?? null,
+                discount_label: offer.discount_label ?? null,
+            };
+            return normalized;
+        })
+        .filter((entry): entry is ReservationAppliedOffer => entry != null);
+    return sanitized.length > 0 ? sanitized : null;
+};
+
+const isOfferActiveForRange = (
+    offer: AdminOfferOption,
+    startDate: Date | null,
+    endDate: Date | null,
+): boolean => {
+    const rangeStart = startDate ?? endDate;
+    const rangeEnd = endDate ?? startDate;
+    if (!rangeStart) {
+        return true;
+    }
+    const offerStart = parsePeriodDate(offer.starts_at);
+    const offerEnd = parsePeriodDate(offer.ends_at);
+    if (offerStart && rangeEnd && rangeEnd < offerStart) {
+        return false;
+    }
+    if (offerEnd && rangeStart && rangeStart > offerEnd) {
+        return false;
+    }
+    if (typeof offer.status === "string") {
+        const normalized = offer.status.trim().toLowerCase();
+        if (["archived", "draft"].includes(normalized)) {
+            return false;
+        }
+    }
+    return true;
+};
+
+const buildOfferLabel = (offer: AdminOfferOption): string => {
+    const title = offer.title.trim();
+    const badge =
+        typeof offer.discount_label === "string" && offer.discount_label.trim().length > 0
+            ? offer.discount_label.trim()
+            : typeof offer.badge === "string" && offer.badge.trim().length > 0
+                ? offer.badge.trim()
+                : null;
+    return badge ? `${title} • ${badge}` : title;
+};
+
+const buildQuotePayload = (
+    values: AdminBookingFormValues,
+    serviceIds: number[],
+): QuotePricePayload => {
+    const carId = typeof values.car_id === "number" ? values.car_id : Number(values.car_id ?? 0);
+    const payload: QuotePricePayload = {
+        car_id: carId,
+        rental_start_date: toApiDateTime(values.rental_start_date) ?? values.rental_start_date,
+        rental_end_date: toApiDateTime(values.rental_end_date) ?? values.rental_end_date,
+        with_deposit: values.with_deposit,
+        service_ids: serviceIds,
+    };
+
+    const totalServices = toOptionalNumber(values.total_services);
+    if (totalServices != null) {
+        payload.total_services = totalServices;
+    }
+
+    const couponType = normalizeCouponTypeValue(values.coupon_type);
+    if (couponType) {
+        payload.coupon_type = couponType;
+        if (couponType === "code") {
+            const couponCode = trimmedOrNull(values.coupon_code);
+            if (couponCode) {
+                payload.coupon_code = couponCode;
+            }
+        } else {
+            const couponAmount = toOptionalNumber(values.coupon_amount);
+            if (couponAmount != null) {
+                payload.coupon_amount = couponAmount;
+            }
+            const couponCode = trimmedOrNull(values.coupon_code);
+            if (couponCode) {
+                payload.coupon_code = couponCode;
+            }
+        }
+    } else {
+        const couponCode = trimmedOrNull(values.coupon_code);
+        if (couponCode) {
+            payload.coupon_code = couponCode;
+        }
+    }
+
+    const basePrice =
+        toOptionalNumber(values.base_price) ??
+        toOptionalNumber(values.price_per_day) ??
+        toOptionalNumber(values.original_price_per_day);
+    if (basePrice != null) {
+        payload.base_price = basePrice;
+    }
+
+    const basePriceCasco = toOptionalNumber(values.base_price_casco);
+    if (basePriceCasco != null) {
+        payload.base_price_casco = basePriceCasco;
+    }
+
+    const originalPrice = toOptionalNumber(values.original_price_per_day);
+    if (originalPrice != null) {
+        payload.original_price_per_day = originalPrice;
+    }
+
+    const wheelPrizeSummary = values.wheel_prize ?? null;
+    const explicitWheelPrizeId = toOptionalNumber(
+        (values as { wheel_of_fortune_prize_id?: unknown }).wheel_of_fortune_prize_id,
+    );
+    const wheelPrizeId =
+        explicitWheelPrizeId ??
+        toOptionalNumber(wheelPrizeSummary?.wheel_of_fortune_prize_id) ??
+        toOptionalNumber(wheelPrizeSummary?.prize_id);
+    if (wheelPrizeId != null) {
+        payload.wheel_of_fortune_prize_id = wheelPrizeId;
+    }
+
+    const wheelPrizeDiscount =
+        toOptionalNumber(values.wheel_prize_discount) ??
+        toOptionalNumber(wheelPrizeSummary?.discount_value);
+    if (wheelPrizeDiscount != null) {
+        payload.wheel_prize_discount = wheelPrizeDiscount;
+    }
+
+    const wheelPrizePayload = sanitizeWheelPrizePayload(wheelPrizeSummary);
+    if (wheelPrizePayload) {
+        payload.wheel_prize = wheelPrizePayload;
+    }
+
+    const totalBeforeWheelPrize = toOptionalNumber(values.total_before_wheel_prize);
+    if (totalBeforeWheelPrize != null) {
+        payload.total_before_wheel_prize = totalBeforeWheelPrize;
+    }
+
+    const offersDiscount = toOptionalNumber(values.offers_discount);
+    if (offersDiscount != null) {
+        payload.offers_discount = offersDiscount;
+    }
+
+    if (values.deposit_waived === true) {
+        payload.deposit_waived = true;
+    }
+
+    const appliedOffersPayload = sanitizeAppliedOffersPayload(values.applied_offers);
+    if (appliedOffersPayload) {
+        payload.applied_offers = appliedOffersPayload;
+    }
+
+    return payload;
+};
+
+const buildBookingUpdatePayload = (
+    values: AdminBookingFormValues,
+    serviceIds: number[],
+): Record<string, unknown> => {
+    const payload: Record<string, unknown> = {
+        service_ids: serviceIds,
+        with_deposit: values.with_deposit !== false,
+        keep_old_price: values.keep_old_price !== false,
+        send_email: values.send_email !== false,
+        deposit_waived: values.deposit_waived === true,
+    };
+
+    const rentalStart = toApiDateTime(values.rental_start_date);
+    if (rentalStart) {
+        payload.rental_start_date = rentalStart;
+    }
+    const rentalEnd = toApiDateTime(values.rental_end_date);
+    if (rentalEnd) {
+        payload.rental_end_date = rentalEnd;
+    }
+
+    const rawCarId = values.car_id as unknown;
+    if (typeof rawCarId === "number") {
+        payload.car_id = rawCarId;
+    } else if (typeof rawCarId === "string" && rawCarId.trim().length > 0) {
+        payload.car_id = rawCarId.trim();
+    }
+
+    const couponType = normalizeCouponTypeValue(values.coupon_type);
+    if (couponType) {
+        payload.coupon_type = couponType;
+    }
+
+    if (couponType === "code") {
+        const couponCode = trimmedOrNull(values.coupon_code);
+        if (couponCode) {
+            payload.coupon_code = couponCode;
+        }
+    } else {
+        const couponAmount = toOptionalNumber(values.coupon_amount);
+        if (couponAmount != null) {
+            payload.coupon_amount = couponAmount;
+        }
+        const couponCode = trimmedOrNull(values.coupon_code);
+        if (couponCode) {
+            payload.coupon_code = couponCode;
+        }
+    }
+
+    const customerName = trimmedOrNull(values.customer_name);
+    if (customerName) {
+        payload.customer_name = customerName;
+    }
+    const customerEmail = trimmedOrNull(values.customer_email);
+    if (customerEmail) {
+        payload.customer_email = customerEmail;
+    }
+    const customerPhone = trimmedOrNull(values.customer_phone);
+    if (customerPhone) {
+        payload.customer_phone = customerPhone;
+    }
+
+    const customerAge = toOptionalNumber(values.customer_age);
+    if (customerAge != null) {
+        payload.customer_age = customerAge;
+    }
+
+    if (
+        typeof values.customer_id === "number" ||
+        (typeof values.customer_id === "string" && values.customer_id.trim().length > 0)
+    ) {
+        payload.customer_id = values.customer_id;
+    }
+
+    const basePrice = toOptionalNumber(values.base_price);
+    if (basePrice != null) {
+        payload.base_price = basePrice;
+    }
+    const basePriceCasco = toOptionalNumber(values.base_price_casco);
+    if (basePriceCasco != null) {
+        payload.base_price_casco = basePriceCasco;
+    }
+    const carDeposit = toOptionalNumber(values.car_deposit);
+    if (carDeposit != null) {
+        payload.car_deposit = carDeposit;
+    }
+    const pricePerDay = toOptionalNumber(values.price_per_day);
+    if (pricePerDay != null) {
+        payload.price_per_day = pricePerDay;
+    }
+    const originalPrice = toOptionalNumber(values.original_price_per_day);
+    if (originalPrice != null) {
+        payload.original_price_per_day = originalPrice;
+    }
+
+    const totalServices = toOptionalNumber(values.total_services);
+    if (totalServices != null) {
+        payload.total_services = totalServices;
+    }
+
+    const subtotal = toOptionalNumber(values.sub_total);
+    if (subtotal != null) {
+        payload.sub_total = subtotal;
+    }
+
+    const total = toOptionalNumber(values.total);
+    if (total != null) {
+        payload.total = total;
+    }
+
+    const taxAmount = toOptionalNumber(values.tax_amount);
+    if (taxAmount != null) {
+        payload.tax_amount = taxAmount;
+    }
+
+    const days = toOptionalNumber(values.days);
+    if (days != null) {
+        payload.days = days;
+    }
+
+    const advancePayment = toOptionalNumber(values.advance_payment);
+    if (advancePayment != null) {
+        payload.advance_payment = advancePayment;
+    }
+
+    const status = trimmedOrNull(values.status);
+    if (status) {
+        payload.status = status;
+    }
+
+    const note = trimmedOrNull(values.note);
+    if (note) {
+        payload.note = note;
+    }
+
+    const location = trimmedOrNull(values.location);
+    if (location) {
+        payload.location = location;
+    }
+
+    const currencyId =
+        typeof values.currency_id === "number"
+            ? values.currency_id
+            : typeof values.currency_id === "string" && values.currency_id.trim().length > 0
+                ? values.currency_id
+                : null;
+    if (currencyId != null) {
+        payload.currency_id = currencyId;
+    }
+
+    const wheelPrizeSummary = values.wheel_prize ?? null;
+    const wheelPrizePayload = sanitizeWheelPrizePayload(wheelPrizeSummary);
+    if (wheelPrizePayload) {
+        payload.wheel_prize = wheelPrizePayload;
+        payload.wheel_of_fortune_prize_id =
+            wheelPrizePayload.wheel_of_fortune_prize_id ?? wheelPrizePayload.prize_id ?? null;
+    } else {
+        payload.wheel_prize = null;
+        payload.wheel_of_fortune_prize_id = null;
+    }
+
+    const wheelPrizeDiscount =
+        toOptionalNumber(values.wheel_prize_discount) ??
+        toOptionalNumber(wheelPrizeSummary?.discount_value);
+    if (wheelPrizeDiscount != null) {
+        payload.wheel_prize_discount = wheelPrizeDiscount;
+    }
+
+    const totalBeforeWheelPrize = toOptionalNumber(values.total_before_wheel_prize);
+    if (totalBeforeWheelPrize != null) {
+        payload.total_before_wheel_prize = totalBeforeWheelPrize;
+    }
+
+    const offersDiscount = toOptionalNumber(values.offers_discount);
+    if (offersDiscount != null) {
+        payload.offers_discount = offersDiscount;
+    }
+
+    const appliedOffersPayload = sanitizeAppliedOffersPayload(values.applied_offers);
+    payload.applied_offers = appliedOffersPayload ?? [];
+
+    return payload;
+};
+
 interface BookingFormProps {
     open: boolean;
     onClose: () => void;
@@ -179,6 +880,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [carResults, setCarResults] = useState<AdminBookingCarOption[]>([]);
     const [carSearchActive, setCarSearchActive] = useState(false);
     const [services, setServices] = useState<Service[]>([]);
+    const [wheelPeriods, setWheelPeriods] = useState<WheelOfFortunePeriod[]>([]);
+    const [offerOptions, setOfferOptions] = useState<AdminOfferOption[]>([]);
 
     const [customerSearch, setCustomerSearch] = useState("");
     const [customerResults, setCustomerResults] = useState<AdminBookingCustomerSummary[]>([]);
@@ -249,17 +952,164 @@ const BookingForm: React.FC<BookingFormProps> = ({
           } as ApiCar)
         : null;
 
+    const rentalStartDateValue = useMemo(() => parseDateTimeValue(rentalStart), [rentalStart]);
+    const rentalEndDateValue = useMemo(() => parseDateTimeValue(rentalEnd), [rentalEnd]);
+
+    const wheelPrizeOptions = useMemo<WheelPrizeSelectOption[]>(() => {
+        const relevantPeriods = wheelPeriods.filter((period) =>
+            isPeriodActiveForRange(period, rentalStartDateValue, rentalEndDateValue),
+        );
+        const mapped = relevantPeriods.flatMap((period) => {
+            const prizes = Array.isArray(period.wheel_of_fortunes) ? period.wheel_of_fortunes : [];
+            return prizes
+                .map((prize): WheelPrizeSelectOption | null => {
+                    const prizeId = toOptionalNumber((prize as { id?: unknown }).id);
+                    if (typeof prizeId !== "number" || Number.isNaN(prizeId)) {
+                        return null;
+                    }
+                    const title =
+                        typeof prize.title === "string" && prize.title.trim().length > 0
+                            ? prize.title.trim()
+                            : `Premiu #${prizeId}`;
+                    const summary: ReservationWheelPrizeSummary = {
+                        wheel_of_fortune_id: prize.period_id ?? period.id ?? null,
+                        prize_id: prizeId,
+                        wheel_of_fortune_prize_id: prizeId,
+                        title,
+                        type: prize.type ?? undefined,
+                        amount: typeof prize.amount === "number" ? prize.amount : null,
+                        description: prize.description ?? null,
+                        amount_label: null,
+                        discount_value: typeof prize.amount === "number" ? prize.amount : 0,
+                        eligible: true,
+                    };
+                    return {
+                        id: prizeId,
+                        value: String(prizeId),
+                        label: `${period.name} • ${title}`,
+                        summary,
+                    };
+                })
+                .filter((entry): entry is WheelPrizeSelectOption => entry != null);
+        });
+        const unique = new Map<number, WheelPrizeSelectOption>();
+        mapped.forEach((entry) => {
+            if (!unique.has(entry.id)) {
+                unique.set(entry.id, entry);
+            }
+        });
+        const options = Array.from(unique.values()).sort((a, b) =>
+            a.label.localeCompare(b.label, "ro", { sensitivity: "base" }),
+        );
+        const currentPrizeId = bookingInfo
+            ? toOptionalNumber(
+                  (bookingInfo as { wheel_of_fortune_prize_id?: unknown }).wheel_of_fortune_prize_id ??
+                      bookingInfo.wheel_prize?.wheel_of_fortune_prize_id ??
+                      bookingInfo.wheel_prize?.prize_id,
+              )
+            : null;
+        if (
+            typeof currentPrizeId === "number" &&
+            Number.isFinite(currentPrizeId) &&
+            bookingInfo?.wheel_prize &&
+            !options.some((option) => option.id === currentPrizeId)
+        ) {
+            options.unshift({
+                id: currentPrizeId,
+                value: String(currentPrizeId),
+                label: `${bookingInfo.wheel_prize.title ?? `Premiu #${currentPrizeId}`} (în afara perioadei)`,
+                summary: bookingInfo.wheel_prize,
+                inactive: true,
+            });
+        }
+        return options;
+    }, [
+        bookingInfo,
+        rentalEndDateValue,
+        rentalStartDateValue,
+        wheelPeriods,
+    ]);
+
+    const offerSelectOptions = useMemo<OfferSelectOption[]>(() => {
+        const activeOffers = offerOptions.filter((offer) =>
+            isOfferActiveForRange(offer, rentalStartDateValue, rentalEndDateValue),
+        );
+        const sortedActive = [...activeOffers].sort((a, b) =>
+            a.title.localeCompare(b.title, "ro", { sensitivity: "base" }),
+        );
+        const options: OfferSelectOption[] = sortedActive.map((offer) => ({
+            ...offer,
+            label: buildOfferLabel(offer),
+            inactive: false,
+        }));
+        const currentOffer = Array.isArray(bookingInfo?.applied_offers)
+            ? bookingInfo?.applied_offers.find(
+                  (entry) => typeof entry?.id === "number" && Number.isFinite(entry.id),
+              ) ?? null
+            : null;
+        const currentOfferId = currentOffer?.id ?? null;
+        if (
+            currentOffer &&
+            typeof currentOfferId === "number" &&
+            Number.isFinite(currentOfferId) &&
+            !options.some((entry) => entry.id === currentOfferId)
+        ) {
+            const fallbackTitle = currentOffer.title.trim();
+            const fallback: OfferSelectOption = {
+                id: currentOfferId,
+                title: fallbackTitle,
+                status: null,
+                starts_at: null,
+                ends_at: null,
+                discount_label: currentOffer.discount_label ?? null,
+                badge: currentOffer.discount_label ?? null,
+                offer_type: currentOffer.offer_type ?? null,
+                offer_value: currentOffer.offer_value ?? null,
+                label: `${currentOffer.title} (în afara perioadei)`,
+                inactive: true,
+            };
+            options.unshift(fallback);
+        }
+        return options;
+    }, [
+        bookingInfo,
+        offerOptions,
+        rentalEndDateValue,
+        rentalStartDateValue,
+    ]);
+
+    const selectedWheelPrizeValue = useMemo(() => {
+        const prizeId = bookingInfo
+            ? toOptionalNumber(
+                  (bookingInfo as { wheel_of_fortune_prize_id?: unknown }).wheel_of_fortune_prize_id ??
+                      bookingInfo.wheel_prize?.wheel_of_fortune_prize_id ??
+                      bookingInfo.wheel_prize?.prize_id,
+              )
+            : null;
+        return typeof prizeId === "number" && Number.isFinite(prizeId) ? String(prizeId) : "";
+    }, [bookingInfo]);
+
+    const selectedOfferId = useMemo(() => {
+        if (!bookingInfo || !Array.isArray(bookingInfo.applied_offers)) {
+            return "";
+        }
+        const primaryOffer = bookingInfo.applied_offers.find(
+            (offer) => typeof offer?.id === "number" && Number.isFinite(offer.id),
+        );
+        return primaryOffer ? String(primaryOffer.id) : "";
+    }, [bookingInfo]);
+
+    useEffect(() => {
+        setQuote(null);
+        lastQuoteKeyRef.current = null;
+    }, [bookingInfo?.id]);
+
     useEffect(() => {
         if (!bookingInfo) {
             return;
         }
 
-        const normalizedServiceIds = Array.isArray(bookingInfo.service_ids)
-            ? bookingInfo.service_ids
-                  .map((id) => (typeof id === "number" ? id : Number(id)))
-                  .filter((id) => Number.isFinite(id))
-                  .sort((a, b) => a - b)
-            : [];
+        const normalizedServiceIds = resolveServiceSelection(bookingInfo);
 
         if (
             !bookingInfo.car_id ||
@@ -269,19 +1119,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return;
         }
 
-        const quoteKey = JSON.stringify({
-            car: bookingInfo.car_id,
-            start: bookingInfo.rental_start_date,
-            end: bookingInfo.rental_end_date,
-            base: bookingInfo.base_price ?? null,
-            casco: bookingInfo.base_price_casco ?? null,
-            original: bookingInfo.original_price_per_day ?? null,
-            couponType: bookingInfo.coupon_type ?? null,
-            couponAmount: bookingInfo.coupon_amount ?? null,
-            couponCode: bookingInfo.coupon_code ?? null,
-            services: normalizedServiceIds,
-            deposit: bookingInfo.with_deposit ? 1 : 0,
-        });
+        const quotePayload = buildQuotePayload(bookingInfo, normalizedServiceIds);
+        const quoteKey = JSON.stringify(quotePayload);
 
         if (lastQuoteKeyRef.current === quoteKey) {
             return;
@@ -292,42 +1131,99 @@ const BookingForm: React.FC<BookingFormProps> = ({
         const quotePrice = async () => {
             try {
                 lastQuoteKeyRef.current = quoteKey;
-                const data = await apiClient.quotePrice({
-                    car_id: bookingInfo.car_id ?? 0,
-                    rental_start_date: bookingInfo.rental_start_date,
-                    rental_end_date: bookingInfo.rental_end_date,
-                    base_price: bookingInfo.base_price ?? undefined,
-                    base_price_casco: bookingInfo.base_price_casco ?? undefined,
-                    original_price_per_day: bookingInfo.original_price_per_day ?? undefined,
-                    coupon_type: bookingInfo.coupon_type,
-                    coupon_amount: bookingInfo.coupon_amount ?? undefined,
-                    coupon_code: bookingInfo.coupon_code ?? undefined,
-                    service_ids: normalizedServiceIds,
-                    with_deposit: bookingInfo.with_deposit,
-                });
+                const data = await apiClient.quotePrice(quotePayload);
                 if (cancelled) {
                     return;
                 }
                 setQuote(data);
-                updateBookingInfo((prev) => ({
-                    ...prev,
-                    days: typeof data.days === "number" ? data.days : prev.days ?? 0,
-                    price_per_day: data.price_per_day,
-                    base_price: typeof data.rental_rate === "number"
-                        ? data.rental_rate
-                        : prev.base_price ?? data.base_price ?? null,
-                    base_price_casco: typeof data.rental_rate_casco === "number"
-                        ? data.rental_rate_casco
-                        : prev.base_price_casco ?? data.base_price_casco ?? null,
-                    sub_total: prev.with_deposit
-                        ? data.sub_total
-                        : data.sub_total_casco ?? data.sub_total,
-                    total: prev.with_deposit
-                        ? data.total
-                        : data.total_casco ?? data.total,
-                    discount_applied: data.discount ?? null,
-                    total_services: data.total_services ?? prev.total_services,
-                }));
+                updateBookingInfo((prev) => {
+                    const preferCasco = prev.with_deposit === false;
+                    const prevPricePerDay = toOptionalNumber(prev.price_per_day);
+                    const prevOriginalPrice = toOptionalNumber(prev.original_price_per_day);
+                    const depositRateCandidate =
+                        typeof data.rental_rate === "number"
+                            ? data.rental_rate
+                            : typeof data.base_price === "number"
+                              ? data.base_price
+                              : typeof data.price_per_day === "number"
+                                ? data.price_per_day
+                                : toOptionalNumber(prev.base_price);
+                    const cascoRateCandidate =
+                        typeof data.rental_rate_casco === "number"
+                            ? data.rental_rate_casco
+                            : typeof data.base_price_casco === "number"
+                                ? data.base_price_casco
+                                : toOptionalNumber(prev.base_price_casco);
+                    const selectedRateCandidate = preferCasco
+                        ? cascoRateCandidate ?? prevPricePerDay ?? depositRateCandidate
+                        : depositRateCandidate ?? prevPricePerDay ?? cascoRateCandidate;
+                    const normalizedSelectedRate =
+                        typeof selectedRateCandidate === "number" && Number.isFinite(selectedRateCandidate)
+                            ? Math.round(selectedRateCandidate * 100) / 100
+                            : null;
+                    const normalizedDepositRate =
+                        typeof depositRateCandidate === "number" && Number.isFinite(depositRateCandidate)
+                            ? Math.round(depositRateCandidate * 100) / 100
+                            : null;
+                    const normalizedCascoRate =
+                        typeof cascoRateCandidate === "number" && Number.isFinite(cascoRateCandidate)
+                            ? Math.round(cascoRateCandidate * 100) / 100
+                            : null;
+
+                    const normalizedWheelPrize =
+                        normalizeWheelPrizeSummary(data.wheel_prize) ?? prev.wheel_prize ?? null;
+                    const normalizedWheelPrizeDiscount =
+                        typeof data.wheel_prize_discount === "number"
+                            ? data.wheel_prize_discount
+                            : prev.wheel_prize_discount ?? 0;
+                    const normalizedTotalBefore =
+                        typeof data.total_before_wheel_prize === "number"
+                            ? data.total_before_wheel_prize
+                            : prev.total_before_wheel_prize ?? null;
+                    const normalizedAppliedOffers = normalizeAppliedOffers(data.applied_offers);
+                    const nextAppliedOffers =
+                        normalizedAppliedOffers.length > 0
+                            ? normalizedAppliedOffers
+                            : prev.applied_offers ?? [];
+                    const normalizedOffersDiscount =
+                        typeof data.offers_discount === "number"
+                            ? data.offers_discount
+                            : prev.offers_discount ?? 0;
+                    const normalizedDepositWaived =
+                        typeof data.deposit_waived === "boolean"
+                            ? data.deposit_waived
+                            : prev.deposit_waived ?? false;
+
+                    const nextSubtotal = preferCasco
+                        ? data.sub_total_casco ?? data.sub_total ?? prev.sub_total
+                        : data.sub_total ?? data.sub_total_casco ?? prev.sub_total;
+                    const nextTotal = preferCasco
+                        ? data.total_casco ?? data.total ?? prev.total
+                        : data.total ?? data.total_casco ?? prev.total;
+
+                    return {
+                        ...prev,
+                        days: typeof data.days === "number" ? data.days : prev.days ?? 0,
+                        price_per_day: normalizedSelectedRate ?? prev.price_per_day,
+                        original_price_per_day:
+                            normalizedSelectedRate ?? prevOriginalPrice ?? prev.original_price_per_day ?? prev.price_per_day ?? null,
+                        base_price: normalizedDepositRate ?? prev.base_price ?? data.base_price ?? null,
+                        base_price_casco: normalizedCascoRate ?? prev.base_price_casco ?? data.base_price_casco ?? null,
+                        sub_total: typeof nextSubtotal === "number" ? nextSubtotal : prev.sub_total,
+                        total: typeof nextTotal === "number" ? nextTotal : prev.total,
+                        discount_applied: data.discount ?? null,
+                        total_services: data.total_services ?? prev.total_services,
+                        wheel_prize: normalizedWheelPrize,
+                        wheel_prize_discount: normalizedWheelPrizeDiscount,
+                        total_before_wheel_prize:
+                            typeof normalizedTotalBefore === "number"
+                                ? normalizedTotalBefore
+                                : prev.total_before_wheel_prize,
+                        applied_offers: nextAppliedOffers,
+                        offers_discount: normalizedOffersDiscount,
+                        deposit_waived: normalizedDepositWaived,
+                    };
+                });
             } catch (error) {
                 if (lastQuoteKeyRef.current === quoteKey) {
                     lastQuoteKeyRef.current = null;
@@ -354,6 +1250,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo?.coupon_code,
         bookingInfo?.service_ids,
         bookingInfo?.with_deposit,
+        bookingInfo?.wheel_prize,
+        bookingInfo?.wheel_prize_discount,
+        bookingInfo?.applied_offers,
+        bookingInfo?.offers_discount,
+        bookingInfo?.deposit_waived,
+        bookingInfo?.total_before_wheel_prize,
     ]);
 
 
@@ -386,6 +1288,79 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
         fetchServices();
     }, []);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+        let cancelled = false;
+
+        const loadSupportingData = async () => {
+            try {
+                const [periodResponse, offersResponse] = await Promise.all([
+                    apiClient.getWheelOfFortunePeriods({
+                        is_active: 1,
+                        with: "wheelOfFortunes",
+                        limit: 100,
+                    }),
+                    apiClient.getOffers({
+                        status: "published",
+                        audience: "admin",
+                        limit: 100,
+                    }),
+                ]);
+                if (cancelled) {
+                    return;
+                }
+                const periodsList = extractList(periodResponse)
+                    .map((entry) => mapPeriod(entry))
+                    .filter((entry): entry is WheelOfFortunePeriod => entry != null);
+                setWheelPeriods(periodsList);
+
+                const offersList = extractList(offersResponse)
+                    .map((entry) => {
+                        if (!isRecord(entry)) {
+                            return null;
+                        }
+                        const id = toOptionalNumber(entry.id);
+                        if (typeof id !== "number" || Number.isNaN(id)) {
+                            return null;
+                        }
+                        const title =
+                            typeof entry.title === "string" && entry.title.trim().length > 0
+                                ? entry.title.trim()
+                                : typeof entry.name === "string" && entry.name.trim().length > 0
+                                    ? entry.name.trim()
+                                    : null;
+                        if (!title) {
+                            return null;
+                        }
+                        const option: AdminOfferOption = {
+                            id,
+                            title,
+                            status: (entry as { status?: OfferStatus | null }).status ?? null,
+                            starts_at: (entry as { starts_at?: string | null }).starts_at ?? null,
+                            ends_at: (entry as { ends_at?: string | null }).ends_at ?? null,
+                            discount_label: (entry as { discount_label?: string | null }).discount_label ?? null,
+                            badge: (entry as { badge?: string | null }).badge ?? null,
+                            offer_type: (entry as { offer_type?: string | null }).offer_type ?? null,
+                            offer_value: (entry as { offer_value?: string | null }).offer_value ?? null,
+                        };
+                        return option;
+                    })
+                    .filter((entry): entry is AdminOfferOption => entry != null);
+                setOfferOptions(offersList);
+            } catch (error) {
+                console.error("Error loading wheel prizes or offers:", error);
+            }
+        };
+
+        loadSupportingData();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open]);
 
     useEffect(() => {
         if (!carSearchActive) return;
@@ -422,40 +1397,50 @@ const BookingForm: React.FC<BookingFormProps> = ({
     // Populate customer details only when a suggestion is selected
 
     const recalcTotals = useCallback((info: AdminBookingFormValues): AdminBookingFormValues => {
-        const type =
-            info.coupon_type === "per_total"
-                ? "from_total"
-                : info.coupon_type || "fixed_per_day";
+        const normalizedType = normalizeCouponTypeValue(info.coupon_type);
+        const parsedCouponAmount = toOptionalNumber(info.coupon_amount);
+        const resolvedCouponAmount =
+            normalizedType === "code"
+                ? 0
+                : parsedCouponAmount ?? (typeof info.coupon_amount === "number" ? info.coupon_amount : 0);
 
-        let basePrice: number | null = info.base_price ?? null;
-        let basePriceCasco: number | null = info.base_price_casco ?? null;
+        const fallbackBase =
+            toOptionalNumber(info.base_price) ??
+            toOptionalNumber(info.price_per_day) ??
+            toOptionalNumber(info.original_price_per_day);
+        const fallbackCasco =
+            toOptionalNumber(info.base_price_casco) ??
+            toOptionalNumber(info.base_price) ??
+            fallbackBase;
 
-        if (type === "fixed_per_day") {
-            const amount = parsePrice(info.coupon_amount);
-            basePrice = amount;
-            basePriceCasco = amount;
-        } else if (info.original_price_per_day != null) {
-            const original = parsePrice(info.original_price_per_day);
-            basePrice = original;
-            basePriceCasco = original;
-        }
+        const nextBase =
+            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
+                ? resolvedCouponAmount
+                : fallbackBase ?? null;
+        const nextBaseCasco =
+            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
+                ? resolvedCouponAmount
+                : fallbackCasco ?? null;
+        const nextOriginal = info.original_price_per_day ?? fallbackBase ?? null;
 
-        const nextBasePrice = basePrice ?? 0;
-        const nextBasePriceCasco = basePriceCasco ?? 0;
+        const hasChanges =
+            info.coupon_type !== normalizedType ||
+            info.coupon_amount !== (normalizedType === "code" ? 0 : resolvedCouponAmount) ||
+            info.base_price !== nextBase ||
+            info.base_price_casco !== (nextBaseCasco ?? nextBase) ||
+            info.original_price_per_day !== nextOriginal;
 
-        if (
-            info.coupon_type === type &&
-            info.base_price === nextBasePrice &&
-            info.base_price_casco === nextBasePriceCasco
-        ) {
+        if (!hasChanges) {
             return info;
         }
 
         return {
             ...info,
-            coupon_type: type,
-            base_price: nextBasePrice,
-            base_price_casco: nextBasePriceCasco,
+            coupon_type: normalizedType,
+            coupon_amount: normalizedType === "code" ? 0 : resolvedCouponAmount,
+            base_price: nextBase,
+            base_price_casco: nextBaseCasco ?? nextBase,
+            original_price_per_day: nextOriginal,
         };
     }, []);
 
@@ -614,6 +1599,80 @@ const BookingForm: React.FC<BookingFormProps> = ({
         [hasBookingInfo, services, updateBookingInfo, recalcTotals],
     );
 
+    const handleWheelPrizeChange = useCallback(
+        (value: string) => {
+            if (!hasBookingInfo) {
+                return;
+            }
+            if (!value) {
+                updateBookingInfo((prev) => ({
+                    ...prev,
+                    wheel_prize: null,
+                    wheel_prize_discount: 0,
+                }));
+                return;
+            }
+            const option = wheelPrizeOptions.find((entry) => entry.value === value);
+            if (!option) {
+                return;
+            }
+            const discountNumeric =
+                toOptionalNumber(option.summary.discount_value) ??
+                toOptionalNumber(option.summary.amount) ??
+                0;
+            const summary: ReservationWheelPrizeSummary = {
+                ...option.summary,
+                discount_value: discountNumeric,
+            };
+            updateBookingInfo((prev) => {
+                const previousTotalBefore = toOptionalNumber(prev.total_before_wheel_prize);
+                const nextTotalBefore =
+                    previousTotalBefore ??
+                    (typeof prev.total === "number"
+                        ? prev.total + discountNumeric
+                        : null);
+                return {
+                    ...prev,
+                    wheel_prize: summary,
+                    wheel_prize_discount: discountNumeric,
+                    total_before_wheel_prize: nextTotalBefore,
+                };
+            });
+        },
+        [hasBookingInfo, updateBookingInfo, wheelPrizeOptions],
+    );
+
+    const handleOfferChange = useCallback(
+        (value: string) => {
+            if (!hasBookingInfo) {
+                return;
+            }
+            if (!value) {
+                updateBookingInfo((prev) => ({
+                    ...prev,
+                    applied_offers: [],
+                }));
+                return;
+            }
+            const selected = offerSelectOptions.find((offer) => String(offer.id) === value);
+            if (!selected) {
+                return;
+            }
+            const sanitizedOffer: ReservationAppliedOffer = {
+                id: selected.id,
+                title: selected.title,
+                offer_type: selected.offer_type ?? null,
+                offer_value: selected.offer_value ?? null,
+                discount_label: selected.discount_label ?? selected.badge ?? null,
+            };
+            updateBookingInfo((prev) => ({
+                ...prev,
+                applied_offers: [sanitizedOffer],
+            }));
+        },
+        [hasBookingInfo, offerSelectOptions, updateBookingInfo],
+    );
+
     useEffect(() => {
         if (!hasBookingInfo) return;
 
@@ -652,11 +1711,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     useEffect(() => {
         if (!open || !bookingInfo) return;
+
+        const subTotalValue = toOptionalNumber(bookingInfo.sub_total) ?? 0;
+        const servicesValue = toOptionalNumber(bookingInfo.total_services) ?? 0;
+        const totalValue =
+            toOptionalNumber(bookingInfo.total) ?? subTotalValue + servicesValue;
+
         originalTotals.current = {
-            subtotal: (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0),
-            total:
-                bookingInfo.total ||
-                (bookingInfo.sub_total || 0) + (bookingInfo.total_services || 0),
+            subtotal: subTotalValue + servicesValue,
+            total: totalValue,
         };
         updateBookingInfo((prev) => recalcTotals(prev));
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -670,50 +1733,35 @@ const BookingForm: React.FC<BookingFormProps> = ({
         : quote?.rental_rate_casco ?? bookingInfo.price_per_day ?? 0;
     const discountedRate = quote?.price_per_day ?? baseRate;
     const discountedSubtotal = bookingInfo.with_deposit
-        ? quote?.sub_total ?? 0
-        : quote?.sub_total_casco ?? 0;
+        ? quote?.sub_total ?? quote?.sub_total_casco ?? null
+        : quote?.sub_total_casco ?? quote?.sub_total ?? null;
     const discount = quote?.discount ?? 0;
-    const discountedTotal = bookingInfo.with_deposit
-        ? quote?.total ?? 0
-        : quote?.total_casco ?? 0;
-    const subtotalDisplay = quote ? discountedSubtotal : originalTotals.current.subtotal;
-    const totalDisplay = quote ? discountedTotal : originalTotals.current.total;
-    const restToPay = discountedTotal - (bookingInfo.advance_payment || 0);
+    const discountedTotalQuote = bookingInfo.with_deposit
+        ? quote?.total ?? quote?.total_casco ?? null
+        : quote?.total_casco ?? quote?.total ?? null;
+    const subtotalDisplay = discountedSubtotal ?? originalTotals.current.subtotal;
+    const totalDisplay = discountedTotalQuote ?? originalTotals.current.total;
+    const advancePaymentValue = toOptionalNumber(bookingInfo.advance_payment) ?? 0;
+    const totalServicesValue =
+        typeof quote?.total_services === "number"
+            ? quote.total_services
+            : toOptionalNumber(bookingInfo.total_services) ?? 0;
+    const totalServicesDisplay = Math.round(totalServicesValue * 100) / 100;
+    const restToPay = totalDisplay - advancePaymentValue;
+    const restToPayEuroDisplay = Number.isFinite(restToPay)
+        ? Math.round(restToPay * 100) / 100
+        : null;
 
-    const wheelPrizeSummary = bookingInfo.wheel_prize ?? null;
-    const wheelPrizeDiscountRaw =
-        bookingInfo.wheel_prize_discount ?? wheelPrizeSummary?.discount_value ?? null;
-    const wheelPrizeDiscountValue =
-        typeof wheelPrizeDiscountRaw === "number"
-            ? wheelPrizeDiscountRaw
-            : toOptionalNumber(wheelPrizeDiscountRaw) ?? 0;
-    const wheelPrizeAmountLabel = describeWheelPrizeSummaryAmount(wheelPrizeSummary);
-    const wheelPrizeExpiryLabel = wheelPrizeSummary?.expires_at
-        ? formatWheelPrizeExpiry(wheelPrizeSummary.expires_at)
-        : null;
-    const totalBeforeWheelPrizeValue =
-        typeof bookingInfo.total_before_wheel_prize === "number"
-            ? bookingInfo.total_before_wheel_prize
-            : toOptionalNumber(bookingInfo.total_before_wheel_prize);
-    const wheelPrizeDiscountDisplay = Math.round(wheelPrizeDiscountValue * 100) / 100;
-    const totalBeforeWheelPrizeDisplay =
-        typeof totalBeforeWheelPrizeValue === "number"
-            ? Math.round(totalBeforeWheelPrizeValue * 100) / 100
-            : null;
-    const hasWheelPrize = Boolean(wheelPrizeSummary);
-    const wheelPrizeEligible = wheelPrizeSummary?.eligible !== false;
-    const hasWheelPrizeDiscount = wheelPrizeDiscountDisplay > 0 && wheelPrizeEligible;
-    const wheelPrizeEligibilityWarning = hasWheelPrize && !wheelPrizeEligible
-        ? "Premiul nu este eligibil pentru intervalul curent."
-        : null;
-    const wheelPrizeTitle = hasWheelPrize
-        ? wheelPrizeSummary?.title ?? "Premiu DaCars"
-        : "—";
-    const offersDiscountValue = toOptionalNumber(bookingInfo.offers_discount) ?? 0;
     const depositWaived = bookingInfo.deposit_waived === true;
-    const appliedOffersList = Array.isArray(bookingInfo.applied_offers)
-        ? bookingInfo.applied_offers
-        : [];
+    const subtotalLei = formatLeiAmount(subtotalDisplay);
+    const totalLei = formatLeiAmount(totalDisplay);
+    const restToPayLei = formatLeiAmount(restToPay);
+    const discountLei = formatLeiAmount(discount);
+    const baseRateLei = formatLeiAmount(baseRate);
+    const roundedDiscountedRate = Math.round(discountedRate);
+    const roundedDiscountedRateLei = formatLeiAmount(roundedDiscountedRate);
+    const advancePaymentLei = formatLeiAmount(advancePaymentValue);
+    const hasDiscountDetails = discount !== 0 && (discountedTotalQuote ?? 0) > 0;
 
     const handleUpdateBooking = async () => {
         if (!bookingInfo || bookingInfo.id == null) {
@@ -721,7 +1769,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return;
         }
         try {
-            const payload = { ...bookingInfo } as Record<string, unknown>;
+            const serviceIds = resolveServiceSelection(bookingInfo);
+            const payload = buildBookingUpdatePayload(bookingInfo, serviceIds);
             await apiClient.updateBooking(bookingInfo.id, payload);
             onClose();
             onUpdated?.();
@@ -951,21 +2000,22 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             id="coupon-type"
                             value={bookingInfo.coupon_type || ""}
                             onValueChange={(value) =>
-                                updateBookingInfo((prev) =>
-                                    recalcTotals({
+                                updateBookingInfo((prev) => {
+                                    const normalized = normalizeCouponTypeValue(value);
+                                    return recalcTotals({
                                         ...prev,
-                                        coupon_type: value,
+                                        coupon_type: normalized,
                                         coupon_amount: 0,
                                         coupon_code: "",
-                                    }),
-                                )
+                                    });
+                                })
                             }
                             placeholder="Selectează"
                         >
                             <option value="fixed_per_day">Pret fix pe zi</option>
                             <option value="per_day">Reducere pret pe zi</option>
                             <option value="days">Zile</option>
-                            <option value="from_total">Din total</option>
+                            <option value="per_total">Din total</option>
                             <option value="code">Cupon</option>
                         </Select>
                     </div>
@@ -984,7 +2034,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             onChange={(e) => {
                                 const rawValue = e.target.value;
                                 updateBookingInfo((prev) => {
-                                    const nextType = prev.coupon_type || "fixed_per_day";
+                                    const nextType = normalizeCouponTypeValue(
+                                        prev.coupon_type && prev.coupon_type.length > 0
+                                            ? prev.coupon_type
+                                            : "fixed_per_day",
+                                    );
                                     if (nextType === "code") {
                                         return recalcTotals({
                                             ...prev,
@@ -1001,6 +2055,46 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 });
                             }}
                         />
+                    </div>
+                    <div>
+                        <Label htmlFor="wheel-prize">Premiu roata norocului</Label>
+                        <Select
+                            id="wheel-prize"
+                            value={selectedWheelPrizeValue}
+                            onValueChange={handleWheelPrizeChange}
+                            placeholder={
+                                wheelPrizeOptions.length > 0
+                                    ? "Selectează premiul"
+                                    : "Nicio campanie activă"
+                            }
+                            disabled={wheelPrizeOptions.length === 0}
+                        >
+                            <option value="">Fără premiu</option>
+                            {wheelPrizeOptions.map((option) => (
+                                <option key={option.id} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </Select>
+                    </div>
+                    <div>
+                        <Label htmlFor="booking-offer">Ofertă aplicată</Label>
+                        <Select
+                            id="booking-offer"
+                            value={selectedOfferId}
+                            onValueChange={handleOfferChange}
+                            placeholder={
+                                offerSelectOptions.length > 0 ? "Selectează oferta" : "Nu există oferte"
+                            }
+                            disabled={offerSelectOptions.length === 0}
+                        >
+                            <option value="">Fără ofertă</option>
+                            {offerSelectOptions.map((offer) => (
+                                <option key={offer.id} value={String(offer.id)}>
+                                    {offer.label}
+                                </option>
+                            ))}
+                        </Select>
                     </div>
                     <div>
                         <Label htmlFor="advance-payment">Plată în avans</Label>
@@ -1223,94 +2317,126 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         <h4 className="font-dm-sans text-base font-semibold text-gray-700 border-b border-gray-300 pb-2">
                             Rezumat plată
                         </h4>
-                        {quote && (
-                            <>
+                        <div className="space-y-4">
+                            <div>
+                                <h5 className="font-dm-sans text-sm font-semibold text-gray-700 mb-2">
+                                    Rezumat în lei
+                                </h5>
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Preț per zi:</span>
+                                    <span>
+                                        {baseRateLei ? `${baseRateLei} x ${days} zile` : "—"}
+                                    </span>
+                                </div>
+                                {totalServicesDisplay > 0 && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Total Servicii:</span>
+                                        <span>{formatLeiAmount(totalServicesDisplay) ?? "—"}</span>
+                                    </div>
+                                )}
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Subtotal:</span>
+                                    <span>{subtotalLei ?? "—"}</span>
+                                </div>
+                                {discount !== 0 && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Discount:</span>
+                                        <span>{discountLei ?? "—"}</span>
+                                    </div>
+                                )}
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Total:</span>
+                                    <span>{totalLei ?? "—"}</span>
+                                </div>
+                                {depositWaived && (
+                                    <div className="font-dm-sans text-xs text-jade flex justify-between border-b border-b-1 mb-1">
+                                        <span>Garanție:</span>
+                                        <span>Eliminată prin promoție</span>
+                                    </div>
+                                )}
+                                {advancePaymentValue > 0 && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Avans:</span>
+                                        <span>{advancePaymentLei ?? "—"}</span>
+                                    </div>
+                                )}
+                                {advancePaymentValue !== 0 && (
+                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
+                                        <span>Rest de plată:</span>
+                                        <span>{restToPayLei ?? "—"}</span>
+                                    </div>
+                                )}
+                                {hasDiscountDetails && (
+                                    <div className="font-dm-sans text-sm">
+                                        Detalii discount:
+                                        <ul className="list-disc">
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Preț nou pe zi:</span>
+                                                <span>
+                                                    {roundedDiscountedRateLei
+                                                        ? `${roundedDiscountedRateLei} x ${days} zile`
+                                                        : "—"}
+                                                </span>
+                                            </li>
+                                            {discount > 0 && (
+                                                <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                    <span>Discount aplicat:</span>
+                                                    <span>{discountLei ?? "—"}</span>
+                                                </li>
+                                            )}
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Total:</span>
+                                                <span>{totalLei ?? "—"}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="pt-4 border-t border-gray-300">
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Preț per zi:</span>
                                     <span>{baseRate}€ x {days} zile</span>
                                 </div>
-                                {typeof quote.total_services === "number" && quote.total_services > 0 && (
+                                {totalServicesDisplay > 0 && (
                                     <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Total Servicii:</span> <span>{quote.total_services}€</span>
+                                        <span>Total Servicii:</span> <span>{totalServicesDisplay}€</span>
                                     </div>
                                 )}
-                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                            <span>Subtotal:</span>
-                            <span>{subtotalDisplay}€</span>
-                        </div>
-                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                            <span>Premiu Roata Norocului:</span>
-                            <span>{wheelPrizeTitle}</span>
-                        </div>
-                        {typeof totalBeforeWheelPrizeDisplay === "number" && (
-                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                <span>Total înainte de premiu:</span>
-                                <span>{totalBeforeWheelPrizeDisplay}€</span>
-                            </div>
-                        )}
-                        {hasWheelPrize && wheelPrizeAmountLabel && (
-                            <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
-                                <span>Detalii premiu:</span>
-                                <span className="text-right ms-2">{wheelPrizeAmountLabel}</span>
-                            </div>
-                        )}
-                        {wheelPrizeEligibilityWarning && (
-                            <div className="font-dm-sans text-xs text-amber-600 border-b border-b-1 mb-1">
-                                {wheelPrizeEligibilityWarning}
-                            </div>
-                        )}
-                        {hasWheelPrizeDiscount && (
-                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                <span>Reducere premiu:</span>
-                                <span>-{wheelPrizeDiscountDisplay}€</span>
-                            </div>
-                        )}
-                        {hasWheelPrize && wheelPrizeExpiryLabel && (
-                            <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
-                                <span>Valabil până la:</span>
-                                <span>{wheelPrizeExpiryLabel}</span>
-                            </div>
-                        )}
-                        {offersDiscountValue > 0 && (
-                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                <span>Reduceri campanii:</span>
-                                <span>-{Math.round(offersDiscountValue * 100) / 100}€</span>
-                            </div>
-                        )}
-                        {depositWaived && (
-                            <div className="font-dm-sans text-xs text-jade flex justify-between border-b border-b-1 mb-1">
-                                <span>Garanție:</span>
-                                <span>Eliminată prin promoție</span>
-                            </div>
-                        )}
-                        {bookingInfo.advance_payment > 0 && (
-                            <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                <span>Avans:</span> <span>{bookingInfo.advance_payment}€</span>
-                            </div>
-                        )}
-                        <div className="font-dm-sans text-sm font-semibold flex justify-between">
-                            <span>Total:</span>
-                            <span>{totalDisplay}€</span>
-                        </div>
-                        {appliedOffersList.length > 0 && (
-                            <div className="mt-3">
-                                <span className="font-dm-sans text-xs font-semibold text-gray-600 uppercase">
-                                    Oferte aplicate
-                                </span>
-                                <ul className="mt-1 list-disc space-y-1 ps-5 text-xs text-gray-600">
-                                    {appliedOffersList.map((offer) => (
-                                        <li key={offer.id}>
-                                            <span className="font-medium text-gray-700">{offer.title}</span>
-                                            {offer.discount_label && (
-                                                <span className="ms-1 text-emerald-600">{offer.discount_label}</span>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                                {discount !== 0 && discountedTotal > 0 && (
-                                    <div className="font-dm-sans text-sm">
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Subtotal:</span>
+                                    <span>{subtotalDisplay}€</span>
+                                </div>
+                                {discount !== 0 && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Discount:</span>
+                                        <span>{discount}€</span>
+                                    </div>
+                                )}
+                                {depositWaived && (
+                                    <div className="font-dm-sans text-xs text-jade flex justify-between border-b border-b-1 mb-1">
+                                        <span>Garanție:</span>
+                                        <span>Eliminată prin promoție</span>
+                                    </div>
+                                )}
+                                {advancePaymentValue > 0 && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Avans:</span> <span>{advancePaymentValue}€</span>
+                                    </div>
+                                )}
+                                {advancePaymentValue !== 0 && (
+                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
+                                        <span>Rest de plată:</span>
+                                        <span>
+                                            {restToPayEuroDisplay != null ? `${restToPayEuroDisplay}€` : "—"}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="font-dm-sans text-sm font-semibold flex justify-between">
+                                    <span>Total:</span>
+                                    <span>{totalDisplay}€</span>
+                                </div>
+                                {hasDiscountDetails && (
+                                    <div className="font-dm-sans text-sm mt-3">
                                         Detalii discount:
                                         <ul className="list-disc">
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
@@ -1325,19 +2451,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                             )}
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Total:</span>
-                                                <span>{discountedTotal}€</span>
+                                                <span>{totalDisplay}€</span>
                                             </li>
                                         </ul>
                                     </div>
                                 )}
-                                {bookingInfo.advance_payment !== 0 && (
-                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
-                                        <span>Rest de plată:</span>
-                                        <span>{restToPay}€</span>
-                                    </div>
-                                )}
-                            </>
-                        )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
