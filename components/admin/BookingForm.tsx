@@ -15,10 +15,6 @@ import {
     mapCustomerSearchResults,
     normalizeAdminCarOption,
 } from "@/lib/adminBookingHelpers";
-import {
-    describeWheelPrizeSummaryAmount,
-    formatWheelPrizeExpiry,
-} from "@/lib/wheelFormatting";
 import type {
     AdminBookingCarOption,
     AdminBookingCustomerSummary,
@@ -49,26 +45,6 @@ const formatLeiAmount = (value: number | null | undefined): string | null => {
     const converted = convertEuroToLei(value);
     if (converted == null) return null;
     return `${leiFormatter.format(converted)} lei`;
-};
-
-const convertEuroLabelToLei = (label: string | null | undefined): string | null => {
-    if (typeof label !== "string") {
-        return label ?? null;
-    }
-    if (!label.includes("€")) {
-        return label;
-    }
-    return label.replace(/(-?\d+(?:[.,]\d+)?)\s?€/g, (_, value: string) => {
-        const parsed = Number(value.replace(",", "."));
-        if (!Number.isFinite(parsed)) {
-            return `${value}€`;
-        }
-        const converted = convertEuroToLei(parsed);
-        if (converted == null) {
-            return `${value}€`;
-        }
-        return `${leiFormatter.format(converted)} lei`;
-    });
 };
 
 const parsePrice = (raw: unknown): number => {
@@ -297,20 +273,6 @@ const buildQuotePayload = (
         payload.original_price_per_day = originalPrice;
     }
 
-    const wheelPrizeDiscount = toOptionalNumber(values.wheel_prize_discount);
-    if (wheelPrizeDiscount != null) {
-        payload.wheel_prize_discount = wheelPrizeDiscount;
-    }
-
-    if (values.wheel_prize) {
-        payload.wheel_prize = values.wheel_prize;
-        const wheelPrizeId =
-            values.wheel_prize.wheel_of_fortune_prize_id ?? values.wheel_prize.prize_id ?? null;
-        if (wheelPrizeId != null) {
-            payload.wheel_of_fortune_prize_id = wheelPrizeId;
-        }
-    }
-
     return payload;
 };
 
@@ -453,21 +415,6 @@ const buildBookingUpdatePayload = (
         payload.location = location;
     }
 
-    const totalBeforeWheelPrize = toOptionalNumber(values.total_before_wheel_prize);
-    if (totalBeforeWheelPrize != null) {
-        payload.total_before_wheel_prize = totalBeforeWheelPrize;
-    }
-
-    const wheelPrizeDiscount = toOptionalNumber(values.wheel_prize_discount);
-    if (wheelPrizeDiscount != null) {
-        payload.wheel_prize_discount = wheelPrizeDiscount;
-    }
-
-    const offersDiscount = toOptionalNumber(values.offers_discount);
-    if (offersDiscount != null) {
-        payload.offers_discount = offersDiscount;
-    }
-
     const currencyId =
         typeof values.currency_id === "number"
             ? values.currency_id
@@ -476,19 +423,6 @@ const buildBookingUpdatePayload = (
                 : null;
     if (currencyId != null) {
         payload.currency_id = currencyId;
-    }
-
-    if (values.applied_offers && values.applied_offers.length > 0) {
-        payload.applied_offers = values.applied_offers;
-    }
-
-    if (values.wheel_prize) {
-        payload.wheel_prize = values.wheel_prize;
-        const wheelPrizeId =
-            values.wheel_prize.wheel_of_fortune_prize_id ?? values.wheel_prize.prize_id ?? null;
-        if (wheelPrizeId != null) {
-            payload.wheel_of_fortune_prize_id = wheelPrizeId;
-        }
     }
 
     return payload;
@@ -1046,49 +980,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
             : toOptionalNumber(bookingInfo.total_services) ?? 0;
     const totalServicesDisplay = Math.round(totalServicesValue * 100) / 100;
     const restToPay = totalDisplay - advancePaymentValue;
+    const restToPayEuroDisplay = Number.isFinite(restToPay)
+        ? Math.round(restToPay * 100) / 100
+        : null;
 
-    const wheelPrizeSummary = bookingInfo.wheel_prize ?? null;
-    const wheelPrizeDiscountRaw =
-        bookingInfo.wheel_prize_discount ?? wheelPrizeSummary?.discount_value ?? null;
-    const wheelPrizeDiscountValue =
-        typeof wheelPrizeDiscountRaw === "number"
-            ? wheelPrizeDiscountRaw
-            : toOptionalNumber(wheelPrizeDiscountRaw) ?? 0;
-    const wheelPrizeAmountLabel = describeWheelPrizeSummaryAmount(wheelPrizeSummary);
-    const wheelPrizeExpiryLabel = wheelPrizeSummary?.expires_at
-        ? formatWheelPrizeExpiry(wheelPrizeSummary.expires_at)
-        : null;
-    const totalBeforeWheelPrizeValue =
-        typeof bookingInfo.total_before_wheel_prize === "number"
-            ? bookingInfo.total_before_wheel_prize
-            : toOptionalNumber(bookingInfo.total_before_wheel_prize);
-    const wheelPrizeDiscountDisplay = Math.round(wheelPrizeDiscountValue * 100) / 100;
-    const totalBeforeWheelPrizeDisplay =
-        typeof totalBeforeWheelPrizeValue === "number"
-            ? Math.round(totalBeforeWheelPrizeValue * 100) / 100
-            : null;
-    const hasWheelPrize = Boolean(wheelPrizeSummary);
-    const wheelPrizeEligible = wheelPrizeSummary?.eligible !== false;
-    const hasWheelPrizeDiscount = wheelPrizeDiscountDisplay > 0 && wheelPrizeEligible;
-    const wheelPrizeEligibilityWarning = hasWheelPrize && !wheelPrizeEligible
-        ? "Premiul nu este eligibil pentru intervalul curent."
-        : null;
-    const wheelPrizeTitle = hasWheelPrize
-        ? wheelPrizeSummary?.title ?? "Premiu DaCars"
-        : "—";
-    const offersDiscountValue = toOptionalNumber(bookingInfo.offers_discount) ?? 0;
-    const offersDiscountDisplay = Math.round(offersDiscountValue * 100) / 100;
     const depositWaived = bookingInfo.deposit_waived === true;
-    const appliedOffersList = Array.isArray(bookingInfo.applied_offers)
-        ? bookingInfo.applied_offers
-        : [];
-    const wheelPrizeAmountLabelLei = convertEuroLabelToLei(wheelPrizeAmountLabel);
     const subtotalLei = formatLeiAmount(subtotalDisplay);
     const totalLei = formatLeiAmount(totalDisplay);
-    const totalBeforeWheelPrizeLei = formatLeiAmount(totalBeforeWheelPrizeDisplay ?? null);
-    const wheelPrizeDiscountLei = formatLeiAmount(wheelPrizeDiscountDisplay);
     const restToPayLei = formatLeiAmount(restToPay);
-    const discountedTotalLei = formatLeiAmount(totalDisplay);
     const discountLei = formatLeiAmount(discount);
     const baseRateLei = formatLeiAmount(baseRate);
     const roundedDiscountedRate = Math.round(discountedRate);
@@ -1631,47 +1530,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <span>Subtotal:</span>
                                     <span>{subtotalLei ?? "—"}</span>
                                 </div>
+                                {discount !== 0 && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Discount:</span>
+                                        <span>{discountLei ?? "—"}</span>
+                                    </div>
+                                )}
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                    <span>Premiu Roata Norocului:</span>
-                                    <span>{wheelPrizeTitle}</span>
+                                    <span>Total:</span>
+                                    <span>{totalLei ?? "—"}</span>
                                 </div>
-                                {typeof totalBeforeWheelPrizeDisplay === "number" && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Total înainte de premiu:</span>
-                                        <span>{totalBeforeWheelPrizeLei ?? "—"}</span>
-                                    </div>
-                                )}
-                                {hasWheelPrize && (wheelPrizeAmountLabelLei || wheelPrizeAmountLabel) && (
-                                    <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
-                                        <span>Detalii premiu:</span>
-                                        <span className="text-right ms-2">
-                                            {wheelPrizeAmountLabelLei ?? wheelPrizeAmountLabel}
-                                        </span>
-                                    </div>
-                                )}
-                                {wheelPrizeEligibilityWarning && (
-                                    <div className="font-dm-sans text-xs text-amber-600 border-b border-b-1 mb-1">
-                                        {wheelPrizeEligibilityWarning}
-                                    </div>
-                                )}
-                                {hasWheelPrizeDiscount && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Reducere premiu:</span>
-                                        <span>-{wheelPrizeDiscountLei ?? "—"}</span>
-                                    </div>
-                                )}
-                                {hasWheelPrize && wheelPrizeExpiryLabel && (
-                                    <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
-                                        <span>Valabil până la:</span>
-                                        <span>{wheelPrizeExpiryLabel}</span>
-                                    </div>
-                                )}
-                                {offersDiscountValue > 0 && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Reduceri campanii:</span>
-                                        <span>-{formatLeiAmount(offersDiscountDisplay) ?? "—"}</span>
-                                    </div>
-                                )}
                                 {depositWaived && (
                                     <div className="font-dm-sans text-xs text-jade flex justify-between border-b border-b-1 mb-1">
                                         <span>Garanție:</span>
@@ -1684,25 +1552,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         <span>{advancePaymentLei ?? "—"}</span>
                                     </div>
                                 )}
-                                <div className="font-dm-sans text-sm font-semibold flex justify-between">
-                                    <span>Total:</span>
-                                    <span>{totalLei ?? "—"}</span>
-                                </div>
-                                {appliedOffersList.length > 0 && (
-                                    <div className="mt-3">
-                                        <span className="font-dm-sans text-xs font-semibold text-gray-600 uppercase">
-                                            Oferte aplicate
-                                        </span>
-                                        <ul className="mt-1 list-disc space-y-1 ps-5 text-xs text-gray-600">
-                                            {appliedOffersList.map((offer) => (
-                                                <li key={offer.id}>
-                                                    <span className="font-medium text-gray-700">{offer.title}</span>
-                                                    {offer.discount_label && (
-                                                        <span className="ms-1 text-emerald-600">{offer.discount_label}</span>
-                                                    )}
-                                                </li>
-                                            ))}
-                                        </ul>
+                                {advancePaymentValue !== 0 && (
+                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
+                                        <span>Rest de plată:</span>
+                                        <span>{restToPayLei ?? "—"}</span>
                                     </div>
                                 )}
                                 {hasDiscountDetails && (
@@ -1725,15 +1578,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                             )}
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Total:</span>
-                                                <span>{discountedTotalLei ?? "—"}</span>
+                                                <span>{totalLei ?? "—"}</span>
                                             </li>
                                         </ul>
-                                    </div>
-                                )}
-                                {advancePaymentValue !== 0 && (
-                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
-                                        <span>Rest de plată:</span>
-                                        <span>{restToPayLei ?? "—"}</span>
                                     </div>
                                 )}
                             </div>
@@ -1751,43 +1598,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <span>Subtotal:</span>
                                     <span>{subtotalDisplay}€</span>
                                 </div>
-                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                    <span>Premiu Roata Norocului:</span>
-                                    <span>{wheelPrizeTitle}</span>
-                                </div>
-                                {typeof totalBeforeWheelPrizeDisplay === "number" && (
+                                {discount !== 0 && (
                                     <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Total înainte de premiu:</span>
-                                        <span>{totalBeforeWheelPrizeDisplay}€</span>
-                                    </div>
-                                )}
-                                {hasWheelPrize && wheelPrizeAmountLabel && (
-                                    <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
-                                        <span>Detalii premiu:</span>
-                                        <span className="text-right ms-2">{wheelPrizeAmountLabel}</span>
-                                    </div>
-                                )}
-                                {wheelPrizeEligibilityWarning && (
-                                    <div className="font-dm-sans text-xs text-amber-600 border-b border-b-1 mb-1">
-                                        {wheelPrizeEligibilityWarning}
-                                    </div>
-                                )}
-                                {hasWheelPrizeDiscount && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Reducere premiu:</span>
-                                        <span>-{wheelPrizeDiscountDisplay}€</span>
-                                    </div>
-                                )}
-                                {hasWheelPrize && wheelPrizeExpiryLabel && (
-                                    <div className="font-dm-sans text-xs text-gray-600 flex justify-between border-b border-b-1 mb-1">
-                                        <span>Valabil până la:</span>
-                                        <span>{wheelPrizeExpiryLabel}</span>
-                                    </div>
-                                )}
-                                {offersDiscountValue > 0 && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Reduceri campanii:</span>
-                                        <span>-{offersDiscountDisplay}€</span>
+                                        <span>Discount:</span>
+                                        <span>{discount}€</span>
                                     </div>
                                 )}
                                 {depositWaived && (
@@ -1801,29 +1615,20 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         <span>Avans:</span> <span>{advancePaymentValue}€</span>
                                     </div>
                                 )}
+                                {advancePaymentValue !== 0 && (
+                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
+                                        <span>Rest de plată:</span>
+                                        <span>
+                                            {restToPayEuroDisplay != null ? `${restToPayEuroDisplay}€` : "—"}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="font-dm-sans text-sm font-semibold flex justify-between">
                                     <span>Total:</span>
                                     <span>{totalDisplay}€</span>
                                 </div>
-                                {appliedOffersList.length > 0 && (
-                                    <div className="mt-3">
-                                        <span className="font-dm-sans text-xs font-semibold text-gray-600 uppercase">
-                                            Oferte aplicate
-                                        </span>
-                                        <ul className="mt-1 list-disc space-y-1 ps-5 text-xs text-gray-600">
-                                            {appliedOffersList.map((offer) => (
-                                                <li key={offer.id}>
-                                                    <span className="font-medium text-gray-700">{offer.title}</span>
-                                                    {offer.discount_label && (
-                                                        <span className="ms-1 text-emerald-600">{offer.discount_label}</span>
-                                                    )}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
                                 {hasDiscountDetails && (
-                                    <div className="font-dm-sans text-sm">
+                                    <div className="font-dm-sans text-sm mt-3">
                                         Detalii discount:
                                         <ul className="list-disc">
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
@@ -1841,12 +1646,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 <span>{totalDisplay}€</span>
                                             </li>
                                         </ul>
-                                    </div>
-                                )}
-                                {advancePaymentValue !== 0 && (
-                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
-                                        <span>Rest de plată:</span>
-                                        <span>{restToPay}€</span>
                                     </div>
                                 )}
                             </div>
