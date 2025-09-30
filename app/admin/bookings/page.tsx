@@ -354,12 +354,31 @@ const EMPTY_WHEEL_PRIZE_DETAILS: ReturnType<typeof extractWheelPrizeDisplay> = {
   eligible: true,
 };
 
-const toLocalDateTimeInput = (iso?: string | null) => {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  const tzOffset = date.getTimezoneOffset();
-  const local = new Date(date.getTime() - tzOffset * 60000);
+const toLocalDateTimeInput = (value?: string | null) => {
+  if (!value) return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  const normalized = trimmed.replace(" ", "T").replace(/\.\d+/, "");
+  const hasTimezone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(normalized);
+
+  if (!hasTimezone) {
+    const match = normalized.match(
+      /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+    );
+    if (match) {
+      const [, datePart, hours = "00", minutes = "00"] = match;
+      return `${datePart}T${hours}:${minutes}`;
+    }
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  const tzOffset = parsed.getTimezoneOffset();
+  const local = new Date(parsed.getTime() - tzOffset * 60000);
   return local.toISOString().slice(0, 16);
 };
 
