@@ -26,7 +26,7 @@ import type {
     AdminBookingLinkedService,
 } from "@/types/admin";
 import type { ApiCar } from "@/types/car";
-import type { QuotePriceResponse, Service } from "@/types/reservation";
+import type { QuotePricePayload, QuotePriceResponse, Service } from "@/types/reservation";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
@@ -200,6 +200,296 @@ const resolveServiceSelection = (
     return merged.sort((a, b) => a - b);
 };
 
+const normalizeCouponTypeValue = (raw: unknown): string => {
+    if (typeof raw !== "string") {
+        return "";
+    }
+    const trimmed = raw.trim();
+    if (trimmed === "from_total") {
+        return "per_total";
+    }
+    return trimmed;
+};
+
+const toApiDateTime = (value: string | null | undefined): string | undefined => {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+        return undefined;
+    }
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) {
+        return `${trimmed}:00`;
+    }
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(trimmed)) {
+        return `${trimmed.replace(" ", "T")}:00`;
+    }
+    return trimmed;
+};
+
+const trimmedOrNull = (value: unknown): string | null => {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+};
+
+const buildQuotePayload = (
+    values: AdminBookingFormValues,
+    serviceIds: number[],
+): QuotePricePayload => {
+    const carId = typeof values.car_id === "number" ? values.car_id : Number(values.car_id ?? 0);
+    const payload: QuotePricePayload = {
+        car_id: carId,
+        rental_start_date: toApiDateTime(values.rental_start_date) ?? values.rental_start_date,
+        rental_end_date: toApiDateTime(values.rental_end_date) ?? values.rental_end_date,
+        with_deposit: values.with_deposit,
+        service_ids: serviceIds,
+    };
+
+    const totalServices = toOptionalNumber(values.total_services);
+    if (totalServices != null) {
+        payload.total_services = totalServices;
+    }
+
+    const couponType = normalizeCouponTypeValue(values.coupon_type);
+    if (couponType) {
+        payload.coupon_type = couponType;
+        if (couponType === "code") {
+            const couponCode = trimmedOrNull(values.coupon_code);
+            if (couponCode) {
+                payload.coupon_code = couponCode;
+            }
+        } else {
+            const couponAmount = toOptionalNumber(values.coupon_amount);
+            if (couponAmount != null) {
+                payload.coupon_amount = couponAmount;
+            }
+            const couponCode = trimmedOrNull(values.coupon_code);
+            if (couponCode) {
+                payload.coupon_code = couponCode;
+            }
+        }
+    } else {
+        const couponCode = trimmedOrNull(values.coupon_code);
+        if (couponCode) {
+            payload.coupon_code = couponCode;
+        }
+    }
+
+    const basePrice =
+        toOptionalNumber(values.base_price) ??
+        toOptionalNumber(values.price_per_day) ??
+        toOptionalNumber(values.original_price_per_day);
+    if (basePrice != null) {
+        payload.base_price = basePrice;
+    }
+
+    const basePriceCasco = toOptionalNumber(values.base_price_casco);
+    if (basePriceCasco != null) {
+        payload.base_price_casco = basePriceCasco;
+    }
+
+    const originalPrice = toOptionalNumber(values.original_price_per_day);
+    if (originalPrice != null) {
+        payload.original_price_per_day = originalPrice;
+    }
+
+    const wheelPrizeDiscount = toOptionalNumber(values.wheel_prize_discount);
+    if (wheelPrizeDiscount != null) {
+        payload.wheel_prize_discount = wheelPrizeDiscount;
+    }
+
+    if (values.wheel_prize) {
+        payload.wheel_prize = values.wheel_prize;
+        const wheelPrizeId =
+            values.wheel_prize.wheel_of_fortune_prize_id ?? values.wheel_prize.prize_id ?? null;
+        if (wheelPrizeId != null) {
+            payload.wheel_of_fortune_prize_id = wheelPrizeId;
+        }
+    }
+
+    return payload;
+};
+
+const buildBookingUpdatePayload = (
+    values: AdminBookingFormValues,
+    serviceIds: number[],
+): Record<string, unknown> => {
+    const payload: Record<string, unknown> = {
+        service_ids: serviceIds,
+        with_deposit: Boolean(values.with_deposit),
+        keep_old_price: Boolean(values.keep_old_price),
+        send_email: Boolean(values.send_email),
+        deposit_waived: Boolean(values.deposit_waived),
+    };
+
+    const rentalStart = toApiDateTime(values.rental_start_date);
+    if (rentalStart) {
+        payload.rental_start_date = rentalStart;
+    }
+    const rentalEnd = toApiDateTime(values.rental_end_date);
+    if (rentalEnd) {
+        payload.rental_end_date = rentalEnd;
+    }
+
+    if (typeof values.car_id === "number") {
+        payload.car_id = values.car_id;
+    } else if (typeof values.car_id === "string" && values.car_id.trim().length > 0) {
+        payload.car_id = values.car_id.trim();
+    }
+
+    const couponType = normalizeCouponTypeValue(values.coupon_type);
+    if (couponType) {
+        payload.coupon_type = couponType;
+    }
+
+    if (couponType === "code") {
+        const couponCode = trimmedOrNull(values.coupon_code);
+        if (couponCode) {
+            payload.coupon_code = couponCode;
+        }
+    } else {
+        const couponAmount = toOptionalNumber(values.coupon_amount);
+        if (couponAmount != null) {
+            payload.coupon_amount = couponAmount;
+        }
+        const couponCode = trimmedOrNull(values.coupon_code);
+        if (couponCode) {
+            payload.coupon_code = couponCode;
+        }
+    }
+
+    const customerName = trimmedOrNull(values.customer_name);
+    if (customerName) {
+        payload.customer_name = customerName;
+    }
+    const customerEmail = trimmedOrNull(values.customer_email);
+    if (customerEmail) {
+        payload.customer_email = customerEmail;
+    }
+    const customerPhone = trimmedOrNull(values.customer_phone);
+    if (customerPhone) {
+        payload.customer_phone = customerPhone;
+    }
+
+    const customerAge = toOptionalNumber(values.customer_age);
+    if (customerAge != null) {
+        payload.customer_age = customerAge;
+    }
+
+    if (
+        typeof values.customer_id === "number" ||
+        (typeof values.customer_id === "string" && values.customer_id.trim().length > 0)
+    ) {
+        payload.customer_id = values.customer_id;
+    }
+
+    const basePrice = toOptionalNumber(values.base_price);
+    if (basePrice != null) {
+        payload.base_price = basePrice;
+    }
+    const basePriceCasco = toOptionalNumber(values.base_price_casco);
+    if (basePriceCasco != null) {
+        payload.base_price_casco = basePriceCasco;
+    }
+    const pricePerDay = toOptionalNumber(values.price_per_day);
+    if (pricePerDay != null) {
+        payload.price_per_day = pricePerDay;
+    }
+    const originalPrice = toOptionalNumber(values.original_price_per_day);
+    if (originalPrice != null) {
+        payload.original_price_per_day = originalPrice;
+    }
+
+    const totalServices = toOptionalNumber(values.total_services);
+    if (totalServices != null) {
+        payload.total_services = totalServices;
+    }
+
+    const subtotal = toOptionalNumber(values.sub_total);
+    if (subtotal != null) {
+        payload.sub_total = subtotal;
+    }
+
+    const total = toOptionalNumber(values.total);
+    if (total != null) {
+        payload.total = total;
+    }
+
+    const taxAmount = toOptionalNumber(values.tax_amount);
+    if (taxAmount != null) {
+        payload.tax_amount = taxAmount;
+    }
+
+    const days = toOptionalNumber(values.days);
+    if (days != null) {
+        payload.days = days;
+    }
+
+    const advancePayment = toOptionalNumber(values.advance_payment);
+    if (advancePayment != null) {
+        payload.advance_payment = advancePayment;
+    }
+
+    const status = trimmedOrNull(values.status);
+    if (status) {
+        payload.status = status;
+    }
+
+    const note = trimmedOrNull(values.note);
+    if (note) {
+        payload.note = note;
+    }
+
+    const location = trimmedOrNull(values.location);
+    if (location) {
+        payload.location = location;
+    }
+
+    const totalBeforeWheelPrize = toOptionalNumber(values.total_before_wheel_prize);
+    if (totalBeforeWheelPrize != null) {
+        payload.total_before_wheel_prize = totalBeforeWheelPrize;
+    }
+
+    const wheelPrizeDiscount = toOptionalNumber(values.wheel_prize_discount);
+    if (wheelPrizeDiscount != null) {
+        payload.wheel_prize_discount = wheelPrizeDiscount;
+    }
+
+    const offersDiscount = toOptionalNumber(values.offers_discount);
+    if (offersDiscount != null) {
+        payload.offers_discount = offersDiscount;
+    }
+
+    const currencyId =
+        typeof values.currency_id === "number"
+            ? values.currency_id
+            : typeof values.currency_id === "string" && values.currency_id.trim().length > 0
+                ? values.currency_id
+                : null;
+    if (currencyId != null) {
+        payload.currency_id = currencyId;
+    }
+
+    if (values.applied_offers && values.applied_offers.length > 0) {
+        payload.applied_offers = values.applied_offers;
+    }
+
+    if (values.wheel_prize) {
+        payload.wheel_prize = values.wheel_prize;
+        const wheelPrizeId =
+            values.wheel_prize.wheel_of_fortune_prize_id ?? values.wheel_prize.prize_id ?? null;
+        if (wheelPrizeId != null) {
+            payload.wheel_of_fortune_prize_id = wheelPrizeId;
+        }
+    }
+
+    return payload;
+};
+
 interface BookingFormProps {
     open: boolean;
     onClose: () => void;
@@ -299,12 +589,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return;
         }
 
-        const normalizedServiceIds = Array.isArray(bookingInfo.service_ids)
-            ? bookingInfo.service_ids
-                  .map((id) => (typeof id === "number" ? id : Number(id)))
-                  .filter((id) => Number.isFinite(id))
-                  .sort((a, b) => a - b)
-            : [];
+        const normalizedServiceIds = resolveServiceSelection(bookingInfo);
 
         if (
             !bookingInfo.car_id ||
@@ -314,19 +599,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return;
         }
 
-        const quoteKey = JSON.stringify({
-            car: bookingInfo.car_id,
-            start: bookingInfo.rental_start_date,
-            end: bookingInfo.rental_end_date,
-            base: bookingInfo.base_price ?? null,
-            casco: bookingInfo.base_price_casco ?? null,
-            original: bookingInfo.original_price_per_day ?? null,
-            couponType: bookingInfo.coupon_type ?? null,
-            couponAmount: bookingInfo.coupon_amount ?? null,
-            couponCode: bookingInfo.coupon_code ?? null,
-            services: normalizedServiceIds,
-            deposit: bookingInfo.with_deposit ? 1 : 0,
-        });
+        const quotePayload = buildQuotePayload(bookingInfo, normalizedServiceIds);
+        const quoteKey = JSON.stringify(quotePayload);
 
         if (lastQuoteKeyRef.current === quoteKey) {
             return;
@@ -337,19 +611,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         const quotePrice = async () => {
             try {
                 lastQuoteKeyRef.current = quoteKey;
-                const data = await apiClient.quotePrice({
-                    car_id: bookingInfo.car_id ?? 0,
-                    rental_start_date: bookingInfo.rental_start_date,
-                    rental_end_date: bookingInfo.rental_end_date,
-                    base_price: bookingInfo.base_price ?? undefined,
-                    base_price_casco: bookingInfo.base_price_casco ?? undefined,
-                    original_price_per_day: bookingInfo.original_price_per_day ?? undefined,
-                    coupon_type: bookingInfo.coupon_type,
-                    coupon_amount: bookingInfo.coupon_amount ?? undefined,
-                    coupon_code: bookingInfo.coupon_code ?? undefined,
-                    service_ids: normalizedServiceIds,
-                    with_deposit: bookingInfo.with_deposit,
-                });
+                const data = await apiClient.quotePrice(quotePayload);
                 if (cancelled) {
                     return;
                 }
@@ -467,40 +729,50 @@ const BookingForm: React.FC<BookingFormProps> = ({
     // Populate customer details only when a suggestion is selected
 
     const recalcTotals = useCallback((info: AdminBookingFormValues): AdminBookingFormValues => {
-        const type =
-            info.coupon_type === "per_total"
-                ? "from_total"
-                : info.coupon_type || "fixed_per_day";
+        const normalizedType = normalizeCouponTypeValue(info.coupon_type);
+        const parsedCouponAmount = toOptionalNumber(info.coupon_amount);
+        const resolvedCouponAmount =
+            normalizedType === "code"
+                ? 0
+                : parsedCouponAmount ?? (typeof info.coupon_amount === "number" ? info.coupon_amount : 0);
 
-        let basePrice: number | null = info.base_price ?? null;
-        let basePriceCasco: number | null = info.base_price_casco ?? null;
+        const fallbackBase =
+            toOptionalNumber(info.base_price) ??
+            toOptionalNumber(info.price_per_day) ??
+            toOptionalNumber(info.original_price_per_day);
+        const fallbackCasco =
+            toOptionalNumber(info.base_price_casco) ??
+            toOptionalNumber(info.base_price) ??
+            fallbackBase;
 
-        if (type === "fixed_per_day") {
-            const amount = parsePrice(info.coupon_amount);
-            basePrice = amount;
-            basePriceCasco = amount;
-        } else if (info.original_price_per_day != null) {
-            const original = parsePrice(info.original_price_per_day);
-            basePrice = original;
-            basePriceCasco = original;
-        }
+        const nextBase =
+            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
+                ? resolvedCouponAmount
+                : fallbackBase ?? null;
+        const nextBaseCasco =
+            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
+                ? resolvedCouponAmount
+                : fallbackCasco ?? null;
+        const nextOriginal = info.original_price_per_day ?? fallbackBase ?? null;
 
-        const nextBasePrice = basePrice ?? 0;
-        const nextBasePriceCasco = basePriceCasco ?? 0;
+        const hasChanges =
+            info.coupon_type !== normalizedType ||
+            info.coupon_amount !== (normalizedType === "code" ? 0 : resolvedCouponAmount) ||
+            info.base_price !== nextBase ||
+            info.base_price_casco !== (nextBaseCasco ?? nextBase) ||
+            info.original_price_per_day !== nextOriginal;
 
-        if (
-            info.coupon_type === type &&
-            info.base_price === nextBasePrice &&
-            info.base_price_casco === nextBasePriceCasco
-        ) {
+        if (!hasChanges) {
             return info;
         }
 
         return {
             ...info,
-            coupon_type: type,
-            base_price: nextBasePrice,
-            base_price_casco: nextBasePriceCasco,
+            coupon_type: normalizedType,
+            coupon_amount: normalizedType === "code" ? 0 : resolvedCouponAmount,
+            base_price: nextBase,
+            base_price_casco: nextBaseCasco ?? nextBase,
+            original_price_per_day: nextOriginal,
         };
     }, []);
 
@@ -790,7 +1062,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
             return;
         }
         try {
-            const payload = { ...bookingInfo } as Record<string, unknown>;
+            const serviceIds = resolveServiceSelection(bookingInfo);
+            const payload = buildBookingUpdatePayload(bookingInfo, serviceIds);
             await apiClient.updateBooking(bookingInfo.id, payload);
             onClose();
             onUpdated?.();
@@ -1020,21 +1293,22 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             id="coupon-type"
                             value={bookingInfo.coupon_type || ""}
                             onValueChange={(value) =>
-                                updateBookingInfo((prev) =>
-                                    recalcTotals({
+                                updateBookingInfo((prev) => {
+                                    const normalized = normalizeCouponTypeValue(value);
+                                    return recalcTotals({
                                         ...prev,
-                                        coupon_type: value,
+                                        coupon_type: normalized,
                                         coupon_amount: 0,
                                         coupon_code: "",
-                                    }),
-                                )
+                                    });
+                                })
                             }
                             placeholder="Selectează"
                         >
                             <option value="fixed_per_day">Pret fix pe zi</option>
                             <option value="per_day">Reducere pret pe zi</option>
                             <option value="days">Zile</option>
-                            <option value="from_total">Din total</option>
+                            <option value="per_total">Din total</option>
                             <option value="code">Cupon</option>
                         </Select>
                     </div>
@@ -1053,7 +1327,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             onChange={(e) => {
                                 const rawValue = e.target.value;
                                 updateBookingInfo((prev) => {
-                                    const nextType = prev.coupon_type || "fixed_per_day";
+                                    const nextType = normalizeCouponTypeValue(
+                                        prev.coupon_type && prev.coupon_type.length > 0
+                                            ? prev.coupon_type
+                                            : "fixed_per_day",
+                                    );
                                     if (nextType === "code") {
                                         return recalcTotals({
                                             ...prev,
