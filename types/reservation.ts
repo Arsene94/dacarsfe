@@ -76,6 +76,8 @@ export interface ReservationWheelPrizeSummary {
   expires_at?: string | null;
   eligible?: boolean | null;
   discount_value: number;
+  discount_value_deposit?: number | null;
+  discount_value_casco?: number | null;
 }
 
 export interface ReservationWheelPrizePayload {
@@ -84,6 +86,8 @@ export interface ReservationWheelPrizePayload {
   wheel_of_fortune_prize_id?: number | string | null;
   discount_value: number | string;
   eligible?: boolean | null;
+  discount_value_deposit?: number | string | null;
+  discount_value_casco?: number | string | null;
   [key: string]: unknown;
 }
 
@@ -93,6 +97,15 @@ export interface ReservationAppliedOffer {
   offer_type?: OfferKind | null;
   offer_value?: string | null;
   discount_label?: string | null;
+  percent_discount_deposit?: number | null;
+  percent_discount_casco?: number | null;
+  fixed_discount_deposit?: number | null;
+  fixed_discount_casco?: number | null;
+  fixed_discount_deposit_applied?: number | null;
+  fixed_discount_casco_applied?: number | null;
+  discount_amount_deposit?: number | null;
+  discount_amount_casco?: number | null;
+  discount_amount?: number | null;
 }
 
 export interface ReservationPayload extends ReservationFormData {
@@ -115,6 +128,7 @@ export interface ReservationPayload extends ReservationFormData {
   wheel_prize?: ReservationWheelPrizeSummary | ReservationWheelPrizePayload | null;
   applied_offers?: ReservationAppliedOffer[];
   note?: string;
+  offer_fixed_discount?: number;
 }
 
 export interface DiscountValidationPayload {
@@ -164,6 +178,7 @@ export interface QuotePricePayload {
   wheel_prize?: ReservationWheelPrizePayload | null;
   total_before_wheel_prize?: number | string;
   offers_discount?: number | string;
+  offer_fixed_discount?: number | string;
   deposit_waived?: boolean;
   applied_offers?: ReservationAppliedOffer[];
   [key: string]: unknown;
@@ -185,6 +200,7 @@ export interface QuotePriceResponse {
   coupon_code?: string | null;
   coupon_type?: string | null;
   offers_discount?: number;
+  offer_fixed_discount?: number;
   deposit_waived?: boolean;
   total_services?: number;
   service_ids?: number[];

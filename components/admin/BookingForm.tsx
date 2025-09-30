@@ -359,6 +359,14 @@ const normalizeWheelPrizeSummary = (
     const discountValue = toOptionalNumber(
         raw.discount_value ?? raw.discount ?? (raw as { value?: unknown }).value,
     );
+    const discountValueDeposit =
+        toOptionalNumber((raw as { discount_value_deposit?: unknown }).discount_value_deposit) ??
+        toOptionalNumber((raw as { discount_deposit?: unknown }).discount_deposit) ??
+        (typeof discountValue === "number" ? discountValue : null);
+    const discountValueCasco =
+        toOptionalNumber((raw as { discount_value_casco?: unknown }).discount_value_casco) ??
+        toOptionalNumber((raw as { discount_casco?: unknown }).discount_casco) ??
+        (typeof discountValue === "number" ? discountValue : null);
     const description =
         typeof raw.description === "string" && raw.description.trim().length > 0
             ? raw.description
@@ -397,6 +405,10 @@ const normalizeWheelPrizeSummary = (
         amount_label: amountLabel,
         discount_value: typeof discountValue === "number" ? discountValue : 0,
         eligible,
+        discount_value_deposit:
+            typeof discountValueDeposit === "number" ? discountValueDeposit : null,
+        discount_value_casco:
+            typeof discountValueCasco === "number" ? discountValueCasco : null,
     };
 };
 
@@ -413,12 +425,21 @@ const sanitizeWheelPrizePayload = (
     }
     const wheelId = toOptionalNumber(prize.wheel_of_fortune_id);
     const discountValue = toOptionalNumber(prize.discount_value) ?? 0;
+    const discountValueDeposit =
+        toOptionalNumber(prize.discount_value_deposit) ?? discountValue;
+    const discountValueCasco = toOptionalNumber(prize.discount_value_casco) ?? discountValue;
     const payload: ReservationWheelPrizePayload = {
         prize_id: rawPrizeId,
         wheel_of_fortune_id: wheelId ?? null,
         wheel_of_fortune_prize_id: pivotId ?? null,
         discount_value: discountValue,
     };
+    if (discountValueDeposit != null) {
+        payload.discount_value_deposit = discountValueDeposit;
+    }
+    if (discountValueCasco != null) {
+        payload.discount_value_casco = discountValueCasco;
+    }
     if (typeof prize.eligible === "boolean") {
         payload.eligible = prize.eligible;
     }
@@ -475,14 +496,65 @@ const normalizeAppliedOfferEntry = (raw: unknown): ReservationAppliedOffer | nul
             : typeof (raw as { badge?: unknown }).badge === "string"
                 ? String((raw as { badge: unknown }).badge)
                 : null;
+    const percentDeposit = toOptionalNumber(
+        (raw as { percent_discount_deposit?: unknown }).percent_discount_deposit,
+    );
+    const percentCasco = toOptionalNumber(
+        (raw as { percent_discount_casco?: unknown }).percent_discount_casco,
+    );
+    const fixedDeposit = toOptionalNumber((raw as { fixed_discount_deposit?: unknown }).fixed_discount_deposit);
+    const fixedCasco = toOptionalNumber((raw as { fixed_discount_casco?: unknown }).fixed_discount_casco);
+    const fixedDepositApplied = toOptionalNumber(
+        (raw as { fixed_discount_deposit_applied?: unknown }).fixed_discount_deposit_applied,
+    );
+    const fixedCascoApplied = toOptionalNumber(
+        (raw as { fixed_discount_casco_applied?: unknown }).fixed_discount_casco_applied,
+    );
+    const discountAmountDeposit = toOptionalNumber(
+        (raw as { discount_amount_deposit?: unknown }).discount_amount_deposit,
+    );
+    const discountAmountCasco = toOptionalNumber(
+        (raw as { discount_amount_casco?: unknown }).discount_amount_casco,
+    );
+    const discountAmount = toOptionalNumber((raw as { discount_amount?: unknown }).discount_amount);
 
-    return {
+    const normalized: ReservationAppliedOffer = {
         id,
         title: titleSource,
         offer_type: offerType,
         offer_value: offerValue,
         discount_label: discountLabel,
     };
+
+    if (percentDeposit != null) {
+        normalized.percent_discount_deposit = percentDeposit;
+    }
+    if (percentCasco != null) {
+        normalized.percent_discount_casco = percentCasco;
+    }
+    if (fixedDeposit != null) {
+        normalized.fixed_discount_deposit = fixedDeposit;
+    }
+    if (fixedCasco != null) {
+        normalized.fixed_discount_casco = fixedCasco;
+    }
+    if (fixedDepositApplied != null) {
+        normalized.fixed_discount_deposit_applied = fixedDepositApplied;
+    }
+    if (fixedCascoApplied != null) {
+        normalized.fixed_discount_casco_applied = fixedCascoApplied;
+    }
+    if (discountAmountDeposit != null) {
+        normalized.discount_amount_deposit = discountAmountDeposit;
+    }
+    if (discountAmountCasco != null) {
+        normalized.discount_amount_casco = discountAmountCasco;
+    }
+    if (discountAmount != null) {
+        normalized.discount_amount = discountAmount;
+    }
+
+    return normalized;
 };
 
 const normalizeAppliedOffers = (raw: unknown): ReservationAppliedOffer[] => {
@@ -526,6 +598,44 @@ const sanitizeAppliedOffersPayload = (
                 offer_value: offer.offer_value ?? null,
                 discount_label: offer.discount_label ?? null,
             };
+            const percentDeposit = toOptionalNumber(offer.percent_discount_deposit);
+            const percentCasco = toOptionalNumber(offer.percent_discount_casco);
+            const fixedDeposit = toOptionalNumber(offer.fixed_discount_deposit);
+            const fixedCasco = toOptionalNumber(offer.fixed_discount_casco);
+            const fixedDepositApplied = toOptionalNumber(offer.fixed_discount_deposit_applied);
+            const fixedCascoApplied = toOptionalNumber(offer.fixed_discount_casco_applied);
+            const discountAmountDeposit = toOptionalNumber(offer.discount_amount_deposit);
+            const discountAmountCasco = toOptionalNumber(offer.discount_amount_casco);
+            const discountAmount = toOptionalNumber(offer.discount_amount);
+
+            if (percentDeposit != null) {
+                normalized.percent_discount_deposit = percentDeposit;
+            }
+            if (percentCasco != null) {
+                normalized.percent_discount_casco = percentCasco;
+            }
+            if (fixedDeposit != null) {
+                normalized.fixed_discount_deposit = fixedDeposit;
+            }
+            if (fixedCasco != null) {
+                normalized.fixed_discount_casco = fixedCasco;
+            }
+            if (fixedDepositApplied != null) {
+                normalized.fixed_discount_deposit_applied = fixedDepositApplied;
+            }
+            if (fixedCascoApplied != null) {
+                normalized.fixed_discount_casco_applied = fixedCascoApplied;
+            }
+            if (discountAmountDeposit != null) {
+                normalized.discount_amount_deposit = discountAmountDeposit;
+            }
+            if (discountAmountCasco != null) {
+                normalized.discount_amount_casco = discountAmountCasco;
+            }
+            if (discountAmount != null) {
+                normalized.discount_amount = discountAmount;
+            }
+
             return normalized;
         })
         .filter((entry): entry is ReservationAppliedOffer => entry != null);
@@ -632,9 +742,7 @@ const buildQuotePayload = (
     }
 
     const wheelPrizeSummary = values.wheel_prize ?? null;
-    const explicitWheelPrizeId = toOptionalNumber(
-        (values as { wheel_of_fortune_prize_id?: unknown }).wheel_of_fortune_prize_id,
-    );
+    const explicitWheelPrizeId = toOptionalNumber(values.wheel_of_fortune_prize_id);
     const wheelPrizeId =
         explicitWheelPrizeId ??
         toOptionalNumber(wheelPrizeSummary?.wheel_of_fortune_prize_id) ??
@@ -663,6 +771,11 @@ const buildQuotePayload = (
     const offersDiscount = toOptionalNumber(values.offers_discount);
     if (offersDiscount != null) {
         payload.offers_discount = offersDiscount;
+    }
+
+    const offerFixedDiscount = toOptionalNumber(values.offer_fixed_discount);
+    if (offerFixedDiscount != null) {
+        payload.offer_fixed_discount = offerFixedDiscount;
     }
 
     if (values.deposit_waived === true) {
@@ -855,6 +968,11 @@ const buildBookingUpdatePayload = (
         payload.offers_discount = offersDiscount;
     }
 
+    const offerFixedDiscount = toOptionalNumber(values.offer_fixed_discount);
+    if (offerFixedDiscount != null) {
+        payload.offer_fixed_discount = offerFixedDiscount;
+    }
+
     const appliedOffersPayload = sanitizeAppliedOffersPayload(values.applied_offers);
     payload.applied_offers = appliedOffersPayload ?? [];
 
@@ -971,6 +1089,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         typeof prize.title === "string" && prize.title.trim().length > 0
                             ? prize.title.trim()
                             : `Premiu #${prizeId}`;
+                    const discountValueDeposit =
+                        toOptionalNumber((prize as { discount_value_deposit?: unknown }).discount_value_deposit) ??
+                        toOptionalNumber((prize as { discount_deposit?: unknown }).discount_deposit);
+                    const discountValueCasco =
+                        toOptionalNumber((prize as { discount_value_casco?: unknown }).discount_value_casco) ??
+                        toOptionalNumber((prize as { discount_casco?: unknown }).discount_casco);
                     const summary: ReservationWheelPrizeSummary = {
                         wheel_of_fortune_id: prize.period_id ?? period.id ?? null,
                         prize_id: prizeId,
@@ -981,6 +1105,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         description: prize.description ?? null,
                         amount_label: null,
                         discount_value: typeof prize.amount === "number" ? prize.amount : 0,
+                        discount_value_deposit:
+                            typeof discountValueDeposit === "number"
+                                ? discountValueDeposit
+                                : typeof prize.amount === "number"
+                                    ? prize.amount
+                                    : null,
+                        discount_value_casco:
+                            typeof discountValueCasco === "number"
+                                ? discountValueCasco
+                                : typeof prize.amount === "number"
+                                    ? prize.amount
+                                    : null,
                         eligible: true,
                     };
                     return {
@@ -1003,7 +1139,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         );
         const currentPrizeId = bookingInfo
             ? toOptionalNumber(
-                  (bookingInfo as { wheel_of_fortune_prize_id?: unknown }).wheel_of_fortune_prize_id ??
+                  bookingInfo.wheel_of_fortune_prize_id ??
                       bookingInfo.wheel_prize?.wheel_of_fortune_prize_id ??
                       bookingInfo.wheel_prize?.prize_id,
               )
@@ -1081,7 +1217,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const selectedWheelPrizeValue = useMemo(() => {
         const prizeId = bookingInfo
             ? toOptionalNumber(
-                  (bookingInfo as { wheel_of_fortune_prize_id?: unknown }).wheel_of_fortune_prize_id ??
+                  bookingInfo.wheel_of_fortune_prize_id ??
                       bookingInfo.wheel_prize?.wheel_of_fortune_prize_id ??
                       bookingInfo.wheel_prize?.prize_id,
               )
@@ -1189,10 +1325,23 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         typeof data.offers_discount === "number"
                             ? data.offers_discount
                             : prev.offers_discount ?? 0;
+                    const normalizedOfferFixedDiscount =
+                        typeof data.offer_fixed_discount === "number"
+                            ? data.offer_fixed_discount
+                            : typeof prev.offer_fixed_discount === "number"
+                                ? prev.offer_fixed_discount
+                                : 0;
                     const normalizedDepositWaived =
                         typeof data.deposit_waived === "boolean"
                             ? data.deposit_waived
                             : prev.deposit_waived ?? false;
+                    const normalizedWheelPrizeId =
+                        toOptionalNumber(
+                            (data as { wheel_of_fortune_prize_id?: unknown }).wheel_of_fortune_prize_id,
+                        ) ??
+                        toOptionalNumber(normalizedWheelPrize?.wheel_of_fortune_prize_id) ??
+                        toOptionalNumber(normalizedWheelPrize?.prize_id) ??
+                        toOptionalNumber(prev.wheel_of_fortune_prize_id);
 
                     const nextSubtotal = preferCasco
                         ? data.sub_total_casco ?? data.sub_total ?? prev.sub_total
@@ -1221,7 +1370,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 : prev.total_before_wheel_prize,
                         applied_offers: nextAppliedOffers,
                         offers_discount: normalizedOffersDiscount,
+                        offer_fixed_discount: normalizedOfferFixedDiscount,
                         deposit_waived: normalizedDepositWaived,
+                        wheel_of_fortune_prize_id:
+                            typeof normalizedWheelPrizeId === "number"
+                                ? normalizedWheelPrizeId
+                                : prev.wheel_of_fortune_prize_id ?? null,
                     };
                 });
             } catch (error) {
@@ -1254,6 +1408,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo?.wheel_prize_discount,
         bookingInfo?.applied_offers,
         bookingInfo?.offers_discount,
+        bookingInfo?.offer_fixed_discount,
         bookingInfo?.deposit_waived,
         bookingInfo?.total_before_wheel_prize,
     ]);
@@ -1605,39 +1760,47 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 return;
             }
             if (!value) {
-                updateBookingInfo((prev) => ({
-                    ...prev,
-                    wheel_prize: null,
-                    wheel_prize_discount: 0,
-                }));
-                return;
-            }
-            const option = wheelPrizeOptions.find((entry) => entry.value === value);
-            if (!option) {
-                return;
-            }
-            const discountNumeric =
-                toOptionalNumber(option.summary.discount_value) ??
-                toOptionalNumber(option.summary.amount) ??
-                0;
-            const summary: ReservationWheelPrizeSummary = {
-                ...option.summary,
-                discount_value: discountNumeric,
-            };
-            updateBookingInfo((prev) => {
-                const previousTotalBefore = toOptionalNumber(prev.total_before_wheel_prize);
-                const nextTotalBefore =
-                    previousTotalBefore ??
+            updateBookingInfo((prev) => ({
+                ...prev,
+                wheel_prize: null,
+                wheel_prize_discount: 0,
+                total_before_wheel_prize: null,
+                wheel_of_fortune_prize_id: null,
+            }));
+            return;
+        }
+        const option = wheelPrizeOptions.find((entry) => entry.value === value);
+        if (!option) {
+            return;
+        }
+        const discountNumeric =
+            toOptionalNumber(option.summary.discount_value) ??
+            toOptionalNumber(option.summary.amount) ??
+            0;
+        const summary: ReservationWheelPrizeSummary = {
+            ...option.summary,
+            discount_value: discountNumeric,
+            discount_value_deposit:
+                toOptionalNumber(option.summary.discount_value_deposit) ?? discountNumeric,
+            discount_value_casco:
+                toOptionalNumber(option.summary.discount_value_casco) ?? discountNumeric,
+        };
+        updateBookingInfo((prev) => {
+            const previousTotalBefore = toOptionalNumber(prev.total_before_wheel_prize);
+            const nextTotalBefore =
+                previousTotalBefore ??
                     (typeof prev.total === "number"
                         ? prev.total + discountNumeric
                         : null);
-                return {
-                    ...prev,
-                    wheel_prize: summary,
-                    wheel_prize_discount: discountNumeric,
-                    total_before_wheel_prize: nextTotalBefore,
-                };
-            });
+            return {
+                ...prev,
+                wheel_prize: summary,
+                wheel_prize_discount: discountNumeric,
+                total_before_wheel_prize: nextTotalBefore,
+                wheel_of_fortune_prize_id:
+                    summary.wheel_of_fortune_prize_id ?? summary.prize_id ?? prev.wheel_of_fortune_prize_id ?? null,
+            };
+        });
         },
         [hasBookingInfo, updateBookingInfo, wheelPrizeOptions],
     );
@@ -1651,6 +1814,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 updateBookingInfo((prev) => ({
                     ...prev,
                     applied_offers: [],
+                    offers_discount: 0,
+                    offer_fixed_discount: 0,
                 }));
                 return;
             }
@@ -1668,6 +1833,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
             updateBookingInfo((prev) => ({
                 ...prev,
                 applied_offers: [sanitizedOffer],
+                offers_discount: 0,
+                offer_fixed_discount: 0,
             }));
         },
         [hasBookingInfo, offerSelectOptions, updateBookingInfo],
@@ -1736,6 +1903,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
         ? quote?.sub_total ?? quote?.sub_total_casco ?? null
         : quote?.sub_total_casco ?? quote?.sub_total ?? null;
     const discount = quote?.discount ?? 0;
+    const wheelPrizeDiscountValue =
+        typeof quote?.wheel_prize_discount === "number"
+            ? quote.wheel_prize_discount
+            : toOptionalNumber(bookingInfo.wheel_prize_discount) ??
+              toOptionalNumber(bookingInfo.wheel_prize?.discount_value) ??
+              null;
+    const normalizedWheelPrizeDiscount =
+        typeof wheelPrizeDiscountValue === "number"
+            ? Math.round(wheelPrizeDiscountValue * 100) / 100
+            : null;
+    const hasWheelPrizeDiscount =
+        typeof normalizedWheelPrizeDiscount === "number" && normalizedWheelPrizeDiscount !== 0;
     const discountedTotalQuote = bookingInfo.with_deposit
         ? quote?.total ?? quote?.total_casco ?? null
         : quote?.total_casco ?? quote?.total ?? null;
@@ -1757,6 +1936,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const totalLei = formatLeiAmount(totalDisplay);
     const restToPayLei = formatLeiAmount(restToPay);
     const discountLei = formatLeiAmount(discount);
+    const wheelPrizeDiscountLei = formatLeiAmount(normalizedWheelPrizeDiscount);
     const baseRateLei = formatLeiAmount(baseRate);
     const roundedDiscountedRate = Math.round(discountedRate);
     const roundedDiscountedRateLei = formatLeiAmount(roundedDiscountedRate);
@@ -2344,6 +2524,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         <span>{discountLei ?? "—"}</span>
                                     </div>
                                 )}
+                                {hasWheelPrizeDiscount && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Reducere roata norocului:</span>
+                                        <span>{wheelPrizeDiscountLei ?? "—"}</span>
+                                    </div>
+                                )}
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Total:</span>
                                     <span>{totalLei ?? "—"}</span>
@@ -2410,6 +2596,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                         <span>Discount:</span>
                                         <span>{discount}€</span>
+                                    </div>
+                                )}
+                                {hasWheelPrizeDiscount && (
+                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                        <span>Reducere roata norocului:</span>
+                                        <span>{normalizedWheelPrizeDiscount}€</span>
                                     </div>
                                 )}
                                 {depositWaived && (

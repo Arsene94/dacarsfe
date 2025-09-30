@@ -338,7 +338,9 @@ export interface AdminBookingFormValues {
   total_before_wheel_prize: number | null;
   wheel_prize_discount: number;
   wheel_prize: ReservationWheelPrizeSummary | null;
+  wheel_of_fortune_prize_id?: number | string | null;
   offers_discount: number;
+  offer_fixed_discount: number;
   deposit_waived: boolean;
   applied_offers: ReservationAppliedOffer[];
   discount_applied?: number | null;
@@ -386,7 +388,9 @@ export const createEmptyBookingForm = (): AdminBookingFormValues => ({
   total_before_wheel_prize: null,
   wheel_prize_discount: 0,
   wheel_prize: null,
+  wheel_of_fortune_prize_id: null,
   offers_discount: 0,
+  offer_fixed_discount: 0,
   deposit_waived: false,
   applied_offers: [],
   discount_applied: null,
