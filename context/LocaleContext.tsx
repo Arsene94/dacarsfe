@@ -31,20 +31,33 @@ const getInitialLocale = (): Locale => {
     return DEFAULT_LOCALE;
 };
 
-export const LocaleProvider = ({ children }: { children: ReactNode }) => {
-    const [locale, setLocaleState] = useState<Locale>(getInitialLocale);
+type LocaleProviderProps = {
+    children: ReactNode;
+    initialLocale?: Locale;
+};
+
+const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 an
+
+export const LocaleProvider = ({ children, initialLocale }: LocaleProviderProps) => {
+    const [locale, setLocaleState] = useState<Locale>(() => initialLocale ?? getInitialLocale());
 
     useEffect(() => {
         apiClient.setLanguage(locale);
     }, [locale]);
 
+    useEffect(() => {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+        document.cookie = `${LOCALE_STORAGE_KEY}=${locale}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; SameSite=Lax`;
+        document.documentElement.lang = locale;
+        document.documentElement.setAttribute("data-locale", locale);
+    }, [locale]);
+
     const handleSetLocale = useCallback((nextLocale: Locale) => {
         setLocaleState(nextLocale);
-        if (typeof window !== "undefined") {
-            window.localStorage.setItem(LOCALE_STORAGE_KEY, nextLocale);
-            document.documentElement.lang = nextLocale;
-            document.documentElement.setAttribute("data-locale", nextLocale);
-        }
     }, []);
 
     const value = useMemo<LocaleContextValue>(() => ({

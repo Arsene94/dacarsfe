@@ -11,7 +11,9 @@ import { DM_Sans, Poppins } from "next/font/google";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { GlobalStyles } from "./global-styles";
-import { LOCALE_STORAGE_KEY } from "@/lib/i18n/config";
+import { LOCALE_STORAGE_KEY, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { cookies } from "next/headers";
+import { isLocale } from "@/lib/i18n/utils";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -53,11 +55,23 @@ export const metadata: Metadata = {
   },
 };
 
+const resolveInitialLocale = (): Locale => {
+  const localeCookie = cookies().get(LOCALE_STORAGE_KEY)?.value;
+  if (localeCookie && isLocale(localeCookie)) {
+    return localeCookie;
+  }
+
+  return DEFAULT_LOCALE;
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const initialLocale = resolveInitialLocale();
+  const cookieKeyPattern = LOCALE_STORAGE_KEY.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+
   return (
     <html
-      lang="ro"
-      data-locale="ro"
+      lang={initialLocale}
+      data-locale={initialLocale}
       className={`${poppins.variable} ${dmSans.variable}`}
       suppressHydrationWarning
     >
@@ -102,9 +116,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             (function() {
               try {
                 var stored = window.localStorage.getItem('${LOCALE_STORAGE_KEY}');
-                if (stored) {
-                  document.documentElement.lang = stored;
-                  document.documentElement.setAttribute('data-locale', stored);
+                var cookieMatch = document.cookie.match(new RegExp('(?:^|; )${cookieKeyPattern}=([^;]+)'));
+                var cookieLocale = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+                var preferred = stored || cookieLocale;
+                if (preferred) {
+                  document.documentElement.lang = preferred;
+                  document.documentElement.setAttribute('data-locale', preferred);
+                  if (!stored) {
+                    window.localStorage.setItem('${LOCALE_STORAGE_KEY}', preferred);
+                  }
                   return;
                 }
               } catch (error) {
@@ -112,12 +132,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               }
               var current = document.documentElement.getAttribute('data-locale');
               if (!current) {
-                document.documentElement.setAttribute('data-locale', 'ro');
+                document.documentElement.setAttribute('data-locale', '${initialLocale}');
+                document.documentElement.lang = '${initialLocale}';
               }
             })();
           `}
         </Script>
-        <LocaleProvider>
+        <LocaleProvider initialLocale={initialLocale}>
           <AuthProvider>
             <BookingProvider>
               <Header />
