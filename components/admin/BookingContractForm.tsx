@@ -30,6 +30,7 @@ interface BookingContractFormProps {
 }
 
 const EMPTY_FORM: BookingContractFormState = {
+  id: "",
   cnp: "",
   license: "",
   bookingNumber: "",
@@ -309,7 +310,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       const response =
         form.name.trim().length > 0 && form.email.trim().length > 0
           ? await apiClient.generateContract(cleanPayload)
-          : await apiClient.generateContract(cleanPayload, form.bookingNumber);
+          : await apiClient.generateContract(cleanPayload, form.id);
 
       applyContractResponse(response);
     } catch (error) {

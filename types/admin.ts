@@ -399,6 +399,7 @@ export const createEmptyBookingForm = (): AdminBookingFormValues => ({
 });
 
 export interface BookingContractFormState {
+  id: string | number | undefined;
   cnp: string;
   license: string;
   bookingNumber: string;
