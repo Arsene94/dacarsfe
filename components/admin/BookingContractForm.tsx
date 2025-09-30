@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
+import type { PdfViewerProps } from "./PdfViewer";
 import Image from "next/image";
 import { Popup } from "@/components/ui/popup";
 import { Input } from "@/components/ui/input";
@@ -50,6 +52,10 @@ const STORAGE_BASE =
   process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
 
 const DEFAULT_CONTRACT_FILE_NAME = "contract.pdf";
+
+const ContractPdfViewer = dynamic<PdfViewerProps>(() => import("./PdfViewer"), {
+  ssr: false,
+});
 
 const toLocalDateTimeInput = (value?: string | null): string => {
   if (!value) {
@@ -713,12 +719,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
             </Button>
           </div>
           <div className="h-[800px] overflow-hidden rounded border border-gray-200">
-            <iframe
-              src={pdfUrl}
-              title="Contract PDF"
-              className="h-full w-full"
-              allow="fullscreen"
-            />
+            <ContractPdfViewer fileUrl={pdfUrl} fileName={contractFileName} />
           </div>
         </div>
       )}
