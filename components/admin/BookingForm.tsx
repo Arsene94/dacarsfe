@@ -616,25 +616,58 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     return;
                 }
                 setQuote(data);
-                updateBookingInfo((prev) => ({
-                    ...prev,
-                    days: typeof data.days === "number" ? data.days : prev.days ?? 0,
-                    price_per_day: data.price_per_day,
-                    base_price: typeof data.rental_rate === "number"
-                        ? data.rental_rate
-                        : prev.base_price ?? data.base_price ?? null,
-                    base_price_casco: typeof data.rental_rate_casco === "number"
-                        ? data.rental_rate_casco
-                        : prev.base_price_casco ?? data.base_price_casco ?? null,
-                    sub_total: prev.with_deposit
-                        ? data.sub_total
-                        : data.sub_total_casco ?? data.sub_total,
-                    total: prev.with_deposit
-                        ? data.total
-                        : data.total_casco ?? data.total,
-                    discount_applied: data.discount ?? null,
-                    total_services: data.total_services ?? prev.total_services,
-                }));
+                updateBookingInfo((prev) => {
+                    const preferCasco = prev.with_deposit === false;
+                    const prevPricePerDay = toOptionalNumber(prev.price_per_day);
+                    const prevOriginalPrice = toOptionalNumber(prev.original_price_per_day);
+                    const depositRateCandidate =
+                        typeof data.rental_rate === "number"
+                            ? data.rental_rate
+                            : typeof data.base_price === "number"
+                              ? data.base_price
+                              : typeof data.price_per_day === "number"
+                                ? data.price_per_day
+                                : toOptionalNumber(prev.base_price);
+                    const cascoRateCandidate =
+                        typeof data.rental_rate_casco === "number"
+                            ? data.rental_rate_casco
+                            : typeof data.base_price_casco === "number"
+                                ? data.base_price_casco
+                                : toOptionalNumber(prev.base_price_casco);
+                    const selectedRateCandidate = preferCasco
+                        ? cascoRateCandidate ?? depositRateCandidate ?? prevPricePerDay
+                        : depositRateCandidate ?? cascoRateCandidate ?? prevPricePerDay;
+                    const normalizedSelectedRate =
+                        typeof selectedRateCandidate === "number" && Number.isFinite(selectedRateCandidate)
+                            ? Math.round(selectedRateCandidate * 100) / 100
+                            : null;
+                    const normalizedDepositRate =
+                        typeof depositRateCandidate === "number" && Number.isFinite(depositRateCandidate)
+                            ? Math.round(depositRateCandidate * 100) / 100
+                            : null;
+                    const normalizedCascoRate =
+                        typeof cascoRateCandidate === "number" && Number.isFinite(cascoRateCandidate)
+                            ? Math.round(cascoRateCandidate * 100) / 100
+                            : null;
+
+                    return {
+                        ...prev,
+                        days: typeof data.days === "number" ? data.days : prev.days ?? 0,
+                        price_per_day: normalizedSelectedRate ?? prev.price_per_day,
+                        original_price_per_day:
+                            normalizedSelectedRate ?? prevOriginalPrice ?? prev.original_price_per_day ?? prev.price_per_day ?? null,
+                        base_price: normalizedDepositRate ?? prev.base_price ?? data.base_price ?? null,
+                        base_price_casco: normalizedCascoRate ?? prev.base_price_casco ?? data.base_price_casco ?? null,
+                        sub_total: prev.with_deposit
+                            ? data.sub_total
+                            : data.sub_total_casco ?? data.sub_total,
+                        total: prev.with_deposit
+                            ? data.total
+                            : data.total_casco ?? data.total,
+                        discount_applied: data.discount ?? null,
+                        total_services: data.total_services ?? prev.total_services,
+                    };
+                });
             } catch (error) {
                 if (lastQuoteKeyRef.current === quoteKey) {
                     lastQuoteKeyRef.current = null;
