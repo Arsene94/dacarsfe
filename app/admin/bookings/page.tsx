@@ -496,10 +496,10 @@ const EMPTY_WHEEL_PRIZE_DETAILS: ReturnType<typeof extractWheelPrizeDisplay> = {
   eligible: true,
 };
 
-const toLocalDateTimeInput = (value?: string | null) => {
-  if (!value) return "";
+const toLocalDateTimeInput = (value?: string | null): string | null => {
+  if (!value) return null;
   const trimmed = value.trim();
-  if (!trimmed) return "";
+  if (!trimmed) return null;
 
   const normalized = trimmed.replace(" ", "T").replace(/\.\d+/, "");
   const hasTimezone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(normalized);
@@ -516,7 +516,7 @@ const toLocalDateTimeInput = (value?: string | null) => {
 
   const parsed = new Date(normalized);
   if (Number.isNaN(parsed.getTime())) {
-    return "";
+    return null;
   }
 
   const tzOffset = parsed.getTimezoneOffset();
