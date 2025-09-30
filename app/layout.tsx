@@ -55,8 +55,9 @@ export const metadata: Metadata = {
   },
 };
 
-const resolveInitialLocale = (): Locale => {
-  const localeCookie = cookies().get(LOCALE_STORAGE_KEY)?.value;
+const resolveInitialLocale = async (): Promise<Locale> => {
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get(LOCALE_STORAGE_KEY)?.value;
   if (localeCookie && isLocale(localeCookie)) {
     return localeCookie;
   }
@@ -64,8 +65,8 @@ const resolveInitialLocale = (): Locale => {
   return DEFAULT_LOCALE;
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
-  const initialLocale = resolveInitialLocale();
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const initialLocale = await resolveInitialLocale();
   const cookieKeyPattern = LOCALE_STORAGE_KEY.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
 
   return (
