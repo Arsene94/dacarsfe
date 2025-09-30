@@ -163,10 +163,6 @@ const nextConfig = {
                         value: '<https://fe.dacars.ro>; rel=preconnect; crossorigin, <https://backend.dacars.ro>; rel=preconnect; crossorigin, <https://images.pexels.com>; rel=preconnect',
                     },
                     {
-                        key: 'X-Frame-Options',
-                        value: 'ALLOW',
-                    },
-                    {
                         key: 'X-Content-Type-Options',
                         value: 'nosniff',
                     },
