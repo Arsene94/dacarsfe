@@ -910,6 +910,8 @@ const AdminDashboard = () => {
         }
     }
 
+    console.log(contractReservation);
+    console.error(contractReservation);
 
     return (
         <div className="min-h-screen bg-gray-50">
