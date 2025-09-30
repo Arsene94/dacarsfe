@@ -307,6 +307,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
         withDeposit: form.withDeposit,
       };
       const cleanPayload = JSON.parse(JSON.stringify(payload)) as typeof payload;
+      console.log(form);
       const response =
         form.name.trim().length > 0 && form.email.trim().length > 0
           ? await apiClient.generateContract(cleanPayload)
