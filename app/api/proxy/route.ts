@@ -19,6 +19,16 @@ const sanitizeFileName = (value: string): string | null => {
   return cleaned.slice(0, 200);
 };
 
+const encodeRFC5987ValueChars = (value: string): string =>
+  encodeURIComponent(value)
+    .replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
+    .replace(/%(7C|60|5E)/g, (match, hex) => `%${hex}`);
+
+const buildContentDisposition = (fileName: string): string => {
+  const encoded = encodeRFC5987ValueChars(fileName);
+  return `inline; filename="${fileName}"; filename*=UTF-8''${encoded}`;
+};
+
 export async function GET(req: NextRequest) {
   const urlParam = req.nextUrl.searchParams.get('url');
   if (!urlParam) {
@@ -38,14 +48,33 @@ export async function GET(req: NextRequest) {
     }
     const arrayBuffer = await res.arrayBuffer();
     const contentType = res.headers.get('content-type') || 'application/pdf';
+    const originalContentDisposition = res.headers.get('content-disposition');
+    const fallbackEncoded = originalContentDisposition?.match(/filename\*=UTF-8''([^;]+)/)?.[1] ?? null;
+    const decodedFallback = (() => {
+      if (!fallbackEncoded) {
+        return null;
+      }
+      try {
+        return decodeURIComponent(fallbackEncoded);
+      } catch (error) {
+        console.warn('Failed to decode filename* from Content-Disposition', error);
+        return null;
+      }
+    })();
+    const fallbackNameRaw =
+      decodedFallback ||
+      originalContentDisposition?.match(/filename="?([^";]+)"?/)?.[1] ||
+      null;
+    const resolvedFileName =
+      sanitizedFileName || (fallbackNameRaw ? sanitizeFileName(fallbackNameRaw) : null);
     const headers: Record<string, string> = {
       'Content-Type': contentType,
       'Access-Control-Allow-Origin': '*',
       'Cache-Control': 'no-store'
     };
 
-    if (sanitizedFileName) {
-      headers['Content-Disposition'] = `inline; filename="${sanitizedFileName}"`;
+    if (resolvedFileName) {
+      headers['Content-Disposition'] = buildContentDisposition(resolvedFileName);
     }
 
     return new NextResponse(arrayBuffer, {
