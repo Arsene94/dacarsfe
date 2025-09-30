@@ -751,8 +751,8 @@ const ReservationsPage = () => {
           toIdString((booking as { bookingNumber?: unknown }).bookingNumber) ??
           "";
         const bookingNumber =
-          booking.booking_number ??
-          (booking as { bookingNumber?: unknown }).bookingNumber ??
+          toIdString(booking.booking_number) ??
+          toIdString((booking as { bookingNumber?: unknown }).bookingNumber) ??
           undefined;
         const customerName =
           booking.customer_name ?? booking.customer?.name ?? "";

@@ -27,10 +27,11 @@ import type {
     QuotePricePayload,
     QuotePriceResponse,
     ReservationAppliedOffer,
+    ReservationWheelPrizePayload,
     ReservationWheelPrizeSummary,
     Service,
 } from "@/types/reservation";
-import type { Offer } from "@/types/offer";
+import type { Offer, OfferStatus } from "@/types/offer";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
 
 const STORAGE_BASE =
@@ -401,29 +402,46 @@ const normalizeWheelPrizeSummary = (
 
 const sanitizeWheelPrizePayload = (
     prize: ReservationWheelPrizeSummary | null | undefined,
-): Record<string, unknown> | null => {
+): ReservationWheelPrizePayload | null => {
     if (!prize) {
         return null;
     }
-    const prizeId = toOptionalNumber(
-        prize.wheel_of_fortune_prize_id ?? prize.prize_id,
-    );
+    const pivotId = toOptionalNumber(prize.wheel_of_fortune_prize_id);
+    const rawPrizeId = toOptionalNumber(prize.prize_id) ?? pivotId;
+    if (rawPrizeId == null) {
+        return null;
+    }
     const wheelId = toOptionalNumber(prize.wheel_of_fortune_id);
-    const discountValue = toOptionalNumber(prize.discount_value);
-
-    return {
-        wheel_of_fortune_prize_id: prizeId ?? null,
+    const discountValue = toOptionalNumber(prize.discount_value) ?? 0;
+    const payload: ReservationWheelPrizePayload = {
+        prize_id: rawPrizeId,
         wheel_of_fortune_id: wheelId ?? null,
-        prize_id: toOptionalNumber(prize.prize_id),
-        title: prize.title,
-        type: prize.type ?? null,
-        type_label: prize.type_label ?? null,
-        amount: toOptionalNumber(prize.amount),
-        description: prize.description ?? null,
-        amount_label: prize.amount_label ?? null,
-        discount_value: discountValue ?? 0,
-        eligible: typeof prize.eligible === "boolean" ? prize.eligible : undefined,
+        wheel_of_fortune_prize_id: pivotId ?? null,
+        discount_value: discountValue,
     };
+    if (typeof prize.eligible === "boolean") {
+        payload.eligible = prize.eligible;
+    }
+    if (typeof prize.title === "string" && prize.title.trim().length > 0) {
+        payload.title = prize.title.trim();
+    }
+    if (typeof prize.type === "string" && prize.type.trim().length > 0) {
+        payload.type = prize.type.trim();
+    }
+    if (typeof prize.type_label === "string") {
+        payload.type_label = prize.type_label;
+    }
+    const amount = toOptionalNumber(prize.amount);
+    if (amount != null) {
+        payload.amount = amount;
+    }
+    if (typeof prize.description === "string") {
+        payload.description = prize.description;
+    }
+    if (typeof prize.amount_label === "string") {
+        payload.amount_label = prize.amount_label;
+    }
+    return payload;
 };
 
 const normalizeAppliedOfferEntry = (raw: unknown): ReservationAppliedOffer | null => {
@@ -501,13 +519,14 @@ const sanitizeAppliedOffersPayload = (
             if (!title) {
                 return null;
             }
-            return {
+            const normalized: ReservationAppliedOffer = {
                 id: offer.id,
                 title,
                 offer_type: offer.offer_type ?? null,
                 offer_value: offer.offer_value ?? null,
                 discount_label: offer.discount_label ?? null,
-            } satisfies ReservationAppliedOffer;
+            };
+            return normalized;
         })
         .filter((entry): entry is ReservationAppliedOffer => entry != null);
     return sanitized.length > 0 ? sanitized : null;
@@ -679,10 +698,11 @@ const buildBookingUpdatePayload = (
         payload.rental_end_date = rentalEnd;
     }
 
-    if (typeof values.car_id === "number") {
-        payload.car_id = values.car_id;
-    } else if (typeof values.car_id === "string" && values.car_id.trim().length > 0) {
-        payload.car_id = values.car_id.trim();
+    const rawCarId = values.car_id as unknown;
+    if (typeof rawCarId === "number") {
+        payload.car_id = rawCarId;
+    } else if (typeof rawCarId === "string" && rawCarId.trim().length > 0) {
+        payload.car_id = rawCarId.trim();
     }
 
     const couponType = normalizeCouponTypeValue(values.coupon_type);
@@ -1315,17 +1335,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         if (!title) {
                             return null;
                         }
-                        return {
+                        const option: AdminOfferOption = {
                             id,
                             title,
-                            status: (entry as { status?: string | null }).status ?? null,
+                            status: (entry as { status?: OfferStatus | null }).status ?? null,
                             starts_at: (entry as { starts_at?: string | null }).starts_at ?? null,
                             ends_at: (entry as { ends_at?: string | null }).ends_at ?? null,
                             discount_label: (entry as { discount_label?: string | null }).discount_label ?? null,
                             badge: (entry as { badge?: string | null }).badge ?? null,
                             offer_type: (entry as { offer_type?: string | null }).offer_type ?? null,
                             offer_value: (entry as { offer_value?: string | null }).offer_value ?? null,
-                        } satisfies AdminOfferOption;
+                        };
+                        return option;
                     })
                     .filter((entry): entry is AdminOfferOption => entry != null);
                 setOfferOptions(offersList);
