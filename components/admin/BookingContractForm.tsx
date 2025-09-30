@@ -291,6 +291,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     try {
       // build payload explicitly to avoid carrying over read-only properties
       const payload = {
+        id: form.id,
         cnp: form.cnp,
         license: form.license,
         bookingNumber: form.bookingNumber,
