@@ -49,6 +49,8 @@ const EMPTY_FORM: BookingContractFormState = {
 const STORAGE_BASE =
   process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
 
+const DEFAULT_CONTRACT_FILE_NAME = "contract.pdf";
+
 const toLocalDateTimeInput = (value?: string | null): string => {
   if (!value) {
     return "";
@@ -110,6 +112,57 @@ const resolveCarRelationName = (relation: CarRelation): string => {
   return "";
 };
 
+const removeDiacritics = (value: string): string =>
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const sanitizeFileSegment = (value: string, fallback: string): string => {
+  const sanitized = removeDiacritics(value)
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return sanitized.length > 0 ? sanitized : fallback;
+};
+
+const formatDateSegment = (value?: string | null): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.includes("T")) {
+    const [datePart] = trimmed.split("T");
+    if (datePart) {
+      return datePart;
+    }
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  return null;
+};
+
+const resolveContractFileName = (form: BookingContractFormState): string => {
+  const nameSegment = sanitizeFileSegment(form.name, "Client");
+  const today = new Date().toISOString().slice(0, 10);
+  const dateSegment =
+    formatDateSegment(form.start) ?? formatDateSegment(form.end) ?? today;
+  const planSegment = form.withDeposit ? "Cu-Garantie" : "Fara-Garantie";
+
+  return `Contract-${nameSegment}-${dateSegment}-${planSegment}.pdf`;
+};
+
 const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose, reservation }) => {
   const [form, setForm] = useState<BookingContractFormState>(EMPTY_FORM);
   const [carSearch, setCarSearch] = useState("");
@@ -119,6 +172,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const [customerResults, setCustomerResults] = useState<AdminBookingCustomerSummary[]>([]);
   const [customerSearchActive, setCustomerSearchActive] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [contractFileName, setContractFileName] = useState<string>(DEFAULT_CONTRACT_FILE_NAME);
   const revokeRef = useRef<(() => void) | undefined>();
 
   useEffect(() => {
@@ -151,6 +205,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     revokeRef.current?.();
     revokeRef.current = undefined;
     setPdfUrl(null);
+    setContractFileName(DEFAULT_CONTRACT_FILE_NAME);
   }, [reservation, open]);
 
   useEffect(() => {
@@ -268,19 +323,30 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   }, []);
 
   const applyContractResponse = useCallback(
-    (response: Parameters<typeof resolveContractUrl>[0]) => {
+    (response: Parameters<typeof resolveContractUrl>[0], nextFileName?: string) => {
       const resolved = resolveContractUrl(response);
       revokeRef.current?.();
       revokeRef.current = resolved.revoke;
+      const fileName =
+        nextFileName && nextFileName.trim().length > 0
+          ? nextFileName
+          : DEFAULT_CONTRACT_FILE_NAME;
 
       if (resolved.url) {
+        setContractFileName(fileName);
+
         const finalUrl = resolved.url.startsWith("blob:")
           ? resolved.url
-          : `/api/proxy?url=${encodeURIComponent(resolved.url)}`;
+          : (() => {
+              const params = new URLSearchParams({ url: resolved.url });
+              params.set("filename", fileName);
+              return `/api/proxy?${params.toString()}`;
+            })();
 
         setPdfUrl(finalUrl);
       } else {
         setPdfUrl(null);
+        setContractFileName(fileName);
       }
     },
     [],
@@ -311,7 +377,8 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
           ? await apiClient.generateContract(cleanPayload)
           : await apiClient.generateContract(cleanPayload, form.bookingNumber);
 
-      applyContractResponse(response);
+      const fileName = resolveContractFileName(form);
+      applyContractResponse(response, fileName);
     } catch (error) {
       console.error(error);
     }
@@ -337,7 +404,8 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       };
       const cleanPayload = JSON.parse(JSON.stringify(payload)) as typeof payload;
       const response = await apiClient.storeAndGenerateContract(cleanPayload);
-      applyContractResponse(response);
+      const fileName = resolveContractFileName(form);
+      applyContractResponse(response, fileName);
     } catch (error) {
       console.error("Eroare:", error);
     }
@@ -350,7 +418,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
 
     const link = document.createElement("a");
     link.href = pdfUrl;
-    link.download = "contract.pdf";
+    link.download = contractFileName;
     link.rel = "noopener";
     link.target = "_blank";
     document.body.appendChild(link);
