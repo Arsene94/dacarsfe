@@ -164,7 +164,7 @@ const nextConfig = {
                     },
                     {
                         key: 'X-Frame-Options',
-                        value: 'DENY',
+                        value: 'ALLOW',
                     },
                     {
                         key: 'X-Content-Type-Options',

@@ -272,10 +272,12 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       const resolved = resolveContractUrl(response);
       revokeRef.current?.();
       revokeRef.current = resolved.revoke;
+
       if (resolved.url) {
         const finalUrl = resolved.url.startsWith("blob:")
           ? resolved.url
           : `/api/proxy?url=${encodeURIComponent(resolved.url)}`;
+
         setPdfUrl(finalUrl);
       } else {
         setPdfUrl(null);
@@ -308,6 +310,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
         form.name.trim().length > 0 && form.email.trim().length > 0
           ? await apiClient.generateContract(cleanPayload)
           : await apiClient.generateContract(cleanPayload, form.bookingNumber);
+
       applyContractResponse(response);
     } catch (error) {
       console.error(error);

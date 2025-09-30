@@ -145,10 +145,10 @@ export const resolveContractUrl = (
     | null
     | undefined,
 ): ResolvedContractUrl => {
+
   if (!response) {
     return { url: null };
   }
-
   if (response instanceof Blob) {
     const objectUrl = URL.createObjectURL(response);
     return { url: objectUrl, revoke: () => URL.revokeObjectURL(objectUrl) };
@@ -156,7 +156,8 @@ export const resolveContractUrl = (
 
   const payload = Array.isArray(response)
     ? response[0] ?? null
-    : extractItem(response as ApiItemResult<BookingContractResponse>) ?? null;
+    : response ?? null;
+
 
   if (!payload) {
     return { url: null };
