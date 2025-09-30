@@ -121,11 +121,12 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const [customerSearchActive, setCustomerSearchActive] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const revokeRef = useRef<(() => void) | undefined>();
-console.log(error)
+
   useEffect(() => {
-    const bookingNumber = reservation?.id ?? reservation?.bookingNumber ?? "";
+    const bookingNumber = reservation?.bookingNumber ?? reservation?.id ?? "";
     const nextForm: BookingContractFormState = {
       ...EMPTY_FORM,
+      id: reservation?.id ?? EMPTY_FORM.id,
       bookingNumber: bookingNumber ? String(bookingNumber) : "",
     };
 
