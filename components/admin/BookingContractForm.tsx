@@ -123,10 +123,17 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
   const revokeRef = useRef<(() => void) | undefined>();
 
   useEffect(() => {
-    const bookingNumber = reservation?.id ?? reservation?.bookingNumber ?? "";
+    const reservationId = reservation?.id ? String(reservation.id) : "";
+    const rawBookingNumber = reservation?.bookingNumber;
+    const bookingNumber =
+      rawBookingNumber != null && String(rawBookingNumber).trim().length > 0
+        ? String(rawBookingNumber)
+        : reservationId;
+
     const nextForm: BookingContractFormState = {
       ...EMPTY_FORM,
-      bookingNumber: bookingNumber ? String(bookingNumber) : "",
+      id: reservationId,
+      bookingNumber,
     };
 
     if (reservation) {
