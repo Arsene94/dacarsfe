@@ -320,10 +320,10 @@ const buildBookingUpdatePayload = (
 ): Record<string, unknown> => {
     const payload: Record<string, unknown> = {
         service_ids: serviceIds,
-        with_deposit: Boolean(values.with_deposit),
-        keep_old_price: Boolean(values.keep_old_price),
-        send_email: Boolean(values.send_email),
-        deposit_waived: Boolean(values.deposit_waived),
+        with_deposit: values.with_deposit !== false,
+        keep_old_price: values.keep_old_price !== false,
+        send_email: values.send_email !== false,
+        deposit_waived: values.deposit_waived === true,
     };
 
     const rentalStart = toApiDateTime(values.rental_start_date);
@@ -394,6 +394,10 @@ const buildBookingUpdatePayload = (
     const basePriceCasco = toOptionalNumber(values.base_price_casco);
     if (basePriceCasco != null) {
         payload.base_price_casco = basePriceCasco;
+    }
+    const carDeposit = toOptionalNumber(values.car_deposit);
+    if (carDeposit != null) {
+        payload.car_deposit = carDeposit;
     }
     const pricePerDay = toOptionalNumber(values.price_per_day);
     if (pricePerDay != null) {

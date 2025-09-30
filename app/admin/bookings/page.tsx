@@ -92,44 +92,26 @@ const mergeBookingRecord = (
   };
 };
 
-const findBookingInCollection = (
-  collection: unknown,
-  reservationId: string,
-): Record<string, unknown> | null => {
-  if (!Array.isArray(collection)) {
-    return null;
-  }
-
-  for (const entry of collection) {
-    if (!isRecord(entry)) {
-      continue;
-    }
-    const merged = mergeBookingRecord(entry);
-    const candidateId =
-      toIdString(merged.id) ??
-      toIdString((merged as { booking_id?: unknown }).booking_id) ??
-      toIdString((merged as { bookingId?: unknown }).bookingId) ??
-      toIdString((merged as { booking_number?: unknown }).booking_number);
-
-    if (!candidateId || candidateId === reservationId) {
-      return merged;
-    }
-  }
-
-  return null;
-};
-
 const resolveBookingResourcePayload = (
   raw: unknown,
   reservationId: string,
 ): AdminBookingResource | null => {
   const targetId = reservationId.trim();
+  if (!targetId) {
+    return null;
+  }
 
   const visit = (value: unknown): Record<string, unknown> | null => {
     if (!value) return null;
 
     if (Array.isArray(value)) {
-      return findBookingInCollection(value, targetId);
+      for (const entry of value) {
+        const found = visit(entry);
+        if (found) {
+          return found;
+        }
+      }
+      return null;
     }
 
     if (!isRecord(value)) {
@@ -140,24 +122,43 @@ const resolveBookingResourcePayload = (
     const candidateId =
       toIdString(merged.id) ??
       toIdString((merged as { booking_id?: unknown }).booking_id) ??
-      toIdString((merged as { bookingId?: unknown }).bookingId) ??
-      toIdString((merged as { booking_number?: unknown }).booking_number);
+      toIdString((merged as { bookingId?: unknown }).bookingId);
+    const candidateNumber =
+      toIdString((merged as { booking_number?: unknown }).booking_number) ??
+      toIdString((merged as { bookingNumber?: unknown }).bookingNumber);
 
-    if (!candidateId || candidateId === targetId) {
-      const { bookings: _bookings, reservations: _reservations, booking: _booking, ...rest } = merged;
+    if (
+      (candidateId && candidateId === targetId) ||
+      (candidateNumber && candidateNumber === targetId)
+    ) {
+      const {
+        bookings: _bookings,
+        reservations: _reservations,
+        booking: _booking,
+        ...rest
+      } = merged;
       return rest;
     }
 
-    return (
-      visit(value.data) ??
-      visit(value.item) ??
-      visit(value.resource) ??
-      visit(value.result) ??
-      visit((value as { booking?: unknown }).booking) ??
-      visit((value as { reservation?: unknown }).reservation) ??
-      visit((value as { reservations?: unknown }).reservations) ??
-      visit((value as { booking_data?: unknown }).booking_data)
-    );
+    const nestedSources: unknown[] = [
+      (value as { data?: unknown }).data,
+      (value as { item?: unknown }).item,
+      (value as { resource?: unknown }).resource,
+      (value as { result?: unknown }).result,
+      (value as { booking?: unknown }).booking,
+      (value as { reservation?: unknown }).reservation,
+      (value as { reservations?: unknown }).reservations,
+      (value as { booking_data?: unknown }).booking_data,
+    ];
+
+    for (const source of nestedSources) {
+      const found = visit(source);
+      if (found) {
+        return found;
+      }
+    }
+
+    return null;
   };
 
   const resolved = visit(raw);
@@ -739,17 +740,20 @@ const ReservationsPage = () => {
         const totalBeforeWheelPrize = parseOptionalNumber(
           booking.total_before_wheel_prize,
         );
-        const identifier =
-          booking.booking_number ??
-          booking.bookingNumber ??
+        const rawId =
           booking.id ??
+          (booking as { booking_id?: unknown }).booking_id ??
+          (booking as { bookingId?: unknown }).bookingId ??
           null;
         const id =
-          typeof identifier === "string"
-            ? identifier
-            : identifier != null
-            ? String(identifier)
-            : "";
+          toIdString(rawId) ??
+          toIdString(booking.booking_number) ??
+          toIdString((booking as { bookingNumber?: unknown }).bookingNumber) ??
+          "";
+        const bookingNumber =
+          booking.booking_number ??
+          (booking as { bookingNumber?: unknown }).bookingNumber ??
+          undefined;
         const customerName =
           booking.customer_name ?? booking.customer?.name ?? "";
         const phone = booking.customer_phone ?? booking.customer?.phone ?? "";
@@ -793,6 +797,7 @@ const ReservationsPage = () => {
 
         return {
           id,
+          bookingNumber,
           customerName,
           email,
           phone,
@@ -858,14 +863,27 @@ const ReservationsPage = () => {
 
   const handleEditReservation = useCallback(
     async (reservationId: string) => {
+      const trimmedId = reservationId.trim();
       const fallbackReservation = reservations.find(
-        (reservation) => reservation.id === reservationId,
+        (reservation) => reservation.id === trimmedId,
       );
       const fallbackForm = fallbackReservation
         ? buildBookingFormFromReservation(fallbackReservation)
         : createEmptyBookingForm();
 
-      editingReservationIdRef.current = reservationId;
+      const lookupId =
+        trimmedId.length > 0
+          ? trimmedId
+          : toIdString(fallbackReservation?.bookingNumber) ?? "";
+
+      if (!lookupId) {
+        console.error("ID rezervare invalid pentru editare.");
+        return;
+      }
+
+      const requestId = /^(?:\d+)$/.test(lookupId) ? Number(lookupId) : lookupId;
+
+      editingReservationIdRef.current = lookupId;
       fallbackBookingRef.current = fallbackForm;
 
       setBookingInfo({ ...fallbackForm });
@@ -873,14 +891,14 @@ const ReservationsPage = () => {
       setShowModal(false);
 
       try {
-        const response = await apiClient.getBookingInfo(reservationId);
-        const info = resolveBookingResourcePayload(response, reservationId);
+        const response = await apiClient.getBookingInfo(requestId);
+        const info = resolveBookingResourcePayload(response, lookupId);
         if (!info) {
           throw new Error("Nu am putut găsi rezervarea solicitată.");
         }
 
         setBookingInfo((prev) => {
-          if (editingReservationIdRef.current !== reservationId) {
+          if (editingReservationIdRef.current !== lookupId) {
             return prev;
           }
           const base = prev ?? fallbackBookingRef.current ?? fallbackForm;
