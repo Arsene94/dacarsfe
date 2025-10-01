@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import BenefitsSection from "@/components/BenefitsSection";
 import ContactSection from "@/components/ContactSection";
@@ -82,11 +82,32 @@ const HomePageClient = () => {
     const [periodError, setPeriodError] = useState<unknown>(null);
     const [showWheelPopup, setShowWheelPopup] = useState(false);
     const [hasManuallyClosed, setHasManuallyClosed] = useState(false);
+    const [hasUserAdjustedBookingRange, setHasUserAdjustedBookingRange] = useState(false);
 
     const hasBookingRange = Boolean(booking.startDate && booking.endDate);
     const bookingRangeKey = hasBookingRange
         ? `${booking.startDate ?? ""}|${booking.endDate ?? ""}`
         : null;
+
+    const capturedInitialRangeKey = useRef<string | null>(null);
+    const hasCapturedInitialRange = useRef(false);
+
+    useEffect(() => {
+        if (!hasCapturedInitialRange.current) {
+            capturedInitialRangeKey.current = bookingRangeKey;
+            hasCapturedInitialRange.current = true;
+            return;
+        }
+
+        if (!bookingRangeKey) {
+            setHasUserAdjustedBookingRange(false);
+            return;
+        }
+
+        if (bookingRangeKey !== capturedInitialRangeKey.current) {
+            setHasUserAdjustedBookingRange(true);
+        }
+    }, [bookingRangeKey]);
 
     useEffect(() => {
         if (!hasBookingRange && isLoadingPeriod) {
@@ -95,7 +116,7 @@ const HomePageClient = () => {
     }, [hasBookingRange, isLoadingPeriod]);
 
     useEffect(() => {
-        if (!hasBookingRange || !bookingRangeKey) {
+        if (!hasBookingRange || !bookingRangeKey || !hasUserAdjustedBookingRange) {
             return;
         }
 
@@ -161,6 +182,7 @@ const HomePageClient = () => {
     }, [
         bookingRangeKey,
         hasBookingRange,
+        hasUserAdjustedBookingRange,
     ]);
 
     const activeMonthsSet = useMemo(() => {
@@ -201,6 +223,16 @@ const HomePageClient = () => {
     }, [activeMonthsSet, activePeriod, booking.endDate, booking.startDate]);
 
     useEffect(() => {
+        if (!hasUserAdjustedBookingRange) {
+            if (showWheelPopup) {
+                setShowWheelPopup(false);
+            }
+            if (hasManuallyClosed) {
+                setHasManuallyClosed(false);
+            }
+            return;
+        }
+
         if (!hasBookingRange) {
             if (showWheelPopup) {
                 setShowWheelPopup(false);
@@ -241,6 +273,7 @@ const HomePageClient = () => {
     }, [
         hasBookingRange,
         hasManuallyClosed,
+        hasUserAdjustedBookingRange,
         isBookingWithinActiveMonths,
         isLoadingPeriod,
         periodError,
