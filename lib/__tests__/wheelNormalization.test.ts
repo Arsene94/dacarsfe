@@ -92,4 +92,13 @@ describe("isPeriodActive", () => {
     it("ignores invalid date strings", () => {
         expect(isPeriodActive(createPeriod({ start_at: "invalid" }), reference)).toBe(false);
     });
+
+    it("treats period with doar active_months ca activă", () => {
+        expect(
+            isPeriodActive(
+                createPeriod({ active_months: [5, 6, 7], start_at: null, end_at: null }),
+                reference,
+            ),
+        ).toBe(true);
+    });
 });

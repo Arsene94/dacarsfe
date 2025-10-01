@@ -116,7 +116,11 @@ export const isPeriodActive = (
     const end = parsePeriodDate(period.end_at ?? period.ends_at ?? null) ?? null;
 
     if (!start && !end) {
-        return false;
+        const hasActiveMonths = Array.isArray(period.active_months)
+            ? period.active_months.length > 0
+            : false;
+
+        return hasActiveMonths;
     }
 
     const nowTime = referenceDate.getTime();
