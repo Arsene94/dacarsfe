@@ -24,8 +24,9 @@ import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 
-import heroMobile1x from "@/public/images/bg-hero-mobile-480x879.webp";
-import heroMobile2x from "@/public/images/bg-hero-mobile-960x1759.webp";
+import heroMobile1x from "@/public/images/bg-hero-mobile-378x284.webp";
+import heroMobile2x from "@/public/images/bg-hero-mobile-480x879.webp";
+import heroMobile3x from "@/public/images/bg-hero-mobile-960x1759.webp";
 import heroDesktop from "@/public/images/bg-hero-1920x1080.webp";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -236,7 +237,7 @@ const HeroSection = () => {
                 <picture className="relative block w-full h-full">
                     <source
                         media="(max-width: 639px)"
-                        srcSet={`${heroMobile1x.src} 1x, ${heroMobile2x.src} 2x`}
+                        srcSet={`${heroMobile1x.src} 1x, ${heroMobile2x.src} 2x, ${heroMobile3x.src} 3x`}
                         sizes="100vw"
                         type="image/webp"
                     />

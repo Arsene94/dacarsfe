@@ -82,7 +82,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           rel="preload"
           as="image"
           href="/images/bg-hero-mobile-960x1759.webp"
-          imageSrcSet="/images/bg-hero-mobile-480x879.webp 480w, /images/bg-hero-mobile-960x1759.webp 960w"
+          imageSrcSet="/images/bg-hero-mobile-378x284.webp 378w, /images/bg-hero-mobile-480x879.webp 480w, /images/bg-hero-mobile-960x1759.webp 960w"
           imageSizes="100vw"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
