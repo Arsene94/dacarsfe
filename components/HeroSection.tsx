@@ -120,6 +120,14 @@ const HeroSection = () => {
             startDate: pickup,
             endDate: dropoff,
         });
+
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(
+                new CustomEvent("booking:dates-adjusted", {
+                    detail: { startDate: pickup, endDate: dropoff },
+                }),
+            );
+        }
     }, [booking, formData.end_date, formData.start_date, setBooking]);
 
     useEffect(() => {

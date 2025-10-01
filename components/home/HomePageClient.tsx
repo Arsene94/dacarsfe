@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import BenefitsSection from "@/components/BenefitsSection";
 import ContactSection from "@/components/ContactSection";
@@ -89,25 +89,27 @@ const HomePageClient = () => {
         ? `${booking.startDate ?? ""}|${booking.endDate ?? ""}`
         : null;
 
-    const capturedInitialRangeKey = useRef<string | null>(null);
-    const hasCapturedInitialRange = useRef(false);
+    useEffect(() => {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        const markAdjusted = () => {
+            setHasUserAdjustedBookingRange(true);
+        };
+
+        window.addEventListener("booking:dates-adjusted", markAdjusted);
+
+        return () => {
+            window.removeEventListener("booking:dates-adjusted", markAdjusted);
+        };
+    }, []);
 
     useEffect(() => {
-        if (!hasCapturedInitialRange.current) {
-            capturedInitialRangeKey.current = bookingRangeKey;
-            hasCapturedInitialRange.current = true;
-            return;
-        }
-
-        if (!bookingRangeKey) {
+        if (!hasBookingRange && hasUserAdjustedBookingRange) {
             setHasUserAdjustedBookingRange(false);
-            return;
         }
-
-        if (bookingRangeKey !== capturedInitialRangeKey.current) {
-            setHasUserAdjustedBookingRange(true);
-        }
-    }, [bookingRangeKey]);
+    }, [hasBookingRange, hasUserAdjustedBookingRange]);
 
     useEffect(() => {
         if (!hasBookingRange && isLoadingPeriod) {
