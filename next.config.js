@@ -160,7 +160,7 @@ const nextConfig = {
                 headers: [
                     {
                         key: 'Link',
-                        value: '<https://fe.dacars.ro>; rel=preconnect; crossorigin, <https://backend.dacars.ro>; rel=preconnect; crossorigin, <https://images.pexels.com>; rel=preconnect',
+                        value: '<https://fe.dacars.ro>; rel=preconnect; crossorigin, <https://backend.dacars.ro>; rel=preconnect; crossorigin',
                     },
                     {
                         key: 'X-Content-Type-Options',
