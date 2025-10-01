@@ -4,18 +4,117 @@ const fs = require('fs/promises');
 const path = require('path');
 const sharp = require('sharp');
 
-const SUPPORTED_EXTENSIONS = new Set([
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.tif',
-  '.tiff',
-  '.gif',
-  '.bmp'
-]);
+const PROJECT_ROOT = path.resolve(__dirname, '..');
+const CONFIG_ROOT = path.join(PROJECT_ROOT, 'config');
+const PUBLIC_ROOT = path.join(PROJECT_ROOT, 'public');
+const MANIFEST_FILENAME = 'webp-manifest.json';
+const MANIFEST_PATH = path.join(CONFIG_ROOT, MANIFEST_FILENAME);
+const IMAGE_FORMATS_PATH = path.join(CONFIG_ROOT, 'image-formats.json');
+
+let sourceExtensions;
+try {
+  ({ sourceExtensions } = require(IMAGE_FORMATS_PATH));
+} catch (error) {
+  throw new Error(`Failed to load image formats from ${IMAGE_FORMATS_PATH}: ${error.message}`);
+}
+
+if (!Array.isArray(sourceExtensions) || sourceExtensions.length === 0) {
+  throw new Error('No source extensions configured for WebP conversion.');
+}
+
+const SUPPORTED_EXTENSIONS = new Set(
+  sourceExtensions.map((ext) => `.${String(ext).replace(/^\./, '').toLowerCase()}`)
+);
 
 const DEFAULT_QUALITY = 80;
 const DEFAULT_EFFORT = 5;
+
+function normalizeManifestEntry(entry) {
+  if (typeof entry !== 'string') {
+    return null;
+  }
+  const trimmed = entry.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.replace(/\\/g, '/').replace(/^\/+/, '');
+}
+
+async function loadManifest() {
+  try {
+    const raw = await fs.readFile(MANIFEST_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      throw new Error('WebP manifest must be an array of relative paths.');
+    }
+    const entries = parsed
+      .map(normalizeManifestEntry)
+      .filter(Boolean)
+      .sort();
+    return { entries };
+  } catch (error) {
+    if (error && error.code === 'ENOENT') {
+      return { entries: [] };
+    }
+    if (error instanceof SyntaxError) {
+      throw new Error(`Failed to parse WebP manifest: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+async function persistManifest(manifest, previousEntries) {
+  const nextEntriesSet = new Set();
+
+  for (const entry of manifest) {
+    const normalized = normalizeManifestEntry(entry);
+    if (!normalized) {
+      continue;
+    }
+    const absolutePath = path.join(PUBLIC_ROOT, normalized);
+    try {
+      const stats = await fs.stat(absolutePath);
+      if (stats.isFile()) {
+        nextEntriesSet.add(normalized);
+      }
+    } catch (error) {
+      if (!error || error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  }
+
+  const nextEntries = Array.from(nextEntriesSet).sort();
+
+  if (
+    previousEntries &&
+    previousEntries.length === nextEntries.length &&
+    previousEntries.every((entry, index) => entry === nextEntries[index])
+  ) {
+    return;
+  }
+
+  await fs.mkdir(CONFIG_ROOT, { recursive: true });
+  await fs.writeFile(MANIFEST_PATH, `${JSON.stringify(nextEntries, null, 2)}\n`);
+
+  console.log(
+    `Updated WebP manifest at ${path.relative(PROJECT_ROOT, MANIFEST_PATH)} (${nextEntries.length} entries).`
+  );
+}
+
+function addManifestEntry(manifest, destinationPath) {
+  if (!manifest) {
+    return;
+  }
+
+  const relativeToPublic = path.relative(PUBLIC_ROOT, destinationPath);
+  if (relativeToPublic.startsWith('..') || path.isAbsolute(relativeToPublic)) {
+    return;
+  }
+
+  const normalized = relativeToPublic.split(path.sep).join('/');
+  manifest.add(normalized);
+}
 
 function printHelp() {
   const script = path.relative(process.cwd(), __filename);
@@ -35,6 +134,7 @@ function printHelp() {
     '  -f, --force               Re-create WebP files even if up to date.\n' +
     '      --dry-run             Show planned work without writing files.\n' +
     '  -v, --verbose             Print skipped files.\n' +
+    `      --list-formats        Show supported source formats.\n` +
     '  -h, --help                Show this message.\n');
 }
 
@@ -116,6 +216,15 @@ function parseArguments() {
       case '--verbose':
         options.verbose = true;
         break;
+      case '--list-formats': {
+        const formats = Array.from(SUPPORTED_EXTENSIONS)
+          .map((ext) => ext.replace(/^\./, ''))
+          .sort()
+          .join(', ');
+        console.log(`Supported formats: ${formats}`);
+        process.exit(0);
+        break;
+      }
       case '-h':
       case '--help':
         printHelp();
@@ -168,13 +277,14 @@ async function shouldSkipConversion(sourcePath, targetPath, { force }) {
   }
 }
 
-async function convertFile(sourcePath, relativePath, options, counters) {
+async function convertFile(sourcePath, relativePath, options, counters, manifest) {
   const parsed = path.parse(relativePath);
   const destinationDir = path.join(options.outputRoot, parsed.dir);
   const destinationPath = path.join(destinationDir, `${parsed.name}.webp`);
 
   if (await shouldSkipConversion(sourcePath, destinationPath, options)) {
     counters.skipped += 1;
+    addManifestEntry(manifest, destinationPath);
     if (options.verbose) {
       console.log(`Skipping up-to-date file: ${relativePath}`);
     }
@@ -213,20 +323,21 @@ async function convertFile(sourcePath, relativePath, options, counters) {
     await sharp(sourcePath).rotate().webp(webpOptions).toFile(destinationPath);
     counters.converted += 1;
     console.log(`Converted ${relativePath} -> ${path.relative(options.outputRoot, destinationPath)}`);
+    addManifestEntry(manifest, destinationPath);
   } catch (error) {
     counters.failed += 1;
     console.error(`Failed to convert ${relativePath}:`, error.message);
   }
 }
 
-async function walkDirectory(currentPath, basePath, options, counters) {
+async function walkDirectory(currentPath, basePath, options, counters, manifest) {
   const entries = await fs.readdir(currentPath, { withFileTypes: true });
 
   for (const entry of entries) {
     const entryPath = path.join(currentPath, entry.name);
 
     if (entry.isDirectory()) {
-      await walkDirectory(entryPath, basePath, options, counters);
+      await walkDirectory(entryPath, basePath, options, counters, manifest);
       continue;
     }
 
@@ -240,11 +351,11 @@ async function walkDirectory(currentPath, basePath, options, counters) {
     }
 
     const relativePath = path.relative(basePath, entryPath);
-    await convertFile(entryPath, relativePath, options, counters);
+    await convertFile(entryPath, relativePath, options, counters, manifest);
   }
 }
 
-async function processPath(options) {
+async function processPath(options, manifest) {
   const counters = { converted: 0, skipped: 0, failed: 0 };
   const stats = await fs.stat(options.src).catch(() => null);
 
@@ -257,13 +368,13 @@ async function processPath(options) {
   }
 
   if (stats.isDirectory()) {
-    await walkDirectory(options.src, options.src, options, counters);
+    await walkDirectory(options.src, options.src, options, counters, manifest);
   } else if (stats.isFile()) {
     const ext = path.extname(options.src).toLowerCase();
     if (!SUPPORTED_EXTENSIONS.has(ext)) {
       throw new Error(`Unsupported file type: ${ext || 'unknown'}`);
     }
-    await convertFile(options.src, path.basename(options.src), options, counters);
+    await convertFile(options.src, path.basename(options.src), options, counters, manifest);
   } else {
     throw new Error('Source path must be a file or directory');
   }
@@ -274,7 +385,10 @@ async function processPath(options) {
 async function main() {
   try {
     const options = parseArguments();
-    const counters = await processPath(options);
+    const { entries: previousManifestEntries } = await loadManifest();
+    const manifest = new Set(previousManifestEntries);
+    const counters = await processPath(options, manifest);
+    await persistManifest(manifest, previousManifestEntries);
 
     const summary = [`Converted: ${counters.converted}`];
     summary.push(`Skipped: ${counters.skipped}`);

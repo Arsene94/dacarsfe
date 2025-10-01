@@ -1,0 +1,10 @@
+{
+  "allowlist": [
+    "images.pexels.com",
+    "backend.dacars.ro",
+    "dacars.ro",
+    "*.dacars.ro",
+    "localhost",
+    "127.0.0.1"
+  ]
+}
