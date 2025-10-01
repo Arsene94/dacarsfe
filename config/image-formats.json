@@ -1,0 +1,14 @@
+{
+  "sourceExtensions": [
+    "jpg",
+    "jpeg",
+    "png",
+    "tif",
+    "tiff",
+    "gif",
+    "bmp",
+    "avif",
+    "heic",
+    "heif"
+  ]
+}
