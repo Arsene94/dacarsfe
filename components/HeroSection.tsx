@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -96,6 +96,8 @@ const HeroSection = () => {
         ? formatDate(startOfDay(addDays(new Date(formData.start_date), 1)))
         : defaultDateRange.ret;
 
+    const hasSyncedInitialBooking = useRef(false);
+
     useEffect(() => {
         if (!formData.start_date || !formData.end_date) {
             return;
@@ -103,6 +105,11 @@ const HeroSection = () => {
 
         const pickup = formData.start_date;
         const dropoff = formData.end_date;
+
+        if (!hasSyncedInitialBooking.current) {
+            hasSyncedInitialBooking.current = true;
+            return;
+        }
 
         if (booking.startDate === pickup && booking.endDate === dropoff) {
             return;
@@ -113,6 +120,14 @@ const HeroSection = () => {
             startDate: pickup,
             endDate: dropoff,
         });
+
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(
+                new CustomEvent("booking:dates-adjusted", {
+                    detail: { startDate: pickup, endDate: dropoff },
+                }),
+            );
+        }
     }, [booking, formData.end_date, formData.start_date, setBooking]);
 
     useEffect(() => {
