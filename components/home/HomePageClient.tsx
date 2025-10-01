@@ -49,6 +49,30 @@ const resolveMonthsInRange = (startIso: string, endIso: string): number[] => {
     return Array.from(months);
 };
 
+const doesPeriodMatchBookingMonths = (
+    period: WheelOfFortunePeriod | null,
+    months: readonly number[],
+) => {
+    if (!period) {
+        return false;
+    }
+
+    if (!isPeriodActive(period)) {
+        return false;
+    }
+
+    if (months.length === 0) {
+        return false;
+    }
+
+    const periodMonths = Array.isArray(period.active_months) ? period.active_months : null;
+    if (!periodMonths || periodMonths.length === 0) {
+        return true;
+    }
+
+    return months.every((month) => periodMonths.includes(month));
+};
+
 const HomePageClient = () => {
     const { booking } = useBooking();
     const [activePeriod, setActivePeriod] = useState<WheelOfFortunePeriod | null>(null);
@@ -59,6 +83,13 @@ const HomePageClient = () => {
     const [lastFetchKey, setLastFetchKey] = useState<string | null>(null);
 
     const hasBookingRange = Boolean(booking.startDate && booking.endDate);
+    const bookingMonths = useMemo(() => {
+        if (!booking.startDate || !booking.endDate) {
+            return [] as number[];
+        }
+
+        return resolveMonthsInRange(booking.startDate, booking.endDate);
+    }, [booking.endDate, booking.startDate]);
     const bookingRangeKey = hasBookingRange
         ? `${booking.startDate ?? ""}|${booking.endDate ?? ""}`
         : null;
@@ -70,11 +101,15 @@ const HomePageClient = () => {
     }, [hasBookingRange, lastFetchKey]);
 
     useEffect(() => {
-        if (!hasBookingRange || !bookingRangeKey) {
+        if (!hasBookingRange || !bookingRangeKey || bookingMonths.length === 0) {
             return;
         }
 
-        if (isLoadingPeriod || activePeriod) {
+        if (isLoadingPeriod) {
+            return;
+        }
+
+        if (doesPeriodMatchBookingMonths(activePeriod, bookingMonths)) {
             return;
         }
 
@@ -100,7 +135,12 @@ const HomePageClient = () => {
                     .map(mapPeriod)
                     .filter((item): item is WheelOfFortunePeriod => item !== null);
 
-                let resolvedPeriod = activeCandidates.find((item) => isPeriodActive(item)) ?? null;
+                const resolveMatchingPeriod = (
+                    list: WheelOfFortunePeriod[],
+                ): WheelOfFortunePeriod | null =>
+                    list.find((item) => doesPeriodMatchBookingMonths(item, bookingMonths)) ?? null;
+
+                let resolvedPeriod = resolveMatchingPeriod(activeCandidates);
 
                 if (!resolvedPeriod) {
                     const fallbackResponse = await apiClient.getWheelOfFortunePeriods({
@@ -110,7 +150,7 @@ const HomePageClient = () => {
                     const fallbackList = extractArray(fallbackResponse)
                         .map(mapPeriod)
                         .filter((item): item is WheelOfFortunePeriod => item !== null);
-                    resolvedPeriod = fallbackList.find((item) => isPeriodActive(item)) ?? null;
+                    resolvedPeriod = resolveMatchingPeriod(fallbackList);
                 }
 
                 if (!cancelled) {
@@ -146,34 +186,20 @@ const HomePageClient = () => {
         };
     }, [
         activePeriod,
+        bookingMonths,
         bookingRangeKey,
         hasBookingRange,
         isLoadingPeriod,
         lastFetchKey,
     ]);
 
-    const activeMonths = activePeriod?.active_months ?? null;
-
     const isBookingWithinActiveMonths = useMemo(() => {
         if (!booking.startDate || !booking.endDate) {
             return false;
         }
 
-        if (!activePeriod || !isPeriodActive(activePeriod)) {
-            return false;
-        }
-
-        const bookingMonths = resolveMonthsInRange(booking.startDate, booking.endDate);
-        if (bookingMonths.length === 0) {
-            return false;
-        }
-
-        if (!activeMonths || activeMonths.length === 0) {
-            return true;
-        }
-
-        return bookingMonths.every((month) => activeMonths.includes(month));
-    }, [activeMonths, activePeriod, booking.endDate, booking.startDate]);
+        return doesPeriodMatchBookingMonths(activePeriod, bookingMonths);
+    }, [activePeriod, bookingMonths, booking.endDate, booking.startDate]);
 
     useEffect(() => {
         if (!hasBookingRange) {
@@ -249,3 +275,5 @@ const HomePageClient = () => {
 };
 
 export default HomePageClient;
+
+export { doesPeriodMatchBookingMonths, resolveMonthsInRange };
