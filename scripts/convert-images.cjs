@@ -11,7 +11,10 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.tif',
   '.tiff',
   '.gif',
-  '.bmp'
+  '.bmp',
+  '.avif',
+  '.heic',
+  '.heif'
 ]);
 
 const DEFAULT_QUALITY = 80;
@@ -35,6 +38,7 @@ function printHelp() {
     '  -f, --force               Re-create WebP files even if up to date.\n' +
     '      --dry-run             Show planned work without writing files.\n' +
     '  -v, --verbose             Print skipped files.\n' +
+    `      --list-formats        Show supported source formats.\n` +
     '  -h, --help                Show this message.\n');
 }
 
@@ -116,6 +120,15 @@ function parseArguments() {
       case '--verbose':
         options.verbose = true;
         break;
+      case '--list-formats': {
+        const formats = Array.from(SUPPORTED_EXTENSIONS)
+          .map((ext) => ext.replace(/^\./, ''))
+          .sort()
+          .join(', ');
+        console.log(`Supported formats: ${formats}`);
+        process.exit(0);
+        break;
+      }
       case '-h':
       case '--help':
         printHelp();
