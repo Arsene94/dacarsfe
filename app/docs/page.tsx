@@ -7,6 +7,8 @@ import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { DOCS_HREFLANG_LOCALES, resolveDocsSeo } from "@/app/docs/seo";
 
+export const dynamic = "force-static";
+
 export async function generateMetadata(): Promise<Metadata> {
     const { locale, copy } = await resolveDocsSeo();
 

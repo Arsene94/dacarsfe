@@ -1,5 +1,4 @@
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
-import { resolveRequestLocale } from "@/lib/i18n/server";
 
 export type DocsSeoCopy = {
     pageTitle: string;
@@ -103,7 +102,7 @@ export const getDocsSeoCopy = (locale: Locale): DocsSeoCopy => {
 };
 
 export const resolveDocsSeo = async () => {
-    const locale = await resolveRequestLocale();
+    const locale = FALLBACK_LOCALE;
     const copy = getDocsSeoCopy(locale);
     return { locale, copy };
 };
