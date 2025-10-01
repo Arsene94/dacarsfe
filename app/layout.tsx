@@ -11,9 +11,7 @@ import { DM_Sans, Poppins } from "next/font/google";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { GlobalStyles } from "./global-styles";
-import { LOCALE_STORAGE_KEY, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
-import { cookies } from "next/headers";
-import { isLocale } from "@/lib/i18n/utils";
+import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY, DEFAULT_LOCALE } from "@/lib/i18n/config";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -55,24 +53,25 @@ export const metadata: Metadata = {
   },
 };
 
-const resolveInitialLocale = async (): Promise<Locale> => {
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get(LOCALE_STORAGE_KEY)?.value;
-  if (localeCookie && isLocale(localeCookie)) {
-    return localeCookie;
-  }
+const FALLBACK_LOCALE = DEFAULT_LOCALE;
+const cookieKeyPattern = LOCALE_STORAGE_KEY.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
 
-  return DEFAULT_LOCALE;
+const supportedLocales = Array.from(AVAILABLE_LOCALES);
+
+const localeBootstrapConfig = {
+  storageKey: LOCALE_STORAGE_KEY,
+  fallbackLocale: FALLBACK_LOCALE,
+  cookiePattern: cookieKeyPattern,
+  supportedLocales,
 };
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const initialLocale = await resolveInitialLocale();
-  const cookieKeyPattern = LOCALE_STORAGE_KEY.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+export default function RootLayout({ children }: { children: ReactNode }) {
+  const bootstrapPayload = JSON.stringify(localeBootstrapConfig);
 
   return (
     <html
-      lang={initialLocale}
-      data-locale={initialLocale}
+      lang={FALLBACK_LOCALE}
+      data-locale={FALLBACK_LOCALE}
       className={`${poppins.variable} ${dmSans.variable}`}
       suppressHydrationWarning
     >
@@ -119,31 +118,59 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`
             (function() {
+              var payload = ${bootstrapPayload};
               try {
-                var stored = window.localStorage.getItem('${LOCALE_STORAGE_KEY}');
-                var cookieMatch = document.cookie.match(new RegExp('(?:^|; )${cookieKeyPattern}=([^;]+)'));
-                var cookieLocale = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
-                var preferred = stored || cookieLocale;
+                var config = typeof payload === 'string' ? JSON.parse(payload) : payload;
+                var supported = Array.isArray(config.supportedLocales) ? config.supportedLocales : [];
+                var isSupported = function(locale) {
+                  if (typeof locale !== 'string' || locale.trim().length === 0) {
+                    return false;
+                  }
+                  var lower = locale.toLowerCase();
+                  if (supported.indexOf(lower) !== -1) {
+                    return true;
+                  }
+                  var base = lower.split(/[-_]/)[0];
+                  return supported.indexOf(base) !== -1;
+                };
+                var normalize = function(locale) {
+                  if (!locale) return '';
+                  var trimmed = locale.trim();
+                  if (!trimmed) return '';
+                  var lower = trimmed.toLowerCase();
+                  if (isSupported(lower)) return lower;
+                  var base = lower.split(/[-_]/)[0];
+                  if (isSupported(base)) return base;
+                  return '';
+                };
+                var stored = window.localStorage.getItem(config.storageKey);
+                var cookieMatch = document.cookie.match(new RegExp('(?:^|; )' + config.cookiePattern + '=([^;]+)'));
+                var cookieLocale = cookieMatch ? decodeURIComponent(cookieMatch[1]) : '';
+                var navigatorLocale = normalize(window.navigator.language || window.navigator.userLanguage || '');
+                var preferred = normalize(stored) || normalize(cookieLocale) || navigatorLocale || config.fallbackLocale;
                 if (preferred) {
                   document.documentElement.lang = preferred;
                   document.documentElement.setAttribute('data-locale', preferred);
-                  if (!stored) {
-                    window.localStorage.setItem('${LOCALE_STORAGE_KEY}', preferred);
+                  if (!stored || normalize(stored) !== preferred) {
+                    try {
+                      window.localStorage.setItem(config.storageKey, preferred);
+                    } catch (storageError) {
+                      console.warn('Nu am putut salva limba preferată în localStorage', storageError);
+                    }
                   }
                   return;
                 }
               } catch (error) {
                 console.warn('Nu am putut citi limba salvată înainte de hidratare', error);
               }
-              var current = document.documentElement.getAttribute('data-locale');
-              if (!current) {
-                document.documentElement.setAttribute('data-locale', '${initialLocale}');
-                document.documentElement.lang = '${initialLocale}';
+              if (!document.documentElement.getAttribute('data-locale')) {
+                document.documentElement.setAttribute('data-locale', '${FALLBACK_LOCALE}');
+                document.documentElement.lang = '${FALLBACK_LOCALE}';
               }
             })();
           `}
         </Script>
-        <LocaleProvider initialLocale={initialLocale}>
+        <LocaleProvider>
           <AuthProvider>
             <BookingProvider>
               <Header />

@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { cache } from "react";
 import HomePageClient from "@/components/home/HomePageClient";
 import StructuredData from "@/components/StructuredData";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
-import { resolveRequestLocale } from "@/lib/i18n/server";
 import { buildMetadata } from "@/lib/seo/meta";
 import { breadcrumb, organization, website } from "@/lib/seo/jsonld";
 
@@ -56,32 +54,25 @@ const HOME_SEO_COPY: Record<Locale, HomeSeoCopy> = {
 const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
 const HREFLANG_LOCALES = ["ro", "en", "it", "es", "fr", "de"] as const;
 
-const resolveHomeSeo = cache(async () => {
-    const locale = await resolveRequestLocale();
-    const copy = HOME_SEO_COPY[locale] ?? HOME_SEO_COPY[FALLBACK_LOCALE];
-    return { locale, copy };
+export const dynamic = "force-static";
+
+const FALLBACK_COPY = HOME_SEO_COPY[FALLBACK_LOCALE];
+
+export const metadata: Metadata = buildMetadata({
+    title: FALLBACK_COPY.metaTitle,
+    description: FALLBACK_COPY.metaDescription,
+    path: "/",
+    hreflangLocales: HREFLANG_LOCALES,
+    locale: FALLBACK_LOCALE,
 });
 
-export async function generateMetadata(): Promise<Metadata> {
-    const { locale, copy } = await resolveHomeSeo();
-
-    return buildMetadata({
-        title: copy.metaTitle,
-        description: copy.metaDescription,
-        path: "/",
-        hreflangLocales: HREFLANG_LOCALES,
-        locale,
-    });
-}
-
-const HomePage = async () => {
-    const { copy } = await resolveHomeSeo();
+const HomePage = () => {
     const structuredData = [
-        organization({ description: copy.metaDescription }),
-        website({ description: copy.metaDescription }),
+        organization({ description: FALLBACK_COPY.metaDescription }),
+        website({ description: FALLBACK_COPY.metaDescription }),
         breadcrumb([
             {
-                name: copy.breadcrumbHome,
+                name: FALLBACK_COPY.breadcrumbHome,
                 url: SITE_URL,
             },
         ]),
