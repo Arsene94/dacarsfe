@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import HomePageClient from "@/components/home/HomePageClient";
 import StructuredData from "@/components/StructuredData";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
@@ -55,11 +56,11 @@ const HOME_SEO_COPY: Record<Locale, HomeSeoCopy> = {
 const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
 const HREFLANG_LOCALES = ["ro", "en", "it", "es", "fr", "de"] as const;
 
-const resolveHomeSeo = async () => {
+const resolveHomeSeo = cache(async () => {
     const locale = await resolveRequestLocale();
     const copy = HOME_SEO_COPY[locale] ?? HOME_SEO_COPY[FALLBACK_LOCALE];
     return { locale, copy };
-};
+});
 
 export async function generateMetadata(): Promise<Metadata> {
     const { locale, copy } = await resolveHomeSeo();

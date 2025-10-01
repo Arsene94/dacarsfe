@@ -1,4 +1,5 @@
 import { cookies, headers } from "next/headers";
+import { cache } from "react";
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { isLocale } from "@/lib/i18n/utils";
 
@@ -69,7 +70,7 @@ const parseAcceptLanguage = (headerValue: string | null): Locale | null => {
     return null;
 };
 
-export const resolveRequestLocale = async (): Promise<Locale> => {
+const resolveRequestLocaleUncached = async (): Promise<Locale> => {
     const cookieStore = await cookies();
     for (const key of LOCALE_COOKIE_KEYS) {
         const value = cookieStore.get(key)?.value;
@@ -91,6 +92,8 @@ export const resolveRequestLocale = async (): Promise<Locale> => {
 
     return AVAILABLE_LOCALES[0];
 };
+
+export const resolveRequestLocale = cache(resolveRequestLocaleUncached);
 
 export const isSupportedLocale = (value: string): value is Locale => {
     return normalizeLocaleCandidate(value) != null;
