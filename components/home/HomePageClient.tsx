@@ -56,18 +56,45 @@ const HomePageClient = () => {
     const [periodError, setPeriodError] = useState<unknown>(null);
     const [showWheelPopup, setShowWheelPopup] = useState(false);
     const [hasManuallyClosed, setHasManuallyClosed] = useState(false);
+    const [lastFetchKey, setLastFetchKey] = useState<string | null>(null);
+
+    const hasBookingRange = Boolean(booking.startDate && booking.endDate);
+    const bookingRangeKey = hasBookingRange
+        ? `${booking.startDate ?? ""}|${booking.endDate ?? ""}`
+        : null;
 
     useEffect(() => {
+        if (!hasBookingRange && lastFetchKey !== null) {
+            setLastFetchKey(null);
+        }
+    }, [hasBookingRange, lastFetchKey]);
+
+    useEffect(() => {
+        if (!hasBookingRange || !bookingRangeKey) {
+            return;
+        }
+
+        if (isLoadingPeriod || activePeriod) {
+            return;
+        }
+
+        if (bookingRangeKey === lastFetchKey) {
+            return;
+        }
+
         let cancelled = false;
+        const controller = new AbortController();
 
         const fetchActivePeriod = async () => {
             setIsLoadingPeriod(true);
             setPeriodError(null);
+
             try {
                 const activePeriodResponse = await apiClient.getWheelOfFortunePeriods({
                     active: 1,
                     is_active: 1,
                     limit: 1,
+                    signal: controller.signal,
                 });
                 const activeCandidates = extractArray(activePeriodResponse)
                     .map(mapPeriod)
@@ -76,7 +103,10 @@ const HomePageClient = () => {
                 let resolvedPeriod = activeCandidates.find((item) => isPeriodActive(item)) ?? null;
 
                 if (!resolvedPeriod) {
-                    const fallbackResponse = await apiClient.getWheelOfFortunePeriods({ per_page: 20 });
+                    const fallbackResponse = await apiClient.getWheelOfFortunePeriods({
+                        per_page: 20,
+                        signal: controller.signal,
+                    });
                     const fallbackList = extractArray(fallbackResponse)
                         .map(mapPeriod)
                         .filter((item): item is WheelOfFortunePeriod => item !== null);
@@ -87,7 +117,15 @@ const HomePageClient = () => {
                     setActivePeriod(resolvedPeriod);
                 }
             } catch (error) {
-                console.error("Nu am putut încărca perioadele active pentru roata norocului", error);
+                if ((error as { name?: string }).name === "AbortError") {
+                    return;
+                }
+
+                console.error(
+                    "Nu am putut încărca perioadele active pentru roata norocului",
+                    error,
+                );
+
                 if (!cancelled) {
                     setActivePeriod(null);
                     setPeriodError(error);
@@ -95,6 +133,7 @@ const HomePageClient = () => {
             } finally {
                 if (!cancelled) {
                     setIsLoadingPeriod(false);
+                    setLastFetchKey(bookingRangeKey);
                 }
             }
         };
@@ -103,8 +142,15 @@ const HomePageClient = () => {
 
         return () => {
             cancelled = true;
+            controller.abort();
         };
-    }, []);
+    }, [
+        activePeriod,
+        bookingRangeKey,
+        hasBookingRange,
+        isLoadingPeriod,
+        lastFetchKey,
+    ]);
 
     const activeMonths = activePeriod?.active_months ?? null;
 
@@ -130,6 +176,16 @@ const HomePageClient = () => {
     }, [activeMonths, activePeriod, booking.endDate, booking.startDate]);
 
     useEffect(() => {
+        if (!hasBookingRange) {
+            if (showWheelPopup) {
+                setShowWheelPopup(false);
+            }
+            if (hasManuallyClosed) {
+                setHasManuallyClosed(false);
+            }
+            return;
+        }
+
         if (isLoadingPeriod) {
             if (showWheelPopup) {
                 setShowWheelPopup(false);
@@ -137,7 +193,7 @@ const HomePageClient = () => {
             return;
         }
 
-        if (!isBookingWithinActiveMonths) {
+        if (!isBookingWithinActiveMonths || periodError) {
             if (showWheelPopup) {
                 setShowWheelPopup(false);
             }
@@ -157,7 +213,14 @@ const HomePageClient = () => {
         if (!showWheelPopup) {
             setShowWheelPopup(true);
         }
-    }, [hasManuallyClosed, isBookingWithinActiveMonths, isLoadingPeriod, showWheelPopup]);
+    }, [
+        hasBookingRange,
+        hasManuallyClosed,
+        isBookingWithinActiveMonths,
+        isLoadingPeriod,
+        periodError,
+        showWheelPopup,
+    ]);
 
     const handleWheelClose = () => {
         setShowWheelPopup(false);

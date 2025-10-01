@@ -2119,42 +2119,47 @@ export class ApiClient {
         });
     }
 
-    async getWheelOfFortunePeriods(params: {
-        page?: number;
-        per_page?: number;
-        limit?: number;
-        active?: number | boolean;
-        is_active?: number | boolean;
-        with?: string | readonly string[];
-        include?: string | readonly string[];
-    } = {}): Promise<ApiListResult<WheelOfFortunePeriod>> {
+    async getWheelOfFortunePeriods(
+        params: {
+            page?: number;
+            per_page?: number;
+            limit?: number;
+            active?: number | boolean;
+            is_active?: number | boolean;
+            with?: string | readonly string[];
+            include?: string | readonly string[];
+            signal?: AbortSignal;
+        } = {},
+    ): Promise<ApiListResult<WheelOfFortunePeriod>> {
+        const { signal, ...queryParams } = params;
         const searchParams = new URLSearchParams();
-        if (params.page) searchParams.append('page', params.page.toString());
-        if (params.per_page) searchParams.append('per_page', params.per_page.toString());
-        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (queryParams.page) searchParams.append('page', queryParams.page.toString());
+        if (queryParams.per_page) searchParams.append('per_page', queryParams.per_page.toString());
+        if (queryParams.limit) searchParams.append('limit', queryParams.limit.toString());
         const appendBooleanParam = (key: string, value: number | boolean) => {
             const normalized = typeof value === 'boolean'
                 ? value ? '1' : '0'
                 : value.toString();
             searchParams.append(key, normalized);
         };
-        if (typeof params.active !== 'undefined') {
-            appendBooleanParam('active', params.active);
+        if (typeof queryParams.active !== 'undefined') {
+            appendBooleanParam('active', queryParams.active);
         }
-        if (typeof params.is_active !== 'undefined') {
-            appendBooleanParam('is_active', params.is_active);
+        if (typeof queryParams.is_active !== 'undefined') {
+            appendBooleanParam('is_active', queryParams.is_active);
         }
-        const withValue = resolveIncludeParam(params.with);
+        const withValue = resolveIncludeParam(queryParams.with);
         if (withValue) {
             searchParams.append('with', withValue);
         }
-        const includeValue = resolveIncludeParam(params.include);
+        const includeValue = resolveIncludeParam(queryParams.include);
         if (includeValue) {
             searchParams.append('include', includeValue);
         }
         const query = searchParams.toString();
         return this.request<ApiListResult<WheelOfFortunePeriod>>(
             `/wheel-of-fortune-periods${query ? `?${query}` : ''}`,
+            signal ? { signal } : undefined,
         );
     }
 
