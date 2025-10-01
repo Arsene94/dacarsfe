@@ -22,31 +22,57 @@ const LazyWheelOfFortune = dynamic(() => import("@/components/WheelOfFortune"), 
     ssr: false,
 });
 
+const parseYearMonth = (value: string): { year: number; month: number } | null => {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const match = value.trim().match(/^(\d{4})-(\d{2})/);
+    if (!match) {
+        return null;
+    }
+
+    const [, yearRaw, monthRaw] = match;
+    const year = Number(yearRaw);
+    const month = Number(monthRaw);
+
+    if (!Number.isFinite(year) || !Number.isFinite(month)) {
+        return null;
+    }
+
+    if (month < 1 || month > 12) {
+        return null;
+    }
+
+    return { year, month };
+};
+
 const resolveMonthsInRange = (startIso: string, endIso: string): number[] => {
-    const start = new Date(startIso);
-    const end = new Date(endIso);
+    const start = parseYearMonth(startIso);
+    const end = parseYearMonth(endIso);
 
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    if (!start || !end) {
         return [];
     }
 
-    if (start > end) {
+    const startIndex = start.year * 12 + (start.month - 1);
+    const endIndex = end.year * 12 + (end.month - 1);
+
+    if (startIndex > endIndex) {
         return [];
     }
 
-    const months = new Set<number>();
-    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-    const limit = new Date(end.getFullYear(), end.getMonth(), 1);
-
-    let safety = 0;
-    while (cursor <= limit && safety < 60) {
-        months.add(cursor.getMonth() + 1);
-        cursor.setMonth(cursor.getMonth() + 1, 1);
-        cursor.setHours(0, 0, 0, 0);
-        safety += 1;
+    const months: number[] = [];
+    for (
+        let index = startIndex;
+        index <= endIndex && months.length < 120;
+        index += 1
+    ) {
+        const month = (index % 12) + 1;
+        months.push(month);
     }
 
-    return Array.from(months);
+    return Array.from(new Set(months));
 };
 
 const HomePageClient = () => {
@@ -152,7 +178,21 @@ const HomePageClient = () => {
         lastFetchKey,
     ]);
 
-    const activeMonths = activePeriod?.active_months ?? null;
+    const activeMonthsSet = useMemo(() => {
+        if (!activePeriod?.active_months || activePeriod.active_months.length === 0) {
+            return null;
+        }
+
+        const normalized = activePeriod.active_months
+            .map((month) => Number(month))
+            .filter((month) => Number.isFinite(month) && month >= 1 && month <= 12);
+
+        if (normalized.length === 0) {
+            return null;
+        }
+
+        return new Set(normalized);
+    }, [activePeriod?.active_months]);
 
     const isBookingWithinActiveMonths = useMemo(() => {
         if (!booking.startDate || !booking.endDate) {
@@ -168,12 +208,12 @@ const HomePageClient = () => {
             return false;
         }
 
-        if (!activeMonths || activeMonths.length === 0) {
+        if (!activeMonthsSet || activeMonthsSet.size === 0) {
             return true;
         }
 
-        return bookingMonths.every((month) => activeMonths.includes(month));
-    }, [activeMonths, activePeriod, booking.endDate, booking.startDate]);
+        return bookingMonths.some((month) => activeMonthsSet.has(month));
+    }, [activeMonthsSet, activePeriod, booking.endDate, booking.startDate]);
 
     useEffect(() => {
         if (!hasBookingRange) {
