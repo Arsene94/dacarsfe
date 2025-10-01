@@ -82,7 +82,6 @@ const HomePageClient = () => {
     const [periodError, setPeriodError] = useState<unknown>(null);
     const [showWheelPopup, setShowWheelPopup] = useState(false);
     const [hasManuallyClosed, setHasManuallyClosed] = useState(false);
-    const [lastFetchKey, setLastFetchKey] = useState<string | null>(null);
 
     const hasBookingRange = Boolean(booking.startDate && booking.endDate);
     const bookingRangeKey = hasBookingRange
@@ -90,25 +89,16 @@ const HomePageClient = () => {
         : null;
 
     useEffect(() => {
-        if (!hasBookingRange && lastFetchKey !== null) {
-            setLastFetchKey(null);
+        if (!hasBookingRange && isLoadingPeriod) {
+            setIsLoadingPeriod(false);
         }
-    }, [hasBookingRange, lastFetchKey]);
+    }, [hasBookingRange, isLoadingPeriod]);
 
     useEffect(() => {
         if (!hasBookingRange || !bookingRangeKey) {
             return;
         }
 
-        if (isLoadingPeriod || activePeriod) {
-            return;
-        }
-
-        if (bookingRangeKey === lastFetchKey) {
-            return;
-        }
-
-        let cancelled = false;
         const controller = new AbortController();
 
         const fetchActivePeriod = async () => {
@@ -139,7 +129,7 @@ const HomePageClient = () => {
                     resolvedPeriod = fallbackList.find((item) => isPeriodActive(item)) ?? null;
                 }
 
-                if (!cancelled) {
+                if (!controller.signal.aborted) {
                     setActivePeriod(resolvedPeriod);
                 }
             } catch (error) {
@@ -152,14 +142,13 @@ const HomePageClient = () => {
                     error,
                 );
 
-                if (!cancelled) {
+                if (!controller.signal.aborted) {
                     setActivePeriod(null);
                     setPeriodError(error);
                 }
             } finally {
-                if (!cancelled) {
+                if (!controller.signal.aborted) {
                     setIsLoadingPeriod(false);
-                    setLastFetchKey(bookingRangeKey);
                 }
             }
         };
@@ -167,15 +156,11 @@ const HomePageClient = () => {
         fetchActivePeriod();
 
         return () => {
-            cancelled = true;
             controller.abort();
         };
     }, [
-        activePeriod,
         bookingRangeKey,
         hasBookingRange,
-        isLoadingPeriod,
-        lastFetchKey,
     ]);
 
     const activeMonthsSet = useMemo(() => {
