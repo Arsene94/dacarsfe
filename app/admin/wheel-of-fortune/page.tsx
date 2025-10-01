@@ -19,6 +19,7 @@ import { Popup } from "@/components/ui/popup";
 import { Select } from "@/components/ui/select";
 import apiClient from "@/lib/api";
 import { extractItem } from "@/lib/apiResponse";
+import { isPeriodActive as resolveIsPeriodActive } from "@/lib/wheelNormalization";
 import type { ApiItemResult } from "@/types/api";
 import type { Column } from "@/types/ui";
 import {
@@ -316,13 +317,6 @@ const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
     };
 };
 
-const isPeriodActive = (period?: WheelOfFortunePeriod | null) => {
-    if (!period) return false;
-    if (typeof period.active === "boolean") return period.active;
-    if (typeof period.is_active === "boolean") return period.is_active;
-    return false;
-};
-
 const mapPrize = (item: unknown): WheelOfFortuneSlice | null => {
     if (!isRecord(item)) return null;
     const id = Number(item.id ?? item.wheel_of_fortune_id ?? item.value);
@@ -459,7 +453,7 @@ export default function WheelOfFortuneAdminPage() {
             if (currentSelected && candidateIds.includes(currentSelected)) {
                 nextSelected = currentSelected;
             } else {
-                const activePeriod = mapped.find((item) => isPeriodActive(item));
+                const activePeriod = mapped.find((item) => resolveIsPeriodActive(item));
                 nextSelected = activePeriod?.id ?? (mapped[0]?.id ?? null);
             }
 
@@ -556,7 +550,7 @@ export default function WheelOfFortuneAdminPage() {
             name: period.name ?? "",
             start: toDateInputValue(period.start_at),
             end: toDateInputValue(period.end_at),
-            isActive: isPeriodActive(period),
+            isActive: resolveIsPeriodActive(period),
             description: period.description ?? "",
             activeMonths: Array.isArray(period.active_months)
                 ? period.active_months
@@ -1004,7 +998,7 @@ export default function WheelOfFortuneAdminPage() {
                                                 </p>
                                             )}
                                         </div>
-                                        {isPeriodActive(period) ? (
+                                        {resolveIsPeriodActive(period) ? (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-jade/10 px-3 py-1 text-xs font-semibold text-jade">
                                                 <CheckCircle2 className="h-3.5 w-3.5" /> Activă
                                             </span>

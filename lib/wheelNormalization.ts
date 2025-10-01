@@ -69,11 +69,60 @@ export const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
     };
 };
 
-export const isPeriodActive = (period?: WheelOfFortunePeriod | null) => {
+const PERIOD_DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
+const PERIOD_DATE_TIME_REGEX = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/;
+
+const parsePeriodDate = (value?: string | null): Date | null => {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return null;
+
+    const normalized = PERIOD_DATE_ONLY_REGEX.test(trimmed)
+        ? `${trimmed}T00:00:00`
+        : PERIOD_DATE_TIME_REGEX.test(trimmed)
+            ? trimmed.replace(" ", "T")
+            : trimmed;
+
+    const parsed = new Date(normalized);
+    if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+    }
+
+    const fallback = new Date(trimmed.replace(" ", "T"));
+    if (!Number.isNaN(fallback.getTime())) {
+        return fallback;
+    }
+
+    return null;
+};
+
+export const isPeriodActive = (
+    period?: WheelOfFortunePeriod | null,
+    referenceDate: Date = new Date(),
+) => {
     if (!period) return false;
     if (typeof period.active === "boolean") return period.active;
     if (typeof period.is_active === "boolean") return period.is_active;
-    return false;
+
+    const start =
+        parsePeriodDate(period.start_at ?? period.starts_at ?? null) ?? null;
+    const end = parsePeriodDate(period.end_at ?? period.ends_at ?? null) ?? null;
+
+    if (!start && !end) {
+        return false;
+    }
+
+    const nowTime = referenceDate.getTime();
+
+    if (start && nowTime < start.getTime()) {
+        return false;
+    }
+
+    if (end && nowTime > end.getTime()) {
+        return false;
+    }
+
+    return true;
 };
 
 export const toOptionalNumber = (value: unknown): number | null => {
