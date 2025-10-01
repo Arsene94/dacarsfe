@@ -108,7 +108,7 @@ Tokenul de autentificare este setat prin `apiClient.setToken` după login și sa
 4. **Build de producție**: `npm run build` (compilează Tailwind, apoi rulează `next build`).
 5. **Pornire server producție**: `npm run start`.
 6. **Linting**: `npm run lint` pentru a valida regulile ESLint/TypeScript.
-7. **Optimizare imagini**: `npm run images:webp` rulează scriptul `scripts/convert-images.cjs` care convertește întreg directorul `public/` în WebP (acceptă opțiuni precum `--quality`, `--effort`, `--lossless`).
+7. **Optimizare imagini**: `npm run images:webp` rulează scriptul `scripts/convert-images.cjs` care convertește întreg directorul `public/` în WebP (acceptă opțiuni precum `--quality`, `--effort`, `--lossless`) și actualizează manifestul `config/webp-manifest.json` folosit de middleware pentru rescrierea automată în format WebP.
 
 > **Sfat:** în mediile CI setați `CI=1` înainte de `npm run lint` pentru a opri fix-urile interactive.
 
