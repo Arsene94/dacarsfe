@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -55,17 +55,6 @@ const HeroSection = () => {
     const heroSubmitLabel =
         typeof heroForm.submit === "string" ? heroForm.submit : "Caută mașini";
 
-    const [formData, setFormData] = useState({
-        start_date: "",
-        end_date: "",
-        location: resolvedLocations[0]?.value ?? "otopeni",
-        car_type: "",
-    });
-    const { booking, setBooking } = useBooking();
-
-    const [categories, setCategories] = useState<CarCategory[]>([]);
-    const router = useRouter();
-
     const formatDate = (date: Date) => {
         const tzOffset = date.getTimezoneOffset() * 60000;
         return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
@@ -83,22 +72,29 @@ const HeroSection = () => {
         return result;
     };
 
-    const minstart_date = formatDate(new Date());
-
-    useEffect(() => {
+    const defaultDateRange = useMemo(() => {
         const now = new Date();
         const pickup = formatDate(now);
         const ret = formatDate(addDays(now, 1));
-        setFormData((prev) => ({
-            ...prev,
-            start_date: pickup,
-            end_date: ret,
-        }));
+        return { pickup, ret };
     }, []);
+
+    const [formData, setFormData] = useState(() => ({
+        start_date: defaultDateRange.pickup,
+        end_date: defaultDateRange.ret,
+        location: resolvedLocations[0]?.value ?? "otopeni",
+        car_type: "",
+    }));
+    const { booking, setBooking } = useBooking();
+
+    const [categories, setCategories] = useState<CarCategory[]>([]);
+    const router = useRouter();
+
+    const minstart_date = defaultDateRange.pickup;
 
     const minend_date = formData.start_date
         ? formatDate(startOfDay(addDays(new Date(formData.start_date), 1)))
-        : formatDate(startOfDay(addDays(new Date(), 1)));
+        : defaultDateRange.ret;
 
     useEffect(() => {
         if (!formData.start_date || !formData.end_date) {
