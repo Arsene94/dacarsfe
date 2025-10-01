@@ -23,6 +23,9 @@ import { useBooking } from "@/context/useBooking";
 import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import heroMobileLowRes from "@/public/images/bg-hero-320x240.webp";
+import heroMobile from "@/public/images/bg-hero-mobile.webp";
+import heroDesktop from "@/public/images/bg-hero-1920x1080.webp";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null;
@@ -231,16 +234,25 @@ const HeroSection = () => {
             <div className="absolute inset-0">
                 <picture className="relative block w-full h-full">
                     <source
+                        media="(max-width: 639px)"
+                        srcSet={`${heroMobileLowRes.src} 1x, ${heroMobile.src} 2x`}
+                        sizes="100vw"
+                        type="image/webp"
+                    />
+                    <source
                         media="(min-width: 640px)"
-                        srcSet="/images/bg-hero-1920x1080.webp"
+                        srcSet={`${heroDesktop.src} 1920w`}
+                        sizes="100vw"
+                        type="image/webp"
                     />
                     <Image
-                        src="/images/bg-hero-mobile.webp"
+                        src={heroMobile}
                         alt="Fundal aeroport"
                         fill
                         priority
+                        placeholder="blur"
                         fetchPriority="high"
-                        sizes="(max-width: 639px) 360px, (max-width: 1023px) 768px, 100vw"
+                        sizes="100vw"
                         className="w-full h-full object-cover"
                     />
                 </picture>
