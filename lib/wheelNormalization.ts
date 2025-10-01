@@ -72,12 +72,19 @@ export const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
 const PERIOD_DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
 const PERIOD_DATE_TIME_REGEX = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/;
 
-const parsePeriodDate = (value?: string | null): Date | null => {
+type ParsedPeriodDate = {
+    date: Date;
+    dateOnly: boolean;
+};
+
+const parsePeriodDate = (value?: string | null): ParsedPeriodDate | null => {
     if (typeof value !== "string") return null;
     const trimmed = value.trim();
     if (trimmed.length === 0) return null;
 
-    const normalized = PERIOD_DATE_ONLY_REGEX.test(trimmed)
+    const isDateOnly = PERIOD_DATE_ONLY_REGEX.test(trimmed);
+
+    const normalized = isDateOnly
         ? `${trimmed}T00:00:00`
         : PERIOD_DATE_TIME_REGEX.test(trimmed)
             ? trimmed.replace(" ", "T")
@@ -85,12 +92,12 @@ const parsePeriodDate = (value?: string | null): Date | null => {
 
     const parsed = new Date(normalized);
     if (!Number.isNaN(parsed.getTime())) {
-        return parsed;
+        return { date: parsed, dateOnly: isDateOnly };
     }
 
     const fallback = new Date(trimmed.replace(" ", "T"));
     if (!Number.isNaN(fallback.getTime())) {
-        return fallback;
+        return { date: fallback, dateOnly: isDateOnly };
     }
 
     return null;
@@ -113,12 +120,18 @@ export const isPeriodActive = (
     }
 
     const nowTime = referenceDate.getTime();
+    const startTime = start?.date.getTime() ?? null;
+    let endTime = end?.date.getTime() ?? null;
 
-    if (start && nowTime < start.getTime()) {
+    if (typeof endTime === "number" && end?.dateOnly) {
+        endTime += 24 * 60 * 60 * 1000 - 1;
+    }
+
+    if (typeof startTime === "number" && nowTime < startTime) {
         return false;
     }
 
-    if (end && nowTime > end.getTime()) {
+    if (typeof endTime === "number" && nowTime > endTime) {
         return false;
     }
 

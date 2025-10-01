@@ -53,6 +53,22 @@ describe("isPeriodActive", () => {
         ).toBe(true);
     });
 
+    it("treats date-only end boundaries as inclusive for the entire day", () => {
+        expect(
+            isPeriodActive(
+                createPeriod({ start_at: "2024-05-01", end_at: "2024-05-20" }),
+                reference,
+            ),
+        ).toBe(true);
+
+        expect(
+            isPeriodActive(
+                createPeriod({ start_at: "2024-05-01", end_at: "2024-05-19" }),
+                reference,
+            ),
+        ).toBe(false);
+    });
+
     it("returns false when current date is outside the configured range", () => {
         expect(
             isPeriodActive(
