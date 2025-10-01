@@ -82,6 +82,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           rel="preload"
           as="image"
           href="/images/bg-hero-mobile.webp"
+          imageSrcSet="/images/bg-hero-320x240.webp 320w, /images/bg-hero-mobile.webp 640w"
+          imageSizes="100vw"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="dns-prefetch" href="//vercel.app" />
@@ -109,6 +111,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           as="image"
           href="/images/bg-hero-1920x1080.webp"
           media="(min-width: 640px)"
+          imageSrcSet="/images/bg-hero-1920x1080.webp 1920w"
+          imageSizes="100vw"
         />
       </head>
       <body className="min-h-screen bg-white">
