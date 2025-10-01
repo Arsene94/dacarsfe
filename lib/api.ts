@@ -2159,7 +2159,6 @@ export class ApiClient {
         const query = searchParams.toString();
         return this.request<ApiListResult<WheelOfFortunePeriod>>(
             `/wheel-of-fortune-periods${query ? `?${query}` : ''}`,
-            signal ? { signal } : undefined,
         );
     }
 
