@@ -47,6 +47,8 @@ const parsePrice = (raw: unknown): number => {
     try { return parsePrice(String(raw)); } catch { return 0; }
 };
 
+const CAR_CARD_IMAGE_SIZES = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
+
 const FleetPage = () => {
     const { t, locale } = useTranslations("cars");
     const fallbackCarName = useMemo(() => t("fallbacks.carName"), [t]);
@@ -458,7 +460,7 @@ const FleetPage = () => {
                     alt={car.name}
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
-                    sizes={isListView ? "(max-width: 768px) 100vw, 33vw" : "100vw"}
+                    sizes={CAR_CARD_IMAGE_SIZES}
                 />
                 <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
                     {car.type}
