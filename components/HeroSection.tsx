@@ -23,8 +23,9 @@ import { useBooking } from "@/context/useBooking";
 import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 import { useTranslations } from "@/lib/i18n/useTranslations";
-import heroMobileLowRes from "@/public/images/bg-hero-320x240.webp";
-import heroMobile from "@/public/images/bg-hero-mobile.webp";
+
+import heroMobile1x from "@/public/images/bg-hero-mobile-480x879.webp";
+import heroMobile2x from "@/public/images/bg-hero-mobile-960x1759.webp";
 import heroDesktop from "@/public/images/bg-hero-1920x1080.webp";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -235,7 +236,7 @@ const HeroSection = () => {
                 <picture className="relative block w-full h-full">
                     <source
                         media="(max-width: 639px)"
-                        srcSet={`${heroMobileLowRes.src} 1x, ${heroMobile.src} 2x`}
+                        srcSet={`${heroMobile1x.src} 1x, ${heroMobile2x.src} 2x`}
                         sizes="100vw"
                         type="image/webp"
                     />
@@ -246,7 +247,7 @@ const HeroSection = () => {
                         type="image/webp"
                     />
                     <Image
-                        src={heroMobile}
+                        src={heroMobile2x}
                         alt="Fundal aeroport"
                         fill
                         priority
