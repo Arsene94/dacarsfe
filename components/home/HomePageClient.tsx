@@ -70,7 +70,7 @@ const doesPeriodMatchBookingMonths = (
         return true;
     }
 
-    return months.every((month) => periodMonths.includes(month));
+    return months.some((month) => periodMonths.includes(month));
 };
 
 const HomePageClient = () => {

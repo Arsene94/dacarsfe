@@ -54,10 +54,11 @@ describe("doesPeriodMatchBookingMonths", () => {
         expect(doesPeriodMatchBookingMonths(period, [3, 4])).toBe(true);
     });
 
-    it("potrivește doar lunile incluse în active_months", () => {
+    it("consideră activă o rezervare care atinge măcar o lună permisă", () => {
         const period = buildPeriod({ active_months: [6, 7, 8] });
         expect(doesPeriodMatchBookingMonths(period, [6, 7])).toBe(true);
-        expect(doesPeriodMatchBookingMonths(period, [6, 9])).toBe(false);
+        expect(doesPeriodMatchBookingMonths(period, [6, 9])).toBe(true);
+        expect(doesPeriodMatchBookingMonths(period, [9])).toBe(false);
     });
 
     it("returnează false când nu există luni pentru rezervare", () => {
