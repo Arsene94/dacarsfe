@@ -72,6 +72,7 @@ Fiecare domeniu este izolat: componentele publice trăiesc în rădăcina `compo
 - `lib/api.ts` centralizează toate apelurile la backend-ul Laravel (mașini, rezervări, servicii, utilizatori, wheel of fortune etc.), atașează tokenul de autentificare și normalizează răspunsurile JSON/PDF.
 - `lib/mapFilters.ts` și `lib/qs.ts` traduc filtrele UI în parametri REST compatibili cu controllerele Laravel.
 - `app/api/proxy/route.ts` expune un endpoint serverless pentru a proxy-a fișiere (de ex. contracte PDF) direct din backend, cu antete CORS și cache control.
+- `app/api/images/webp/route.ts` adaugă varianta C (API proxy) pentru imagini remote/dinamice: răspunde cu WebP când clientul îl acceptă și cade elegant pe formatul original dacă conversia nu este posibilă.
 
 ### Gestionarea autentificării și sesiunii
 - `AuthContext` gestionează logarea, persistă tokenul în `localStorage`, rehidratează utilizatorul la refresh și sincronizează starea cu sidebar-ul admin.
@@ -96,6 +97,7 @@ Aplicația presupune un backend Laravel ce expune API-uri REST securizate.
 | `NEXT_PUBLIC_API_URL` | Punctul de intrare al API-ului public (mașini, rezervări, wheel). | `http://localhost:8000/api/v1` |
 | `NEXT_PUBLIC_BACKEND_URL` | Baza pentru proxy-ul de fișiere (PDF, contracte). | `http://127.0.0.1:8000` |
 | `NEXT_PUBLIC_STORAGE_URL` | URL-ul pentru imaginile din storage Laravel (folosit în cardurile mașinilor). | `https://backend.dacars.ro/storage` |
+| `IMAGE_PROXY_ALLOWLIST` | (Opțional) listă suplimentară de host-uri, separată prin virgulă, acceptate de API-ul de proxy pentru imagini. | – |
 | `CUSTOM_KEY` | Cheie opțională pentru logica custom din `next.config.js`. | – |
 | `ANALYZE` | Activează bundle analyzer (setare Next.js). | – |
 
@@ -108,7 +110,7 @@ Tokenul de autentificare este setat prin `apiClient.setToken` după login și sa
 4. **Build de producție**: `npm run build` (compilează Tailwind, apoi rulează `next build`).
 5. **Pornire server producție**: `npm run start`.
 6. **Linting**: `npm run lint` pentru a valida regulile ESLint/TypeScript.
-7. **Optimizare imagini**: `npm run images:webp` rulează scriptul `scripts/convert-images.cjs` care convertește întreg directorul `public/` în WebP (acceptă opțiuni precum `--quality`, `--effort`, `--lossless`).
+7. **Optimizare imagini**: `npm run images:webp` rulează scriptul `scripts/convert-images.cjs` care convertește întreg directorul `public/` în WebP (acceptă opțiuni precum `--quality`, `--effort`, `--lossless`) și actualizează manifestul `config/webp-manifest.json` folosit de middleware pentru rescrierea automată în format WebP. Pentru URL-urile dinamice sau remote necontrolate, endpoint-ul `app/api/images/webp/route.ts` face conversia la cerere, folosind allowlist-ul din `config/image-proxy.json` și extensia `resolveMediaUrl` din `lib/media.ts`.
 
 > **Sfat:** în mediile CI setați `CI=1` înainte de `npm run lint` pentru a opri fix-urile interactive.
 
