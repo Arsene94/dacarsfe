@@ -944,6 +944,32 @@ const CarRentalCalendar: React.FC = () => {
 
     const getHeaderHeight = () => (viewMode === 'year' ? 'h-20' : 'h-16');
 
+    const cellWidth = getCellWidth();
+    const totalWidth = dates.length * cellWidth;
+    const zoomPercentage = Math.round(zoomLevel * 100);
+    const canZoomIn = zoomLevel < MAX_ZOOM - 0.01;
+    const canZoomOut = zoomLevel > MIN_ZOOM + 0.01;
+
+    const getWeekdayLabel = React.useCallback(
+        (date: Date) => {
+            const full = formatWeekdayShort(date);
+            if (viewMode !== 'year') {
+                return full;
+            }
+
+            if (cellWidth <= 32) {
+                return '';
+            }
+
+            if (cellWidth <= 56) {
+                return full.charAt(0);
+            }
+
+            return full;
+        },
+        [cellWidth, viewMode],
+    );
+
     const getMonthGroups = () => {
         const months = [] as { name: string; daysCount: number }[];
         for (let month = 0; month < 12; month++) {
@@ -957,12 +983,6 @@ const CarRentalCalendar: React.FC = () => {
         }
         return months;
     };
-
-    const cellWidth = getCellWidth();
-    const totalWidth = dates.length * cellWidth;
-    const zoomPercentage = Math.round(zoomLevel * 100);
-    const canZoomIn = zoomLevel < MAX_ZOOM - 0.01;
-    const canZoomOut = zoomLevel > MIN_ZOOM + 0.01;
 
     const weekBgStyle = React.useMemo(() => {
         const A = '#fdecc8';
@@ -1037,24 +1057,36 @@ const CarRentalCalendar: React.FC = () => {
     }, [laneLayoutByCar]);
 
     const initialScrollDone = useRef(false);
+    const initialSelectionApplied = useRef(false);
     useEffect(() => {
         if (initialScrollDone.current) return;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayKey = today.toISOString().split('T')[0];
-        const idx = indexByDateKey.get(todayKey);
-        setSelectedItems([{ type: 'date', date: today }]);
-        setLastSelectedDate(today);
-        if (idx !== undefined) {
-            const scrollPos = idx * cellWidth - (rightPanelRef.current ? rightPanelRef.current.clientWidth / 2 - cellWidth / 2 : 0);
-            if (rightPanelRef.current) {
-                rightPanelRef.current.scrollLeft = scrollPos;
-            }
-            if (monthHeaderRef.current) monthHeaderRef.current.scrollLeft = scrollPos;
-            if (dateHeaderRef.current) dateHeaderRef.current.scrollLeft = scrollPos;
+
+        if (!initialSelectionApplied.current) {
+            setSelectedItems([{ type: 'date', date: today }]);
+            setLastSelectedDate(today);
+            initialSelectionApplied.current = true;
         }
+
+        if (today.getFullYear() !== currentYear) {
+            initialScrollDone.current = true;
+            return;
+        }
+
+        const idx = indexByDateKey.get(todayKey);
+        if (idx === undefined || cellWidth <= 0 || !rightPanelRef.current) {
+            return;
+        }
+
+        const containerWidth = rightPanelRef.current.clientWidth;
+        const scrollPos = Math.max(0, idx * cellWidth - (containerWidth / 2 - cellWidth / 2));
+        rightPanelRef.current.scrollLeft = scrollPos;
+        if (monthHeaderRef.current) monthHeaderRef.current.scrollLeft = scrollPos;
+        if (dateHeaderRef.current) dateHeaderRef.current.scrollLeft = scrollPos;
         initialScrollDone.current = true;
-    }, [cellWidth, indexByDateKey]);
+    }, [cellWidth, currentYear, indexByDateKey]);
 
     useEffect(() => {
         zoomLevelRef.current = zoomLevel;
@@ -1136,7 +1168,7 @@ const CarRentalCalendar: React.FC = () => {
 
     return (
         <div
-            className="h-screen w-full flex flex-col bg-gray-50 overflow-hidden"
+            className="min-h-dvh h-dvh md:h-screen w-full flex flex-col bg-gray-50 overflow-hidden"
             onMouseDownCapture={handleGlobalMouseDown}
         >
             <div className="bg-white shadow-sm border-b border-gray-200 p-4">
@@ -1219,8 +1251,8 @@ const CarRentalCalendar: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex-1 w-full flex overflow-hidden min-w-0">
-                <div className="w-[6.75rem] md:w-80 bg-white border-r border-gray-200 flex flex-col">
+            <div className="flex-1 min-h-0 w-full flex overflow-hidden min-w-0">
+                <div className="w-[6.75rem] md:w-80 bg-white border-r border-gray-200 flex flex-col min-h-0">
                     <div className="p-4 border-b border-gray-200 bg-gray-50">
                         <h2 className="text-lg font-semibold text-gray-900">Fleet Vehicles</h2>
                         <p className="text-sm text-gray-600">{cars.length} vehicles available</p>
@@ -1232,7 +1264,12 @@ const CarRentalCalendar: React.FC = () => {
                             </div>
                         </div>
                     )}
-                    <div ref={leftPanelRef} className="flex-1 overflow-y-auto overflow-x-hidden" onScroll={handleScroll('left')} style={{ scrollbarWidth: 'thin' }}>
+                    <div
+                        ref={leftPanelRef}
+                        className="flex-1 overflow-y-auto overflow-x-hidden min-h-0"
+                        onScroll={handleScroll('left')}
+                        style={{ scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}
+                    >
                         {cars.map((car) => (
                             <div
                                 key={car.id}
@@ -1246,7 +1283,7 @@ const CarRentalCalendar: React.FC = () => {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center space-x-2">
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-sm font-semibold text-gray-900 truncate uppercase">
+                                            <p className="text-[0.8125rem] font-semibold text-gray-900 truncate uppercase">
                                                 {car.license?.trim() ? car.license.trim().toUpperCase() : 'Fără număr'}
                                             </p>
                                             {car.model && (
@@ -1262,7 +1299,7 @@ const CarRentalCalendar: React.FC = () => {
 
                 <div
                     ref={calendarSurfaceRef}
-                    className="flex-1 w-full flex flex-col bg-white overflow-x-hidden min-w-0"
+                    className="flex-1 min-h-0 w-full flex flex-col bg-white overflow-x-hidden min-w-0"
                     style={{ touchAction: 'pan-x pan-y' }}
                 >
                     {viewMode === 'year' && (
@@ -1270,7 +1307,7 @@ const CarRentalCalendar: React.FC = () => {
                             ref={monthHeaderRef}
                             onScroll={handleScroll('header')}
                             className="w-full border-b border-gray-200 bg-gray-50 overflow-x-auto month-header-scroll"
-                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-x pan-y' }}
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}
                         >
                             <div className="flex" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px` }}>
                                 {getMonthGroups().map((month, index) => (
@@ -1292,64 +1329,88 @@ const CarRentalCalendar: React.FC = () => {
                         ref={dateHeaderRef}
                         onScroll={handleScroll('header')}
                         className={`w-full border-b border-gray-200 bg-gray-50 ${getHeaderHeight()} overflow-x-auto date-header-scroll select-none`}
-                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-x pan-y' }}
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}
                     >
                         <div className="flex h-full" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px`, ...weekBgStyle }}>
-                            {dates.map((date, index) => (
-                                <div
-                                    key={index}
-                                    data-selected={isDateSelected(date) ? 'true' : undefined}
-                                    className={`p-2 border-r border-gray-200 last:border-r-0 cursor-pointer transition-colors ${
-                                        isDateSelected(date) ? 'bg-blue-200 border-blue-400' : 'bg-transparent hover:bg-gray-100/60'
-                                    }`}
-                                    style={{ width: `${cellWidth}px`, minWidth: `${cellWidth}px`, flexShrink: 0 }}
-                                    onClick={(e) => handleDateSelect(date, e)}
-                                    onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (lastSelectedDate && e.shiftKey) {
-                                            const range = buildDateRange(lastSelectedDate, date);
-                                            setDateSelection(range, false);
-                                        } else {
-                                            setDateDrag({ active: true, start: date });
-                                            setDateSelection([date], false);
-                                        }
-                                    }}
-                                    onMouseEnter={() => {
-                                        if (dateDrag.active && dateDrag.start) {
-                                            const range = buildDateRange(dateDrag.start, date);
-                                            setDateSelection(range, false);
-                                        }
-                                    }}
-                                    onMouseUp={(e) => {
-                                        e.stopPropagation();
-                                        if (dateDrag.active) setDateDrag({ active: false, start: null });
-                                    }}
-                                >
-                                    <div className="text-center h-full flex flex-col justify-center">
-                                        {viewMode === 'year' && (
-                                            <>
-                                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                                    {formatWeekdayShort(date)}
+                            {dates.map((date, index) => {
+                                const weekdayLabel = getWeekdayLabel(date);
+                                const fullWeekday = formatWeekdayShort(date);
+                                const showWeekday = weekdayLabel.length > 0;
+                                const today = date.toDateString() === new Date().toDateString();
+                                const showTooltip = weekdayLabel.length < fullWeekday.length;
+
+                                return (
+                                    <div
+                                        key={index}
+                                        data-selected={isDateSelected(date) ? 'true' : undefined}
+                                        className={`p-2 border-r border-gray-200 last:border-r-0 cursor-pointer transition-colors ${
+                                            isDateSelected(date)
+                                                ? 'bg-blue-200 border-blue-400'
+                                                : 'bg-transparent hover:bg-gray-100/60'
+                                        }`}
+                                        style={{ width: `${cellWidth}px`, minWidth: `${cellWidth}px`, flexShrink: 0 }}
+                                        onClick={(e) => handleDateSelect(date, e)}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (lastSelectedDate && e.shiftKey) {
+                                                const range = buildDateRange(lastSelectedDate, date);
+                                                setDateSelection(range, false);
+                                            } else {
+                                                setDateDrag({ active: true, start: date });
+                                                setDateSelection([date], false);
+                                            }
+                                        }}
+                                        onMouseEnter={() => {
+                                            if (dateDrag.active && dateDrag.start) {
+                                                const range = buildDateRange(dateDrag.start, date);
+                                                setDateSelection(range, false);
+                                            }
+                                        }}
+                                        onMouseUp={(e) => {
+                                            e.stopPropagation();
+                                            if (dateDrag.active) setDateDrag({ active: false, start: null });
+                                        }}
+                                    >
+                                        <div className="text-center h-full flex flex-col justify-center">
+                                            {viewMode === 'year' && (
+                                                <>
+                                                    <div
+                                                        className="text-xs font-medium text-gray-500 uppercase tracking-wide"
+                                                        aria-label={showTooltip ? fullWeekday : undefined}
+                                                        title={showTooltip ? fullWeekday : undefined}
+                                                    >
+                                                        {weekdayLabel || '\u00a0'}
+                                                    </div>
+                                                    <div
+                                                        className={`text-sm font-semibold ${
+                                                            showWeekday ? 'mt-1' : ''
+                                                        } ${today ? 'text-blue-600' : 'text-gray-900'}`}
+                                                    >
+                                                        {date.getDate()}
+                                                    </div>
+                                                </>
+                                            )}
+                                            {viewMode === 'quarter' && (
+                                                <div className="text-sm font-medium text-gray-700">{formatDate(date)}</div>
+                                            )}
+                                            {viewMode === 'month' && (
+                                                <div className="text-sm font-medium text-gray-700">
+                                                    {formatMonthText(date, { month: 'short' })}
                                                 </div>
-                                                <div className={`text-sm font-semibold mt-1 ${date.toDateString() === new Date().toDateString() ? 'text-blue-600' : 'text-gray-900'}`}>
-                                                    {date.getDate()}
-                                                </div>
-                                            </>
-                                        )}
-                                        {viewMode === 'quarter' && <div className="text-sm font-medium text-gray-700">{formatDate(date)}</div>}
-                                        {viewMode === 'month' && <div className="text-sm font-medium text-gray-700">{formatMonthText(date, { month: 'short' })}</div>}
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 
                     <div
                         ref={rightPanelRef}
-                        className="flex-1 overflow-auto"
+                        className="flex-1 overflow-auto min-h-0"
                         onScroll={handleScroll('right')}
-                        style={{ scrollbarWidth: 'thin', touchAction: 'pan-x pan-y' }}
+                        style={{ scrollbarWidth: 'thin', touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}
                     >
                         <div style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px`, height: 'fit-content', ...weekBgStyle }}>
                             {cars.map((car) => {
