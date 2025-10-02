@@ -693,6 +693,11 @@ const buildQuotePayload = (
         service_ids: serviceIds,
     };
 
+    const customerEmail = trimmedOrNull(values.customer_email);
+    if (customerEmail) {
+        payload.customer_email = customerEmail;
+    }
+
     const totalServices = toOptionalNumber(values.total_services);
     if (totalServices != null) {
         payload.total_services = totalServices;
@@ -1402,6 +1407,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo?.coupon_type,
         bookingInfo?.coupon_amount,
         bookingInfo?.coupon_code,
+        bookingInfo?.customer_email,
         bookingInfo?.service_ids,
         bookingInfo?.with_deposit,
         bookingInfo?.wheel_prize,

@@ -240,7 +240,17 @@ describe('ApiClient coupons management', () => {
 
   it('validates a discount code by POST-ing the payload as JSON', async () => {
     const client = new ApiClient(baseURL);
-    const payload = { code: 'NEWYEAR30', sub_total: 500 };
+    const payload = {
+      code: 'NEWYEAR30',
+      car_id: 17,
+      start_date: '2025-03-12T09:00:00',
+      end_date: '2025-03-18T09:00:00',
+      price: 36,
+      price_casco: 45,
+      total_price: 216,
+      total_price_casco: 270,
+      customer_email: 'vip@example.com',
+    };
     const apiResponse: CouponQuickValidationResponse = {
       valid: true,
       amount: 150,
@@ -270,7 +280,17 @@ describe('ApiClient coupons management', () => {
 
   it('surface validation errors when discount code validation fails', async () => {
     const client = new ApiClient(baseURL);
-    const payload = { code: 'EXPIRED10', sub_total: 210 };
+    const payload = {
+      code: 'EXPIRED10',
+      car_id: 19,
+      start_date: '2025-04-01T09:00:00',
+      end_date: '2025-04-05T09:00:00',
+      price: 32,
+      price_casco: 41,
+      total_price: 160,
+      total_price_casco: 205,
+      customer_email: 'vip@example.com',
+    };
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     fetchMock.mockResolvedValueOnce(

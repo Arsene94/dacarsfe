@@ -710,6 +710,10 @@ const ReservationPage = () => {
                         total_price_casco: selectedCar.total_without_deposit ?? 0,
                     };
 
+                    if (normalizedCustomerEmail) {
+                        payload.customer_email = normalizedCustomerEmail;
+                    }
+
                     const data = await apiClient.validateDiscountCode(payload);
                     if (cancelled) {
                         return;
@@ -858,6 +862,31 @@ const ReservationPage = () => {
             (offer) => typeof offer.id === "number" && Number.isFinite(offer.id) && offer.title?.trim(),
         );
     }, [booking.appliedOffers, quoteResult?.applied_offers]);
+
+    const quoteAppliedOffersPayload = useMemo(() => {
+        if (appliedOffersSummary.length === 0) {
+            return [] as ReservationAppliedOffer[];
+        }
+
+        return appliedOffersSummary
+            .map((offer): ReservationAppliedOffer | null => {
+                if (typeof offer.id !== "number" || !Number.isFinite(offer.id)) {
+                    return null;
+                }
+                const title = typeof offer.title === "string" ? offer.title.trim() : "";
+                if (!title) {
+                    return null;
+                }
+                return {
+                    id: offer.id,
+                    title,
+                    offer_type: offer.kind ?? null,
+                    offer_value: offer.value ?? null,
+                    discount_label: offer.badge ?? null,
+                } satisfies ReservationAppliedOffer;
+            })
+            .filter((offer): offer is ReservationAppliedOffer => offer !== null);
+    }, [appliedOffersSummary]);
 
     const hasWheelPrize = wheelPrizeRecord ? isStoredWheelPrizeActive(wheelPrizeRecord) : false;
     const wheelPrizeAmountLabel = useMemo(() => {
@@ -1048,6 +1077,7 @@ const ReservationPage = () => {
         wheelPrizeDiscount,
     ]);
     const normalizedCouponCode = formData.coupon_code.trim();
+    const normalizedCustomerEmail = formData.customer_email.trim();
 
     useEffect(() => {
         if (!booking.selectedCar || !booking.startDate || !booking.endDate) {
@@ -1080,6 +1110,10 @@ const ReservationPage = () => {
                     payload.with_deposit = booking.withDeposit;
                 }
 
+                if (normalizedCustomerEmail) {
+                    payload.customer_email = normalizedCustomerEmail;
+                }
+
                 if (normalizedCouponCode) {
                     payload.coupon_code = normalizedCouponCode;
                     if (discountStatus?.isValid) {
@@ -1099,6 +1133,10 @@ const ReservationPage = () => {
                     payload.service_ids = selectedServices.map((service) => service.id);
                 }
                 payload.total_services = Math.round(servicesTotal * 100) / 100;
+
+                if (quoteAppliedOffersPayload.length > 0) {
+                    payload.applied_offers = quoteAppliedOffersPayload;
+                }
 
                 if (hasWheelPrize && wheelPrizeRecord) {
                     const prizeId = wheelPrizeRecord.prize_id ?? wheelPrizeRecord.prize.id;
@@ -1147,7 +1185,9 @@ const ReservationPage = () => {
         discountStatus?.discountCasco,
         discountStatus?.isValid,
         hasWheelPrize,
+        normalizedCustomerEmail,
         normalizedCouponCode,
+        quoteAppliedOffersPayload,
         selectedServices,
         servicesTotal,
         wheelPrizeDiscountForRequest,
@@ -1214,6 +1254,9 @@ const ReservationPage = () => {
                 total_price: carForValidation.total_deposit ?? 0,
                 total_price_casco: carForValidation.total_without_deposit ?? 0,
             };
+            if (normalizedCustomerEmail) {
+                payload.customer_email = normalizedCustomerEmail;
+            }
             const data = await apiClient.validateDiscountCode(payload);
             setOriginalCar(carForValidation);
             if (data.valid === false) {
