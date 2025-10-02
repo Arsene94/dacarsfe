@@ -46,6 +46,7 @@ type CouponFormState = {
     value: string;
     isUnlimited: "yes" | "no";
     limit: string;
+    limitToEmail: string;
     isUnlimitedExpires: "yes" | "no";
     expiresAt: string;
 };
@@ -56,6 +57,7 @@ const createEmptyForm = (): CouponFormState => ({
     value: "",
     isUnlimited: "no",
     limit: "",
+    limitToEmail: "",
     isUnlimitedExpires: "no",
     expiresAt: "",
 });
@@ -111,6 +113,7 @@ const toFormState = (coupon: Coupon): CouponFormState => ({
         coupon.is_unlimited || coupon.limit == null
             ? ""
             : String(coupon.limit ?? ""),
+    limitToEmail: coupon.limited_to_email ?? "",
     isUnlimitedExpires: coupon.is_unlimited_expires ? "yes" : "no",
     expiresAt:
         coupon.is_unlimited_expires
@@ -144,6 +147,14 @@ const formatDateTimeValue = (value?: string | null): string => {
         return "—";
     }
     return dateTimeFormatter.format(date);
+};
+
+const formatLimitedToEmail = (value?: string | null): string => {
+    if (typeof value !== "string") {
+        return "—";
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : "—";
 };
 
 type FilterState = {
@@ -281,6 +292,15 @@ export default function CouponsPage() {
 
             const unlimitedUsage = formState.isUnlimited === "yes";
             const unlimitedExpiration = formState.isUnlimitedExpires === "yes";
+            const trimmedLimitEmail = formState.limitToEmail.trim();
+
+            if (trimmedLimitEmail.length > 0) {
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailPattern.test(trimmedLimitEmail)) {
+                    setFormError("Introduce o adresă de email validă pentru limitarea cuponului.");
+                    return;
+                }
+            }
 
             let parsedLimit: number | null = null;
             if (!unlimitedUsage) {
@@ -316,6 +336,7 @@ export default function CouponsPage() {
                     limit: unlimitedUsage ? null : parsedLimit,
                     is_unlimited_expires: unlimitedExpiration,
                     expires_at: unlimitedExpiration ? null : expirationDate,
+                    limited_to_email: trimmedLimitEmail.length > 0 ? trimmedLimitEmail : null,
                 };
 
                 const response = editingCoupon
@@ -376,6 +397,12 @@ export default function CouponsPage() {
             cell: (row) => formatUsageSummary(row),
         },
         {
+            id: "limited_to_email",
+            header: "Limitat la email",
+            accessor: (row) => row.limited_to_email?.trim() ?? "",
+            cell: (row) => formatLimitedToEmail(row.limited_to_email),
+        },
+        {
             id: "expires",
             header: "Expirare",
             accessor: (row) => {
@@ -420,6 +447,10 @@ export default function CouponsPage() {
                 </div>
                 <div>
                     <span className="font-semibold text-slate-700">Utilizări:</span> {formatUsageSummary(row)}
+                </div>
+                <div>
+                    <span className="font-semibold text-slate-700">Limitat la email:</span>{" "}
+                    {formatLimitedToEmail(row.limited_to_email)}
                 </div>
                 <div>
                     <span className="font-semibold text-slate-700">Expirare:</span>{" "}
@@ -675,6 +706,20 @@ export default function CouponsPage() {
                             />
                         </div>
                     )}
+
+                    <div className="space-y-2">
+                        <Label htmlFor="coupon-limit-email">Limitare la adresă de email</Label>
+                        <Input
+                            id="coupon-limit-email"
+                            type="email"
+                            value={formState.limitToEmail}
+                            onChange={(event) => handleFormChange("limitToEmail", event.target.value)}
+                            placeholder="Ex. vip@dacars.ro"
+                        />
+                        <p className="text-xs text-slate-500">
+                            Lasă necompletat pentru a permite folosirea cuponului cu orice adresă de email.
+                        </p>
+                    </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">

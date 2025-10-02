@@ -14,6 +14,7 @@ export interface Coupon {
   is_unlimited_expires?: boolean | null;
   expires_at?: string | null;
   limit?: number | null;
+  limited_to_email?: string | null;
   used?: number | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -28,6 +29,7 @@ export type CouponPayload = Partial<{
   is_unlimited_expires: boolean;
   expires_at: string | null;
   limit: number | null;
+  limited_to_email: string | null;
   used: number | null;
 }> & Record<string, unknown>;
 
