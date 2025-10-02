@@ -1057,24 +1057,36 @@ const CarRentalCalendar: React.FC = () => {
     }, [laneLayoutByCar]);
 
     const initialScrollDone = useRef(false);
+    const initialSelectionApplied = useRef(false);
     useEffect(() => {
         if (initialScrollDone.current) return;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayKey = today.toISOString().split('T')[0];
-        const idx = indexByDateKey.get(todayKey);
-        setSelectedItems([{ type: 'date', date: today }]);
-        setLastSelectedDate(today);
-        if (idx !== undefined) {
-            const scrollPos = idx * cellWidth - (rightPanelRef.current ? rightPanelRef.current.clientWidth / 2 - cellWidth / 2 : 0);
-            if (rightPanelRef.current) {
-                rightPanelRef.current.scrollLeft = scrollPos;
-            }
-            if (monthHeaderRef.current) monthHeaderRef.current.scrollLeft = scrollPos;
-            if (dateHeaderRef.current) dateHeaderRef.current.scrollLeft = scrollPos;
+
+        if (!initialSelectionApplied.current) {
+            setSelectedItems([{ type: 'date', date: today }]);
+            setLastSelectedDate(today);
+            initialSelectionApplied.current = true;
         }
+
+        if (today.getFullYear() !== currentYear) {
+            initialScrollDone.current = true;
+            return;
+        }
+
+        const idx = indexByDateKey.get(todayKey);
+        if (idx === undefined || cellWidth <= 0 || !rightPanelRef.current) {
+            return;
+        }
+
+        const containerWidth = rightPanelRef.current.clientWidth;
+        const scrollPos = Math.max(0, idx * cellWidth - (containerWidth / 2 - cellWidth / 2));
+        rightPanelRef.current.scrollLeft = scrollPos;
+        if (monthHeaderRef.current) monthHeaderRef.current.scrollLeft = scrollPos;
+        if (dateHeaderRef.current) dateHeaderRef.current.scrollLeft = scrollPos;
         initialScrollDone.current = true;
-    }, [cellWidth, indexByDateKey]);
+    }, [cellWidth, currentYear, indexByDateKey]);
 
     useEffect(() => {
         zoomLevelRef.current = zoomLevel;
