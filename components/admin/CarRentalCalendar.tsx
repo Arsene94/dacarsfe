@@ -944,6 +944,26 @@ const CarRentalCalendar: React.FC = () => {
 
     const getHeaderHeight = () => (viewMode === 'year' ? 'h-20' : 'h-16');
 
+    const getWeekdayLabel = React.useCallback(
+        (date: Date) => {
+            const full = formatWeekdayShort(date);
+            if (viewMode !== 'year') {
+                return full;
+            }
+
+            if (cellWidth <= 32) {
+                return '';
+            }
+
+            if (cellWidth <= 56) {
+                return full.charAt(0);
+            }
+
+            return full;
+        },
+        [cellWidth, viewMode],
+    );
+
     const getMonthGroups = () => {
         const months = [] as { name: string; daysCount: number }[];
         for (let month = 0; month < 12; month++) {
@@ -1300,53 +1320,77 @@ const CarRentalCalendar: React.FC = () => {
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}
                     >
                         <div className="flex h-full" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px`, ...weekBgStyle }}>
-                            {dates.map((date, index) => (
-                                <div
-                                    key={index}
-                                    data-selected={isDateSelected(date) ? 'true' : undefined}
-                                    className={`p-2 border-r border-gray-200 last:border-r-0 cursor-pointer transition-colors ${
-                                        isDateSelected(date) ? 'bg-blue-200 border-blue-400' : 'bg-transparent hover:bg-gray-100/60'
-                                    }`}
-                                    style={{ width: `${cellWidth}px`, minWidth: `${cellWidth}px`, flexShrink: 0 }}
-                                    onClick={(e) => handleDateSelect(date, e)}
-                                    onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (lastSelectedDate && e.shiftKey) {
-                                            const range = buildDateRange(lastSelectedDate, date);
-                                            setDateSelection(range, false);
-                                        } else {
-                                            setDateDrag({ active: true, start: date });
-                                            setDateSelection([date], false);
-                                        }
-                                    }}
-                                    onMouseEnter={() => {
-                                        if (dateDrag.active && dateDrag.start) {
-                                            const range = buildDateRange(dateDrag.start, date);
-                                            setDateSelection(range, false);
-                                        }
-                                    }}
-                                    onMouseUp={(e) => {
-                                        e.stopPropagation();
-                                        if (dateDrag.active) setDateDrag({ active: false, start: null });
-                                    }}
-                                >
-                                    <div className="text-center h-full flex flex-col justify-center">
-                                        {viewMode === 'year' && (
-                                            <>
-                                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                                    {formatWeekdayShort(date)}
+                            {dates.map((date, index) => {
+                                const weekdayLabel = getWeekdayLabel(date);
+                                const fullWeekday = formatWeekdayShort(date);
+                                const showWeekday = weekdayLabel.length > 0;
+                                const today = date.toDateString() === new Date().toDateString();
+                                const showTooltip = weekdayLabel.length < fullWeekday.length;
+
+                                return (
+                                    <div
+                                        key={index}
+                                        data-selected={isDateSelected(date) ? 'true' : undefined}
+                                        className={`p-2 border-r border-gray-200 last:border-r-0 cursor-pointer transition-colors ${
+                                            isDateSelected(date)
+                                                ? 'bg-blue-200 border-blue-400'
+                                                : 'bg-transparent hover:bg-gray-100/60'
+                                        }`}
+                                        style={{ width: `${cellWidth}px`, minWidth: `${cellWidth}px`, flexShrink: 0 }}
+                                        onClick={(e) => handleDateSelect(date, e)}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (lastSelectedDate && e.shiftKey) {
+                                                const range = buildDateRange(lastSelectedDate, date);
+                                                setDateSelection(range, false);
+                                            } else {
+                                                setDateDrag({ active: true, start: date });
+                                                setDateSelection([date], false);
+                                            }
+                                        }}
+                                        onMouseEnter={() => {
+                                            if (dateDrag.active && dateDrag.start) {
+                                                const range = buildDateRange(dateDrag.start, date);
+                                                setDateSelection(range, false);
+                                            }
+                                        }}
+                                        onMouseUp={(e) => {
+                                            e.stopPropagation();
+                                            if (dateDrag.active) setDateDrag({ active: false, start: null });
+                                        }}
+                                    >
+                                        <div className="text-center h-full flex flex-col justify-center">
+                                            {viewMode === 'year' && (
+                                                <>
+                                                    <div
+                                                        className="text-xs font-medium text-gray-500 uppercase tracking-wide"
+                                                        aria-label={showTooltip ? fullWeekday : undefined}
+                                                        title={showTooltip ? fullWeekday : undefined}
+                                                    >
+                                                        {weekdayLabel || '\u00a0'}
+                                                    </div>
+                                                    <div
+                                                        className={`text-sm font-semibold ${
+                                                            showWeekday ? 'mt-1' : ''
+                                                        } ${today ? 'text-blue-600' : 'text-gray-900'}`}
+                                                    >
+                                                        {date.getDate()}
+                                                    </div>
+                                                </>
+                                            )}
+                                            {viewMode === 'quarter' && (
+                                                <div className="text-sm font-medium text-gray-700">{formatDate(date)}</div>
+                                            )}
+                                            {viewMode === 'month' && (
+                                                <div className="text-sm font-medium text-gray-700">
+                                                    {formatMonthText(date, { month: 'short' })}
                                                 </div>
-                                                <div className={`text-sm font-semibold mt-1 ${date.toDateString() === new Date().toDateString() ? 'text-blue-600' : 'text-gray-900'}`}>
-                                                    {date.getDate()}
-                                                </div>
-                                            </>
-                                        )}
-                                        {viewMode === 'quarter' && <div className="text-sm font-medium text-gray-700">{formatDate(date)}</div>}
-                                        {viewMode === 'month' && <div className="text-sm font-medium text-gray-700">{formatMonthText(date, { month: 'short' })}</div>}
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 
