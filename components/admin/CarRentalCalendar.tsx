@@ -1396,20 +1396,20 @@ const CarRentalCalendar: React.FC = () => {
             onMouseDownCapture={handleGlobalMouseDown}
         >
             <div className="bg-white shadow-sm border-b border-gray-200 p-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center justify-between gap-4 md:justify-start">
                         <h1 className="text-2xl font-bold text-gray-900 flex items-center">
                             <CarIcon className="mr-2 h-6 w-6 text-blue-600" />
                             DaCars Calendar
                         </h1>
                         <div className="text-sm text-gray-600">
                             {selectedItems.length > 0 && (
-                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md">{selectedItems.length} selected</span>
+                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md">{selectedItems.length} selectate</span>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-4">
+                    <div className="flex flex-wrap items-center gap-3 justify-start md:justify-end md:flex-nowrap md:gap-4">
                         <div className="flex bg-gray-100 rounded-lg p-1">
                             {(['month', 'quarter', 'year'] as const).map((mode) => (
                                 <button
@@ -1452,7 +1452,7 @@ const CarRentalCalendar: React.FC = () => {
                             onClick={goToCurrentYear}
                             className="hidden md:block px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                            Current Year
+                            Anul curent
                         </button>
                         <Button
                             data-keep-selection="true"
@@ -1472,6 +1472,32 @@ const CarRentalCalendar: React.FC = () => {
                             </button>
                         </div>
                     </div>
+                </div>
+
+                <div className="mt-1 flex items-center justify-between md:hidden">
+                    <div className="flex items-center space-x-2">
+                        <button
+                            onClick={() => navigateYear('prev')}
+                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
+                            aria-label="Anul anterior"
+                        >
+                            <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        <span className="text-base font-medium text-gray-900 min-w-[72px] text-center">{currentYear}</span>
+                        <button
+                            onClick={() => navigateYear('next')}
+                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
+                            aria-label="Anul următor"
+                        >
+                            <ChevronRight className="h-5 w-5" />
+                        </button>
+                    </div>
+                    <button
+                        onClick={goToCurrentYear}
+                        className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        Anul curent
+                    </button>
                 </div>
             </div>
 
