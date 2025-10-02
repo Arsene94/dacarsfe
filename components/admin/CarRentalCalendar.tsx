@@ -944,6 +944,12 @@ const CarRentalCalendar: React.FC = () => {
 
     const getHeaderHeight = () => (viewMode === 'year' ? 'h-20' : 'h-16');
 
+    const cellWidth = getCellWidth();
+    const totalWidth = dates.length * cellWidth;
+    const zoomPercentage = Math.round(zoomLevel * 100);
+    const canZoomIn = zoomLevel < MAX_ZOOM - 0.01;
+    const canZoomOut = zoomLevel > MIN_ZOOM + 0.01;
+
     const getWeekdayLabel = React.useCallback(
         (date: Date) => {
             const full = formatWeekdayShort(date);
@@ -977,12 +983,6 @@ const CarRentalCalendar: React.FC = () => {
         }
         return months;
     };
-
-    const cellWidth = getCellWidth();
-    const totalWidth = dates.length * cellWidth;
-    const zoomPercentage = Math.round(zoomLevel * 100);
-    const canZoomIn = zoomLevel < MAX_ZOOM - 0.01;
-    const canZoomOut = zoomLevel > MIN_ZOOM + 0.01;
 
     const weekBgStyle = React.useMemo(() => {
         const A = '#fdecc8';
