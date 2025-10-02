@@ -621,7 +621,10 @@ const CarRentalCalendar: React.FC = () => {
         setDateSelection(range, false);
     };
 
-    const findTouchById = (touchList: TouchList, identifier: number | null): Touch | null => {
+    const findTouchById = (
+        touchList: TouchList | React.TouchList,
+        identifier: number | null,
+    ): (Touch | React.Touch) | null => {
         if (identifier == null) return null;
         for (let i = 0; i < touchList.length; i += 1) {
             const touch = touchList.item(i);
