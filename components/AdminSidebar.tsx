@@ -38,6 +38,7 @@ import {
   LogOut,
   ClipboardList,
   Wallet,
+  TicketPercent,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -462,6 +463,16 @@ const menuItems: readonly AdminSidebarItem[] = [
               href: "/admin/offers",
               icon: BadgePercent,
               requiredPermissions: buildPermissionList("offers", ["offer", "promotion", "promotions"]),
+          },
+          {
+              name: "Cupoane",
+              href: "/admin/coupons",
+              icon: TicketPercent,
+              requiredPermissions: buildPermissionList("coupons", [
+                  "coupon",
+                  "discount-code",
+                  "discount-codes",
+              ]),
           },
           {
               name: "Wheel of Fortune",
