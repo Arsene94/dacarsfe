@@ -202,6 +202,15 @@ interface Selection {
     cellKey?: string;
 }
 
+interface TouchSelectionState {
+    active: boolean;
+    identifier: number | null;
+    startIdx: number;
+    lastIdx: number;
+    startClientX: number;
+    selecting: boolean;
+}
+
 const BASE_ROW_HEIGHT = 64;  // Tailwind h-16
 const LANE_HEIGHT = 34;
 const ROW_VPAD = 8;
@@ -436,11 +445,39 @@ const CarRentalCalendar: React.FC = () => {
     });
     const isScrolling = useRef(false);
 
-    const rowDragRef = useRef<{ down: boolean; selecting: boolean; startIdx: number; startClientX: number }>({
+    const rowDragRef = useRef<{
+        down: boolean;
+        selecting: boolean;
+        startIdx: number;
+        startClientX: number;
+        identifier: number | null;
+        carId: string | null;
+    }>({
         down: false,
         selecting: false,
         startIdx: -1,
         startClientX: 0,
+        identifier: null,
+        carId: null,
+    });
+
+    const headerTouchRef = useRef<TouchSelectionState>({
+        active: false,
+        identifier: null,
+        startIdx: -1,
+        lastIdx: -1,
+        startClientX: 0,
+        selecting: false,
+    });
+
+    const rowTouchRef = useRef<TouchSelectionState & { carId: string | null }>({
+        active: false,
+        identifier: null,
+        startIdx: -1,
+        lastIdx: -1,
+        startClientX: 0,
+        selecting: false,
+        carId: null,
     });
 
     const maybeLoadMoreBookings = (el: HTMLDivElement) => {
@@ -576,15 +613,199 @@ const CarRentalCalendar: React.FC = () => {
         if (datesToSelect.length) setLastSelectedDate(datesToSelect[datesToSelect.length - 1]);
     };
 
-    const getIndexFromRowEvent = (e: React.MouseEvent<HTMLElement>) => {
-        const rowEl = e.currentTarget as HTMLElement;
-        const rect = rowEl.getBoundingClientRect();
-        const localX = e.clientX - rect.left;
+    const applySelectionFromIndexes = (startIdx: number, endIdx: number) => {
+        if (startIdx === -1 || endIdx === -1) return;
+        const [from, to] = startIdx <= endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
+        if (from < 0 || to >= dates.length) return;
+        const range = dates.slice(from, to + 1);
+        setDateSelection(range, false);
+    };
+
+    const findTouchById = (touchList: TouchList, identifier: number | null): Touch | null => {
+        if (identifier == null) return null;
+        for (let i = 0; i < touchList.length; i += 1) {
+            const touch = touchList.item(i);
+            if (touch && touch.identifier === identifier) {
+                return touch;
+            }
+        }
+        return null;
+    };
+
+    const resetHeaderTouch = () => {
+        headerTouchRef.current = {
+            active: false,
+            identifier: null,
+            startIdx: -1,
+            lastIdx: -1,
+            startClientX: 0,
+            selecting: false,
+        };
+        setDateDrag((prev) => (prev.active ? { active: false, start: null } : prev));
+    };
+
+    const resetRowTouch = () => {
+        rowTouchRef.current = {
+            active: false,
+            identifier: null,
+            startIdx: -1,
+            lastIdx: -1,
+            startClientX: 0,
+            selecting: false,
+            carId: null,
+        };
+        setDateDrag((prev) => (prev.active ? { active: false, start: null } : prev));
+    };
+
+    const handleHeaderTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+        if (event.touches.length !== 1) {
+            resetHeaderTouch();
+            return;
+        }
+        const touch = event.touches[0];
+        const headerEl = dateHeaderRef.current;
+        const scrollLeft = headerEl?.scrollLeft ?? 0;
+        const idx = calculateIndexFromPoint(headerEl, touch.clientX, scrollLeft);
+        if (idx === -1) return;
+        headerTouchRef.current = {
+            active: true,
+            identifier: touch.identifier,
+            startIdx: idx,
+            lastIdx: idx,
+            startClientX: touch.clientX,
+            selecting: true,
+        };
+        applySelectionFromIndexes(idx, idx);
+        const startDate = dates[idx];
+        if (startDate) {
+            setDateDrag({ active: true, start: startDate });
+        }
+        event.preventDefault();
+    };
+
+    const handleHeaderTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+        const state = headerTouchRef.current;
+        if (!state.active) return;
+        if (event.touches.length > 1) {
+            resetHeaderTouch();
+            return;
+        }
+        const touch = findTouchById(event.touches, state.identifier);
+        if (!touch) return;
+        const headerEl = dateHeaderRef.current;
+        const scrollLeft = headerEl?.scrollLeft ?? 0;
+        const idx = calculateIndexFromPoint(headerEl, touch.clientX, scrollLeft);
+        if (idx === -1) return;
+        if (state.lastIdx !== idx) {
+            state.lastIdx = idx;
+            applySelectionFromIndexes(state.startIdx, idx);
+        }
+        event.preventDefault();
+    };
+
+    const handleHeaderTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+        const state = headerTouchRef.current;
+        if (!state.active) return;
+        const ended = findTouchById(event.changedTouches, state.identifier);
+        if (!ended) return;
+        const finalIdx = state.lastIdx === -1 ? state.startIdx : state.lastIdx;
+        if (state.selecting && finalIdx !== -1) {
+            applySelectionFromIndexes(state.startIdx, finalIdx);
+            event.preventDefault();
+        }
+        resetHeaderTouch();
+    };
+
+    const handleHeaderTouchCancel = () => {
+        resetHeaderTouch();
+    };
+
+    const handleRowTouchStart = (carId: string) => (event: React.TouchEvent<HTMLDivElement>) => {
+        if (event.touches.length !== 1) {
+            resetRowTouch();
+            return;
+        }
+        const touch = event.touches[0];
+        const rowEl = event.currentTarget;
         const scrollLeft = rightPanelRef.current?.scrollLeft ?? 0;
-        let idx = Math.floor((localX + scrollLeft) / getCellWidth());
+        const idx = calculateIndexFromPoint(rowEl, touch.clientX, scrollLeft);
+        if (idx === -1) return;
+        rowTouchRef.current = {
+            active: true,
+            identifier: touch.identifier,
+            startIdx: idx,
+            lastIdx: idx,
+            startClientX: touch.clientX,
+            selecting: false,
+            carId,
+        };
+    };
+
+    const handleRowTouchMove = (carId: string) => (event: React.TouchEvent<HTMLDivElement>) => {
+        const state = rowTouchRef.current;
+        if (!state.active || state.carId !== carId) return;
+        if (event.touches.length > 1) {
+            resetRowTouch();
+            return;
+        }
+        const touch = findTouchById(event.touches, state.identifier);
+        if (!touch) return;
+        const rowEl = event.currentTarget;
+        const scrollLeft = rightPanelRef.current?.scrollLeft ?? 0;
+        const idx = calculateIndexFromPoint(rowEl, touch.clientX, scrollLeft);
+        if (idx === -1) return;
+        const moveDelta = Math.abs(touch.clientX - state.startClientX);
+        const threshold = 8;
+        if (!state.selecting && moveDelta > threshold) {
+            state.selecting = true;
+            state.lastIdx = idx;
+            const startDate = dates[state.startIdx];
+            if (startDate) {
+                setDateDrag({ active: true, start: startDate });
+                setDateSelection([startDate], false);
+            }
+        }
+        if (state.selecting) {
+            state.lastIdx = idx;
+            applySelectionFromIndexes(state.startIdx, idx);
+            event.preventDefault();
+        }
+    };
+
+    const handleRowTouchEnd = (carId: string) => (event: React.TouchEvent<HTMLDivElement>) => {
+        const state = rowTouchRef.current;
+        if (!state.active || state.carId !== carId) return;
+        const ended = findTouchById(event.changedTouches, state.identifier);
+        if (!ended) return;
+        if (state.selecting) {
+            const finalIdx = state.lastIdx === -1 ? state.startIdx : state.lastIdx;
+            if (finalIdx !== -1) {
+                applySelectionFromIndexes(state.startIdx, finalIdx);
+            }
+            event.preventDefault();
+        }
+        resetRowTouch();
+    };
+
+    const handleRowTouchCancel = () => {
+        resetRowTouch();
+    };
+
+    const calculateIndexFromPoint = (element: HTMLElement | null, clientX: number, scrollLeft: number) => {
+        if (!element) return -1;
+        const width = getCellWidth();
+        if (width <= 0) return -1;
+        const rect = element.getBoundingClientRect();
+        let idx = Math.floor((clientX - rect.left + scrollLeft) / width);
         if (idx < 0) idx = 0;
         if (idx > dates.length - 1) idx = dates.length - 1;
         return idx;
+    };
+
+    const getIndexFromRowEvent = (e: React.MouseEvent<HTMLElement>) => {
+        const rowEl = e.currentTarget as HTMLElement;
+        const scrollLeft = rightPanelRef.current?.scrollLeft ?? 0;
+        return calculateIndexFromPoint(rowEl, e.clientX, scrollLeft);
     };
 
     const handleScroll = (source: 'left' | 'right' | 'header') => (e: React.UIEvent<HTMLDivElement>) => {
@@ -1328,6 +1549,10 @@ const CarRentalCalendar: React.FC = () => {
                     <div
                         ref={dateHeaderRef}
                         onScroll={handleScroll('header')}
+                        onTouchStart={handleHeaderTouchStart}
+                        onTouchMove={handleHeaderTouchMove}
+                        onTouchEnd={handleHeaderTouchEnd}
+                        onTouchCancel={handleHeaderTouchCancel}
                         className={`w-full border-b border-gray-200 bg-gray-50 ${getHeaderHeight()} overflow-x-auto date-header-scroll select-none`}
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}
                     >
@@ -1493,6 +1718,10 @@ const CarRentalCalendar: React.FC = () => {
                                                 e.stopPropagation();
                                             }
                                         }}
+                                        onTouchStartCapture={handleRowTouchStart(car.id)}
+                                        onTouchMoveCapture={handleRowTouchMove(car.id)}
+                                        onTouchEndCapture={handleRowTouchEnd(car.id)}
+                                        onTouchCancelCapture={handleRowTouchCancel}
                                     >
                                         <div className="flex h-full">
                                             {dates.map((date, dateIndex) => {
