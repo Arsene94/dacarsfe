@@ -140,6 +140,7 @@ export interface DiscountValidationPayload {
   price_casco: number | string;
   total_price: number | string;
   total_price_casco: number | string;
+  customer_email?: string | null;
   [key: string]: unknown;
 }
 
@@ -168,6 +169,7 @@ export interface QuotePricePayload {
   rental_start_date: string;
   rental_end_date: string;
   with_deposit?: boolean | null;
+  customer_email?: string | null;
   coupon_type?: string | null;
   coupon_amount?: number | string;
   coupon_code?: string | null;

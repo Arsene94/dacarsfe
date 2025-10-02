@@ -169,7 +169,7 @@ Returns a single resource in the same shape as an item from the list. Missing ID
 ---
 
 ## POST `/api/bookings/quote`
-Validates the provided payload, resolves the base price via `CarPriceService`, applies coupons, optional add-on services, and wheel-of-fortune discounts. The result includes both per-day rates and totals.
+Validates the provided payload, resolves the base price via `CarPriceService`, aplică cupoane, serviciile opționale selectate și reducerea din roata norocului. Răspunsul raportează tarifele zilnice și totalurile pentru planurile cu și fără CASCO.
 
 ### Request body
 ```json
@@ -178,22 +178,11 @@ Validates the provided payload, resolves the base price via `CarPriceService`, a
   "rental_start_date": "2025-03-12T09:00:00",
   "rental_end_date": "2025-03-18T09:00:00",
   "with_deposit": true,
+  "customer_email": "maria.enache@example.com",
   "coupon_type": "percent",
   "coupon_amount": 15,
   "coupon_code": "SPRING15",
   "service_ids": [1, 3],
-  "total_services": 12,
-  "offers_discount": 30,
-  "offer_fixed_discount": 10,
-  "applied_offers": [
-    {
-      "id": 12,
-      "title": "Weekend fără garanție",
-      "offer_type": "percentage_discount",
-      "offer_value": "20",
-      "discount_label": "-20% reducere"
-    }
-  ],
   "wheel_prize_discount": 20,
   "wheel_of_fortune_prize_id": 4,
   "wheel_prize": {
@@ -227,7 +216,24 @@ Validates the provided payload, resolves the base price via `CarPriceService`, a
   "offer_fixed_discount": 0,
   "wheel_prize_discount": 20,
   "deposit_waived": false,
-  "applied_offers": [],
+  "applied_offers": [
+    {
+      "id": 12,
+      "title": "Weekend fără garanție",
+      "offer_type": "percentage_discount",
+      "offer_value": "20",
+      "discount_label": "-20% reducere",
+      "percent_discount_deposit": 20,
+      "percent_discount_casco": 20,
+      "fixed_discount_deposit": 0,
+      "fixed_discount_casco": 0,
+      "fixed_discount_deposit_applied": 0,
+      "fixed_discount_casco_applied": 0,
+      "discount_amount_deposit": 20,
+      "discount_amount_casco": 20,
+      "discount_amount": 20
+    }
+  ],
   "wheel_prize": {
     "wheel_of_fortune_prize_id": 4,
     "wheel_of_fortune_id": 2,
@@ -244,9 +250,9 @@ Validates the provided payload, resolves the base price via `CarPriceService`, a
 }
 ```
 
-Validation failures respond with HTTP 422 detailing the offending fields (e.g. missing `car_id`, invalid `service_ids.*`).
+Validation failures respond with HTTP 422 detailing the offending fields (e.g. missing `car_id`, invalid `service_ids.*`). Dacă un cupon este limitat la o adresă (`limited_to_email`), câmpul `customer_email` trebuie să coincidă sau request-ul primește 422 cu mesajul `Emailul din cupon nu coincide cu cel din cererea de rezervare.`
 
-`offers_discount` raportează totalul valorilor scăzute de engine-ul de oferte, `offer_fixed_discount` păstrează componenta fixă aferentă promoțiilor, iar `applied_offers` conține lista promoțiilor validate (inclusiv titlul tradus și tipul din backend). Dacă o ofertă de tip `deposit_waiver` este acceptată, câmpul `deposit_waived` devine `true` pentru a semnala că rezervarea nu mai necesită garanție, deși tariful promoțional rămâne cel de depozit.
+`service_ids` poate fi transmis pentru a include automat tarifele configurate ale serviciilor adiționale; când lista este prezentă, controller-ul calculează `total_services` și ignoră valorile transmise manual pentru compatibilitate înapoi. `offers_discount` raportează totalul reducerilor aplicate de engine-ul de oferte, iar `offer_fixed_discount` detaliază componenta fixă aplicată pentru planul curent. `applied_offers` conține lista promoțiilor validate (inclusiv titlul tradus și tipul din backend) alături de reducerile repartizate pe plan (`percent_discount_*`, `fixed_discount_*`, `discount_amount_*`). Dacă o ofertă de tip `deposit_waiver` este acceptată, câmpul `deposit_waived` devine `true` pentru a semnala că rezervarea nu mai necesită garanție, deși tariful promoțional rămâne cel de depozit.
 
 ---
 

@@ -21,6 +21,7 @@ Endpoints for coupon catalogue management and runtime validation. Public routes 
 - `expires_at` – nullable date.
 - `is_unlimited` – boolean (usage limit).
 - `limit`, `used` – integers >= 0.
+- `limited_to_email` – optional email address; când este setat, cuponul poate fi folosit doar cu aceeași adresă în payload-ul de rezervare.
 
 ---
 
@@ -32,7 +33,8 @@ Endpoints for coupon catalogue management and runtime validation. Public routes 
   "value": 15,
   "is_unlimited": false,
   "limit": 250,
-  "expires_at": "2025-05-31"
+  "expires_at": "2025-05-31",
+  "limited_to_email": "vip@example.com"
 }
 ```
 
@@ -49,6 +51,7 @@ Response:
     "is_unlimited": false,
     "limit": 250,
     "used": 0,
+    "limited_to_email": "vip@example.com",
     "created_at": "2025-02-14T10:20:00+02:00",
     "updated_at": "2025-02-14T10:20:00+02:00"
   }
@@ -89,7 +92,8 @@ Applies a coupon to a specific car and rental interval, returning a decorated `C
   "code": "SPRING15",
   "car_id": 17,
   "start_date": "2025-03-12T09:00",
-  "end_date": "2025-03-18T09:00"
+  "end_date": "2025-03-18T09:00",
+  "customer_email": "maria.enache@example.com"
 }
 ```
 
@@ -117,7 +121,7 @@ Applies a coupon to a specific car and rental interval, returning a decorated `C
 }
 ```
 
-Invalid input (missing fields, nonexistent car) returns 422 with validation details. Expired or unknown coupons respond with HTTP 200 and `{ "message": "Invalid or expired coupon", "valid": false }`.
+Invalid input (missing fields, nonexistent car) returns 422 with validation details. Dacă un cupon are `limited_to_email`, `customer_email` trebuie să coincidă altfel răspunsul este 422 cu mesajul `Emailul din cupon nu coincide cu cel din cererea de rezervare.` Expired or unknown coupons respond with HTTP 200 and `{ "message": "Invalid or expired coupon", "valid": false }`.
 
 ---
 
