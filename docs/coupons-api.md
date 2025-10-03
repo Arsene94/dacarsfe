@@ -21,7 +21,8 @@ Endpoints for coupon catalogue management and runtime validation. Public routes 
 - `expires_at` – nullable date.
 - `is_unlimited` – boolean (usage limit).
 - `limit`, `used` – integers >= 0.
-- `limited_to_email` – optional email address; când este setat, cuponul poate fi folosit doar cu aceeași adresă în payload-ul de rezervare.
+- `limited_to_email` – optional email address. When present the coupon can only be redeemed together with the matching
+  `customer_email` in booking payloads.
 
 ---
 
@@ -121,7 +122,7 @@ Applies a coupon to a specific car and rental interval, returning a decorated `C
 }
 ```
 
-Invalid input (missing fields, nonexistent car) returns 422 with validation details. Dacă un cupon are `limited_to_email`, `customer_email` trebuie să coincidă altfel răspunsul este 422 cu mesajul `Emailul din cupon nu coincide cu cel din cererea de rezervare.` Expired or unknown coupons respond with HTTP 200 and `{ "message": "Invalid or expired coupon", "valid": false }`.
+Invalid input (missing fields, nonexistent car) returns 422 with validation details. Expired or unknown coupons respond with HTTP 200 and `{ "message": "Invalid or expired coupon", "valid": false }`. When a coupon has `limited_to_email`, providing a different or missing `customer_email` yields HTTP 422 with `Emailul din cupon nu coincide cu cel din cererea de rezervare.`
 
 ---
 

@@ -33,25 +33,12 @@ This convenience endpoint combines booking creation with PDF contract generation
   "withDeposit": true,
   "coupon_code": "SPRING15",
   "coupon_amount": 15,
-  "offers_discount": 30,
-  "offer_fixed_discount": 10,
-  "applied_offers": [
-    {
-      "id": 12,
-      "title": "Weekend fără garanție",
-      "offer_type": "percentage_discount",
-      "offer_value": "20",
-      "discount_label": "-20% reducere"
-    }
-  ],
   "wheel_prize_discount": 20,
   "wheel_of_fortune_prize_id": 4,
   "wheel_prize": {
     "prize_id": 4,
     "wheel_of_fortune_id": 2,
-    "discount_value": 20,
-    "discount_value_deposit": 20,
-    "discount_value_casco": 20
+    "discount_value": 20
   },
   "cnp": "2850312123456",
   "license": "B-12-XYZ"
@@ -80,21 +67,6 @@ This convenience endpoint combines booking creation with PDF contract generation
     "status": "pending",
     "offers_discount": 30.0,
     "offer_fixed_discount": 10.0,
-    "wheel_of_fortune_prize_id": 4,
-    "wheel_prize_discount": 20.0,
-    "total_before_wheel_prize": 231.0,
-    "wheel_prize": {
-      "wheel_of_fortune_prize_id": 4,
-      "wheel_of_fortune_id": 2,
-      "title": "Reducere 20 €",
-      "type": "fixed_discount",
-      "type_label": "Reducere fixă",
-      "amount": 20,
-      "description": "Voucher aplicat automat la rezervare.",
-      "discount_value": 20,
-      "discount_value_deposit": 20,
-      "discount_value_casco": 20
-    },
     "applied_offers": [
       {
         "id": 12,
@@ -112,7 +84,22 @@ This convenience endpoint combines booking creation with PDF contract generation
         "discount_amount_casco": 20,
         "discount_amount": 20
       }
-    ]
+    ],
+    "wheel_of_fortune_prize_id": 4,
+    "wheel_prize_discount": 20.0,
+    "total_before_wheel_prize": 231.0,
+    "wheel_prize": {
+      "wheel_of_fortune_prize_id": 4,
+      "wheel_of_fortune_id": 2,
+      "title": "Reducere 20 €",
+      "type": "fixed_discount",
+      "type_label": "Reducere fixă",
+      "amount": 20,
+      "description": "Voucher aplicat automat la rezervare.",
+      "discount_value": 20,
+      "discount_value_deposit": 20,
+      "discount_value_casco": 20
+    }
   },
   "message": "Booking created",
   "contract_url": "https://api.dacars.test/storage/contracts/generated/4d5fbd48-0e0a-4207-8f0b-b0fa5d5e6c6d.pdf"
@@ -276,7 +263,7 @@ Full update endpoint that validates the payload with `UpdateBookingRequest`, rec
 
 Availability conflicts or invalid ranges result in HTTP 422 with details such as `"car_id": "Car not available in the selected interval."`.
 
-`wheel_prize`, `wheel_of_fortune_prize_id` și `wheel_prize_discount` trebuie trimise împreună atunci când operatorul selectează un premiu din roata norocului pentru perioada aleasă, iar resursa returnată expune și `discount_value_deposit` / `discount_value_casco` pentru a evidenția impactul în funcție de plan. Pentru oferte, payload-ul acceptă `applied_offers` (lista ofertelor aplicate în admin), suma totală `offers_discount` și componenta fixă `offer_fixed_discount`; backend-ul sincronizează aceste valori cu promoțiile active și setează `deposit_waived` dacă oferta elimină garanția.
+`wheel_prize`, `wheel_of_fortune_prize_id` și `wheel_prize_discount` trebuie trimise împreună atunci când operatorul selectează un premiu din roata norocului pentru perioada aleasă. Resursa returnată expune și `discount_value_deposit` / `discount_value_casco` pentru a evidenția clar impactul premiului în funcție de plan. Pentru oferte, payload-ul acceptă `applied_offers` (lista ofertelor aplicate în admin), suma totală `offers_discount` și componenta fixă `offer_fixed_discount`; backend-ul normalizează reducerile (`percent_discount_*`, `fixed_discount_*`, `discount_amount_*`), sincronizează aceste valori cu promoțiile active și setează `deposit_waived` dacă oferta elimină garanția.
 
 ---
 

@@ -57,30 +57,8 @@ Returns a Laravel paginator plus nested resources defined in `BookingResource`.
       "coupon_amount": 15.0,
       "coupon_code": "SPRING15",
       "coupon_type": "percent",
-      "tax_amount": 0.0,
       "offers_discount": 30.0,
       "offer_fixed_discount": 10.0,
-      "wheel_of_fortune_prize_id": 4,
-      "total_before_wheel_prize": 231.0,
-      "wheel_prize_discount": 20.0,
-      "currency_id": "EUR",
-      "note": "Predare la terminal Plecări.",
-      "status": "reserved",
-      "created_at": "2025-02-10T10:35:00+02:00",
-      "updated_at": "2025-02-11T08:20:00+02:00",
-      "wheel_prize": {
-        "wheel_of_fortune_prize_id": 4,
-        "wheel_of_fortune_id": 2,
-        "title": "Reducere 20 €",
-        "type": "fixed_discount",
-        "type_label": "Reducere fixă",
-        "amount": 20,
-        "description": "Voucher aplicat automat la rezervare.",
-        "discount_value": 20,
-        "discount_value_deposit": 20,
-        "discount_value_casco": 20,
-        "eligible": true
-      },
       "applied_offers": [
         {
           "id": 12,
@@ -99,6 +77,28 @@ Returns a Laravel paginator plus nested resources defined in `BookingResource`.
           "discount_amount": 20
         }
       ],
+      "tax_amount": 0.0,
+      "wheel_of_fortune_prize_id": 4,
+      "total_before_wheel_prize": 231.0,
+      "wheel_prize_discount": 20.0,
+      "currency_id": "EUR",
+      "note": "Predare la terminal Plecări.",
+      "status": "reserved",
+      "created_at": "2025-02-10T10:35:00+02:00",
+      "updated_at": "2025-02-11T08:20:00+02:00",
+      "wheel_prize": {
+        "wheel_of_fortune_prize_id": 4,
+        "wheel_of_fortune_id": 2,
+        "title": "Reducere 20 €",
+        "type": "fixed_discount",
+      "type_label": "Reducere fixă",
+      "amount": 20,
+      "description": "Voucher aplicat automat la rezervare.",
+      "discount_value": 20,
+      "discount_value_deposit": 20,
+      "discount_value_casco": 20,
+      "eligible": true
+      },
       "services": [
         { "id": 1, "name": "Scaun copil" },
         { "id": 3, "name": "Asigurare CASCO extinsă" }
@@ -159,7 +159,9 @@ Returns a Laravel paginator plus nested resources defined in `BookingResource`.
 
 `wheel_prize.eligible` indică dacă reducerea aferentă premiului poate fi aplicată pentru intervalul de rezervare curent. Atunci
 când este `false`, câmpurile `wheel_prize_discount` și `wheel_prize.discount_value` vor rămâne la `0` chiar dacă premiul există,
-deoarece perioada configurată (`active_months`) nu se suprapune cu datele selectate.
+deoarece perioada configurată (`active_months`) nu se suprapune cu datele selectate. Pentru transparență expunem și `discount_value_deposit`/`discount_value_casco`, astfel încât clientul să poată afișa exact reducerea calculată pentru planul curent.
+
+Structura `applied_offers` normalizează atât reducerile procentuale, cât și pe cele fixe. Fiecare intrare include valorile brute configurate în ofertă (`percent_discount_*`, `fixed_discount_*`), suma efectiv aplicată după scalare (`*_applied`) și totalurile per plan (`discount_amount_*`) plus valoarea finală (`discount_amount`) raportată în funcție de `with_deposit`.
 
 ---
 
@@ -169,7 +171,7 @@ Returns a single resource in the same shape as an item from the list. Missing ID
 ---
 
 ## POST `/api/bookings/quote`
-Validates the provided payload, resolves the base price via `CarPriceService`, aplică cupoane, serviciile opționale selectate și reducerea din roata norocului. Răspunsul raportează tarifele zilnice și totalurile pentru planurile cu și fără CASCO.
+Validates the provided payload, resolves the base price via `CarPriceService`, applies coupons, optional add-on services, and wheel-of-fortune discounts. The result includes both per-day rates and totals.
 
 ### Request body
 ```json
@@ -178,10 +180,10 @@ Validates the provided payload, resolves the base price via `CarPriceService`, a
   "rental_start_date": "2025-03-12T09:00:00",
   "rental_end_date": "2025-03-18T09:00:00",
   "with_deposit": true,
-  "customer_email": "maria.enache@example.com",
   "coupon_type": "percent",
   "coupon_amount": 15,
   "coupon_code": "SPRING15",
+  "customer_email": "maria.enache@example.com",
   "service_ids": [1, 3],
   "wheel_prize_discount": 20,
   "wheel_of_fortune_prize_id": 4,
@@ -189,12 +191,17 @@ Validates the provided payload, resolves the base price via `CarPriceService`, a
     "prize_id": 4,
     "wheel_of_fortune_id": 2,
     "discount_value": 20,
-    "discount_value_deposit": 20,
-    "discount_value_casco": 20,
     "eligible": true
   }
 }
 ```
+
+`service_ids` can be supplied to automatically include the configured prices of those add-ons in the quote. The endpoint looks up
+the services and populates `total_services` in the response; the request field remains optional for backward compatibility and is
+ignored when `service_ids` are present.
+
+If a coupon is limited to a specific address (`limited_to_email`), the same value must be provided in `customer_email`; otherwise
+the response is HTTP 422 with the validation error `Emailul din cupon nu coincide cu cel din cererea de rezervare.`
 
 ### Response
 ```json
@@ -250,9 +257,9 @@ Validates the provided payload, resolves the base price via `CarPriceService`, a
 }
 ```
 
-Validation failures respond with HTTP 422 detailing the offending fields (e.g. missing `car_id`, invalid `service_ids.*`). Dacă un cupon este limitat la o adresă (`limited_to_email`), câmpul `customer_email` trebuie să coincidă sau request-ul primește 422 cu mesajul `Emailul din cupon nu coincide cu cel din cererea de rezervare.`
+Validation failures respond with HTTP 422 detailing the offending fields (e.g. missing `car_id`, invalid `service_ids.*`).
 
-`service_ids` poate fi transmis pentru a include automat tarifele configurate ale serviciilor adiționale; când lista este prezentă, controller-ul calculează `total_services` și ignoră valorile transmise manual pentru compatibilitate înapoi. `offers_discount` raportează totalul reducerilor aplicate de engine-ul de oferte, iar `offer_fixed_discount` detaliază componenta fixă aplicată pentru planul curent. `applied_offers` conține lista promoțiilor validate (inclusiv titlul tradus și tipul din backend) alături de reducerile repartizate pe plan (`percent_discount_*`, `fixed_discount_*`, `discount_amount_*`). Dacă o ofertă de tip `deposit_waiver` este acceptată, câmpul `deposit_waived` devine `true` pentru a semnala că rezervarea nu mai necesită garanție, deși tariful promoțional rămâne cel de depozit.
+`offers_discount` raportează totalul valorilor scăzute de engine-ul de oferte, iar `offer_fixed_discount` detaliază componenta fixă aplicată pentru planul curent. `applied_offers` conține lista promoțiilor validate (inclusiv titlul tradus și tipul din backend) alături de reducerile repartizate pe plan (`percent_discount_*`, `fixed_discount_*`, `discount_amount_*`). Dacă o ofertă de tip `deposit_waiver` este acceptată, câmpul `deposit_waived` devine `true` pentru a semnala că rezervarea nu mai necesită garanție, deși tariful promoțional rămâne cel de depozit.
 
 ---
 
@@ -292,7 +299,6 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
   "coupon_code": "SPRING15",
   "coupon_type": "percent",
   "offers_discount": 30,
-  "offer_fixed_discount": 10,
   "deposit_waived": false,
   "applied_offers": [
     {
@@ -300,16 +306,7 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
       "title": "Weekend fără garanție",
       "offer_type": "percentage_discount",
       "offer_value": "20",
-      "discount_label": "-20% reducere",
-      "percent_discount_deposit": 20,
-      "percent_discount_casco": 20,
-      "fixed_discount_deposit": 10,
-      "fixed_discount_casco": 10,
-      "fixed_discount_deposit_applied": 10,
-      "fixed_discount_casco_applied": 10,
-      "discount_amount_deposit": 20,
-      "discount_amount_casco": 20,
-      "discount_amount": 20
+      "discount_label": "-20% reducere"
     }
   ],
   "total_services": 12,
@@ -320,8 +317,6 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
     "prize_id": 4,
     "wheel_of_fortune_id": 2,
     "discount_value": 20,
-    "discount_value_deposit": 20,
-    "discount_value_casco": 20,
     "eligible": true
   },
   "note": "Predare la terminal Plecări"
@@ -352,31 +347,31 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
     "total_services": 12.0,
     "advance_payment": 0,
     "price_per_day": 36.0,
-    "with_deposit": true,
-    "coupon_amount": 15.0,
-    "coupon_code": "SPRING15",
-    "coupon_type": "percent",
-    "offers_discount": 30.0,
-    "offer_fixed_discount": 10.0,
-    "deposit_waived": false,
-    "applied_offers": [
-      {
-        "id": 12,
-        "title": "Weekend fără garanție",
-        "offer_type": "percentage_discount",
-        "offer_value": "20",
-        "discount_label": "-20% reducere",
-        "percent_discount_deposit": 20,
-        "percent_discount_casco": 20,
-        "fixed_discount_deposit": 10,
-        "fixed_discount_casco": 10,
-        "fixed_discount_deposit_applied": 10,
-        "fixed_discount_casco_applied": 10,
-        "discount_amount_deposit": 20,
-        "discount_amount_casco": 20,
-        "discount_amount": 20
-      }
-    ],
+  "with_deposit": true,
+  "coupon_amount": 15.0,
+  "coupon_code": "SPRING15",
+  "coupon_type": "percent",
+  "offers_discount": 30.0,
+  "offer_fixed_discount": 10.0,
+  "deposit_waived": false,
+  "applied_offers": [
+    {
+      "id": 12,
+      "title": "Weekend fără garanție",
+      "offer_type": "percentage_discount",
+      "offer_value": "20",
+      "discount_label": "-20% reducere",
+      "percent_discount_deposit": 20,
+      "percent_discount_casco": 20,
+      "fixed_discount_deposit": 10,
+      "fixed_discount_casco": 10,
+      "fixed_discount_deposit_applied": 10,
+      "fixed_discount_casco_applied": 10,
+      "discount_amount_deposit": 20,
+      "discount_amount_casco": 20,
+      "discount_amount": 20
+    }
+  ],
     "tax_amount": 0.0,
     "wheel_of_fortune_prize_id": 4,
     "total_before_wheel_prize": 231.0,
@@ -406,7 +401,7 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
 
 Availability conflicts or invalid date ranges trigger `422` errors sourced from `BookingService`.
 
-Pe lângă câmpurile existente, `BookingResource` serializată de endpoint include suma totală `offers_discount`, componenta fixă `offer_fixed_discount`, lista normalizată `applied_offers` și indicatorul `deposit_waived`, astfel încât aplicațiile client să știe ce promoții au fost acceptate și dacă garanția a fost eliminată în urma unei oferte. Structura `wheel_prize` reflectă și valorile `discount_value_deposit` / `discount_value_casco` pentru a evidenția impactul premiului în funcție de plan.
+Pe lângă câmpurile existente, `BookingResource` serializată de endpoint include suma totală `offers_discount`, componenta fixă aplicată (`offer_fixed_discount`), lista normalizată `applied_offers` cu reduceri distribuite pe plan și indicatorul `deposit_waived`, astfel încât aplicațiile client să știe ce promoții au fost acceptate, ce valoare s-a aplicat efectiv și dacă garanția a fost eliminată în urma unei oferte.
 
 ---
 
