@@ -216,8 +216,18 @@ const mergeBookingResourceIntoForm = (
   const offersDiscountRaw = parseOptionalNumber(
     info.offers_discount ?? (info as { offersDiscount?: unknown }).offersDiscount,
   );
+  const offerFixedDiscountRaw = parseOptionalNumber(
+    info.offer_fixed_discount ?? (info as { offerFixedDiscount?: unknown }).offerFixedDiscount,
+  );
   const depositWaived = normalizeBoolean(info.deposit_waived, base.deposit_waived ?? false);
   const appliedOffers = normalizeAppliedOffersList(info.applied_offers);
+  const wheelOfFortunePrizeIdRaw = parseOptionalNumber(
+    info.wheel_of_fortune_prize_id ?? (info as { wheelPrizeId?: unknown }).wheelPrizeId,
+  );
+  const resolvedWheelPrizeId =
+    typeof wheelOfFortunePrizeIdRaw === "number"
+      ? wheelOfFortunePrizeIdRaw
+      : wheelPrize?.wheel_of_fortune_prize_id ?? wheelPrize?.prize_id ?? null;
 
   const carId = parseOptionalNumber(info?.car_id ?? info?.car?.id);
 
@@ -301,8 +311,10 @@ const mergeBookingResourceIntoForm = (
     wheel_prize_discount: wheelPrizeDiscountRaw ?? base.wheel_prize_discount,
     wheel_prize: wheelPrize ?? base.wheel_prize,
     offers_discount: offersDiscountRaw ?? base.offers_discount,
+    offer_fixed_discount: offerFixedDiscountRaw ?? base.offer_fixed_discount,
     deposit_waived: depositWaived,
     applied_offers: appliedOffers.length > 0 ? appliedOffers : base.applied_offers,
+    wheel_of_fortune_prize_id: resolvedWheelPrizeId ?? base.wheel_of_fortune_prize_id ?? null,
     advance_payment: advancePaymentRaw ?? base.advance_payment,
     note: pickNonEmptyString(info?.note) ?? pickNonEmptyString(info?.notes) ?? base.note,
     currency_id:
@@ -343,58 +355,87 @@ const normalizeWheelPrizeSummary = (
   const wheelId =
     parseOptionalNumber(
       raw.wheel_of_fortune_id ??
-        (raw as { wheelId?: unknown }).wheelId ??
-        raw.period_id,
+        raw.period_id ??
+        (raw as { wheelId?: unknown }).wheelId,
+    ) ?? null;
+  const pivotId =
+    parseOptionalNumber(
+      raw.wheel_of_fortune_prize_id ??
+        raw.prize_id ??
+        raw.id ??
+        (raw as { prizeId?: unknown }).prizeId ??
+        raw.slice_id,
     ) ?? null;
   const prizeId =
     parseOptionalNumber(
       raw.prize_id ?? raw.id ?? (raw as { prizeId?: unknown }).prizeId ?? raw.slice_id,
-    ) ?? null;
-  const amount = parseOptionalNumber(raw.amount ?? raw.value ?? raw.discount_value);
-  const discountValue =
-    parseOptionalNumber(raw.discount_value ?? raw.discount ?? raw.value) ?? 0;
+    ) ?? pivotId;
+  const amount = parseOptionalNumber(
+    raw.amount ?? raw.discount_value ?? (raw as { value?: unknown }).value,
+  );
+  const discountValue = parseOptionalNumber(
+    raw.discount_value ?? raw.discount ?? (raw as { value?: unknown }).value,
+  );
+  const discountValueDeposit =
+    parseOptionalNumber((raw as { discount_value_deposit?: unknown }).discount_value_deposit) ??
+    parseOptionalNumber((raw as { discount_deposit?: unknown }).discount_deposit);
+  const discountValueCasco =
+    parseOptionalNumber((raw as { discount_value_casco?: unknown }).discount_value_casco) ??
+    parseOptionalNumber((raw as { discount_casco?: unknown }).discount_casco);
   const wheelInfo = isRecord(raw.wheel_of_fortune) ? raw.wheel_of_fortune : null;
   const title =
     (typeof raw.title === "string" && raw.title.trim().length > 0
-      ? raw.title
+      ? raw.title.trim()
       : typeof raw.name === "string" && raw.name.trim().length > 0
-        ? raw.name
+        ? raw.name.trim()
         : null) ?? "Premiu DaCars";
   const prizeType =
     pickNonEmptyString(raw.type) ??
-    pickNonEmptyString(raw.prize_type) ??
-    (wheelInfo ? pickNonEmptyString(wheelInfo.type) : undefined) ??
+    pickNonEmptyString((raw as { prize_type?: unknown }).prize_type) ??
+    (wheelInfo ? pickNonEmptyString((wheelInfo as { type?: unknown }).type) : undefined) ??
     "other";
+  const typeLabel =
+    pickNonEmptyString((raw as { type_label?: unknown }).type_label) ??
+    pickNonEmptyString((raw as { typeLabel?: unknown }).typeLabel) ??
+    (wheelInfo ? pickNonEmptyString((wheelInfo as { type_label?: unknown }).type_label) : undefined);
   const eligibleFlag =
     typeof (raw as { eligible?: unknown }).eligible === "boolean"
       ? (raw as { eligible: boolean }).eligible
       : typeof (raw as { is_eligible?: unknown }).is_eligible === "boolean"
         ? Boolean((raw as { is_eligible: boolean }).is_eligible)
         : undefined;
+  const amountLabel =
+    pickNonEmptyString((raw as { amount_label?: unknown }).amount_label) ??
+    pickNonEmptyString((raw as { amountLabel?: unknown }).amountLabel);
+  const expiresAt =
+    pickNonEmptyString((raw as { expires_at?: unknown }).expires_at) ??
+    pickNonEmptyString((raw as { expiresAt?: unknown }).expiresAt);
+  const description = pickNonEmptyString(raw.description) ?? null;
 
   return {
     wheel_of_fortune_id: wheelId,
+    wheel_of_fortune_prize_id: pivotId,
     prize_id: prizeId,
     title,
     type: prizeType,
-    amount,
-    description:
-      typeof raw.description === "string" && raw.description.length > 0
-        ? raw.description
-        : null,
-    amount_label:
-      typeof raw.amount_label === "string"
-        ? raw.amount_label
-        : typeof (raw as { amountLabel?: unknown }).amountLabel === "string"
-          ? (raw as { amountLabel: string }).amountLabel
+    type_label: typeLabel ?? null,
+    amount: typeof amount === "number" ? amount : null,
+    description,
+    amount_label: amountLabel ?? null,
+    expires_at: expiresAt ?? null,
+    discount_value: typeof discountValue === "number" ? discountValue : 0,
+    discount_value_deposit:
+      typeof discountValueDeposit === "number"
+        ? discountValueDeposit
+        : typeof discountValue === "number"
+          ? discountValue
           : null,
-    expires_at:
-      typeof raw.expires_at === "string"
-        ? raw.expires_at
-        : typeof (raw as { expiresAt?: unknown }).expiresAt === "string"
-          ? (raw as { expiresAt: string }).expiresAt
+    discount_value_casco:
+      typeof discountValueCasco === "number"
+        ? discountValueCasco
+        : typeof discountValue === "number"
+          ? discountValue
           : null,
-    discount_value: discountValue,
     eligible: typeof eligibleFlag === "boolean" ? eligibleFlag : undefined,
   };
 };
@@ -423,6 +464,33 @@ const normalizeAppliedOfferEntry = (
   const discountLabel =
     pickNonEmptyString((raw as { discount_label?: unknown }).discount_label) ??
     pickNonEmptyString((raw as { badge?: unknown }).badge);
+  const percentDeposit = parseOptionalNumber(
+    (raw as { percent_discount_deposit?: unknown }).percent_discount_deposit,
+  );
+  const percentCasco = parseOptionalNumber(
+    (raw as { percent_discount_casco?: unknown }).percent_discount_casco,
+  );
+  const fixedDeposit = parseOptionalNumber(
+    (raw as { fixed_discount_deposit?: unknown }).fixed_discount_deposit,
+  );
+  const fixedCasco = parseOptionalNumber(
+    (raw as { fixed_discount_casco?: unknown }).fixed_discount_casco,
+  );
+  const fixedDepositApplied = parseOptionalNumber(
+    (raw as { fixed_discount_deposit_applied?: unknown }).fixed_discount_deposit_applied,
+  );
+  const fixedCascoApplied = parseOptionalNumber(
+    (raw as { fixed_discount_casco_applied?: unknown }).fixed_discount_casco_applied,
+  );
+  const discountAmountDeposit = parseOptionalNumber(
+    (raw as { discount_amount_deposit?: unknown }).discount_amount_deposit,
+  );
+  const discountAmountCasco = parseOptionalNumber(
+    (raw as { discount_amount_casco?: unknown }).discount_amount_casco,
+  );
+  const discountAmount = parseOptionalNumber(
+    (raw as { discount_amount?: unknown }).discount_amount,
+  );
 
   return {
     id: idCandidate,
@@ -430,6 +498,15 @@ const normalizeAppliedOfferEntry = (
     offer_type: offerType ?? null,
     offer_value: offerValue ?? null,
     discount_label: discountLabel ?? null,
+    percent_discount_deposit: percentDeposit ?? null,
+    percent_discount_casco: percentCasco ?? null,
+    fixed_discount_deposit: fixedDeposit ?? null,
+    fixed_discount_casco: fixedCasco ?? null,
+    fixed_discount_deposit_applied: fixedDepositApplied ?? null,
+    fixed_discount_casco_applied: fixedCascoApplied ?? null,
+    discount_amount_deposit: discountAmountDeposit ?? null,
+    discount_amount_casco: discountAmountCasco ?? null,
+    discount_amount: discountAmount ?? null,
   };
 };
 
