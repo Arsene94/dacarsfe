@@ -102,6 +102,9 @@ describe('ApiClient coupons management', () => {
       is_unlimited: false,
       expires_at: undefined,
       limit: null,
+      is_date_valid: true,
+      valid_start_date: '2025-05-01T00:00:00',
+      valid_end_date: '2025-05-31T23:59:59',
     };
 
     const apiResponse: ApiItemResult<Coupon> = {
@@ -112,6 +115,9 @@ describe('ApiClient coupons management', () => {
         value: 15,
         is_unlimited: false,
         limit: null,
+        is_date_valid: true,
+        valid_start_date: '2025-05-01T00:00:00',
+        valid_end_date: '2025-05-31T23:59:59',
       },
     };
 
@@ -136,6 +142,9 @@ describe('ApiClient coupons management', () => {
       value: 15,
       is_unlimited: false,
       limit: null,
+      is_date_valid: true,
+      valid_start_date: '2025-05-01T00:00:00',
+      valid_end_date: '2025-05-31T23:59:59',
     });
 
     expect(result).toEqual(apiResponse);
@@ -149,6 +158,9 @@ describe('ApiClient coupons management', () => {
       value: 35,
       is_unlimited: true,
       limit: undefined,
+      is_date_valid: false,
+      valid_start_date: undefined,
+      valid_end_date: null,
     };
 
     const apiResponse: ApiItemResult<Coupon> = {
@@ -158,6 +170,7 @@ describe('ApiClient coupons management', () => {
         type: 'percent',
         value: 35,
         is_unlimited: true,
+        is_date_valid: false,
       },
     };
 
@@ -183,6 +196,8 @@ describe('ApiClient coupons management', () => {
     expect(parsedBody).toEqual({
       value: 35,
       is_unlimited: true,
+      is_date_valid: false,
+      valid_end_date: null,
     });
 
     expect(result).toEqual(apiResponse);
@@ -214,6 +229,9 @@ describe('ApiClient coupons management', () => {
     const params: CouponQuickValidationParams = {
       code: 'SUMMER20',
       sub_total: 199.99,
+      start_date: '2025-05-12T09:00',
+      end_date: '2025-05-18T09:00',
+      customer_email: 'vip@example.com',
       context: 'booking',
     };
     const apiResponse: CouponQuickValidationResponse = {
@@ -233,7 +251,15 @@ describe('ApiClient coupons management', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe(`${baseURL}/coupons/validate?code=SUMMER20&sub_total=199.99&context=booking`);
+    const expectedParams = new URLSearchParams();
+    expectedParams.append('code', 'SUMMER20');
+    expectedParams.append('sub_total', '199.99');
+    expectedParams.append('start_date', '2025-05-12T09:00');
+    expectedParams.append('end_date', '2025-05-18T09:00');
+    expectedParams.append('customer_email', 'vip@example.com');
+    expectedParams.append('context', 'booking');
+
+    expect(url).toBe(`${baseURL}/coupons/validate?${expectedParams.toString()}`);
     expect(init?.method).toBeUndefined();
     expect(result).toEqual(apiResponse);
   });

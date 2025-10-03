@@ -13,6 +13,9 @@ export interface Coupon {
   is_unlimited: boolean;
   is_unlimited_expires?: boolean | null;
   expires_at?: string | null;
+  is_date_valid?: boolean | null;
+  valid_start_date?: string | null;
+  valid_end_date?: string | null;
   limit?: number | null;
   limited_to_email?: string | null;
   used?: number | null;
@@ -28,6 +31,9 @@ export type CouponPayload = Partial<{
   is_unlimited: boolean;
   is_unlimited_expires: boolean;
   expires_at: string | null;
+  is_date_valid: boolean;
+  valid_start_date: string | null;
+  valid_end_date: string | null;
   limit: number | null;
   limited_to_email: string | null;
   used: number | null;
@@ -47,6 +53,9 @@ export interface CouponListParams {
 export interface CouponQuickValidationParams {
   code: string;
   sub_total?: number | string;
+  start_date?: string | null;
+  end_date?: string | null;
+  customer_email?: string | null;
   [key: string]: unknown;
 }
 
