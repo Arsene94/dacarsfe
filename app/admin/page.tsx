@@ -137,6 +137,33 @@ const normalizeAppliedOfferEntry = (
     const offerValue = toSafeString((raw as { offer_value?: unknown }).offer_value, "").trim();
     const discountLabel = toSafeString((raw as { discount_label?: unknown }).discount_label, "").trim()
         || toSafeString((raw as { badge?: unknown }).badge, "").trim();
+    const percentDeposit = parseOptionalNumber(
+        (raw as { percent_discount_deposit?: unknown }).percent_discount_deposit,
+    );
+    const percentCasco = parseOptionalNumber(
+        (raw as { percent_discount_casco?: unknown }).percent_discount_casco,
+    );
+    const fixedDeposit = parseOptionalNumber(
+        (raw as { fixed_discount_deposit?: unknown }).fixed_discount_deposit,
+    );
+    const fixedCasco = parseOptionalNumber(
+        (raw as { fixed_discount_casco?: unknown }).fixed_discount_casco,
+    );
+    const fixedDepositApplied = parseOptionalNumber(
+        (raw as { fixed_discount_deposit_applied?: unknown }).fixed_discount_deposit_applied,
+    );
+    const fixedCascoApplied = parseOptionalNumber(
+        (raw as { fixed_discount_casco_applied?: unknown }).fixed_discount_casco_applied,
+    );
+    const discountAmountDeposit = parseOptionalNumber(
+        (raw as { discount_amount_deposit?: unknown }).discount_amount_deposit,
+    );
+    const discountAmountCasco = parseOptionalNumber(
+        (raw as { discount_amount_casco?: unknown }).discount_amount_casco,
+    );
+    const discountAmount = parseOptionalNumber(
+        (raw as { discount_amount?: unknown }).discount_amount,
+    );
 
     return {
         id,
@@ -144,6 +171,15 @@ const normalizeAppliedOfferEntry = (
         offer_type: offerType.length > 0 ? offerType : null,
         offer_value: offerValue.length > 0 ? offerValue : null,
         discount_label: discountLabel.length > 0 ? discountLabel : null,
+        percent_discount_deposit: percentDeposit ?? null,
+        percent_discount_casco: percentCasco ?? null,
+        fixed_discount_deposit: fixedDeposit ?? null,
+        fixed_discount_casco: fixedCasco ?? null,
+        fixed_discount_deposit_applied: fixedDepositApplied ?? null,
+        fixed_discount_casco_applied: fixedCascoApplied ?? null,
+        discount_amount_deposit: discountAmountDeposit ?? null,
+        discount_amount_casco: discountAmountCasco ?? null,
+        discount_amount: discountAmount ?? null,
     };
 };
 
@@ -821,8 +857,17 @@ const AdminDashboard = () => {
                 parseOptionalNumber(info.wheel_prize_discount) ?? 0;
             const offersDiscount =
                 parseOptionalNumber(info.offers_discount ?? (info as { offersDiscount?: unknown }).offersDiscount) ?? 0;
+            const offerFixedDiscount =
+                parseOptionalNumber(info.offer_fixed_discount ?? (info as { offerFixedDiscount?: unknown }).offerFixedDiscount) ??
+                0;
             const depositWaived = normalizeBoolean(info.deposit_waived, false);
             const appliedOffers = normalizeAppliedOffersList(info.applied_offers);
+            const wheelPrizeDetails = (info.wheel_prize ?? null) as AdminBookingFormValues["wheel_prize"];
+            const wheelPrizeId =
+                parseOptionalNumber(
+                    info.wheel_of_fortune_prize_id ?? (info as { wheelPrizeId?: unknown }).wheelPrizeId,
+                ) ??
+                parseOptionalNumber(wheelPrizeDetails?.wheel_of_fortune_prize_id ?? wheelPrizeDetails?.prize_id);
             const couponType =
                 typeof info.coupon_type === "string"
                     ? info.coupon_type
@@ -893,10 +938,12 @@ const AdminDashboard = () => {
                 status: toSafeString(info.status, ""),
                 total_before_wheel_prize: totalBeforeWheelPrize,
                 wheel_prize_discount: wheelPrizeDiscount,
-                wheel_prize: (info.wheel_prize ?? null) as AdminBookingFormValues["wheel_prize"],
+                wheel_prize: wheelPrizeDetails,
                 offers_discount: offersDiscount,
+                offer_fixed_discount: offerFixedDiscount,
                 deposit_waived: depositWaived,
                 applied_offers: appliedOffers,
+                wheel_of_fortune_prize_id: wheelPrizeId ?? null,
                 advance_payment: advancePayment,
                 note: toSafeString(info.note, ""),
                 currency_id: currencyId,
