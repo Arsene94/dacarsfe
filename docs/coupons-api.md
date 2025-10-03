@@ -23,6 +23,9 @@ Endpoints for coupon catalogue management and runtime validation. Public routes 
 - `limit`, `used` – integers >= 0.
 - `limited_to_email` – optional email address. When present the coupon can only be redeemed together with the matching
   `customer_email` in booking payloads.
+- `is_date_valid` – boolean switch controlling whether a booking window is enforced. Defaults to `true`.
+- `valid_start_date`, `valid_end_date` – optional datetimes (ISO 8601). When at least one is set and `is_date_valid` is `true`,
+  the reservation's `rental_start_date`/`rental_end_date` must fall entirely inside the configured window.
 
 ---
 
@@ -35,7 +38,10 @@ Endpoints for coupon catalogue management and runtime validation. Public routes 
   "is_unlimited": false,
   "limit": 250,
   "expires_at": "2025-05-31",
-  "limited_to_email": "vip@example.com"
+  "limited_to_email": "vip@example.com",
+  "is_date_valid": true,
+  "valid_start_date": "2025-05-01T00:00:00",
+  "valid_end_date": "2025-05-31T23:59:59"
 }
 ```
 
@@ -53,6 +59,9 @@ Response:
     "limit": 250,
     "used": 0,
     "limited_to_email": "vip@example.com",
+    "is_date_valid": true,
+    "valid_start_date": "2025-05-01T00:00:00+03:00",
+    "valid_end_date": "2025-05-31T23:59:59+03:00",
     "created_at": "2025-02-14T10:20:00+02:00",
     "updated_at": "2025-02-14T10:20:00+02:00"
   }
@@ -67,7 +76,7 @@ Validation errors (e.g. duplicate code) return HTTP 422 with standard Laravel pa
 Fast lookup for displaying coupon badge information before building a booking quote.
 
 ```
-GET /api/coupons/validate?code=SPRING15&sub_total=200
+GET /api/coupons/validate?code=SPRING15&sub_total=200&start_date=2025-05-12T09:00&end_date=2025-05-18T09:00
 ```
 
 Response when valid:
@@ -80,7 +89,8 @@ Response when valid:
 }
 ```
 
-If the code is invalid or expired the response is `{ "valid": false }` with HTTP 200.
+If the code is invalid, expired, or outside the configured booking window the response is `{ "valid": false }` with HTTP 200.
+Omitting `start_date`/`end_date` for coupons that enforce a validity window will also yield `{ "valid": false }`.
 
 ---
 
@@ -97,6 +107,10 @@ Applies a coupon to a specific car and rental interval, returning a decorated `C
   "customer_email": "maria.enache@example.com"
 }
 ```
+
+When the coupon has `is_date_valid=true`, the supplied booking interval must fall entirely within `valid_start_date` →
+`valid_end_date`. Otherwise the response is HTTP 200 with `{ "message": "Cuponul nu este valabil pentru perioada selectată.",
+"valid": false }`.
 
 ### Response
 ```json

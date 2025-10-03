@@ -201,7 +201,10 @@ the services and populates `total_services` in the response; the request field r
 ignored when `service_ids` are present.
 
 If a coupon is limited to a specific address (`limited_to_email`), the same value must be provided in `customer_email`; otherwise
-the response is HTTP 422 with the validation error `Emailul din cupon nu coincide cu cel din cererea de rezervare.`
+the response is HTTP 422 with the validation error `Emailul din cupon nu coincide cu cel din cererea de rezervare.` When a coupon
+enforces a booking window (`is_date_valid=true` together with `valid_start_date`/`valid_end_date`), the requested
+`rental_start_date`/`rental_end_date` must fall inside that interval. Quotes outside the range are rejected with
+`Cuponul nu este valabil pentru perioada selectată.`
 
 ### Response
 ```json

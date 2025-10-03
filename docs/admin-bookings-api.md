@@ -106,7 +106,11 @@ This convenience endpoint combines booking creation with PDF contract generation
 }
 ```
 
-Errors (e.g. unavailable car, invalid date range, validation failures) propagate with HTTP 422.
+Errors (e.g. unavailable car, invalid date range, validation failures) propagate with HTTP 422. When the selected coupon is
+restricted to a specific email address or booking interval, you must also provide the matching `customer_email` and ensure the
+`start`/`end` window stays inside the coupon's `valid_start_date` → `valid_end_date`; otherwise validation errors such as
+`Emailul din cupon nu coincide cu cel din cererea de rezervare.` or `Cuponul nu este valabil pentru perioada selectată.` are
+returned.
 
 ---
 
@@ -262,6 +266,9 @@ Full update endpoint that validates the payload with `UpdateBookingRequest`, rec
 ```
 
 Availability conflicts or invalid ranges result in HTTP 422 with details such as `"car_id": "Car not available in the selected interval."`.
+The same status is returned when coupon constraints fail — mismatched `customer_email` triggers `Emailul din cupon nu coincide cu
+cel din cererea de rezervare.`, while changing the rental window outside `valid_start_date`/`valid_end_date` yields `Cuponul nu este
+valabil pentru perioada selectată.`
 
 `wheel_prize`, `wheel_of_fortune_prize_id` și `wheel_prize_discount` trebuie trimise împreună atunci când operatorul selectează un premiu din roata norocului pentru perioada aleasă. Resursa returnată expune și `discount_value_deposit` / `discount_value_casco` pentru a evidenția clar impactul premiului în funcție de plan. Pentru oferte, payload-ul acceptă `applied_offers` (lista ofertelor aplicate în admin), suma totală `offers_discount` și componenta fixă `offer_fixed_discount`; backend-ul normalizează reducerile (`percent_discount_*`, `fixed_discount_*`, `discount_amount_*`), sincronizează aceste valori cu promoțiile active și setează `deposit_waived` dacă oferta elimină garanția.
 
