@@ -235,6 +235,7 @@ export interface AdminBookingResource {
   coupon_type?: string | null;
   coupon_amount?: number | string | null;
   coupon_code?: string | null;
+  offer_fixed_discount?: number | string | null;
   customer_name?: string | null;
   customer_phone?: string | null;
   customer_email?: string | null;
@@ -264,6 +265,7 @@ export interface AdminBookingResource {
   total_before_wheel_prize?: number | string | null;
   wheel_prize_discount?: number | string | null;
   wheel_prize?: ReservationWheelPrizeSummary | null;
+  wheel_of_fortune_prize_id?: number | string | null;
   offers_discount?: number | string | null;
   deposit_waived?: boolean | number | string | null;
   applied_offers?: ReservationAppliedOffer[] | null;
