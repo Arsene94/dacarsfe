@@ -49,6 +49,9 @@ type CouponFormState = {
     limitToEmail: string;
     isUnlimitedExpires: "yes" | "no";
     expiresAt: string;
+    isDateValid: "yes" | "no";
+    validStartDate: string;
+    validEndDate: string;
 };
 
 const createEmptyForm = (): CouponFormState => ({
@@ -60,6 +63,9 @@ const createEmptyForm = (): CouponFormState => ({
     limitToEmail: "",
     isUnlimitedExpires: "no",
     expiresAt: "",
+    isDateValid: "no",
+    validStartDate: "",
+    validEndDate: "",
 });
 
 const normalizeDateInput = (value?: string | null): string => {
@@ -70,6 +76,19 @@ const normalizeDateInput = (value?: string | null): string => {
         return value.slice(0, 10);
     }
     return value;
+};
+
+const normalizeDateTimeInput = (value?: string | null): string => {
+    if (typeof value !== "string" || value.trim().length === 0) {
+        return "";
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return "";
+    }
+    const offset = parsed.getTimezoneOffset();
+    const localDate = new Date(parsed.getTime() - offset * 60_000);
+    return localDate.toISOString().slice(0, 16);
 };
 
 const parseDateValue = (value?: string | null): Date | null => {
@@ -119,6 +138,9 @@ const toFormState = (coupon: Coupon): CouponFormState => ({
         coupon.is_unlimited_expires
             ? ""
             : normalizeDateInput(coupon.expires_at ?? null),
+    isDateValid: coupon.is_date_valid ? "yes" : "no",
+    validStartDate: normalizeDateTimeInput(coupon.valid_start_date ?? null),
+    validEndDate: normalizeDateTimeInput(coupon.valid_end_date ?? null),
 });
 
 const formatUsageSummary = (coupon: Coupon): string => {
@@ -155,6 +177,24 @@ const formatLimitedToEmail = (value?: string | null): string => {
     }
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : "—";
+};
+
+const isValidDateTimeInput = (value: string): boolean => {
+    if (value.trim().length === 0) {
+        return false;
+    }
+    const parsed = new Date(value);
+    return !Number.isNaN(parsed.getTime());
+};
+
+const ensureDateTimeSeconds = (value: string): string => {
+    if (value.includes("Z") || /[+-]\d{2}:?\d{2}$/.test(value)) {
+        return value;
+    }
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) {
+        return `${value}:00`;
+    }
+    return value;
 };
 
 type FilterState = {
@@ -265,6 +305,10 @@ export default function CouponsPage() {
             if (key === "isUnlimitedExpires" && value === "yes") {
                 next.expiresAt = "";
             }
+            if (key === "isDateValid" && value === "no") {
+                next.validStartDate = "";
+                next.validEndDate = "";
+            }
             return next;
         });
     }, []);
@@ -299,6 +343,46 @@ export default function CouponsPage() {
                 if (!emailPattern.test(trimmedLimitEmail)) {
                     setFormError("Introduce o adresă de email validă pentru limitarea cuponului.");
                     return;
+                }
+            }
+
+            const restrictByDate = formState.isDateValid === "yes";
+            const rawValidStart = restrictByDate ? formState.validStartDate.trim() : "";
+            const rawValidEnd = restrictByDate ? formState.validEndDate.trim() : "";
+            let normalizedValidStart: string | null = null;
+            let normalizedValidEnd: string | null = null;
+
+            if (restrictByDate) {
+                if (rawValidStart.length === 0 && rawValidEnd.length === 0) {
+                    setFormError(
+                        "Configurează cel puțin o limită pentru perioada de rezervare (start sau final).",
+                    );
+                    return;
+                }
+
+                if (rawValidStart.length > 0) {
+                    if (!isValidDateTimeInput(rawValidStart)) {
+                        setFormError("Data de început pentru valabilitate nu este validă.");
+                        return;
+                    }
+                    normalizedValidStart = ensureDateTimeSeconds(rawValidStart);
+                }
+
+                if (rawValidEnd.length > 0) {
+                    if (!isValidDateTimeInput(rawValidEnd)) {
+                        setFormError("Data de final pentru valabilitate nu este validă.");
+                        return;
+                    }
+                    normalizedValidEnd = ensureDateTimeSeconds(rawValidEnd);
+                }
+
+                if (normalizedValidStart && normalizedValidEnd) {
+                    const startDate = new Date(rawValidStart);
+                    const endDate = new Date(rawValidEnd);
+                    if (startDate.getTime() > endDate.getTime()) {
+                        setFormError("Data de început trebuie să fie anterioară datei de final pentru intervalul de valabilitate.");
+                        return;
+                    }
                 }
             }
 
@@ -337,6 +421,9 @@ export default function CouponsPage() {
                     is_unlimited_expires: unlimitedExpiration,
                     expires_at: unlimitedExpiration ? null : expirationDate,
                     limited_to_email: trimmedLimitEmail.length > 0 ? trimmedLimitEmail : null,
+                    is_date_valid: restrictByDate,
+                    valid_start_date: restrictByDate ? normalizedValidStart : null,
+                    valid_end_date: restrictByDate ? normalizedValidEnd : null,
                 };
 
                 const response = editingCoupon
@@ -419,6 +506,18 @@ export default function CouponsPage() {
             sortable: true,
         },
         {
+            id: "booking_window",
+            header: "Perioadă rezervare",
+            accessor: (row) =>
+                row.is_date_valid
+                    ? `${row.valid_start_date ?? ""}|${row.valid_end_date ?? ""}`
+                    : "",
+            cell: (row) =>
+                row.is_date_valid
+                    ? `${formatDateTimeValue(row.valid_start_date)} → ${formatDateTimeValue(row.valid_end_date)}`
+                    : "Fără restricții",
+        },
+        {
             id: "actions",
             header: "Acțiuni",
             accessor: () => "",
@@ -455,6 +554,12 @@ export default function CouponsPage() {
                 <div>
                     <span className="font-semibold text-slate-700">Expirare:</span>{" "}
                     {row.is_unlimited_expires ? "Fără expirare" : formatDateValue(row.expires_at, "—")}
+                </div>
+                <div>
+                    <span className="font-semibold text-slate-700">Perioadă rezervare:</span>{" "}
+                    {row.is_date_valid
+                        ? `${formatDateTimeValue(row.valid_start_date)} → ${formatDateTimeValue(row.valid_end_date)}`
+                        : "Fără restricții"}
                 </div>
                 <div>
                     <span className="font-semibold text-slate-700">Creat la:</span> {formatDateTimeValue(row.created_at)}
@@ -748,6 +853,52 @@ export default function CouponsPage() {
                             </div>
                         )}
                     </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="coupon-date-valid">Restricționează perioada de rezervare</Label>
+                            <Select
+                                id="coupon-date-valid"
+                                value={formState.isDateValid}
+                                onValueChange={(value) =>
+                                    handleFormChange("isDateValid", (value as "yes" | "no") ?? "no")
+                                }
+                            >
+                                <option value="no">Nu</option>
+                                <option value="yes">Da</option>
+                            </Select>
+                            <p className="text-xs text-slate-500">
+                                Activează opțiunea pentru a impune intervalul de rezervare (<code>valid_start_date</code> / <code>valid_end_date</code>).
+                            </p>
+                        </div>
+                    </div>
+
+                    {formState.isDateValid === "yes" && (
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="coupon-valid-start">Început valabilitate rezervare</Label>
+                                <Input
+                                    id="coupon-valid-start"
+                                    type="datetime-local"
+                                    value={formState.validStartDate}
+                                    onChange={(event) => handleFormChange("validStartDate", event.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="coupon-valid-end">Final valabilitate rezervare</Label>
+                                <Input
+                                    id="coupon-valid-end"
+                                    type="datetime-local"
+                                    value={formState.validEndDate}
+                                    onChange={(event) => handleFormChange("validEndDate", event.target.value)}
+                                />
+                            </div>
+                            <p className="md:col-span-2 text-xs text-slate-500">
+                                Cel puțin unul dintre capetele intervalului trebuie completat. Dacă setezi ambele valori, data de început
+                                trebuie să fie înainte de data de final.
+                            </p>
+                        </div>
+                    )}
 
                     {editingCoupon && typeof editingCoupon.used === "number" && (
                         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
