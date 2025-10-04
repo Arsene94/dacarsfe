@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -96,7 +96,8 @@ const resolveRelationName = (relation: unknown, fallback: string): string => {
 const FleetSection = () => {
     const [cars, setCars] = useState<FleetCar[]>([]);
     const [current, setCurrent] = useState(0);
-    const [autoplayResetKey, setAutoplayResetKey] = useState(0);
+    const autoplayTimerRef = useRef<number | null>(null);
+    const prefersReducedMotionRef = useRef(false);
     const { messages, t, locale } = useTranslations("home");
     const fleetMessages = (messages.fleet ?? {}) as Record<string, unknown>;
     const fleetTitle = (fleetMessages.title ?? {}) as { main?: string; highlight?: string };
@@ -163,25 +164,54 @@ const FleetSection = () => {
         [cars.length]
     );
 
-    const goToNextSlide = useCallback(() => {
-        changeSlide(1);
-        setAutoplayResetKey((prev) => prev + 1);
-    }, [changeSlide]);
+    const clearAutoplay = useCallback(() => {
+        if (autoplayTimerRef.current !== null) {
+            window.clearInterval(autoplayTimerRef.current);
+            autoplayTimerRef.current = null;
+        }
+    }, []);
 
-    const goToPreviousSlide = useCallback(() => {
-        changeSlide(-1);
-        setAutoplayResetKey((prev) => prev + 1);
-    }, [changeSlide]);
+    const restartAutoplay = useCallback(() => {
+        if (cars.length <= 1 || prefersReducedMotionRef.current) {
+            clearAutoplay();
+            return;
+        }
 
-    useEffect(() => {
-        if (cars.length <= 1) return;
-        const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-        if (mq.matches) return;
-        const id = window.setInterval(() => {
+        clearAutoplay();
+        autoplayTimerRef.current = window.setInterval(() => {
             changeSlide(1);
         }, 5000);
-        return () => window.clearInterval(id);
-    }, [cars.length, changeSlide, autoplayResetKey]);
+    }, [cars.length, changeSlide, clearAutoplay]);
+
+    const handleManualNavigation = useCallback(
+        (delta: number) => {
+            clearAutoplay();
+            changeSlide(delta);
+            restartAutoplay();
+        },
+        [changeSlide, clearAutoplay, restartAutoplay]
+    );
+
+    const goToNextSlide = useCallback(() => {
+        handleManualNavigation(1);
+    }, [handleManualNavigation]);
+
+    const goToPreviousSlide = useCallback(() => {
+        handleManualNavigation(-1);
+    }, [handleManualNavigation]);
+
+    useEffect(() => {
+        prefersReducedMotionRef.current = window
+            .matchMedia("(prefers-reduced-motion: reduce)")
+            .matches;
+    }, []);
+
+    useEffect(() => {
+        restartAutoplay();
+        return () => {
+            clearAutoplay();
+        };
+    }, [restartAutoplay, clearAutoplay]);
 
     const structuredData = useMemo(() => {
         if (cars.length === 0) {
