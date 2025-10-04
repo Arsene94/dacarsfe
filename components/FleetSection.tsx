@@ -291,7 +291,7 @@ const FleetSection = () => {
                         {cars.map((car, index) => (
                             <div
                                 key={car.id}
-                                className="min-w-full"
+                                className="min-w-full flex-shrink-0"
                                 role="group"
                                 aria-roledescription="slide"
                                 aria-label={t("fleet.carousel.position", {
