@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -96,6 +96,8 @@ const resolveRelationName = (relation: unknown, fallback: string): string => {
 const FleetSection = () => {
     const [cars, setCars] = useState<FleetCar[]>([]);
     const [current, setCurrent] = useState(0);
+    const autoplayTimerRef = useRef<number | null>(null);
+    const prefersReducedMotionRef = useRef(false);
     const { messages, t, locale } = useTranslations("home");
     const fleetMessages = (messages.fleet ?? {}) as Record<string, unknown>;
     const fleetTitle = (fleetMessages.title ?? {}) as { main?: string; highlight?: string };
@@ -151,22 +153,65 @@ const FleetSection = () => {
         };
     }, [fallbackCarName, locale]);
 
-    const nextSlide = useCallback(() => {
-        setCurrent((prev) => (prev + 1) % Math.max(cars.length, 1));
-    }, [cars.length]);
-    const prevSlide = useCallback(() => {
-        setCurrent((prev) =>
-            (prev - 1 + Math.max(cars.length, 1)) % Math.max(cars.length, 1)
-        );
-    }, [cars.length]);
+    const changeSlide = useCallback(
+        (delta: number) => {
+            setCurrent((prev) => {
+                const length = Math.max(cars.length, 1);
+                const nextIndex = (prev + delta + length) % length;
+                return nextIndex;
+            });
+        },
+        [cars.length]
+    );
+
+    const clearAutoplay = useCallback(() => {
+        if (autoplayTimerRef.current !== null) {
+            window.clearInterval(autoplayTimerRef.current);
+            autoplayTimerRef.current = null;
+        }
+    }, []);
+
+    const restartAutoplay = useCallback(() => {
+        if (cars.length <= 1 || prefersReducedMotionRef.current) {
+            clearAutoplay();
+            return;
+        }
+
+        clearAutoplay();
+        autoplayTimerRef.current = window.setInterval(() => {
+            changeSlide(1);
+        }, 5000);
+    }, [cars.length, changeSlide, clearAutoplay]);
+
+    const handleManualNavigation = useCallback(
+        (delta: number) => {
+            clearAutoplay();
+            changeSlide(delta);
+            restartAutoplay();
+        },
+        [changeSlide, clearAutoplay, restartAutoplay]
+    );
+
+    const goToNextSlide = useCallback(() => {
+        handleManualNavigation(1);
+    }, [handleManualNavigation]);
+
+    const goToPreviousSlide = useCallback(() => {
+        handleManualNavigation(-1);
+    }, [handleManualNavigation]);
 
     useEffect(() => {
-        if (cars.length <= 1) return;
-        const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-        if (mq.matches) return;
-        const id = setInterval(nextSlide, 5000);
-        return () => clearInterval(id);
-    }, [cars.length, nextSlide]);
+        prefersReducedMotionRef.current = window
+            .matchMedia("(prefers-reduced-motion: reduce)")
+            .matches;
+    }, []);
+
+    useEffect(() => {
+        restartAutoplay();
+        return () => {
+            clearAutoplay();
+        };
+    }, [restartAutoplay, clearAutoplay]);
 
     const structuredData = useMemo(() => {
         if (cars.length === 0) {
@@ -191,7 +236,7 @@ const FleetSection = () => {
 
     const CarCard = ({ car, index }: { car: FleetCar; index: number }) => (
         <div
-            className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group border border-gray-100 animate-slide-up"
+            className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group border border-gray-100"
             style={{ animationDelay: `${index * 0.1}s` }}
         >
             <div className="relative overflow-hidden h-48">
@@ -291,7 +336,7 @@ const FleetSection = () => {
                         {cars.map((car, index) => (
                             <div
                                 key={car.id}
-                                className="min-w-full"
+                                className="min-w-full flex-shrink-0"
                                 role="group"
                                 aria-roledescription="slide"
                                 aria-label={t("fleet.carousel.position", {
@@ -307,14 +352,14 @@ const FleetSection = () => {
                     {cars.length > 1 && (
                         <>
                             <button
-                                onClick={prevSlide}
+                                onClick={goToPreviousSlide}
                                 aria-label={fleetCarousel.previous ?? "Mașina precedentă"}
                                 className="absolute top-1/2 left-2 -translate-y-1/2 p-2 rounded-full bg-white/80 shadow hover:bg-white"
                             >
                                 <ChevronLeft className="h-5 w-5 text-jade" />
                             </button>
                             <button
-                                onClick={nextSlide}
+                                onClick={goToNextSlide}
                                 aria-label={fleetCarousel.next ?? "Mașina următoare"}
                                 className="absolute top-1/2 right-2 -translate-y-1/2 p-2 rounded-full bg-white/80 shadow hover:bg-white"
                             >

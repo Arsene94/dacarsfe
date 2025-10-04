@@ -887,6 +887,10 @@ const ReservationPage = () => {
             })
             .filter((offer): offer is ReservationAppliedOffer => offer !== null);
     }, [appliedOffersSummary]);
+    const quoteAppliedOffersPayloadKey = useMemo(
+        () => JSON.stringify(quoteAppliedOffersPayload),
+        [quoteAppliedOffersPayload],
+    );
 
     const hasWheelPrize = wheelPrizeRecord ? isStoredWheelPrizeActive(wheelPrizeRecord) : false;
     const wheelPrizeAmountLabel = useMemo(() => {
@@ -1187,7 +1191,7 @@ const ReservationPage = () => {
         hasWheelPrize,
         normalizedCustomerEmail,
         normalizedCouponCode,
-        quoteAppliedOffersPayload,
+        quoteAppliedOffersPayloadKey,
         selectedServices,
         servicesTotal,
         wheelPrizeDiscountForRequest,
