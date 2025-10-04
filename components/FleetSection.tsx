@@ -96,6 +96,7 @@ const resolveRelationName = (relation: unknown, fallback: string): string => {
 const FleetSection = () => {
     const [cars, setCars] = useState<FleetCar[]>([]);
     const [current, setCurrent] = useState(0);
+    const [autoplayResetKey, setAutoplayResetKey] = useState(0);
     const { messages, t, locale } = useTranslations("home");
     const fleetMessages = (messages.fleet ?? {}) as Record<string, unknown>;
     const fleetTitle = (fleetMessages.title ?? {}) as { main?: string; highlight?: string };
@@ -151,22 +152,36 @@ const FleetSection = () => {
         };
     }, [fallbackCarName, locale]);
 
-    const nextSlide = useCallback(() => {
-        setCurrent((prev) => (prev + 1) % Math.max(cars.length, 1));
-    }, [cars.length]);
-    const prevSlide = useCallback(() => {
-        setCurrent((prev) =>
-            (prev - 1 + Math.max(cars.length, 1)) % Math.max(cars.length, 1)
-        );
-    }, [cars.length]);
+    const changeSlide = useCallback(
+        (delta: number) => {
+            setCurrent((prev) => {
+                const length = Math.max(cars.length, 1);
+                const nextIndex = (prev + delta + length) % length;
+                return nextIndex;
+            });
+        },
+        [cars.length]
+    );
+
+    const goToNextSlide = useCallback(() => {
+        changeSlide(1);
+        setAutoplayResetKey((prev) => prev + 1);
+    }, [changeSlide]);
+
+    const goToPreviousSlide = useCallback(() => {
+        changeSlide(-1);
+        setAutoplayResetKey((prev) => prev + 1);
+    }, [changeSlide]);
 
     useEffect(() => {
         if (cars.length <= 1) return;
         const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
         if (mq.matches) return;
-        const id = setInterval(nextSlide, 5000);
-        return () => clearInterval(id);
-    }, [cars.length, nextSlide]);
+        const id = window.setInterval(() => {
+            changeSlide(1);
+        }, 5000);
+        return () => window.clearInterval(id);
+    }, [cars.length, changeSlide, autoplayResetKey]);
 
     const structuredData = useMemo(() => {
         if (cars.length === 0) {
@@ -307,14 +322,14 @@ const FleetSection = () => {
                     {cars.length > 1 && (
                         <>
                             <button
-                                onClick={prevSlide}
+                                onClick={goToPreviousSlide}
                                 aria-label={fleetCarousel.previous ?? "Mașina precedentă"}
                                 className="absolute top-1/2 left-2 -translate-y-1/2 p-2 rounded-full bg-white/80 shadow hover:bg-white"
                             >
                                 <ChevronLeft className="h-5 w-5 text-jade" />
                             </button>
                             <button
-                                onClick={nextSlide}
+                                onClick={goToNextSlide}
                                 aria-label={fleetCarousel.next ?? "Mașina următoare"}
                                 className="absolute top-1/2 right-2 -translate-y-1/2 p-2 rounded-full bg-white/80 shadow hover:bg-white"
                             >
