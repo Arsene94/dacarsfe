@@ -10,6 +10,7 @@ import { apiClient } from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
+import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import {
     getStoredWheelPrize,
     isStoredWheelPrizeActive,
@@ -542,6 +543,7 @@ const ReservationPage = () => {
     );
     const [isValidatingCode, setIsValidatingCode] = useState(false);
     const [originalCar, setOriginalCar] = useState<Car | null>(storedOriginalCar);
+    const checkoutLoadedTrackedRef = useRef(false);
     const lastValidatedRef = useRef<{ carId: number | null; withDeposit: boolean | null }>({
         carId: null,
         withDeposit: null,
@@ -1082,6 +1084,36 @@ const ReservationPage = () => {
     ]);
     const normalizedCouponCode = formData.coupon_code.trim();
     const normalizedCustomerEmail = formData.customer_email.trim();
+
+    useEffect(() => {
+        if (checkoutLoadedTrackedRef.current) {
+            return;
+        }
+
+        if (!selectedCar || !booking.startDate || !booking.endDate) {
+            return;
+        }
+
+        trackMixpanelEvent("checkout_loaded", {
+            startDate: booking.startDate,
+            endDate: booking.endDate,
+            selectedCar,
+            selectedServices,
+            appliedOffersSummary,
+            hasWheelPrize,
+            quoteResult,
+        });
+
+        checkoutLoadedTrackedRef.current = true;
+    }, [
+        booking.startDate,
+        booking.endDate,
+        selectedCar,
+        selectedServices,
+        appliedOffersSummary,
+        hasWheelPrize,
+        quoteResult,
+    ]);
 
     useEffect(() => {
         if (!booking.selectedCar || !booking.startDate || !booking.endDate) {
