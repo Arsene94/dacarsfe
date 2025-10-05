@@ -16,6 +16,7 @@ import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { useBooking } from "@/context/useBooking";
 import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { trackMixpanelEvent } from "@/lib/mixpanel";
 
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
@@ -33,6 +34,19 @@ const toImageUrl = (p?: string | null): string => {
 const toFiniteInteger = (value: unknown, fallback: number): number => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const toFiniteNumber = (value: unknown): number | undefined => {
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? value : undefined;
+    }
+
+    if (typeof value === "string" && value.trim().length > 0) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+    }
+
+    return undefined;
 };
 
 const parsePrice = (raw: unknown): number => {
@@ -438,6 +452,34 @@ const FleetPage = () => {
     }, [filters, categories, filterOptions, formatPassengersLabel]);
 
     const handleBooking = (withDeposit: boolean, car: Car) => {
+        const eventProperties: Record<string, unknown> = Object.fromEntries(
+            Object.entries({
+                car_id: car.id,
+                car_name: car.name,
+                car_type: car.type,
+                car_type_id: car.typeId ?? undefined,
+                car_days: car.days,
+                car_passengers: car.features.passengers,
+                car_transmission: car.features.transmission,
+                car_transmission_id: car.features.transmissionId ?? undefined,
+                car_fuel: car.features.fuel,
+                car_fuel_id: car.features.fuelId ?? undefined,
+                car_deposit: toFiniteNumber(car.deposit),
+                car_total_deposit: toFiniteNumber(car.total_deposit),
+                car_total_without_deposit: toFiniteNumber(car.total_without_deposit),
+                car_rental_rate: toFiniteNumber(car.rental_rate),
+                car_rental_rate_casco: toFiniteNumber(car.rental_rate_casco),
+                with_deposit: withDeposit,
+                start_date: startDate || undefined,
+                end_date: endDate || undefined,
+                location: location || undefined,
+                locale,
+                car_available: car.available,
+            }).filter(([, value]) => value !== undefined && value !== null && value !== ""),
+        );
+
+        trackMixpanelEvent("car_cta_clicked", eventProperties);
+
         if (startDate && endDate) {
             setBooking({
                 ...booking,
