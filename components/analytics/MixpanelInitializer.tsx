@@ -2,17 +2,24 @@
 
 import { useEffect } from "react";
 
-import { useAuth } from "@/context/AuthContext";
+import { useOptionalAuth } from "@/context/AuthContext";
 import { identifyMixpanelUser, initMixpanel } from "@/lib/mixpanelClient";
 
 const MixpanelInitializer = () => {
-  const { user } = useAuth();
+  const auth = useOptionalAuth();
+  const user = auth?.user ?? null;
 
   useEffect(() => {
     initMixpanel();
   }, []);
 
   useEffect(() => {
+    const distinctId = user?.id;
+
+    if (distinctId === undefined || distinctId === null) {
+      return;
+    }
+
     if (!user) {
       return;
     }
@@ -37,7 +44,7 @@ const MixpanelInitializer = () => {
 
     const mixpanelTraits = Object.keys(traits).length > 0 ? traits : undefined;
 
-    identifyMixpanelUser(String(user.id), mixpanelTraits);
+    identifyMixpanelUser(String(distinctId), mixpanelTraits);
   }, [user]);
 
   return null;

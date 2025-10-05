@@ -72,3 +72,5 @@ export const useAuth = () => {
   }
   return ctx;
 };
+
+export const useOptionalAuth = () => useContext(AuthContext);
