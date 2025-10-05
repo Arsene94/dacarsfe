@@ -12,6 +12,7 @@ import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { GlobalStyles } from "./global-styles";
 import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY, DEFAULT_LOCALE } from "@/lib/i18n/config";
+import MixpanelInitializer from "@/components/analytics/MixpanelInitializer";
 
 
 const poppins = Poppins({
@@ -114,6 +115,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-screen bg-white">
+        <MixpanelInitializer />
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`
             (function() {
