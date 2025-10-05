@@ -16,6 +16,7 @@ import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { useBooking } from "@/context/useBooking";
 import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
@@ -394,8 +395,17 @@ const FleetPage = () => {
 
     const handleFilterChange = (key: string, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
+
+        const eventProps = {
+            filter_key: key,
+            filter_value: value,
+            current_page: currentPage,
+            total_cars: totalCars,
+        };
+
         setCurrentPage(1);
         hasMoreRef.current = true;
+        trackMixpanelEvent("fleet_filters_updated", eventProps);
     };
 
     const clearFilters = () => {
@@ -410,6 +420,12 @@ const FleetPage = () => {
         setSearchTerm("");
         setCurrentPage(1);
         hasMoreRef.current = true;
+        trackMixpanelEvent("fleet_filters_updated", {
+            filter_key: "reset",
+            filter_value: "all",
+            current_page: currentPage,
+            total_cars: totalCars,
+        });
     };
 
     const activeFilters = useMemo(() => {
