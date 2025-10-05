@@ -31,6 +31,7 @@ import SelectedCarGallery from "@/components/checkout/SelectedCarGallery";
 import {Button} from "@/components/ui/button";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import checkoutMessagesRo from "@/messages/checkout/ro.json";
+import { trackEvent } from "@/lib/mixpanelClient";
 
 type CheckoutMessages = typeof checkoutMessagesRo;
 
@@ -443,6 +444,7 @@ const ReservationPage = () => {
     const [quoteResult, setQuoteResult] = useState<QuotePriceResponse | null>(null);
     const [isQuoteLoading, setIsQuoteLoading] = useState(false);
     const [quoteErrorKey, setQuoteErrorKey] = useState<string | null>(null);
+    const hasTrackedCheckoutLoaded = useRef(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -893,6 +895,42 @@ const ReservationPage = () => {
     );
 
     const hasWheelPrize = wheelPrizeRecord ? isStoredWheelPrizeActive(wheelPrizeRecord) : false;
+    useEffect(() => {
+        if (hasTrackedCheckoutLoaded.current) {
+            return;
+        }
+
+        if (!booking.startDate || !booking.endDate || !selectedCar) {
+            return;
+        }
+
+        hasTrackedCheckoutLoaded.current = true;
+
+        trackEvent("checkout_loaded", {
+            selected_car_id: selectedCar.id,
+            selected_car_name: selectedCar.name,
+            with_deposit:
+                typeof booking.withDeposit === "boolean" ? booking.withDeposit : null,
+            booking_start: booking.startDate,
+            booking_end: booking.endDate,
+            preselected_service_ids: selectedServices.map((service) => service.id),
+            applied_offer_ids: appliedOffersSummary.map((offer) => offer.id),
+            has_wheel_prize: hasWheelPrize,
+            wheel_prize_id:
+                wheelPrizeRecord?.prize_id ?? wheelPrizeRecord?.prize?.id ?? null,
+            quote_ready: Boolean(quoteResult),
+        });
+    }, [
+        appliedOffersSummary,
+        booking.endDate,
+        booking.startDate,
+        booking.withDeposit,
+        hasWheelPrize,
+        quoteResult,
+        selectedCar,
+        selectedServices,
+        wheelPrizeRecord,
+    ]);
     const wheelPrizeAmountLabel = useMemo(() => {
         if (!hasWheelPrize) return null;
         const prize = wheelPrizeRecord?.prize ?? null;
@@ -1375,6 +1413,11 @@ const ReservationPage = () => {
         if (availabilityErrorKey || !booking.startDate || !booking.endDate || !selectedCar) return;
         setIsSubmitting(true);
 
+        const reservationPayloadId =
+            typeof globalThis !== "undefined" && globalThis.crypto?.randomUUID
+                ? globalThis.crypto.randomUUID()
+                : `payload-${Date.now()}`;
+
         const start = new Date(booking.startDate);
         const end = new Date(booking.endDate);
         const daysDiff = Math.ceil(
@@ -1496,6 +1539,35 @@ const ReservationPage = () => {
                 resolveReservationIdentifier(bookingRecord) ??
                 resolveReservationIdentifier(res) ??
                 `#${Math.floor(1000000 + Math.random() * 9000000)}`;
+
+            const appliedOfferIds = Array.isArray(payload.applied_offers)
+                ? payload.applied_offers
+                      .map((offer) => offer.id)
+                      .filter((id): id is number => typeof id === "number" && Number.isFinite(id))
+                : [];
+            const wheelPrizeIdFromPayload =
+                (payload.wheel_of_fortune_prize_id as number | undefined) ??
+                (typeof payload.wheel_prize === "object" && payload.wheel_prize !== null
+                    ? ((payload.wheel_prize as { prize_id?: unknown }).prize_id as number | undefined)
+                    : undefined);
+
+            trackEvent("checkout_submitted", {
+                reservation_id: reservationId,
+                reservation_payload_id: reservationPayloadId,
+                car_id: selectedCar.id,
+                with_deposit: payload.with_deposit,
+                price_per_day: payload.price_per_day,
+                sub_total: payload.sub_total,
+                total: payload.total,
+                total_services: payload.total_services,
+                coupon_amount: payload.coupon_amount,
+                offers_discount: payload.offers_discount,
+                wheel_prize_discount: payload.wheel_prize_discount,
+                wheel_prize_id: wheelPrizeIdFromPayload ?? null,
+                applied_offer_ids: appliedOfferIds,
+                deposit_waived: payload.deposit_waived,
+            });
+
             localStorage.setItem(
                 "reservationData",
                 JSON.stringify({

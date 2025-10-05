@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import BenefitsSection from "@/components/BenefitsSection";
 import ContactSection from "@/components/ContactSection";
@@ -12,6 +12,7 @@ import apiClient from "@/lib/api";
 import { extractArray, isPeriodActive, mapPeriod } from "@/lib/wheelNormalization";
 import { useBooking } from "@/context/useBooking";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
+import { trackEvent } from "@/lib/mixpanelClient";
 
 const ElfsightWidget = dynamic(() => import("@/components/ElfsightWidget"), {
     ssr: false,
@@ -83,6 +84,7 @@ const HomePageClient = () => {
     const [showWheelPopup, setShowWheelPopup] = useState(false);
     const [hasManuallyClosed, setHasManuallyClosed] = useState(false);
     const [hasUserAdjustedBookingRange, setHasUserAdjustedBookingRange] = useState(false);
+    const hasTrackedLandingView = useRef(false);
 
     const hasBookingRange = Boolean(booking.startDate && booking.endDate);
     const bookingRangeKey = hasBookingRange
@@ -286,6 +288,45 @@ const HomePageClient = () => {
         setShowWheelPopup(false);
         setHasManuallyClosed(true);
     };
+
+    useEffect(() => {
+        if (hasTrackedLandingView.current) {
+            return;
+        }
+
+        if (isLoadingPeriod) {
+            return;
+        }
+
+        const hasResolvedPeriod =
+            !hasUserAdjustedBookingRange ||
+            !hasBookingRange ||
+            periodError !== null ||
+            activePeriod !== null;
+
+        if (!hasResolvedPeriod) {
+            return;
+        }
+
+        trackEvent("landing_view", {
+            has_booking_range: hasBookingRange,
+            booking_range_key: bookingRangeKey,
+            wheel_popup_shown: showWheelPopup,
+            wheel_period_id: activePeriod?.id ?? null,
+            wheel_active_month_match: isBookingWithinActiveMonths,
+        });
+
+        hasTrackedLandingView.current = true;
+    }, [
+        activePeriod,
+        bookingRangeKey,
+        hasBookingRange,
+        hasUserAdjustedBookingRange,
+        isBookingWithinActiveMonths,
+        isLoadingPeriod,
+        periodError,
+        showWheelPopup,
+    ]);
 
     return (
         <div className="pt-16 lg:pt-20">

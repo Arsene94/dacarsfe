@@ -37,3 +37,20 @@ export const trackPageView = (path: string, properties: TrackerProperties = {}):
         ...properties,
     });
 };
+
+export const trackEvent = (
+    eventName: string,
+    properties: TrackerProperties = {},
+): void => {
+    if (!eventName || typeof eventName !== "string") {
+        return;
+    }
+
+    const initialized = hasInitialized || initMixpanel();
+
+    if (!initialized) {
+        return;
+    }
+
+    mixpanel.track(eventName, properties);
+};

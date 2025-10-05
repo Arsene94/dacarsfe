@@ -16,6 +16,7 @@ import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { useBooking } from "@/context/useBooking";
 import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { trackEvent } from "@/lib/mixpanelClient";
 
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
@@ -393,9 +394,35 @@ const FleetPage = () => {
     }, []);
 
     const handleFilterChange = (key: string, value: string) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
+        setFilters((prev) => ({ ...prev, [key]: value }));
         setCurrentPage(1);
         hasMoreRef.current = true;
+
+        trackEvent("fleet_filters_updated", {
+            filter_key: key,
+            filter_value: value ?? null,
+            view_mode: viewMode,
+            search_term: searchTerm || null,
+            sort_by: sortBy,
+            page: 1,
+            total_results: totalCars,
+        });
+    };
+
+    const handleSortChange = (value: string) => {
+        setSortBy(value);
+        setCurrentPage(1);
+        hasMoreRef.current = true;
+
+        trackEvent("fleet_filters_updated", {
+            filter_key: "sort_by",
+            filter_value: value ?? null,
+            view_mode: viewMode,
+            search_term: searchTerm || null,
+            sort_by: value,
+            page: 1,
+            total_results: totalCars,
+        });
     };
 
     const clearFilters = () => {
@@ -439,6 +466,25 @@ const FleetPage = () => {
 
     const handleBooking = (withDeposit: boolean, car: Car) => {
         if (startDate && endDate) {
+            const pricePerDay = Number(
+                withDeposit ? car.rental_rate : car.rental_rate_casco,
+            );
+            const totalPrice = Number(
+                withDeposit ? car.total_deposit : car.total_without_deposit,
+            );
+
+            trackEvent("car_cta_clicked", {
+                car_id: car.id,
+                car_name: car.name,
+                with_deposit: withDeposit,
+                car_price_plan: withDeposit ? "with_deposit" : "no_deposit",
+                car_price_per_day: Number.isFinite(pricePerDay) ? pricePerDay : 0,
+                car_total: Number.isFinite(totalPrice) ? totalPrice : 0,
+                start_date: startDate,
+                end_date: endDate,
+                view_mode: viewMode,
+            });
+
             setBooking({
                 ...booking,
                 startDate,
@@ -632,7 +678,7 @@ const FleetPage = () => {
                                 <Select
                                     className="w-auto px-4 py-2 transition-all duration-300"
                                     value={sortBy}
-                                    onValueChange={(v) => { setSortBy(v); setCurrentPage(1); }}
+                                    onValueChange={handleSortChange}
                                     aria-label={t("search.sortAria")}
                                 >
                                     <option value="cheapest">{t("search.sortOptions.cheapest")}</option>
