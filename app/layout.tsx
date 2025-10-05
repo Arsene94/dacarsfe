@@ -13,6 +13,7 @@ import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { GlobalStyles } from "./global-styles";
 import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY, DEFAULT_LOCALE } from "@/lib/i18n/config";
 
+
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["600", "700"],
