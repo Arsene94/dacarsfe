@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import BenefitsSection from "@/components/BenefitsSection";
 import ContactSection from "@/components/ContactSection";
@@ -12,6 +12,7 @@ import apiClient from "@/lib/api";
 import { extractArray, isPeriodActive, mapPeriod } from "@/lib/wheelNormalization";
 import { useBooking } from "@/context/useBooking";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
+import { trackMixpanelEvent } from "@/lib/mixpanel";
 
 const ElfsightWidget = dynamic(() => import("@/components/ElfsightWidget"), {
     ssr: false,
@@ -83,6 +84,7 @@ const HomePageClient = () => {
     const [showWheelPopup, setShowWheelPopup] = useState(false);
     const [hasManuallyClosed, setHasManuallyClosed] = useState(false);
     const [hasUserAdjustedBookingRange, setHasUserAdjustedBookingRange] = useState(false);
+    const landingTrackedRef = useRef(false);
 
     const hasBookingRange = Boolean(booking.startDate && booking.endDate);
     const bookingRangeKey = hasBookingRange
@@ -223,6 +225,28 @@ const HomePageClient = () => {
 
         return bookingMonths.some((month) => activeMonthsSet.has(month));
     }, [activeMonthsSet, activePeriod, booking.endDate, booking.startDate]);
+
+    useEffect(() => {
+        if (landingTrackedRef.current) {
+            return;
+        }
+
+        landingTrackedRef.current = true;
+
+        trackMixpanelEvent("landing_view", {
+            bookingRangeKey: bookingRangeKey ?? "",
+            activePeriod: activePeriod?.id ?? null,
+            showWheelPopup: Number(Boolean(showWheelPopup)),
+            hasBookingRange: Number(Boolean(hasBookingRange)),
+            isBookingWithinActiveMonths: Number(Boolean(isBookingWithinActiveMonths)),
+        });
+    }, [
+        bookingRangeKey,
+        activePeriod,
+        showWheelPopup,
+        hasBookingRange,
+        isBookingWithinActiveMonths,
+    ]);
 
     useEffect(() => {
         if (!hasUserAdjustedBookingRange) {

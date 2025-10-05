@@ -7,6 +7,7 @@ import {Label} from "@/components/ui/label";
 import PhoneInput from "@/components/PhoneInput";
 import {useBooking} from "@/context/useBooking";
 import { apiClient } from "@/lib/api";
+import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
@@ -1528,6 +1529,11 @@ const ReservationPage = () => {
                 resolveReservationIdentifier(bookingRecord) ??
                 resolveReservationIdentifier(res) ??
                 `#${Math.floor(1000000 + Math.random() * 9000000)}`;
+            trackMixpanelEvent("checkout_submitted", {
+                ...payload,
+                reservationId,
+                quoteCouponType: payload.coupon_type ?? null,
+            });
             localStorage.setItem(
                 "reservationData",
                 JSON.stringify({
