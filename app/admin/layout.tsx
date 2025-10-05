@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import "./admin.css";
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/AdminSidebar";
 import { FORBIDDEN_EVENT } from "@/lib/api";
+import { MixpanelTracker } from "@/components/analytics/MixpanelTracker";
 
 const PERMISSION_MESSAGE = "Nu ai permisiunea necesară să accesezi această pagină.";
 
@@ -15,6 +16,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
     const [permissionError, setPermissionError] = useState<string | null>(null);
+    const mixpanelProperties = useMemo(() => ({ area: "admin" }), []);
 
     useEffect(() => {
         if (!loading) {
@@ -64,11 +66,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
 
     if (pathname === "/admin/login") {
-        return <div className="pt-16 lg:pt-20">{renderContent}</div>;
+        return (
+            <div className="pt-16 lg:pt-20">
+                <MixpanelTracker scope="admin" properties={mixpanelProperties} />
+                {renderContent}
+            </div>
+        );
     }
 
     return (
         <div className="md:flex min-h-screen pt-16 lg:pt-20">
+            <MixpanelTracker scope="admin" properties={mixpanelProperties} />
             <AdminSidebar />
             <main className="flex-1 min-w-0">{renderContent}</main>
         </div>
