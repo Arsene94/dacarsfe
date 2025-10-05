@@ -23,6 +23,7 @@ import { useBooking } from "@/context/useBooking";
 import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 
 import heroMobile1x from "@/public/images/bg-hero-mobile-378x284.webp";
 import heroMobile2x from "@/public/images/bg-hero-mobile-480x879.webp";
@@ -31,6 +32,19 @@ import heroDesktop from "@/public/images/bg-hero-1920x1080.webp";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null;
+
+const toISODateTime = (value: string | null | undefined) => {
+    if (!value) {
+        return null;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+
+    return parsed.toISOString();
+};
 
 const HeroSection = () => {
     const { messages, t, locale } = useTranslations("home");
@@ -232,6 +246,34 @@ const HeroSection = () => {
 
         if (formData.car_type) params.set("car_type", formData.car_type);
         if (formData.location) params.set("location", formData.location);
+
+        const normalizedStartDate = toISODateTime(formData.start_date);
+        const normalizedEndDate = toISODateTime(formData.end_date);
+        const bookingStartDate = toISODateTime(booking.startDate);
+        const bookingEndDate = toISODateTime(booking.endDate);
+
+        trackMixpanelEvent("hero_search_submitted", {
+            start_date: normalizedStartDate,
+            end_date: normalizedEndDate,
+            location: formData.location || null,
+            car_type: formData.car_type || null,
+            booking_start_date: bookingStartDate,
+            booking_end_date: bookingEndDate,
+            booking_with_deposit:
+                typeof booking.withDeposit === "boolean"
+                    ? booking.withDeposit
+                    : null,
+            booking_selected_car_id: booking.selectedCar?.id ?? null,
+            booking_applied_offer_ids: booking.appliedOffers.map((offer) => offer.id),
+            booking_synced: Boolean(
+                normalizedStartDate &&
+                    normalizedEndDate &&
+                    bookingStartDate &&
+                    bookingEndDate &&
+                    normalizedStartDate === bookingStartDate &&
+                    normalizedEndDate === bookingEndDate,
+            ),
+        });
 
         router.push(`/cars?${params.toString()}`);
     };
