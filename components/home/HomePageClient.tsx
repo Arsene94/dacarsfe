@@ -12,7 +12,7 @@ import apiClient from "@/lib/api";
 import { extractArray, isPeriodActive, mapPeriod } from "@/lib/wheelNormalization";
 import { useBooking } from "@/context/useBooking";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
-import { trackMixpanelEvent } from "@/lib/mixpanel";
+import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 
 const ElfsightWidget = dynamic(() => import("@/components/ElfsightWidget"), {
     ssr: false,
@@ -226,26 +226,39 @@ const HomePageClient = () => {
         return bookingMonths.some((month) => activeMonthsSet.has(month));
     }, [activeMonthsSet, activePeriod, booking.endDate, booking.startDate]);
 
+    const hasResolvedActivePeriod = useMemo(() => {
+        if (!hasBookingRange) {
+            return true;
+        }
+
+        return !isLoadingPeriod;
+    }, [hasBookingRange, isLoadingPeriod]);
+
     useEffect(() => {
         if (landingTrackedRef.current) {
             return;
         }
 
-        landingTrackedRef.current = true;
+        if (!hasResolvedActivePeriod) {
+            return;
+        }
 
         trackMixpanelEvent("landing_view", {
-            bookingRangeKey: bookingRangeKey ?? "",
-            activePeriod: activePeriod?.id ?? null,
-            showWheelPopup: Number(Boolean(showWheelPopup)),
-            hasBookingRange: Number(Boolean(hasBookingRange)),
-            isBookingWithinActiveMonths: Number(Boolean(isBookingWithinActiveMonths)),
+            has_booking_range: Boolean(hasBookingRange),
+            booking_range_key: bookingRangeKey ?? null,
+            wheel_popup_shown: Boolean(showWheelPopup),
+            wheel_period_id: activePeriod?.id ?? null,
+            wheel_active_month_match: Boolean(isBookingWithinActiveMonths),
         });
+
+        landingTrackedRef.current = true;
     }, [
+        activePeriod?.id,
         bookingRangeKey,
-        activePeriod,
-        showWheelPopup,
         hasBookingRange,
+        hasResolvedActivePeriod,
         isBookingWithinActiveMonths,
+        showWheelPopup,
     ]);
 
     useEffect(() => {

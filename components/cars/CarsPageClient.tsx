@@ -16,6 +16,7 @@ import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { useBooking } from "@/context/useBooking";
 import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
@@ -48,6 +49,20 @@ const parsePrice = (raw: unknown): number => {
 };
 
 const CAR_CARD_IMAGE_SIZES = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
+
+const toNumberOrNull = (value: unknown): number | null => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+};
+
+type FiltersState = {
+    car_type: string;
+    type: string;
+    transmission: string;
+    fuel: string;
+    passengers: string;
+    priceRange: string;
+};
 
 const FleetPage = () => {
     const { t, locale } = useTranslations("cars");
@@ -164,7 +179,7 @@ const FleetPage = () => {
     const pathname = usePathname();
     const { booking, setBooking } = useBooking();
 
-    const [filters, setFilters] = useState(() => ({
+    const [filters, setFilters] = useState<FiltersState>(() => ({
         car_type: searchParams.get("car_type") || "all",
         type: searchParams.get("type") || "all",
         transmission: searchParams.get("transmission") || "all",
@@ -392,10 +407,34 @@ const FleetPage = () => {
         return () => observer.disconnect();
     }, []);
 
-    const handleFilterChange = (key: string, value: string) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
+    const handleFilterChange = (key: keyof FiltersState, value: string) => {
+        let didChange = false;
+
+        setFilters((prev) => {
+            if (prev[key] === value) {
+                return prev;
+            }
+
+            didChange = true;
+            return { ...prev, [key]: value };
+        });
+
+        if (!didChange) {
+            return;
+        }
+
         setCurrentPage(1);
         hasMoreRef.current = true;
+
+        trackMixpanelEvent("fleet_filters_updated", {
+            filter_key: key,
+            filter_value: value,
+            view_mode: viewMode,
+            search_term: searchTerm || null,
+            sort_by: sortBy,
+            page: 1,
+            total_results: totalCars,
+        });
     };
 
     const clearFilters = () => {
@@ -438,7 +477,9 @@ const FleetPage = () => {
     }, [filters, categories, filterOptions, formatPassengersLabel]);
 
     const handleBooking = (withDeposit: boolean, car: Car) => {
-        if (startDate && endDate) {
+        const hasCompleteBookingRange = Boolean(startDate && endDate);
+
+        if (hasCompleteBookingRange) {
             setBooking({
                 ...booking,
                 startDate,
@@ -446,10 +487,28 @@ const FleetPage = () => {
                 withDeposit,
                 selectedCar: car,
             });
-            router.push("/checkout");
-        } else {
-            router.push("/");
         }
+
+        const pricePerDay = toNumberOrNull(
+            withDeposit ? car.rental_rate : car.rental_rate_casco,
+        );
+        const totalAmount = toNumberOrNull(
+            withDeposit ? car.total_deposit : car.total_without_deposit,
+        );
+
+        trackMixpanelEvent("car_cta_clicked", {
+            car_id: car.id,
+            car_name: car.name,
+            with_deposit: withDeposit,
+            car_price_plan: withDeposit ? "with_deposit" : "no_deposit",
+            car_price_per_day: pricePerDay,
+            car_total: totalAmount,
+            start_date: startDate || null,
+            end_date: endDate || null,
+            view_mode: viewMode,
+        });
+
+        router.push(hasCompleteBookingRange ? "/checkout" : "/");
     };
 
     const CarCard = ({ car, isListView = false }: { car: Car; isListView?: boolean; }) => (

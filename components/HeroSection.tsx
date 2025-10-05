@@ -23,6 +23,7 @@ import { useBooking } from "@/context/useBooking";
 import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 
 import heroMobile1x from "@/public/images/bg-hero-mobile-378x284.webp";
 import heroMobile2x from "@/public/images/bg-hero-mobile-480x879.webp";
@@ -232,6 +233,16 @@ const HeroSection = () => {
 
         if (formData.car_type) params.set("car_type", formData.car_type);
         if (formData.location) params.set("location", formData.location);
+
+        trackMixpanelEvent("hero_search_submitted", {
+            start_date: formData.start_date,
+            end_date: formData.end_date,
+            location: formData.location || null,
+            car_type: formData.car_type || null,
+            booking_synced:
+                booking.startDate === formData.start_date &&
+                booking.endDate === formData.end_date,
+        });
 
         router.push(`/cars?${params.toString()}`);
     };
