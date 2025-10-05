@@ -452,7 +452,7 @@ const FleetPage = () => {
     };
 
     const activeFilters = useMemo(() => {
-        const active: { key: string; label: string }[] = [];
+        const active: Array<{ key: keyof FiltersState; label: string }> = [];
         if (filters.car_type !== "all") {
             const label = categories?.find((c) => String(c.id) === filters.car_type)?.name;
             if (label) active.push({ key: "car_type", label });
