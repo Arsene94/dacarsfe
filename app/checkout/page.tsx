@@ -543,6 +543,7 @@ const ReservationPage = () => {
     );
     const [isValidatingCode, setIsValidatingCode] = useState(false);
     const [originalCar, setOriginalCar] = useState<Car | null>(storedOriginalCar);
+    const checkoutLoadedTrackedRef = useRef(false);
     const lastValidatedRef = useRef<{ carId: number | null; withDeposit: boolean | null }>({
         carId: null,
         withDeposit: null,
@@ -938,6 +939,53 @@ const ReservationPage = () => {
             wheelPrizeRecord?.expires_at ?? wheelPrizeRecord?.expiration_date ?? null,
         );
     }, [formatWheelPrizeDate, hasWheelPrize, wheelPrizeRecord]);
+
+    useEffect(() => {
+        if (checkoutLoadedTrackedRef.current) {
+            return;
+        }
+
+        if (!booking.startDate || !booking.endDate || !selectedCar) {
+            return;
+        }
+
+        const serviceIds = selectedServices
+            .map((service) => service.id)
+            .filter((id): id is number => typeof id === "number" && Number.isFinite(id));
+        const appliedOfferIds = appliedOffersSummary
+            .map((offer) => offer.id)
+            .filter((id): id is number => typeof id === "number" && Number.isFinite(id));
+        const wheelPrizeId = wheelPrizeRecord?.prize_id ??
+            (typeof wheelPrizeRecord?.prize?.id === "number"
+                ? wheelPrizeRecord.prize.id
+                : null);
+
+        trackMixpanelEvent("checkout_loaded", {
+            selected_car_id: selectedCar.id,
+            selected_car_name: selectedCar.name,
+            with_deposit:
+                typeof booking.withDeposit === "boolean" ? booking.withDeposit : null,
+            booking_start: booking.startDate,
+            booking_end: booking.endDate,
+            preselected_service_ids: serviceIds,
+            applied_offer_ids: appliedOfferIds,
+            has_wheel_prize: hasWheelPrize,
+            wheel_prize_id: wheelPrizeId,
+            quote_ready: Boolean(quoteResult),
+        });
+
+        checkoutLoadedTrackedRef.current = true;
+    }, [
+        appliedOffersSummary,
+        booking.endDate,
+        booking.startDate,
+        booking.withDeposit,
+        hasWheelPrize,
+        quoteResult,
+        selectedCar,
+        selectedServices,
+        wheelPrizeRecord,
+    ]);
 
     const estimatedRentalSubtotal = useMemo(() => {
         const selectedCar = booking.selectedCar;
@@ -1497,10 +1545,27 @@ const ReservationPage = () => {
                 resolveReservationIdentifier(bookingRecord) ??
                 resolveReservationIdentifier(res) ??
                 `#${Math.floor(1000000 + Math.random() * 9000000)}`;
+            const appliedOfferIds = Array.isArray(payload.applied_offers)
+                ? payload.applied_offers
+                    .map((offer) => offer.id)
+                    .filter((id): id is number => typeof id === "number" && Number.isFinite(id))
+                : [];
+
             trackMixpanelEvent("checkout_submitted", {
-                ...payload,
-                reservationId,
-                quoteCouponType: payload.coupon_type ?? null,
+                reservation_id: reservationId,
+                car_id: selectedCar.id,
+                with_deposit:
+                    typeof payload.with_deposit === "boolean" ? payload.with_deposit : null,
+                price_per_day: payload.price_per_day ?? null,
+                sub_total: payload.sub_total,
+                total: payload.total,
+                total_services: payload.total_services,
+                coupon_amount: payload.coupon_amount ?? null,
+                offers_discount: payload.offers_discount ?? null,
+                wheel_prize_discount: payload.wheel_prize_discount ?? null,
+                deposit_waived: payload.deposit_waived === true,
+                wheel_prize_id: payload.wheel_of_fortune_prize_id ?? null,
+                applied_offer_ids: appliedOfferIds,
             });
             localStorage.setItem(
                 "reservationData",
