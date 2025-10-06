@@ -290,10 +290,10 @@ describe('Fluxul complet al clienților DaCars', () => {
     await waitFor(() => expect(apiClientMock.getHomePageCars).toHaveBeenCalled());
     await waitFor(() => expect(apiClientMock.getOffers).toHaveBeenCalled());
 
-    const pickupInput = screen.getByLabelText('Data ridicare');
-    const returnInput = screen.getByLabelText('Data returnare');
-    const locationSelect = screen.getByLabelText('Locația');
-    const carTypeSelect = screen.getByLabelText('Tip mașină');
+    const pickupInput = await screen.findByLabelText('Data ridicare');
+    const returnInput = await screen.findByLabelText('Data returnare');
+    const locationSelect = await screen.findByLabelText('Locația');
+    const carTypeSelect = await screen.findByLabelText('Tip mașină');
 
     await user.clear(pickupInput);
     await user.type(pickupInput, '2030-06-10T10:30');
