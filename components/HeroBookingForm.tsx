@@ -71,16 +71,15 @@ const HeroBookingForm = ({
             ? locations
             : [{ value: "otopeni", label: "Aeroport Otopeni" }];
     }, [locations]);
-    const defaultDateRange = useMemo(() => {
-        const now = new Date();
-        const pickup = formatDate(now);
-        const ret = formatDate(addDays(now, 1));
-        return { pickup, ret };
-    }, []);
+
+    const [defaultDateRange, setDefaultDateRange] = useState<{ pickup: string; ret: string }>(() => ({
+        pickup: "",
+        ret: "",
+    }));
 
     const [formData, setFormData] = useState<HeroFormState>(() => ({
-        start_date: defaultDateRange.pickup,
-        end_date: defaultDateRange.ret,
+        start_date: "",
+        end_date: "",
         location: resolvedLocations[0]?.value ?? "otopeni",
         car_type: "",
     }));
@@ -106,6 +105,20 @@ const HeroBookingForm = ({
             };
         });
     }, [resolvedLocations]);
+
+    useEffect(() => {
+        const now = new Date();
+        const pickup = formatDate(now);
+        const ret = formatDate(addDays(now, 1));
+
+        setDefaultDateRange({ pickup, ret });
+
+        setFormData((previous) => ({
+            ...previous,
+            start_date: previous.start_date || pickup,
+            end_date: previous.end_date || ret,
+        }));
+    }, []);
 
     const minstart_date = defaultDateRange.pickup;
 
@@ -309,7 +322,7 @@ const HeroBookingForm = ({
                         value={formData.start_date}
                         onChange={handleInputChange}
                         onClick={(event) => event.currentTarget.showPicker?.()}
-                        min={minstart_date}
+                        min={minstart_date || undefined}
                         className={`${dateTimeControlClass} appearance-none flex items-center`}
                         style={{
                             minHeight: "3rem",
@@ -337,7 +350,7 @@ const HeroBookingForm = ({
                         value={formData.end_date}
                         onChange={handleInputChange}
                         onClick={(event) => event.currentTarget.showPicker?.()}
-                        min={minend_date}
+                        min={minend_date || undefined}
                         className={`${dateTimeControlClass} appearance-none flex items-center`}
                         style={{
                             minHeight: "3rem",
