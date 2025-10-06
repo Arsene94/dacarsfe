@@ -27,8 +27,6 @@ import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 
-import heroMobile1x from "@/public/images/bg-hero-mobile-378x284.webp";
-import heroMobile2x from "@/public/images/bg-hero-mobile-480x879.webp";
 import heroMobile3x from "@/public/images/bg-hero-mobile-960x1759.webp";
 import heroDesktop from "@/public/images/bg-hero-1920x1080.webp";
 
@@ -279,30 +277,32 @@ const HeroSection = () => {
         <section className="relative bg-berkeley text-white overflow-hidden">
             {/* Background Image */}
             <div className="absolute inset-0">
-                <picture className="relative block w-full h-full">
-                    <source
-                        media="(max-width: 639px)"
-                        srcSet={`${heroMobile1x.src} 1x, ${heroMobile2x.src} 2x, ${heroMobile3x.src} 3x`}
-                        sizes="100vw"
-                        type="image/webp"
-                    />
-                    <source
-                        media="(min-width: 640px)"
-                        srcSet={`${heroDesktop.src} 1920w`}
-                        sizes="100vw"
-                        type="image/webp"
-                    />
+                <div className="relative h-full w-full sm:hidden">
                     <Image
-                        src={heroMobile2x}
+                        src={heroMobile3x}
                         alt="Fundal aeroport"
                         fill
                         priority
                         placeholder="blur"
                         fetchPriority="high"
                         sizes="100vw"
-                        className="w-full h-full object-cover"
+                        quality={70}
+                        className="object-cover"
                     />
-                </picture>
+                </div>
+                <div className="relative hidden h-full w-full sm:block">
+                    <Image
+                        src={heroDesktop}
+                        alt="Fundal aeroport"
+                        fill
+                        priority
+                        placeholder="blur"
+                        fetchPriority="high"
+                        sizes="100vw"
+                        quality={70}
+                        className="object-cover"
+                    />
+                </div>
                 <div className="absolute inset-0 bg-gradient-to-r from-berkeley/90 to-berkeley/70 z-10"></div>
             </div>
 
