@@ -284,7 +284,7 @@ const HeroSection = () => {
                         fill
                         priority
                         placeholder="blur"
-                        sizes="100vw"
+                        sizes="(min-width: 640px) 0px, 100vw"
                         quality={70}
                         className="object-cover"
                     />
@@ -296,7 +296,7 @@ const HeroSection = () => {
                         fill
                         placeholder="blur"
                         loading="lazy"
-                        sizes="100vw"
+                        sizes="(max-width: 639px) 0px, 100vw"
                         quality={70}
                         className="object-cover"
                     />
