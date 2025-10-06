@@ -27,7 +27,7 @@ import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 
-import heroMobile3x from "@/public/images/bg-hero-mobile-960x1759.webp";
+import heroMobile2x from "@/public/images/bg-hero-mobile-480x879.webp";
 import heroDesktop from "@/public/images/bg-hero-1920x1080.webp";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -279,7 +279,7 @@ const HeroSection = () => {
             <div className="absolute inset-0">
                 <div className="relative h-full w-full sm:hidden">
                     <Image
-                        src={heroMobile3x}
+                        src={heroMobile2x}
                         alt="Fundal aeroport"
                         fill
                         priority
