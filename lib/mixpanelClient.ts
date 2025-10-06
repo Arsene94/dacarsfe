@@ -258,10 +258,20 @@ const canUseMixpanel = () => {
     }
 
     if (!isInitialized) {
-        mixpanel.init(MIXPANEL_TOKEN, { autocapture: true });
+        mixpanel.init(MIXPANEL_TOKEN, {
+            debug: true,
+            track_pageview: true,
+            persistence: "localStorage",
+            record_sessions_percent: 1,
+            record_heatmap_data: true,
+        });
         logMixpanelDebug("Mixpanel a fost inițializat", {
             tokenPrefix: `${MIXPANEL_TOKEN.slice(0, 6)}…`,
-            autocapture: true,
+            debug: true,
+            track_pageview: true,
+            persistence: "localStorage",
+            record_sessions_percent: 1,
+            record_heatmap_data: true,
         });
         isInitialized = true;
     }
