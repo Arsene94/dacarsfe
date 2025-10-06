@@ -201,10 +201,10 @@ describe('HeroSection', () => {
 
     await waitForCarCategories();
 
-    const pickupInput = screen.getByLabelText(/Data ridicare/i) as HTMLInputElement;
-    const returnInput = screen.getByLabelText(/Data returnare/i) as HTMLInputElement;
-    const locationSelect = screen.getByLabelText(/Locația/i) as HTMLSelectElement;
-    const carTypeSelect = screen.getByLabelText(/Tip mașină/i) as HTMLSelectElement;
+      const pickupInput = (await screen.findByLabelText(/Data ridicare/i)) as HTMLInputElement;
+      const returnInput = (await screen.findByLabelText(/Data returnare/i)) as HTMLInputElement;
+      const locationSelect = (await screen.findByLabelText(/Locația/i)) as HTMLSelectElement;
+      const carTypeSelect = (await screen.findByLabelText(/Tip mașină/i)) as HTMLSelectElement;
 
     expect(pickupInput.value).not.toBe('');
     expect(returnInput.value).not.toBe('');
@@ -229,8 +229,8 @@ describe('HeroSection', () => {
 
     await waitForCarCategories();
 
-    const pickupInput = screen.getByLabelText(/Data ridicare/i) as HTMLInputElement;
-    const returnInput = screen.getByLabelText(/Data returnare/i) as HTMLInputElement;
+      const pickupInput = (await screen.findByLabelText(/Data ridicare/i)) as HTMLInputElement;
+      const returnInput = (await screen.findByLabelText(/Data returnare/i)) as HTMLInputElement;
 
     await user.clear(pickupInput);
     await user.type(pickupInput, '2025-09-01T10:00');
