@@ -295,7 +295,7 @@ const HeroSection = () => {
                         alt="Fundal aeroport"
                         fill
                         placeholder="blur"
-                        loading="lazy"
+                        priority
                         sizes="(max-width: 639px) 0px, 100vw"
                         quality={70}
                         className="object-cover"
