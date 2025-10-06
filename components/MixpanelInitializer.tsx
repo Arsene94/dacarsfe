@@ -1,33 +1,45 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/router";
+import { useEffect, useMemo, useRef } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { initMixpanel, trackPageView } from "@/lib/mixpanelClient";
 
 const MixpanelInitializer = () => {
-    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const lastTrackedUrlRef = useRef<string | null>(null);
 
     useEffect(() => {
         initMixpanel();
+    }, []);
 
-        const initialPath =
-            typeof window !== "undefined"
-                ? `${window.location.pathname}${window.location.search}`
-                : router.asPath;
+    const currentUrl = useMemo(() => {
+        if (!pathname) {
+            return null;
+        }
 
-        trackPageView(initialPath);
+        const query = searchParams?.toString();
 
-        const handleRouteChange = (url: string) => {
-            trackPageView(url);
-        };
+        if (query && query.length > 0) {
+            return `${pathname}?${query}`;
+        }
 
-        router.events.on("routeChangeComplete", handleRouteChange);
+        return pathname;
+    }, [pathname, searchParams]);
 
-        return () => {
-            router.events.off("routeChangeComplete", handleRouteChange);
-        };
-    }, [router]);
+    useEffect(() => {
+        if (!currentUrl) {
+            return;
+        }
+
+        if (lastTrackedUrlRef.current === currentUrl) {
+            return;
+        }
+
+        lastTrackedUrlRef.current = currentUrl;
+        trackPageView(currentUrl);
+    }, [currentUrl]);
 
     return null;
 };

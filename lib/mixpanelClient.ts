@@ -3,6 +3,12 @@ import type { Config as MixpanelConfig } from "mixpanel-browser";
 
 const MIXPANEL_TOKEN = process.env.NEXT_PUBLIC_MIXPANEL_TOKEN;
 
+export const MIXPANEL_EVENTS = {
+    PAGE_VIEW: "Page View",
+} as const;
+
+export type MixpanelEventName = (typeof MIXPANEL_EVENTS)[keyof typeof MIXPANEL_EVENTS];
+
 let isInitialized = false;
 let cachedClientIp: string | null | undefined;
 let pendingClientIpRequest: Promise<string | null> | null = null;
@@ -343,7 +349,7 @@ export const trackMixpanelEvent = (
     }
 };
 
-export const trackPageView = (url?: string) => {
+export const trackPageView = (url?: string | null) => {
     const pageUrl =
         typeof url === "string" && url.length > 0
             ? url
@@ -361,10 +367,18 @@ export const trackPageView = (url?: string) => {
             ? document.referrer
             : undefined;
 
-    trackMixpanelEvent("Page View", {
+    const locale =
+        typeof document !== "undefined"
+            ? document.documentElement.getAttribute("lang") ?? undefined
+            : undefined;
+
+    trackMixpanelEvent(MIXPANEL_EVENTS.PAGE_VIEW, {
         url: pageUrl,
+        path: pageUrl,
         title: pageTitle,
         referrer,
+        locale,
+        timestamp: new Date(),
     });
 };
 
