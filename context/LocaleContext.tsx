@@ -21,16 +21,6 @@ type LocaleContextValue = {
 
 const LocaleContext = createContext<LocaleContextValue | undefined>(undefined);
 
-const getInitialLocale = (): Locale => {
-    if (typeof document !== "undefined") {
-        const dataLocale = document.documentElement.getAttribute("data-locale");
-        if (dataLocale && isLocale(dataLocale)) {
-            return dataLocale;
-        }
-    }
-    return DEFAULT_LOCALE;
-};
-
 type LocaleProviderProps = {
     children: ReactNode;
     initialLocale?: Locale;
@@ -39,7 +29,24 @@ type LocaleProviderProps = {
 const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 an
 
 export const LocaleProvider = ({ children, initialLocale }: LocaleProviderProps) => {
-    const [locale, setLocaleState] = useState<Locale>(() => initialLocale ?? getInitialLocale());
+    const [locale, setLocaleState] = useState<Locale>(initialLocale ?? DEFAULT_LOCALE);
+
+    useEffect(() => {
+        if (typeof window === "undefined" || typeof document === "undefined") {
+            return;
+        }
+
+        const dataLocale = document.documentElement.getAttribute("data-locale");
+        if (dataLocale && isLocale(dataLocale) && dataLocale !== locale) {
+            setLocaleState(dataLocale);
+            return;
+        }
+
+        const storedLocale = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+        if (storedLocale && isLocale(storedLocale) && storedLocale !== locale) {
+            setLocaleState(storedLocale);
+        }
+    }, [locale]);
 
     useEffect(() => {
         apiClient.setLanguage(locale);
