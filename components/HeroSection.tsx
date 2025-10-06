@@ -283,9 +283,10 @@ const HeroSection = () => {
                         alt="Fundal aeroport"
                         fill
                         priority
+                        fetchPriority="high"
                         placeholder="blur"
-                        sizes="(min-width: 640px) 0px, 100vw"
-                        quality={70}
+                        sizes="100vw"
+                        quality={60}
                         className="object-cover"
                     />
                 </div>
@@ -296,8 +297,9 @@ const HeroSection = () => {
                         fill
                         placeholder="blur"
                         priority
-                        sizes="(max-width: 639px) 0px, 100vw"
-                        quality={70}
+                        fetchPriority="high"
+                        sizes="100vw"
+                        quality={60}
                         className="object-cover"
                     />
                 </div>
