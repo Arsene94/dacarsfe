@@ -7,6 +7,7 @@ import type {
     ActivityRecord,
     ActivityListParams,
     ActivityPayload,
+    ActivityUpdatePayload,
     ActivityWeeklySummary,
     ActivityWeeklySummaryDispatchPayload,
     ActivityWeeklySummaryDispatchResponse,
@@ -3013,7 +3014,7 @@ export class ApiClient {
 
     async updateActivity(
         id: number | string,
-        payload: ActivityPayload,
+        payload: ActivityUpdatePayload,
     ): Promise<ApiItemResult<ActivityRecord>> {
         const body = sanitizePayload(payload);
         return this.request<ApiItemResult<ActivityRecord>>(`/activities/${id}`, {
