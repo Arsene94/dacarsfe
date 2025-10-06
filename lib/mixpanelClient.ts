@@ -22,30 +22,32 @@ const sanitizeMixpanelValue = (value: unknown): unknown => {
     }
 
     if (value !== null && typeof value === "object") {
-        const entries = Object.entries(value as Record<string, unknown>)
-            .map(([key, nested]) => {
-                const sanitizedNested = sanitizeMixpanelValue(nested);
+        const entries = Object.entries(value as Record<string, unknown>).reduce<
+            Array<[string, unknown]>
+        >((acc, [key, nested]) => {
+            const sanitizedNested = sanitizeMixpanelValue(nested);
 
-                if (sanitizedNested === undefined) {
-                    return null;
-                }
+            if (sanitizedNested === undefined) {
+                return acc;
+            }
 
-                if (
-                    typeof sanitizedNested === "object" &&
-                    sanitizedNested !== null &&
-                    !Array.isArray(sanitizedNested) &&
-                    Object.keys(sanitizedNested).length === 0
-                ) {
-                    return null;
-                }
+            if (
+                typeof sanitizedNested === "object" &&
+                sanitizedNested !== null &&
+                !Array.isArray(sanitizedNested) &&
+                Object.keys(sanitizedNested).length === 0
+            ) {
+                return acc;
+            }
 
-                if (Array.isArray(sanitizedNested) && sanitizedNested.length === 0) {
-                    return [key, []];
-                }
+            if (Array.isArray(sanitizedNested) && sanitizedNested.length === 0) {
+                acc.push([key, []]);
+                return acc;
+            }
 
-                return [key, sanitizedNested];
-            })
-            .filter((entry): entry is [string, unknown] => entry !== null);
+            acc.push([key, sanitizedNested]);
+            return acc;
+        }, []);
 
         if (entries.length === 0) {
             return undefined;
