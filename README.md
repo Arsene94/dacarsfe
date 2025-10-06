@@ -100,6 +100,7 @@ Aplicația presupune un backend Laravel ce expune API-uri REST securizate.
 | `IMAGE_PROXY_ALLOWLIST` | (Opțional) listă suplimentară de host-uri, separată prin virgulă, acceptate de API-ul de proxy pentru imagini. | – |
 | `CUSTOM_KEY` | Cheie opțională pentru logica custom din `next.config.js`. | – |
 | `ANALYZE` | Activează bundle analyzer (setare Next.js). | – |
+| `NEXT_PUBLIC_MIXPANEL_DEBUG` | Controlează logging-ul de debugging pentru evenimentele Mixpanel. Setează `true` pentru a vedea în consolă toate evenimentele, `false` pentru a dezactiva log-urile chiar și în dezvoltare. | – (implicit activ în dezvoltare) |
 
 Tokenul de autentificare este setat prin `apiClient.setToken` după login și salvat în `localStorage` sub `auth_token`. Toate request-urile includ antetul `X-API-KEY`, iar metodele standard `getCars`, `getBookings`, `getServices`, `getWheelPrizes` mapează răspunsurile la structurile TypeScript definite în `types/`.
 
