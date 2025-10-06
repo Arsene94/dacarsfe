@@ -13,6 +13,7 @@ import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { GlobalStyles } from "./global-styles";
 import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY, DEFAULT_LOCALE } from "@/lib/i18n/config";
+import TailwindStylesheetManager from "../components/TailwindStylesheetManager";
 import MixpanelInitializer from "../components/MixpanelInitializer";
 import TikTokPixelScript from "../components/TikTokPixelScript";
 import TikTokPixelInitializer from "../components/TikTokPixelInitializer";
@@ -125,6 +126,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className="min-h-screen bg-white">
         <Suspense fallback={null}>
+          <TailwindStylesheetManager />
           <MixpanelInitializer />
           <TikTokPixelInitializer />
           <MetaPixelInitializer />

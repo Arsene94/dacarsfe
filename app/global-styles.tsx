@@ -19,23 +19,6 @@ if (isProduction) {
   }
 }
 
-const asyncCssScript = `(() => {
-  const link = document.querySelector('link[data-async-css="tailwind"]');
-  if (!link || !(link instanceof HTMLLinkElement)) return;
-  if (link.media === 'all') return;
-  const critical = document.getElementById('critical-tailwind');
-  const enable = () => {
-    link.media = 'all';
-    if (critical && critical.parentNode) {
-      critical.parentNode.removeChild(critical);
-    }
-  };
-  link.addEventListener('load', enable, { once: true });
-  if (link.sheet) {
-    enable();
-  }
-})();`;
-
 const noscriptStyles = '<link rel="stylesheet" href="/tailwind.css" />';
 
 export function GlobalStyles(): JSX.Element | null {
@@ -65,7 +48,6 @@ export function GlobalStyles(): JSX.Element | null {
         media="print"
         data-async-css="tailwind"
       />
-      <script dangerouslySetInnerHTML={{ __html: asyncCssScript }} />
       <noscript dangerouslySetInnerHTML={{ __html: noscriptStyles }} />
     </>
   );
