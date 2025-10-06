@@ -343,6 +343,31 @@ export const trackMixpanelEvent = (
     }
 };
 
+export const trackPageView = (url?: string) => {
+    const pageUrl =
+        typeof url === "string" && url.length > 0
+            ? url
+            : typeof window !== "undefined"
+              ? `${window.location.pathname}${window.location.search}`
+              : undefined;
+
+    const pageTitle =
+        typeof document !== "undefined" && document.title.trim().length > 0
+            ? document.title
+            : undefined;
+
+    const referrer =
+        typeof document !== "undefined" && document.referrer.trim().length > 0
+            ? document.referrer
+            : undefined;
+
+    trackMixpanelEvent("Page View", {
+        url: pageUrl,
+        title: pageTitle,
+        referrer,
+    });
+};
+
 export const identifyMixpanelUser = (
     userId: string,
     traits?: Record<string, unknown>,
