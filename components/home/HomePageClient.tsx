@@ -13,7 +13,7 @@ import { extractArray, isPeriodActive, mapPeriod } from "@/lib/wheelNormalizatio
 import { useBooking } from "@/context/useBooking";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
-import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
+import { trackTikTokEvent, TIKTOK_CONTENT_TYPE, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 
 const ElfsightWidget = dynamic(() => import("@/components/ElfsightWidget"), {
@@ -254,7 +254,7 @@ const HomePageClient = () => {
         });
 
         trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
-            content_type: "landing_page",
+            content_type: TIKTOK_CONTENT_TYPE,
             has_booking_range: Boolean(hasBookingRange),
             booking_range_key: bookingRangeKey || undefined,
             wheel_popup_shown: Boolean(showWheelPopup),

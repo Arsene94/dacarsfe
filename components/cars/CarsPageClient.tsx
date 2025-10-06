@@ -17,7 +17,7 @@ import { useBooking } from "@/context/useBooking";
 import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
-import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
+import { trackTikTokEvent, TIKTOK_CONTENT_TYPE, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 
 const siteUrl = siteMetadata.siteUrl;
@@ -534,7 +534,7 @@ const FleetPage = () => {
         });
 
         trackTikTokEvent(TIKTOK_EVENTS.ADD_TO_CART, {
-            content_type: "car",
+            content_type: TIKTOK_CONTENT_TYPE,
             contents: [
                 {
                     content_id: car.id,
@@ -614,7 +614,7 @@ const FleetPage = () => {
             .map((id) => String(id));
 
         trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
-            content_type: "car_fleet",
+            content_type: TIKTOK_CONTENT_TYPE,
             contents,
             currency: "RON",
             value: contents[0]?.price ?? undefined,

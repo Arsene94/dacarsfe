@@ -112,6 +112,8 @@ export const TIKTOK_EVENTS = {
 
 export type TikTokEventName = (typeof TIKTOK_EVENTS)[keyof typeof TIKTOK_EVENTS];
 
+export const TIKTOK_CONTENT_TYPE = "vehicle" as const;
+
 export const initTikTokPixel = () => {
     if (!isBrowser) {
         return;
