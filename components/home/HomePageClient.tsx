@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import BenefitsSection from "@/components/BenefitsSection";
 import ContactSection from "@/components/ContactSection";
@@ -86,7 +86,46 @@ const HomePageClient = () => {
     const [showWheelPopup, setShowWheelPopup] = useState(false);
     const [hasManuallyClosed, setHasManuallyClosed] = useState(false);
     const [hasUserAdjustedBookingRange, setHasUserAdjustedBookingRange] = useState(false);
+    const [shouldRenderElfsight, setShouldRenderElfsight] = useState(false);
     const landingTrackedRef = useRef(false);
+
+    const scheduleIdle = useCallback(
+        (callback: () => void, options?: { timeout?: number }) => {
+            if (typeof window === "undefined") {
+                return undefined;
+            }
+
+            const win = window as typeof window & {
+                requestIdleCallback?: (
+                    cb: IdleRequestCallback,
+                    idleOptions?: IdleRequestOptions,
+                ) => number;
+                cancelIdleCallback?: (handle: number) => void;
+            };
+
+            if (typeof win.requestIdleCallback === "function") {
+                const handle = win.requestIdleCallback(
+                    () => {
+                        callback();
+                    },
+                    options?.timeout !== undefined
+                        ? { timeout: options.timeout }
+                        : undefined,
+                );
+
+                return () => {
+                    win.cancelIdleCallback?.(handle);
+                };
+            }
+
+            const timeout = window.setTimeout(callback, options?.timeout ?? 200);
+
+            return () => {
+                window.clearTimeout(timeout);
+            };
+        },
+        [],
+    );
 
     const hasBookingRange = Boolean(booking.startDate && booking.endDate);
     const bookingRangeKey = hasBookingRange
@@ -245,33 +284,40 @@ const HomePageClient = () => {
             return;
         }
 
-        trackMixpanelEvent("landing_view", {
-            has_booking_range: Boolean(hasBookingRange),
-            booking_range_key: bookingRangeKey ?? null,
-            wheel_popup_shown: Boolean(showWheelPopup),
-            wheel_period_id: activePeriod?.id ?? null,
-            wheel_active_month_match: Boolean(isBookingWithinActiveMonths),
-        });
+        const cancelIdle = scheduleIdle(
+            () => {
+                trackMixpanelEvent("landing_view", {
+                    has_booking_range: Boolean(hasBookingRange),
+                    booking_range_key: bookingRangeKey ?? null,
+                    wheel_popup_shown: Boolean(showWheelPopup),
+                    wheel_period_id: activePeriod?.id ?? null,
+                    wheel_active_month_match: Boolean(isBookingWithinActiveMonths),
+                });
 
-        trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
-            content_type: TIKTOK_CONTENT_TYPE,
-            has_booking_range: Boolean(hasBookingRange),
-            booking_range_key: bookingRangeKey || undefined,
-            wheel_popup_shown: Boolean(showWheelPopup),
-            wheel_period_id: activePeriod?.id ?? undefined,
-        });
+                trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
+                    content_type: TIKTOK_CONTENT_TYPE,
+                    has_booking_range: Boolean(hasBookingRange),
+                    booking_range_key: bookingRangeKey || undefined,
+                    wheel_popup_shown: Boolean(showWheelPopup),
+                    wheel_period_id: activePeriod?.id ?? undefined,
+                });
 
-        trackMetaPixelEvent(META_PIXEL_EVENTS.VIEW_CONTENT, {
-            content_name: "Landing Page",
-            content_category: "home",
-            content_type: "landing_page",
-            has_booking_range: Boolean(hasBookingRange),
-            booking_range_key: bookingRangeKey || undefined,
-            wheel_popup_shown: Boolean(showWheelPopup),
-            wheel_period_id: activePeriod?.id ?? undefined,
-        });
+                trackMetaPixelEvent(META_PIXEL_EVENTS.VIEW_CONTENT, {
+                    content_name: "Landing Page",
+                    content_category: "home",
+                    content_type: "landing_page",
+                    has_booking_range: Boolean(hasBookingRange),
+                    booking_range_key: bookingRangeKey || undefined,
+                    wheel_popup_shown: Boolean(showWheelPopup),
+                    wheel_period_id: activePeriod?.id ?? undefined,
+                });
 
-        landingTrackedRef.current = true;
+                landingTrackedRef.current = true;
+            },
+            { timeout: 2000 },
+        );
+
+        return cancelIdle;
     }, [
         activePeriod?.id,
         bookingRangeKey,
@@ -279,7 +325,26 @@ const HomePageClient = () => {
         hasResolvedActivePeriod,
         isBookingWithinActiveMonths,
         showWheelPopup,
+        scheduleIdle,
     ]);
+
+    useEffect(() => {
+        if (shouldRenderElfsight) {
+            return;
+        }
+
+        if (process.env.NODE_ENV === "test") {
+            setShouldRenderElfsight(true);
+            return;
+        }
+
+        return scheduleIdle(
+            () => {
+                setShouldRenderElfsight(true);
+            },
+            { timeout: 3000 },
+        );
+    }, [scheduleIdle, shouldRenderElfsight]);
 
     useEffect(() => {
         if (!hasUserAdjustedBookingRange) {
@@ -350,7 +415,7 @@ const HomePageClient = () => {
             <FleetSection />
             <BenefitsSection />
             <OffersSection />
-            <ElfsightWidget />
+            {shouldRenderElfsight ? <ElfsightWidget /> : null}
             {/*<TestimonialsSection />*/}
             <ProcessSection />
             <ContactSection />
