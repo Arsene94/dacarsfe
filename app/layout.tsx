@@ -18,6 +18,7 @@ import TikTokPixelScript from "../components/TikTokPixelScript";
 import TikTokPixelInitializer from "../components/TikTokPixelInitializer";
 import MetaPixelScript from "../components/MetaPixelScript";
 import MetaPixelInitializer from "../components/MetaPixelInitializer";
+import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 
 
 const poppins = Poppins({
@@ -126,6 +127,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <MixpanelInitializer />
           <TikTokPixelInitializer />
           <MetaPixelInitializer />
+          <ServiceWorkerRegistration />
         </Suspense>
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`

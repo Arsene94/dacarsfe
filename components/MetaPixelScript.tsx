@@ -23,6 +23,7 @@ const MetaPixelScript = () => {
   s.parentNode?.insertBefore(t,s);
 }(window, document,'script','${META_PIXEL_LIBRARY_PATH}');
 fbq('init', '${pixelId}');
+fbq('set', 'autoConfig', false, '${pixelId}');
 fbq('consent', 'grant');
 fbq('track', 'PageView');`;
 
