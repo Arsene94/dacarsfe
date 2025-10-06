@@ -1,4 +1,5 @@
 import mixpanel from "mixpanel-browser";
+import type { Config as MixpanelConfig } from "mixpanel-browser";
 
 const MIXPANEL_TOKEN = process.env.NEXT_PUBLIC_MIXPANEL_TOKEN;
 
@@ -241,6 +242,35 @@ export const resetMixpanelIdentity = () => {
     resetMixpanelPersistence();
 };
 
+const isLocalStorageUsable = () => {
+    if (typeof window === "undefined") {
+        return false;
+    }
+
+    try {
+        const testKey = `__mp_test__${Math.random().toString(36).slice(2)}`;
+        window.localStorage.setItem(testKey, "1");
+        window.localStorage.removeItem(testKey);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+const buildMixpanelInitConfig = (): Partial<MixpanelConfig> => {
+    const baseConfig: Partial<MixpanelConfig> = {
+        autocapture: true,
+        batch_requests: false,
+        persistence: "cookie",
+    };
+
+    if (!isLocalStorageUsable()) {
+        baseConfig.disable_persistence = true;
+    }
+
+    return baseConfig;
+};
+
 const canUseMixpanel = () => {
     if (typeof window === "undefined") {
         logMixpanelDebug("Mixpanel inaccesibil în mediul curent (nu există window)");
@@ -258,10 +288,11 @@ const canUseMixpanel = () => {
     }
 
     if (!isInitialized) {
-        mixpanel.init(MIXPANEL_TOKEN, { autocapture: true });
+        const initConfig = buildMixpanelInitConfig();
+        mixpanel.init(MIXPANEL_TOKEN, initConfig);
         logMixpanelDebug("Mixpanel a fost inițializat", {
             tokenPrefix: `${MIXPANEL_TOKEN.slice(0, 6)}…`,
-            autocapture: true,
+            config: initConfig,
         });
         isInitialized = true;
     }
