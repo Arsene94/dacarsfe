@@ -610,7 +610,7 @@ const FleetPage = () => {
         }));
         const contentIds = contents
             .map((item) => item.content_id)
-            .filter((id): id is number | string => id !== undefined && id !== null)
+            .filter((id): id is number => id !== undefined && id !== null)
             .map((id) => String(id));
 
         trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
