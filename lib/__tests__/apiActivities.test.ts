@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiClient } from '@/lib/api';
 import type { ApiDeleteResponse, ApiItemResult, ApiListResult } from '@/types/api';
 import type {
+  ActivityListParams,
   ActivityMarkPaidPayload,
   ActivityMarkPaidResponse,
   ActivityPayload,
@@ -41,7 +42,7 @@ describe('ApiClient admin operational activities', () => {
       is_paid: true,
       page: 2,
       per_page: 25,
-    } as const;
+    } as const satisfies Record<string, unknown>;
 
     const apiResponse: ApiListResult<ActivityRecord> = {
       data: [
@@ -77,7 +78,7 @@ describe('ApiClient admin operational activities', () => {
       }),
     );
 
-    const result = await client.getActivities(params);
+    const result = await client.getActivities(params as ActivityListParams);
 
     expect(fetchMock).toHaveBeenCalledWith(
       `${baseURL}/activities?week=2024-W21&from=2024-05-20&car_id=42&type=cleaning&created_by=9&is_paid=true&page=2&per_page=25`,
