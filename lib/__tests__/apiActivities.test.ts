@@ -434,9 +434,9 @@ describe('ApiClient admin operational activities', () => {
       channel: 'email' as const,
     };
 
-    const apiResponse: ApiItemResult<ActivityWeeklySummaryDispatchResponse> = {
+    const apiResponse = {
       data: null,
-    };
+    } satisfies ApiItemResponse<ActivityWeeklySummaryDispatchResponse | null>;
 
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify(apiResponse), {
@@ -507,9 +507,9 @@ describe('ApiClient admin operational activities', () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');
 
-    const apiResponse: ApiItemResult<ActivityMarkPaidResponse> = {
+    const apiResponse = {
       data: null,
-    };
+    } satisfies ApiItemResponse<ActivityMarkPaidResponse | null>;
 
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify(apiResponse), {
