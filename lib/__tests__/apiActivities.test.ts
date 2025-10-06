@@ -3,9 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiClient } from '@/lib/api';
 import type { ApiDeleteResponse, ApiItemResult, ApiListResult } from '@/types/api';
 import type {
+  ActivityMarkPaidPayload,
   ActivityMarkPaidResponse,
+  ActivityPayload,
   ActivityRecord,
+  ActivityUpdatePayload,
   ActivityWeeklySummary,
+  ActivityWeeklySummaryDispatchPayload,
   ActivityWeeklySummaryDispatchResponse,
 } from '@/types/activity-tracking';
 
@@ -145,10 +149,10 @@ describe('ApiClient admin operational activities', () => {
     const payload = {
       car_id: 10,
       performed_at: '2024-05-19T10:00:00Z',
-      type: 'cleaning' as const,
+      type: 'cleaning',
       notes: null,
       extra: undefined,
-    };
+    } satisfies ActivityPayload & Record<string, unknown>;
 
     const apiResponse: ApiItemResult<ActivityRecord> = {
       data: {
@@ -209,7 +213,7 @@ describe('ApiClient admin operational activities', () => {
       performed_at: '2024-05-20T11:00:00Z',
       notes: 'Curățare interior',
       ignored: undefined,
-    };
+    } satisfies ActivityUpdatePayload;
 
     const apiResponse: ApiItemResult<ActivityRecord> = {
       data: {
@@ -367,10 +371,10 @@ describe('ApiClient admin operational activities', () => {
 
     const payload = {
       week: '2024-W24',
-      channel: 'email' as const,
+      channel: 'email',
       recipients: ['ops@dacars.ro'],
       include_breakdown: undefined,
-    };
+    } satisfies ActivityWeeklySummaryDispatchPayload & Record<string, unknown>;
 
     const apiResponse: ApiItemResult<ActivityWeeklySummaryDispatchResponse> = {
       data: {
@@ -444,7 +448,7 @@ describe('ApiClient admin operational activities', () => {
       week: '2024-W25',
       car_id: 18,
       extra: undefined,
-    };
+    } satisfies ActivityMarkPaidPayload & Record<string, unknown>;
 
     const apiResponse: ApiItemResult<ActivityMarkPaidResponse> = {
       data: {

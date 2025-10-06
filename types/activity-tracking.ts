@@ -25,6 +25,8 @@ export interface ActivityPayload {
   notes?: string | null;
 }
 
+export type ActivityUpdatePayload = Partial<ActivityPayload> & Record<string, unknown>;
+
 export interface ActivityListParams extends Record<string, unknown> {
   week?: string;
   from?: string;
