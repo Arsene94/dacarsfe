@@ -4,6 +4,39 @@ const MIXPANEL_TOKEN = process.env.NEXT_PUBLIC_MIXPANEL_TOKEN;
 
 let isInitialized = false;
 
+const isMixpanelDebugEnabled =
+    (process.env.NEXT_PUBLIC_MIXPANEL_DEBUG ?? "").toLowerCase() === "true" ||
+    (process.env.NODE_ENV !== "production" &&
+        (process.env.NEXT_PUBLIC_MIXPANEL_DEBUG ?? "").toLowerCase() !== "false");
+
+const logMixpanelDebug = (title: string, details?: Record<string, unknown>) => {
+    if (!isMixpanelDebugEnabled) {
+        return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const prefix = `[Mixpanel][${timestamp}] ${title}`;
+
+    if (typeof window === "undefined") {
+        console.info(prefix);
+        if (details) {
+            console.info(details);
+        }
+        return;
+    }
+
+    if (!details || Object.keys(details).length === 0) {
+        console.info(prefix);
+        return;
+    }
+
+    console.groupCollapsed(prefix);
+    Object.entries(details).forEach(([key, value]) => {
+        console.log(`${key}:`, value);
+    });
+    console.groupEnd();
+};
+
 const sanitizeMixpanelValue = (value: unknown): unknown => {
     if (value === undefined) {
         return undefined;
@@ -121,6 +154,7 @@ const sanitizeMixpanelProperties = (
 
 const canUseMixpanel = () => {
     if (typeof window === "undefined") {
+        logMixpanelDebug("Mixpanel inaccesibil în mediul curent (nu există window)");
         return false;
     }
 
@@ -130,11 +164,16 @@ const canUseMixpanel = () => {
                 "Tokenul Mixpanel lipsește! Verifică variabila NEXT_PUBLIC_MIXPANEL_TOKEN.",
             );
         }
+        logMixpanelDebug("Mixpanel dezactivat din cauza lipsei token-ului");
         return false;
     }
 
     if (!isInitialized) {
         mixpanel.init(MIXPANEL_TOKEN, { autocapture: true });
+        logMixpanelDebug("Mixpanel a fost inițializat", {
+            tokenPrefix: `${MIXPANEL_TOKEN.slice(0, 6)}…`,
+            autocapture: true,
+        });
         isInitialized = true;
     }
 
@@ -157,16 +196,30 @@ export const trackMixpanelEvent = (
         const trimmedEventName = eventName.trim();
 
         if (trimmedEventName.length === 0) {
+            logMixpanelDebug("Eveniment Mixpanel ignorat – numele este gol", {
+                rawEventName: eventName,
+            });
             return;
         }
 
         const sanitizedPayload = sanitizeMixpanelProperties(payload);
 
         mixpanel.track(trimmedEventName, sanitizedPayload);
+        logMixpanelDebug("Eveniment Mixpanel trimis", {
+            event: trimmedEventName,
+            payload: sanitizedPayload,
+        });
     } catch (error) {
         if (process.env.NODE_ENV !== "production") {
             console.error("Failed to track Mixpanel event", error);
         }
+        logMixpanelDebug("Eroare la trimiterea evenimentului Mixpanel", {
+            event: eventName,
+            error:
+                error instanceof Error
+                    ? { name: error.name, message: error.message }
+                    : { message: "Unknown error" },
+        });
     }
 };
 
@@ -181,21 +234,38 @@ export const identifyMixpanelUser = (
     try {
         const trimmedId = userId.trim();
         if (trimmedId.length === 0) {
+            logMixpanelDebug("Identificare Mixpanel ignorată – ID gol", {
+                rawUserId: userId,
+            });
             return;
         }
 
         mixpanel.identify(trimmedId);
+        logMixpanelDebug("Utilizator Mixpanel identificat", {
+            userId: trimmedId,
+        });
 
         if (traits && Object.keys(traits).length > 0) {
             const sanitizedTraits = sanitizeMixpanelProperties(traits);
 
             if (Object.keys(sanitizedTraits).length > 0) {
                 mixpanel.people.set(sanitizedTraits);
+                logMixpanelDebug("Trăsături Mixpanel actualizate", {
+                    userId: trimmedId,
+                    traits: sanitizedTraits,
+                });
             }
         }
     } catch (error) {
         if (process.env.NODE_ENV !== "production") {
             console.error("Failed to identify Mixpanel user", error);
         }
+        logMixpanelDebug("Eroare la identificarea utilizatorului Mixpanel", {
+            userId,
+            error:
+                error instanceof Error
+                    ? { name: error.name, message: error.message }
+                    : { message: "Unknown error" },
+        });
     }
 };
