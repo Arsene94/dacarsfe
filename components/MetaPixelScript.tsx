@@ -2,6 +2,8 @@ import Script from "next/script";
 
 const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
+const META_PIXEL_LIBRARY_PATH = "/scripts/fbevents.v20240926.js";
+
 const MetaPixelScript = () => {
     if (!pixelId) {
         return null;
@@ -13,9 +15,13 @@ const MetaPixelScript = () => {
   if(!f._fbq)f._fbq=n;
   n.push=n; n.loaded=!0; n.version='2.0';
   n.queue=[]; t=b.createElement(e); t.async=!0;
-  t.src=v; s=b.getElementsByTagName(e)[0];
+  var src=v;
+  try {
+    src = new URL(v, f.location && f.location.href ? f.location.href : undefined).toString();
+  } catch (error) {}
+  t.src=src; s=b.getElementsByTagName(e)[0];
   s.parentNode?.insertBefore(t,s);
-}(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');
+}(window, document,'script','${META_PIXEL_LIBRARY_PATH}');
 fbq('init', '${pixelId}');
 fbq('consent', 'grant');
 fbq('track', 'PageView');`;

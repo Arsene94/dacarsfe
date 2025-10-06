@@ -192,6 +192,16 @@ const nextConfig = {
                 ],
             },
             {
+                // Long-term caching for first-party scripts and styles
+                source: '/:all*(js|css)',
+                headers: [
+                    {
+                        key: 'Cache-Control',
+                        value: 'public, max-age=31536000, immutable, stale-while-revalidate=86400',
+                    },
+                ],
+            },
+            {
                 // Long-term caching for fonts
                 source: '/:all*(woff|woff2|ttf|eot)',
                 headers: [
