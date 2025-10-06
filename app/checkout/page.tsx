@@ -9,6 +9,7 @@ import {useBooking} from "@/context/useBooking";
 import { apiClient } from "@/lib/api";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
+import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
@@ -1003,6 +1004,27 @@ const ReservationPage = () => {
             applied_offer_ids: appliedOfferIds,
         });
 
+        trackMetaPixelEvent(META_PIXEL_EVENTS.INITIATE_CHECKOUT, {
+            value: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
+            currency: DEFAULT_CURRENCY,
+            content_ids: [String(selectedCar.id)],
+            content_name: selectedCar.name,
+            content_type: "car",
+            contents: [
+                {
+                    id: String(selectedCar.id),
+                    quantity: 1,
+                    item_price: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
+                    title: selectedCar.name,
+                },
+            ],
+            start_date: booking.startDate || undefined,
+            end_date: booking.endDate || undefined,
+            with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
+            service_ids: serviceIds,
+            applied_offer_ids: appliedOfferIds,
+        });
+
         checkoutLoadedTrackedRef.current = true;
     }, [
         appliedOffersSummary,
@@ -1582,6 +1604,28 @@ const ReservationPage = () => {
                     price: totalAfterAdjustments,
                 },
             ],
+            service_ids: serviceIds,
+            applied_offer_ids: appliedOffersPayload.map((offer) => offer.id),
+        });
+
+        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
+            form_name: "checkout_reservation",
+            value: totalAfterAdjustments,
+            currency: DEFAULT_CURRENCY,
+            content_ids: [String(selectedCar.id)],
+            content_name: selectedCar.name,
+            content_type: "car",
+            contents: [
+                {
+                    id: String(selectedCar.id),
+                    quantity: 1,
+                    item_price: totalAfterAdjustments,
+                    title: selectedCar.name,
+                },
+            ],
+            with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
+            start_date: booking.startDate || undefined,
+            end_date: booking.endDate || undefined,
             service_ids: serviceIds,
             applied_offer_ids: appliedOffersPayload.map((offer) => offer.id),
         });

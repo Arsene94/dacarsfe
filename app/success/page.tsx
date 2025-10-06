@@ -8,6 +8,7 @@ import type { ReservationPayload } from "@/types/reservation";
 import type { WheelPrize } from "@/types/wheel";
 import { formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
+import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { Locale } from "@/lib/i18n/config";
 import successMessagesRo from "@/messages/success/ro.json";
@@ -143,6 +144,36 @@ const SuccessPage = () => {
                     content_name: carName ?? undefined,
                     quantity: 1,
                     price: totalAmount ?? undefined,
+                },
+            ],
+            reservation_id:
+                typeof reservationData.reservationId === "string" && reservationData.reservationId.trim().length > 0
+                    ? reservationData.reservationId
+                    : undefined,
+            start_date: reservationData.rental_start_date || undefined,
+            end_date: reservationData.rental_end_date || undefined,
+            with_deposit:
+                typeof reservationData.with_deposit === "boolean"
+                    ? reservationData.with_deposit
+                    : undefined,
+            service_ids: normalizedServices,
+        });
+
+        const carIdString =
+            carId !== undefined && carId !== null ? String(carId) : undefined;
+
+        trackMetaPixelEvent(META_PIXEL_EVENTS.PURCHASE, {
+            value: totalAmount ?? undefined,
+            currency: DEFAULT_CURRENCY,
+            content_ids: carIdString ? [carIdString] : undefined,
+            content_name: carName,
+            content_type: "car",
+            contents: [
+                {
+                    id: carIdString,
+                    quantity: 1,
+                    item_price: totalAmount ?? undefined,
+                    title: carName,
                 },
             ],
             reservation_id:
