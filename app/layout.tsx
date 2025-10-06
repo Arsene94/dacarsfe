@@ -4,6 +4,7 @@ import Footer from "../components/Footer";
 import PageTransition from "../components/PageTransition";
 import Script from "next/script";
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import { BookingProvider } from "@/context/BookingProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { LocaleProvider } from "@/context/LocaleContext";
@@ -115,7 +116,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-screen bg-white">
-        <MixpanelInitializer />
+        <Suspense fallback={null}>
+          <MixpanelInitializer />
+        </Suspense>
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`
             (function() {

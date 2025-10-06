@@ -10,36 +10,28 @@ const MixpanelInitializer = () => {
     const searchParams = useSearchParams();
     const lastTrackedUrlRef = useRef<string | null>(null);
 
-    useEffect(() => {
-        initMixpanel();
-    }, []);
+    const searchParamsString = useMemo(() => {
+        return searchParams?.toString() ?? "";
+    }, [searchParams]);
 
-    const currentUrl = useMemo(() => {
+    useEffect(() => {
         if (!pathname) {
-            return null;
-        }
-
-        const query = searchParams?.toString();
-
-        if (query && query.length > 0) {
-            return `${pathname}?${query}`;
-        }
-
-        return pathname;
-    }, [pathname, searchParams]);
-
-    useEffect(() => {
-        if (!currentUrl) {
             return;
         }
 
-        if (lastTrackedUrlRef.current === currentUrl) {
+        initMixpanel();
+
+        const nextUrl = searchParamsString
+            ? `${pathname}?${searchParamsString}`
+            : pathname;
+
+        if (lastTrackedUrlRef.current === nextUrl) {
             return;
         }
 
-        lastTrackedUrlRef.current = currentUrl;
-        trackPageView(currentUrl);
-    }, [currentUrl]);
+        lastTrackedUrlRef.current = nextUrl;
+        trackPageView(nextUrl);
+    }, [pathname, searchParamsString]);
 
     return null;
 };
