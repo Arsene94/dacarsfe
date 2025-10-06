@@ -3,6 +3,8 @@ import mixpanel from "mixpanel-browser";
 const MIXPANEL_TOKEN = process.env.NEXT_PUBLIC_MIXPANEL_TOKEN;
 
 let isInitialized = false;
+let cachedClientIp: string | null | undefined;
+let pendingClientIpRequest: Promise<string | null> | null = null;
 
 const isMixpanelDebugEnabled =
     (process.env.NEXT_PUBLIC_MIXPANEL_DEBUG ?? "").toLowerCase() === "true" ||
@@ -152,6 +154,93 @@ const sanitizeMixpanelProperties = (
     return Object.fromEntries(sanitizedEntries);
 };
 
+const registerMixpanelSuperProperties = (properties: Record<string, unknown>) => {
+    if (!canUseMixpanel()) {
+        return;
+    }
+
+    const sanitized = sanitizeMixpanelProperties(properties);
+
+    if (Object.keys(sanitized).length === 0) {
+        return;
+    }
+
+    mixpanel.register(sanitized);
+    logMixpanelDebug("Super proprietăți Mixpanel înregistrate", sanitized);
+};
+
+const resetMixpanelPersistence = () => {
+    if (!canUseMixpanel()) {
+        return false;
+    }
+
+    mixpanel.reset();
+    logMixpanelDebug("Identitatea Mixpanel a fost resetată");
+    return true;
+};
+
+const generateAnonymousDistinctId = () => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return `anon:${crypto.randomUUID()}`;
+    }
+
+    const random = Math.random().toString(36).slice(2, 11);
+    return `anon:${random}`;
+};
+
+const fetchClientIp = async (): Promise<string | null> => {
+    if (typeof window === "undefined") {
+        return null;
+    }
+
+    if (cachedClientIp !== undefined) {
+        return cachedClientIp;
+    }
+
+    if (!pendingClientIpRequest) {
+        pendingClientIpRequest = fetch("/api/ip", { cache: "no-store" })
+            .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error(`Status ${response.status}`);
+                }
+
+                const data: unknown = await response.json();
+
+                if (
+                    typeof data === "object" &&
+                    data !== null &&
+                    "ip" in data &&
+                    typeof (data as Record<string, unknown>).ip === "string"
+                ) {
+                    const ip = ((data as Record<string, string>).ip ?? "").trim();
+                    return ip.length > 0 ? ip : null;
+                }
+
+                return null;
+            })
+            .catch((error) => {
+                logMixpanelDebug("Nu am putut obține IP-ul vizitatorului", {
+                    error:
+                        error instanceof Error
+                            ? { name: error.name, message: error.message }
+                            : { message: "Unknown error" },
+                });
+                return null;
+            })
+            .finally(() => {
+                pendingClientIpRequest = null;
+            });
+    }
+
+    const ip = await pendingClientIpRequest;
+    cachedClientIp = ip ?? null;
+    return ip ?? null;
+};
+
+export const resetMixpanelIdentity = () => {
+    resetMixpanelPersistence();
+};
+
 const canUseMixpanel = () => {
     if (typeof window === "undefined") {
         logMixpanelDebug("Mixpanel inaccesibil în mediul curent (nu există window)");
@@ -241,12 +330,19 @@ export const identifyMixpanelUser = (
         }
 
         mixpanel.identify(trimmedId);
+        registerMixpanelSuperProperties({
+            is_authenticated: true,
+            mixpanel_user_id: trimmedId,
+        });
         logMixpanelDebug("Utilizator Mixpanel identificat", {
             userId: trimmedId,
         });
 
         if (traits && Object.keys(traits).length > 0) {
-            const sanitizedTraits = sanitizeMixpanelProperties(traits);
+            const sanitizedTraits = sanitizeMixpanelProperties({
+                ...traits,
+                is_authenticated: true,
+            });
 
             if (Object.keys(sanitizedTraits).length > 0) {
                 mixpanel.people.set(sanitizedTraits);
@@ -262,6 +358,59 @@ export const identifyMixpanelUser = (
         }
         logMixpanelDebug("Eroare la identificarea utilizatorului Mixpanel", {
             userId,
+            error:
+                error instanceof Error
+                    ? { name: error.name, message: error.message }
+                    : { message: "Unknown error" },
+        });
+    }
+};
+
+export const identifyAnonymousMixpanelVisitor = async () => {
+    if (!canUseMixpanel()) {
+        return;
+    }
+
+    try {
+        const ipAddress = await fetchClientIp();
+        const existingDistinctId =
+            typeof mixpanel.get_distinct_id === "function"
+                ? mixpanel.get_distinct_id()
+                : null;
+        const normalizedExistingId =
+            typeof existingDistinctId === "string" && existingDistinctId.trim().length > 0
+                ? existingDistinctId.trim()
+                : null;
+        const distinctId = ipAddress
+            ? `ip:${ipAddress}`
+            : normalizedExistingId ?? generateAnonymousDistinctId();
+
+        mixpanel.identify(distinctId);
+        registerMixpanelSuperProperties({
+            is_authenticated: false,
+            mixpanel_user_id: distinctId,
+            anonymous_identity_source: ipAddress ? "ip" : "generated",
+        });
+
+        const traits = sanitizeMixpanelProperties({
+            is_authenticated: false,
+            ip_address: ipAddress ?? undefined,
+            identity_source: ipAddress ? "ip" : "generated",
+        });
+
+        if (Object.keys(traits).length > 0) {
+            mixpanel.people.set(traits);
+        }
+
+        logMixpanelDebug("Vizitator anonim Mixpanel identificat", {
+            distinctId,
+            ipAddress: ipAddress ?? undefined,
+        });
+    } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+            console.error("Failed to identify anonymous Mixpanel visitor", error);
+        }
+        logMixpanelDebug("Eroare la identificarea vizitatorului anonim Mixpanel", {
             error:
                 error instanceof Error
                     ? { name: error.name, message: error.message }
