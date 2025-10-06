@@ -284,7 +284,6 @@ const HeroSection = () => {
                         fill
                         priority
                         placeholder="blur"
-                        fetchPriority="high"
                         sizes="100vw"
                         quality={70}
                         className="object-cover"
@@ -295,9 +294,8 @@ const HeroSection = () => {
                         src={heroDesktop}
                         alt="Fundal aeroport"
                         fill
-                        priority
                         placeholder="blur"
-                        fetchPriority="high"
+                        loading="lazy"
                         sizes="100vw"
                         quality={70}
                         className="object-cover"
