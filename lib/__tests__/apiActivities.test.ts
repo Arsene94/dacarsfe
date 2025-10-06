@@ -32,7 +32,9 @@ describe('ApiClient admin operational activities', () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');
 
-    const rawFilters: Record<string, unknown> = {
+    type RawActivityListParams = Omit<ActivityListParams, 'type'> & { type?: string };
+
+    const rawFilters = {
       week: ' 2024-W21 ',
       from: ' 2024-05-20 ',
       to: '   ',
@@ -42,7 +44,7 @@ describe('ApiClient admin operational activities', () => {
       is_paid: true,
       page: 2,
       per_page: 25,
-    };
+    } satisfies RawActivityListParams;
 
     const apiResponse: ApiListResult<ActivityRecord> = {
       data: [
