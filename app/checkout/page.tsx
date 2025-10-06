@@ -8,6 +8,7 @@ import PhoneInput from "@/components/PhoneInput";
 import {useBooking} from "@/context/useBooking";
 import { apiClient } from "@/lib/api";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
+import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
@@ -36,6 +37,7 @@ import checkoutMessagesRo from "@/messages/checkout/ro.json";
 type CheckoutMessages = typeof checkoutMessagesRo;
 
 const STORAGE_BASE = "https://backend.dacars.ro/storage";
+const DEFAULT_CURRENCY = "RON";
 
 const toImageUrl = (p?: string | null): string => {
     if (!p) return "/images/placeholder-car.svg";
@@ -960,6 +962,15 @@ const ReservationPage = () => {
                 ? wheelPrizeRecord.prize.id
                 : null);
 
+        const estimatedCheckoutValue = (() => {
+            const totalWithDeposit = parsePrice(selectedCar.total_deposit);
+            const totalWithoutDeposit = parsePrice(selectedCar.total_without_deposit);
+            if (typeof booking.withDeposit === "boolean") {
+                return booking.withDeposit ? totalWithDeposit : totalWithoutDeposit;
+            }
+            return totalWithoutDeposit || totalWithDeposit || 0;
+        })();
+
         trackMixpanelEvent("checkout_loaded", {
             selected_car_id: selectedCar.id,
             selected_car_name: selectedCar.name,
@@ -972,6 +983,24 @@ const ReservationPage = () => {
             has_wheel_prize: hasWheelPrize,
             wheel_prize_id: wheelPrizeId,
             quote_ready: Boolean(quoteResult),
+        });
+
+        trackTikTokEvent(TIKTOK_EVENTS.INITIATE_CHECKOUT, {
+            value: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
+            currency: DEFAULT_CURRENCY,
+            contents: [
+                {
+                    content_id: selectedCar.id,
+                    content_name: selectedCar.name,
+                    quantity: 1,
+                    price: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
+                },
+            ],
+            start_date: booking.startDate || undefined,
+            end_date: booking.endDate || undefined,
+            with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
+            service_ids: serviceIds,
+            applied_offer_ids: appliedOfferIds,
         });
 
         checkoutLoadedTrackedRef.current = true;
@@ -1537,6 +1566,25 @@ const ReservationPage = () => {
                     ? wheelPrizeIdForPayload
                     : undefined,
         };
+
+        trackTikTokEvent(TIKTOK_EVENTS.SUBMIT_FORM, {
+            form_name: "checkout_reservation",
+            value: totalAfterAdjustments,
+            currency: DEFAULT_CURRENCY,
+            with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
+            start_date: booking.startDate || undefined,
+            end_date: booking.endDate || undefined,
+            contents: [
+                {
+                    content_id: selectedCar.id,
+                    content_name: selectedCar.name,
+                    quantity: 1,
+                    price: totalAfterAdjustments,
+                },
+            ],
+            service_ids: serviceIds,
+            applied_offer_ids: appliedOffersPayload.map((offer) => offer.id),
+        });
 
         try {
             const res = await apiClient.createBooking(payload);

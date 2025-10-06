@@ -14,6 +14,8 @@ import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { GlobalStyles } from "./global-styles";
 import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY, DEFAULT_LOCALE } from "@/lib/i18n/config";
 import MixpanelInitializer from "../components/MixpanelInitializer";
+import TikTokPixelScript from "../components/TikTokPixelScript";
+import TikTokPixelInitializer from "../components/TikTokPixelInitializer";
 
 
 const poppins = Poppins({
@@ -80,6 +82,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     >
       <head>
         <GlobalStyles />
+        <TikTokPixelScript />
         <link
           rel="preload"
           as="image"
@@ -118,6 +121,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-screen bg-white">
         <Suspense fallback={null}>
           <MixpanelInitializer />
+          <TikTokPixelInitializer />
         </Suspense>
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`

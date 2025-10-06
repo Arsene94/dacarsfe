@@ -13,6 +13,7 @@ import { extractArray, isPeriodActive, mapPeriod } from "@/lib/wheelNormalizatio
 import { useBooking } from "@/context/useBooking";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
+import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 
 const ElfsightWidget = dynamic(() => import("@/components/ElfsightWidget"), {
     ssr: false,
@@ -249,6 +250,14 @@ const HomePageClient = () => {
             wheel_popup_shown: Boolean(showWheelPopup),
             wheel_period_id: activePeriod?.id ?? null,
             wheel_active_month_match: Boolean(isBookingWithinActiveMonths),
+        });
+
+        trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
+            content_type: "landing_page",
+            has_booking_range: Boolean(hasBookingRange),
+            booking_range_key: bookingRangeKey || undefined,
+            wheel_popup_shown: Boolean(showWheelPopup),
+            wheel_period_id: activePeriod?.id ?? undefined,
         });
 
         landingTrackedRef.current = true;

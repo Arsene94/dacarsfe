@@ -17,6 +17,7 @@ import { useBooking } from "@/context/useBooking";
 import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
+import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
@@ -208,6 +209,7 @@ const FleetPage = () => {
     const loadMoreRef = useRef<HTMLDivElement | null>(null);
     const loadingRef = useRef(false);
     const hasMoreRef = useRef(true);
+    const hasTrackedViewRef = useRef(false);
 
     const [categories, setCategories] = useState<CarCategory[]>();
 
@@ -331,6 +333,7 @@ const FleetPage = () => {
     useEffect(() => {
         setCurrentPage(1);
         hasMoreRef.current = true;
+        hasTrackedViewRef.current = false;
     }, [filters, sortBy, searchTerm, startDate, endDate, carTypeParam, location]);
 
     // categories (reîncărcare la schimbarea localei pentru fallback-uri)
@@ -435,6 +438,16 @@ const FleetPage = () => {
             page: 1,
             total_results: totalCars,
         });
+
+        trackTikTokEvent(TIKTOK_EVENTS.SEARCH, {
+            search_type: "fleet_filters",
+            filter_key: key,
+            filter_value: value,
+            search_term: searchTerm || undefined,
+            sort_by: sortBy,
+            page: 1,
+            total_results: totalCars,
+        });
     };
 
     const clearFilters = () => {
@@ -508,8 +521,65 @@ const FleetPage = () => {
             view_mode: viewMode,
         });
 
+        trackTikTokEvent(TIKTOK_EVENTS.ADD_TO_CART, {
+            content_type: "car",
+            contents: [
+                {
+                    content_id: car.id,
+                    content_name: car.name,
+                    quantity: 1,
+                    price: totalAmount ?? undefined,
+                },
+            ],
+            value: totalAmount ?? undefined,
+            currency: "RON",
+            start_date: startDate || undefined,
+            end_date: endDate || undefined,
+            with_deposit: withDeposit,
+        });
+
         router.push(hasCompleteBookingRange ? "/checkout" : "/");
     };
+
+    useEffect(() => {
+        if (loading) {
+            return;
+        }
+        if (cars.length === 0) {
+            return;
+        }
+        if (currentPage !== 1) {
+            return;
+        }
+        if (hasTrackedViewRef.current) {
+            return;
+        }
+
+        const contents = cars.slice(0, 5).map((car) => {
+            const totalWithoutDeposit = toNumberOrNull(car.total_without_deposit);
+            const fallbackTotal = toNumberOrNull(car.total_deposit);
+            const resolvedPrice = totalWithoutDeposit ?? fallbackTotal ?? toNumberOrNull(car.price);
+
+            return {
+                content_id: car.id,
+                content_name: car.name,
+                quantity: 1,
+                price: resolvedPrice ?? undefined,
+            };
+        });
+
+        trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
+            content_type: "car_fleet",
+            contents,
+            currency: "RON",
+            value: contents[0]?.price ?? undefined,
+            total_results: totalCars,
+            search_term: searchTerm || undefined,
+            sort_by: sortBy,
+        });
+
+        hasTrackedViewRef.current = true;
+    }, [cars, currentPage, loading, totalCars, searchTerm, sortBy]);
 
     const CarCard = ({ car, isListView = false }: { car: Car; isListView?: boolean; }) => (
         <div className={`bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group border border-gray-100 ${isListView ? "flex flex-col md:flex-row" : ""}`}>

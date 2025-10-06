@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Calendar, Car, CheckCircle, Clock, Gift, Home, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ReservationPayload } from "@/types/reservation";
 import type { WheelPrize } from "@/types/wheel";
 import { formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
+import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { Locale } from "@/lib/i18n/config";
 import successMessagesRo from "@/messages/success/ro.json";
@@ -21,6 +22,8 @@ const LOCALE_TO_INTL: Record<Locale, string> = {
     es: "es-ES",
     it: "it-IT",
 };
+
+const DEFAULT_CURRENCY = "RON";
 
 const parseMaybeNumber = (value: unknown): number | null => {
     if (typeof value === "number") {
@@ -39,6 +42,7 @@ const SuccessPage = () => {
     const [reservationData, setReservationData] = useState<ReservationPayload | null>(null);
     const { locale, messages, t } = useTranslations<SuccessMessages>("success");
     const intlLocale = LOCALE_TO_INTL[locale] ?? LOCALE_TO_INTL.ro;
+    const hasTrackedConversionRef = useRef(false);
 
     const priceFormatter = useMemo(
         () =>
@@ -99,6 +103,63 @@ const SuccessPage = () => {
             }
         }
     }, []);
+
+    useEffect(() => {
+        if (!reservationData) {
+            return;
+        }
+        if (hasTrackedConversionRef.current) {
+            return;
+        }
+
+        const totalAmountRaw = reservationData.total;
+        const totalAmount =
+            typeof totalAmountRaw === "number" && Number.isFinite(totalAmountRaw)
+                ? totalAmountRaw
+                : parseMaybeNumber(totalAmountRaw);
+
+        const car = reservationData.selectedCar ?? null;
+        const carId =
+            car && typeof (car as { id?: unknown }).id === "number" && Number.isFinite((car as { id: number }).id)
+                ? (car as { id: number }).id
+                : undefined;
+        const carName =
+            car && typeof (car as { name?: unknown }).name === "string"
+                ? (car as { name: string }).name
+                : undefined;
+
+        const normalizedServices = Array.isArray(reservationData.service_ids)
+            ? reservationData.service_ids
+                  .map((serviceId) => parseMaybeNumber(serviceId))
+                  .filter((id): id is number => typeof id === "number" && Number.isFinite(id))
+            : [];
+
+        trackTikTokEvent(TIKTOK_EVENTS.COMPLETE_PAYMENT, {
+            value: totalAmount ?? undefined,
+            currency: DEFAULT_CURRENCY,
+            contents: [
+                {
+                    content_id: carId ?? undefined,
+                    content_name: carName ?? undefined,
+                    quantity: 1,
+                    price: totalAmount ?? undefined,
+                },
+            ],
+            reservation_id:
+                typeof reservationData.reservationId === "string" && reservationData.reservationId.trim().length > 0
+                    ? reservationData.reservationId
+                    : undefined,
+            start_date: reservationData.rental_start_date || undefined,
+            end_date: reservationData.rental_end_date || undefined,
+            with_deposit:
+                typeof reservationData.with_deposit === "boolean"
+                    ? reservationData.with_deposit
+                    : undefined,
+            service_ids: normalizedServices,
+        });
+
+        hasTrackedConversionRef.current = true;
+    }, [reservationData]);
 
     const wheelPrize = reservationData?.wheel_prize ?? null;
     const wheelPrizeDiscountRaw = reservationData?.wheel_prize_discount ??
