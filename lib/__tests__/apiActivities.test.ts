@@ -32,7 +32,7 @@ describe('ApiClient admin operational activities', () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');
 
-    const params = {
+    const rawFilters: Record<string, unknown> = {
       week: ' 2024-W21 ',
       from: ' 2024-05-20 ',
       to: '   ',
@@ -42,7 +42,7 @@ describe('ApiClient admin operational activities', () => {
       is_paid: true,
       page: 2,
       per_page: 25,
-    } as const satisfies Record<string, unknown>;
+    };
 
     const apiResponse: ApiListResult<ActivityRecord> = {
       data: [
@@ -78,7 +78,7 @@ describe('ApiClient admin operational activities', () => {
       }),
     );
 
-    const result = await client.getActivities(params as ActivityListParams);
+    const result = await client.getActivities(rawFilters as ActivityListParams);
 
     expect(fetchMock).toHaveBeenCalledWith(
       `${baseURL}/activities?week=2024-W21&from=2024-05-20&car_id=42&type=cleaning&created_by=9&is_paid=true&page=2&per_page=25`,
