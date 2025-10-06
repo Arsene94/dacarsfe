@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClient } from '@/lib/api';
 import type { ApiDeleteResponse, ApiItemResult, ApiListResult } from '@/types/api';
-import type { Service, ServiceTranslation } from '@/types/reservation';
+import type { Service, ServiceListParams, ServiceTranslation } from '@/types/reservation';
 
 describe('ApiClient admin services management', () => {
   const baseURL = 'https://admin-api.dacars.test';
@@ -30,7 +30,7 @@ describe('ApiClient admin services management', () => {
       status: ' pending ',
       name_like: ' Transfer VIP ',
       include: ' translations ',
-    } as const;
+    } satisfies ServiceListParams & { language: string } & Record<string, unknown>;
 
     const apiResponse: ApiListResult<Service> = {
       data: [
@@ -93,7 +93,13 @@ describe('ApiClient admin services management', () => {
       }),
     );
 
-    const result = await client.getServices({ per_page: 15 });
+    type RawServiceListParams = (ServiceListParams & { per_page?: number }) & {
+      language?: string;
+    };
+
+    const rawParams: RawServiceListParams = { per_page: 15 };
+
+    const result = await client.getServices(rawParams);
 
     expect(fetchMock).toHaveBeenCalledWith(
       `${baseURL}/services/en?per_page=15`,

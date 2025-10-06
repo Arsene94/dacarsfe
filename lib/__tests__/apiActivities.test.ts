@@ -1,8 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClient } from '@/lib/api';
-import type { ApiDeleteResponse, ApiItemResult, ApiListResult } from '@/types/api';
 import type {
+  ApiDeleteResponse,
+  ApiItemResponse,
+  ApiItemResult,
+  ApiListResult,
+} from '@/types/api';
+import type {
+  ActivityListParams,
   ActivityMarkPaidPayload,
   ActivityMarkPaidResponse,
   ActivityPayload,
@@ -31,7 +37,9 @@ describe('ApiClient admin operational activities', () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');
 
-    const params = {
+    type RawActivityListParams = Omit<ActivityListParams, 'type'> & { type?: string };
+
+    const rawFilters = {
       week: ' 2024-W21 ',
       from: ' 2024-05-20 ',
       to: '   ',
@@ -41,7 +49,7 @@ describe('ApiClient admin operational activities', () => {
       is_paid: true,
       page: 2,
       per_page: 25,
-    } as const;
+    } satisfies RawActivityListParams;
 
     const apiResponse: ApiListResult<ActivityRecord> = {
       data: [
@@ -77,7 +85,7 @@ describe('ApiClient admin operational activities', () => {
       }),
     );
 
-    const result = await client.getActivities(params);
+    const result = await client.getActivities(rawFilters as ActivityListParams);
 
     expect(fetchMock).toHaveBeenCalledWith(
       `${baseURL}/activities?week=2024-W21&from=2024-05-20&car_id=42&type=cleaning&created_by=9&is_paid=true&page=2&per_page=25`,
@@ -351,7 +359,9 @@ describe('ApiClient admin operational activities', () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');
 
-    const apiResponse: ApiItemResult<ActivityWeeklySummary> = { data: null };
+    const apiResponse = {
+      data: null,
+    } satisfies ApiItemResponse<ActivityWeeklySummary | null>;
 
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify(apiResponse), {
@@ -424,9 +434,9 @@ describe('ApiClient admin operational activities', () => {
       channel: 'email' as const,
     };
 
-    const apiResponse: ApiItemResult<ActivityWeeklySummaryDispatchResponse> = {
+    const apiResponse = {
       data: null,
-    };
+    } satisfies ApiItemResponse<ActivityWeeklySummaryDispatchResponse | null>;
 
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify(apiResponse), {
@@ -497,9 +507,9 @@ describe('ApiClient admin operational activities', () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');
 
-    const apiResponse: ApiItemResult<ActivityMarkPaidResponse> = {
+    const apiResponse = {
       data: null,
-    };
+    } satisfies ApiItemResponse<ActivityMarkPaidResponse | null>;
 
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify(apiResponse), {

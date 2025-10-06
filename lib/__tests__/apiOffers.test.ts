@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClient } from '@/lib/api';
 import type { ApiItemResult } from '@/types/api';
-import type { Offer } from '@/types/offer';
+import type { Offer, OfferPayload } from '@/types/offer';
 
 describe('ApiClient admin offers management', () => {
   const baseURL = 'https://admin-api.dacars.test';
@@ -32,7 +32,7 @@ describe('ApiClient admin offers management', () => {
       benefits: 'Asigurare completă inclusă',
       starts_at: '2024-10-01T00:00:00Z',
       ends_at: null,
-    } as const;
+    } satisfies OfferPayload;
 
     const apiResponse: ApiItemResult<Offer> = {
       data: {
@@ -90,7 +90,7 @@ describe('ApiClient admin offers management', () => {
       primary_cta_url: 'https://dacars.test/oferte/early-booking',
       background_class: 'bg-berkeley-600',
       text_class: undefined,
-    } as const;
+    } satisfies OfferPayload;
 
     const apiResponse: ApiItemResult<Offer> = {
       data: {

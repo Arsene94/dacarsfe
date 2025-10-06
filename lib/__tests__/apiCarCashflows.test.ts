@@ -87,6 +87,8 @@ describe('ApiClient admin car cashflows management', () => {
     client.setToken('admin-token');
 
     const payload = {
+      car_id: 12,
+      direction: 'expense',
       category: 'Costuri service',
       description: 'Schimb plăcuțe frână și verificare suspensie',
       payment_method: 'cash_card',
@@ -122,6 +124,8 @@ describe('ApiClient admin car cashflows management', () => {
       expect.objectContaining({
         method: 'PUT',
         body: JSON.stringify({
+          car_id: 12,
+          direction: 'expense',
           category: 'Costuri service',
           description: 'Schimb plăcuțe frână și verificare suspensie',
           payment_method: 'cash_card',
