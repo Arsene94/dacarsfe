@@ -25,6 +25,7 @@ import type { ApiListResult } from "@/types/api";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
+import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 
 import heroMobile1x from "@/public/images/bg-hero-mobile-378x284.webp";
 import heroMobile2x from "@/public/images/bg-hero-mobile-480x879.webp";
@@ -251,6 +252,19 @@ const HeroSection = () => {
             end_date: formData.end_date,
             location: formData.location || undefined,
             car_type: formData.car_type || undefined,
+        });
+
+        const searchString = [formData.location, formData.car_type]
+            .filter((value) => typeof value === "string" && value.trim().length > 0)
+            .join(" | ");
+
+        trackMetaPixelEvent(META_PIXEL_EVENTS.SEARCH, {
+            search_source: "hero_form",
+            start_date: formData.start_date || undefined,
+            end_date: formData.end_date || undefined,
+            location: formData.location || undefined,
+            car_type: formData.car_type || undefined,
+            search_string: searchString.length > 0 ? searchString : undefined,
         });
 
         router.push(`/cars?${params.toString()}`);

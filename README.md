@@ -102,6 +102,7 @@ Aplicația presupune un backend Laravel ce expune API-uri REST securizate.
 | `ANALYZE` | Activează bundle analyzer (setare Next.js). | – |
 | `NEXT_PUBLIC_MIXPANEL_DEBUG` | Controlează logging-ul de debugging pentru evenimentele Mixpanel. Setează `true` pentru a vedea în consolă toate evenimentele, `false` pentru a dezactiva log-urile chiar și în dezvoltare. | – (implicit activ în dezvoltare) |
 | `NEXT_PUBLIC_TIKTOK_PIXEL_ID` | ID-ul pixelului TikTok folosit pentru evenimentele de marketing descrise în `docs/tiktok-pixel.md`. | – |
+| `NEXT_PUBLIC_META_PIXEL_ID` | ID-ul Meta Pixel (Facebook) folosit pentru evenimentele descrise în `docs/meta-pixel.md`. | – |
 
 Tokenul de autentificare este setat prin `apiClient.setToken` după login și salvat în `localStorage` sub `auth_token`. Toate request-urile includ antetul `X-API-KEY`, iar metodele standard `getCars`, `getBookings`, `getServices`, `getWheelPrizes` mapează răspunsurile la structurile TypeScript definite în `types/`.
 
@@ -129,7 +130,7 @@ Tokenul de autentificare este setat prin `apiClient.setToken` după login și sa
 - **API layer**: adăugați metode noi în `lib/api.ts` și exportați tipuri în `types/` pentru a păstra contractul clar între frontend și backend.
 
 ## Extensibilitate și următori pași
-- **Monitorizare și analytics**: integrați servicii suplimentare în `app/layout.tsx` sau `components/PageTransition.tsx` pentru tracking al conversiilor; vezi și `docs/tiktok-pixel.md` pentru integrarea curentă TikTok.
+- **Monitorizare și analytics**: integrați servicii suplimentare în `app/layout.tsx` sau `components/PageTransition.tsx` pentru tracking al conversiilor; vezi și `docs/tiktok-pixel.md` respectiv `docs/meta-pixel.md` pentru integrările existente.
 - **Raportări avansate**: reutilizați `DataTable` și `Popup` pentru a construi rapoarte custom (ex. utilizare flotă pe luni).
 - **Automatizări marketing**: extindeți editorul de template-uri cu validări suplimentare și preview-uri pentru alte rezoluții folosind componentele existente din `mail-branding`.
 - **Internaționalizare**: proiectul include alias `@/locales/*` în `tsconfig.json`, pregătit pentru adăugarea de mesaje și traduceri viitoare.

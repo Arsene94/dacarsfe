@@ -14,6 +14,7 @@ import { useBooking } from "@/context/useBooking";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
+import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 
 const ElfsightWidget = dynamic(() => import("@/components/ElfsightWidget"), {
     ssr: false,
@@ -253,6 +254,16 @@ const HomePageClient = () => {
         });
 
         trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
+            content_type: "landing_page",
+            has_booking_range: Boolean(hasBookingRange),
+            booking_range_key: bookingRangeKey || undefined,
+            wheel_popup_shown: Boolean(showWheelPopup),
+            wheel_period_id: activePeriod?.id ?? undefined,
+        });
+
+        trackMetaPixelEvent(META_PIXEL_EVENTS.VIEW_CONTENT, {
+            content_name: "Landing Page",
+            content_category: "home",
             content_type: "landing_page",
             has_booking_range: Boolean(hasBookingRange),
             booking_range_key: bookingRangeKey || undefined,

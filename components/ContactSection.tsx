@@ -5,6 +5,7 @@ import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
 import LazyMap from "./LazyMap";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
+import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 
 type ContactMessages = {
     title?: { main?: string; highlight?: string };
@@ -67,12 +68,16 @@ const ContactSection = () => {
                                     href={phoneHref}
                                     className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
                                     aria-label={contact.items?.phone?.aria ?? `Sună la ${phoneNumber}`}
-                                    onClick={() =>
+                                    onClick={() => {
                                         trackTikTokEvent(TIKTOK_EVENTS.CONTACT, {
                                             contact_method: "phone",
                                             value: phoneNumber,
-                                        })
-                                    }
+                                        });
+                                        trackMetaPixelEvent(META_PIXEL_EVENTS.CONTACT, {
+                                            contact_method: "phone",
+                                            value: phoneNumber,
+                                        });
+                                    }}
                                 >
                                     {phoneNumber}
                                 </a>
@@ -93,12 +98,16 @@ const ContactSection = () => {
                                     href={whatsappHref}
                                     className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
                                     aria-label={contact.items?.whatsapp?.aria ?? `Contactează pe WhatsApp la ${phoneNumber}`}
-                                    onClick={() =>
+                                    onClick={() => {
                                         trackTikTokEvent(TIKTOK_EVENTS.CONTACT, {
                                             contact_method: "whatsapp",
                                             value: phoneNumber,
-                                        })
-                                    }
+                                        });
+                                        trackMetaPixelEvent(META_PIXEL_EVENTS.CONTACT, {
+                                            contact_method: "whatsapp",
+                                            value: phoneNumber,
+                                        });
+                                    }}
                                 >
                                     {phoneNumber}
                                 </a>
@@ -119,12 +128,16 @@ const ContactSection = () => {
                                     href={`mailto:${emailAddress}`}
                                     className="text-jade font-dm-sans font-semibold hover:text-jade/80 transition-colors duration-300"
                                     aria-label={contact.items?.email?.aria ?? `Trimite email la ${emailAddress}`}
-                                    onClick={() =>
+                                    onClick={() => {
                                         trackTikTokEvent(TIKTOK_EVENTS.CONTACT, {
                                             contact_method: "email",
                                             value: emailAddress,
-                                        })
-                                    }
+                                        });
+                                        trackMetaPixelEvent(META_PIXEL_EVENTS.CONTACT, {
+                                            contact_method: "email",
+                                            value: emailAddress,
+                                        });
+                                    }}
                                 >
                                     {emailAddress}
                                 </a>
