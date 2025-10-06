@@ -948,9 +948,16 @@ const ReservationPage = () => {
             return;
         }
 
-        if (!booking.startDate || !booking.endDate || !selectedCar) {
+        if (!selectedCar) {
             return;
         }
+
+        const bookingStartDate = typeof booking.startDate === "string" && booking.startDate.trim().length > 0
+            ? booking.startDate
+            : undefined;
+        const bookingEndDate = typeof booking.endDate === "string" && booking.endDate.trim().length > 0
+            ? booking.endDate
+            : undefined;
 
         const serviceIds = selectedServices
             .map((service) => service.id)
@@ -972,13 +979,34 @@ const ReservationPage = () => {
             return totalWithoutDeposit || totalWithDeposit || 0;
         })();
 
+        const estimatedMetaPayload = {
+            value: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
+            currency: DEFAULT_CURRENCY,
+            content_ids: [String(selectedCar.id)],
+            content_name: selectedCar.name,
+            content_type: "car",
+            contents: [
+                {
+                    id: String(selectedCar.id),
+                    quantity: 1,
+                    item_price: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
+                    title: selectedCar.name,
+                },
+            ],
+            start_date: bookingStartDate,
+            end_date: bookingEndDate,
+            with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
+            service_ids: serviceIds,
+            applied_offer_ids: appliedOfferIds,
+        } as const;
+
         trackMixpanelEvent("checkout_loaded", {
             selected_car_id: selectedCar.id,
             selected_car_name: selectedCar.name,
             with_deposit:
                 typeof booking.withDeposit === "boolean" ? booking.withDeposit : null,
-            booking_start: booking.startDate,
-            booking_end: booking.endDate,
+            booking_start: bookingStartDate ?? null,
+            booking_end: bookingEndDate ?? null,
             preselected_service_ids: serviceIds,
             applied_offer_ids: appliedOfferIds,
             has_wheel_prize: hasWheelPrize,
@@ -997,32 +1025,18 @@ const ReservationPage = () => {
                     price: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
                 },
             ],
-            start_date: booking.startDate || undefined,
-            end_date: booking.endDate || undefined,
+            start_date: bookingStartDate,
+            end_date: bookingEndDate,
             with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
             service_ids: serviceIds,
             applied_offer_ids: appliedOfferIds,
         });
 
-        trackMetaPixelEvent(META_PIXEL_EVENTS.INITIATE_CHECKOUT, {
-            value: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
-            currency: DEFAULT_CURRENCY,
-            content_ids: [String(selectedCar.id)],
-            content_name: selectedCar.name,
-            content_type: "car",
-            contents: [
-                {
-                    id: String(selectedCar.id),
-                    quantity: 1,
-                    item_price: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
-                    title: selectedCar.name,
-                },
-            ],
-            start_date: booking.startDate || undefined,
-            end_date: booking.endDate || undefined,
-            with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
-            service_ids: serviceIds,
-            applied_offer_ids: appliedOfferIds,
+        trackMetaPixelEvent(META_PIXEL_EVENTS.INITIATE_CHECKOUT, estimatedMetaPayload);
+
+        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
+            ...estimatedMetaPayload,
+            lead_stage: "checkout_view",
         });
 
         checkoutLoadedTrackedRef.current = true;
@@ -1623,6 +1637,7 @@ const ReservationPage = () => {
                     title: selectedCar.name,
                 },
             ],
+            lead_stage: "form_submit",
             with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
             start_date: booking.startDate || undefined,
             end_date: booking.endDate || undefined,
