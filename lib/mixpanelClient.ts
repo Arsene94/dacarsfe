@@ -1,6 +1,13 @@
 import mixpanel from "mixpanel-browser";
+import type { Config as MixpanelConfig } from "mixpanel-browser";
 
 const MIXPANEL_TOKEN = process.env.NEXT_PUBLIC_MIXPANEL_TOKEN;
+
+export const MIXPANEL_EVENTS = {
+    PAGE_VIEW: "Page View",
+} as const;
+
+export type MixpanelEventName = (typeof MIXPANEL_EVENTS)[keyof typeof MIXPANEL_EVENTS];
 
 let isInitialized = false;
 let cachedClientIp: string | null | undefined;
@@ -241,6 +248,35 @@ export const resetMixpanelIdentity = () => {
     resetMixpanelPersistence();
 };
 
+const isLocalStorageUsable = () => {
+    if (typeof window === "undefined") {
+        return false;
+    }
+
+    try {
+        const testKey = `__mp_test__${Math.random().toString(36).slice(2)}`;
+        window.localStorage.setItem(testKey, "1");
+        window.localStorage.removeItem(testKey);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+const buildMixpanelInitConfig = (): Partial<MixpanelConfig> => {
+    const baseConfig: Partial<MixpanelConfig> = {
+        autocapture: true,
+        batch_requests: false,
+        persistence: "cookie",
+    };
+
+    if (!isLocalStorageUsable()) {
+        baseConfig.disable_persistence = true;
+    }
+
+    return baseConfig;
+};
+
 const canUseMixpanel = () => {
     if (typeof window === "undefined") {
         logMixpanelDebug("Mixpanel inaccesibil în mediul curent (nu există window)");
@@ -258,10 +294,11 @@ const canUseMixpanel = () => {
     }
 
     if (!isInitialized) {
-        mixpanel.init(MIXPANEL_TOKEN, { autocapture: true });
+        const initConfig = buildMixpanelInitConfig();
+        mixpanel.init(MIXPANEL_TOKEN, initConfig);
         logMixpanelDebug("Mixpanel a fost inițializat", {
             tokenPrefix: `${MIXPANEL_TOKEN.slice(0, 6)}…`,
-            autocapture: true,
+            config: initConfig,
         });
         isInitialized = true;
     }
@@ -310,6 +347,39 @@ export const trackMixpanelEvent = (
                     : { message: "Unknown error" },
         });
     }
+};
+
+export const trackPageView = (url?: string | null) => {
+    const pageUrl =
+        typeof url === "string" && url.length > 0
+            ? url
+            : typeof window !== "undefined"
+              ? `${window.location.pathname}${window.location.search}`
+              : undefined;
+
+    const pageTitle =
+        typeof document !== "undefined" && document.title.trim().length > 0
+            ? document.title
+            : undefined;
+
+    const referrer =
+        typeof document !== "undefined" && document.referrer.trim().length > 0
+            ? document.referrer
+            : undefined;
+
+    const locale =
+        typeof document !== "undefined"
+            ? document.documentElement.getAttribute("lang") ?? undefined
+            : undefined;
+
+    trackMixpanelEvent(MIXPANEL_EVENTS.PAGE_VIEW, {
+        url: pageUrl,
+        path: pageUrl,
+        title: pageTitle,
+        referrer,
+        locale,
+        timestamp: new Date(),
+    });
 };
 
 export const identifyMixpanelUser = (
