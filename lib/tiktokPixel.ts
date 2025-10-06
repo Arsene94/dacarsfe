@@ -66,14 +66,15 @@ const sanitizeValue = (value: unknown): unknown => {
 
     if (typeof value === "object") {
         const entries = Object.entries(value as Record<string, unknown>)
-            .map(([key, entryValue]) => {
+            .reduce<Array<readonly [string, unknown]>>((acc, [key, entryValue]) => {
                 const sanitizedEntry = sanitizeValue(entryValue);
                 if (sanitizedEntry === undefined) {
-                    return null;
+                    return acc;
                 }
-                return [key, sanitizedEntry] as const;
-            })
-            .filter((entry): entry is readonly [string, unknown] => entry !== null);
+
+                acc.push([key, sanitizedEntry] as const);
+                return acc;
+            }, []);
 
         if (entries.length === 0) {
             return undefined;
