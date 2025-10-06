@@ -86,12 +86,78 @@ const sanitizeValue = (value: unknown): unknown => {
     return value;
 };
 
+const toContentIdentifier = (value: unknown): string | null => {
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return String(value);
+    }
+
+    return null;
+};
+
+const extractContentIdentifiers = (contents: Array<unknown>): Array<string> =>
+    contents
+        .map((entry) => {
+            if (!entry || typeof entry !== "object") {
+                return null;
+            }
+
+            const contentId = (entry as { content_id?: unknown }).content_id;
+            return toContentIdentifier(contentId ?? null);
+        })
+        .filter((identifier): identifier is string => identifier !== null);
+
+const hasValidPrimaryContentId = (value: unknown): boolean => {
+    if (typeof value === "string") {
+        return value.trim().length > 0;
+    }
+
+    if (typeof value === "number") {
+        return Number.isFinite(value);
+    }
+
+    return false;
+};
+
+const hasValidContentIds = (value: unknown): boolean =>
+    Array.isArray(value) && value.some((entry) => hasValidPrimaryContentId(entry));
+
+const augmentContentIdentifiers = (payload: Record<string, unknown>): Record<string, unknown> => {
+    const normalized: Record<string, unknown> = { ...payload };
+    const contents = (payload as { contents?: unknown }).contents;
+
+    if (!Array.isArray(contents) || contents.length === 0) {
+        return normalized;
+    }
+
+    const identifiers = extractContentIdentifiers(contents);
+    if (identifiers.length === 0) {
+        return normalized;
+    }
+
+    if (!hasValidPrimaryContentId(normalized["content_id"])) {
+        normalized.content_id = identifiers[0];
+    }
+
+    if (!hasValidContentIds(normalized["content_ids"])) {
+        normalized.content_ids = identifiers;
+    }
+
+    return normalized;
+};
+
 const sanitizePayload = (payload?: Record<string, unknown>): Record<string, unknown> | undefined => {
     if (!payload) {
         return undefined;
     }
 
-    const sanitized = sanitizeValue(payload);
+    const normalized = augmentContentIdentifiers(payload);
+
+    const sanitized = sanitizeValue(normalized);
     if (!sanitized || typeof sanitized !== "object") {
         return undefined;
     }
