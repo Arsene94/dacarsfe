@@ -295,6 +295,8 @@ const HomePageClient = () => {
                 });
 
                 trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
+                    content_id: "landing_home",
+                    content_name: "Landing Page",
                     content_type: TIKTOK_CONTENT_TYPE,
                     has_booking_range: Boolean(hasBookingRange),
                     booking_range_key: bookingRangeKey || undefined,

@@ -251,6 +251,7 @@ const HeroBookingForm = ({
         trackTikTokEvent(TIKTOK_EVENTS.SUBMIT_FORM, {
             contents: [
                 {
+                    content_id: "hero_booking_form",
                     content_name: "booking", // eslint-disable-line camelcase -- cerință pixel TikTok
                 },
             ],
