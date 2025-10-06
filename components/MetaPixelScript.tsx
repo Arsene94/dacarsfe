@@ -14,65 +14,106 @@ const MetaPixelScript = () => {
     return;
   }
 
-  var shouldSkipPixel = false;
-
-    try {
-      if (!document.body) {
-        shouldSkipPixel = false;
-      } else {
-        var bait = document.createElement('div');
-        bait.setAttribute('aria-hidden', 'true');
-        bait.style.position = 'absolute';
-        bait.style.width = '1px';
-        bait.style.height = '1px';
-        bait.style.left = '-10000px';
-        bait.style.top = '-10000px';
-        bait.className = 'adsbox pub_300x250 banner_ad';
-
-        bait.style.pointerEvents = 'none';
-        bait.style.zIndex = '-1';
-
-        document.body.appendChild(bait);
-
-        var baitStyles = window.getComputedStyle(bait);
-        shouldSkipPixel = baitStyles.display === 'none' || baitStyles.visibility === 'hidden' || bait.clientHeight === 0;
-
-        document.body.removeChild(bait);
-      }
-    } catch (error) {
-      shouldSkipPixel = false;
-    }
-
-  if (shouldSkipPixel) {
-    var fbqStub = function fbqStub() {
-      fbqStub.queue.push(arguments);
-    };
-    fbqStub.queue = [];
-    fbqStub.push = fbqStub;
-    fbqStub.loaded = false;
-    fbqStub.version = '2.0';
-    window.fbq = fbqStub;
-    window._fbq = fbqStub;
+  if (window.__dacarsMetaPixelHandled) {
     return;
   }
 
-  !function(f,b,e,v,n,t,s){
-    if(f.fbq)return; n=f.fbq=function(){ n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;
-    n.push=n; n.loaded=!0; n.version='2.0';
-    n.queue=[]; t=b.createElement(e); t.async=!0;
-    var src=v;
-    try {
-      src = new URL(v, f.location && f.location.href ? f.location.href : undefined).toString();
-    } catch (error) {}
-    t.src=src; s=b.getElementsByTagName(e)[0];
-    s.parentNode?.insertBefore(t,s);
-  }(window, document,'script','${META_PIXEL_LIBRARY_PATH}');
-  fbq('init', '${pixelId}');
-  fbq('set', 'autoConfig', false, '${pixelId}');
-  fbq('consent', 'grant');
-  fbq('track', 'PageView');
+  function finalizePixel(initiallySkipped) {
+    var shouldSkipPixel = initiallySkipped === true;
+
+    if (!shouldSkipPixel && typeof navigator !== 'undefined') {
+      try {
+        if (navigator.globalPrivacyControl === true) {
+          shouldSkipPixel = true;
+        }
+      } catch (error) {}
+
+      try {
+        var dnt = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+        if (dnt === '1' || dnt === 'yes') {
+          shouldSkipPixel = true;
+        }
+      } catch (error) {}
+    }
+
+    if (!shouldSkipPixel) {
+      try {
+        if (typeof window.canRunAds === 'boolean') {
+          shouldSkipPixel = window.canRunAds === false;
+        }
+      } catch (error) {}
+    }
+
+    if (!shouldSkipPixel) {
+      try {
+        if (document.body) {
+          var bait = document.createElement('div');
+          bait.setAttribute('aria-hidden', 'true');
+          bait.style.position = 'absolute';
+          bait.style.width = '1px';
+          bait.style.height = '1px';
+          bait.style.left = '-10000px';
+          bait.style.top = '-10000px';
+          bait.className = 'adsbox pub_300x250 banner_ad';
+          bait.style.pointerEvents = 'none';
+          bait.style.zIndex = '-1';
+
+          document.body.appendChild(bait);
+
+          var baitStyles = window.getComputedStyle(bait);
+          shouldSkipPixel = baitStyles.display === 'none' || baitStyles.visibility === 'hidden' || bait.clientHeight === 0;
+
+          document.body.removeChild(bait);
+        }
+      } catch (error) {}
+    }
+
+    if (shouldSkipPixel) {
+      var fbqStub = function fbqStub() {
+        fbqStub.queue.push(arguments);
+      };
+      fbqStub.queue = [];
+      fbqStub.push = fbqStub;
+      fbqStub.loaded = false;
+      fbqStub.version = '2.0';
+      window.fbq = fbqStub;
+      window._fbq = fbqStub;
+      window.__dacarsMetaPixelHandled = true;
+      return;
+    }
+
+    !function(f,b,e,v,n,t,s){
+      if(f.fbq)return; n=f.fbq=function(){ n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;
+      n.push=n; n.loaded=!0; n.version='2.0';
+      n.queue=[]; t=b.createElement(e); t.async=!0;
+      var src=v;
+      try {
+        src = new URL(v, f.location && f.location.href ? f.location.href : undefined).toString();
+      } catch (error) {}
+      t.src=src; s=b.getElementsByTagName(e)[0];
+      s.parentNode?.insertBefore(t,s);
+    }(window, document,'script','${META_PIXEL_LIBRARY_PATH}');
+    fbq('init', '${pixelId}');
+    fbq('set', 'autoConfig', false, '${pixelId}');
+    fbq('consent', 'grant');
+    fbq('track', 'PageView');
+    window.__dacarsMetaPixelHandled = true;
+  }
+
+  try {
+    if (window.brave && window.brave.isBrave) {
+      window.brave.isBrave().then(function(isBrave) {
+        finalizePixel(!!isBrave);
+      }).catch(function() {
+        finalizePixel(false);
+      });
+      return;
+    }
+  } catch (error) {}
+
+  finalizePixel(false);
 })();`;
 
     const noscriptMarkup = `
