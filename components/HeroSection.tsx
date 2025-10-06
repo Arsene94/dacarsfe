@@ -24,6 +24,7 @@ import { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
+import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 
 import heroMobile1x from "@/public/images/bg-hero-mobile-378x284.webp";
 import heroMobile2x from "@/public/images/bg-hero-mobile-480x879.webp";
@@ -242,6 +243,14 @@ const HeroSection = () => {
             booking_synced:
                 booking.startDate === formData.start_date &&
                 booking.endDate === formData.end_date,
+        });
+
+        trackTikTokEvent(TIKTOK_EVENTS.SEARCH, {
+            search_type: "hero_form",
+            start_date: formData.start_date,
+            end_date: formData.end_date,
+            location: formData.location || undefined,
+            car_type: formData.car_type || undefined,
         });
 
         router.push(`/cars?${params.toString()}`);
