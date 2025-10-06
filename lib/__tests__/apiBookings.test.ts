@@ -171,6 +171,7 @@ describe('ApiClient bookings management', () => {
     const client = new ApiClient(baseURL);
 
     const payload = {
+      car_id: 99,
       pickup_location: 'OTP',
       dropoff_location: 'OTP',
       rental_start_date: '2024-07-01',
