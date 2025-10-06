@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClient } from '@/lib/api';
-import type { ApiDeleteResponse, ApiItemResult, ApiListResult } from '@/types/api';
+import type {
+  ApiDeleteResponse,
+  ApiItemResponse,
+  ApiItemResult,
+  ApiListResult,
+} from '@/types/api';
 import type {
   ActivityListParams,
   ActivityMarkPaidPayload,
@@ -354,7 +359,9 @@ describe('ApiClient admin operational activities', () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');
 
-    const apiResponse: ApiItemResult<ActivityWeeklySummary> = { data: null };
+    const apiResponse = {
+      data: null,
+    } satisfies ApiItemResponse<ActivityWeeklySummary | null>;
 
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify(apiResponse), {
