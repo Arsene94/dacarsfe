@@ -64,10 +64,10 @@ const HeroSection = () => {
                         src={heroMobile2x}
                         alt="Fundal aeroport"
                         fill
-                        priority
                         fetchPriority="high"
+                        loading="eager"
                         placeholder="blur"
-                        sizes="100vw"
+                        sizes="(max-width: 639px) 100vw, 0vw"
                         quality={60}
                         className="object-cover"
                     />
@@ -78,9 +78,9 @@ const HeroSection = () => {
                         alt="Fundal aeroport"
                         fill
                         placeholder="blur"
-                        priority
+                        loading="lazy"
                         fetchPriority="high"
-                        sizes="100vw"
+                        sizes="(min-width: 640px) 100vw, 0vw"
                         quality={60}
                         className="object-cover"
                     />

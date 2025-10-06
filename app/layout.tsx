@@ -91,6 +91,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="preload"
           as="image"
           href="/images/bg-hero-mobile-960x1759.webp"
+          media="(max-width: 639px)"
           imageSrcSet="/images/bg-hero-mobile-378x284.webp 378w, /images/bg-hero-mobile-480x879.webp 480w, /images/bg-hero-mobile-960x1759.webp 960w"
           imageSizes="100vw"
         />
