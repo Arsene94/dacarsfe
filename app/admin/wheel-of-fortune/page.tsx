@@ -1310,11 +1310,12 @@ export default function WheelOfFortuneAdminPage() {
                                     cooldownDays: event.target.value,
                                 }))
                             }
-                            placeholder="Ex. 1 pentru 24h"
+                            placeholder="Ex. 2 pentru 2 zile (2880 minute)"
                         />
                         <p className="text-xs text-gray-500">
-                            Setează câte zile trebuie să treacă după folosirea unui premiu pentru a putea învârti din nou
-                            roata. Lasă gol pentru valoarea implicită (1 zi).
+                            Setează câte zile trebuie să treacă după folosirea unui premiu pentru a putea învârti din nou roata.
+                            Acceptă și zecimale, iar valoarea este convertită automat în minute (1 zi = 1440 minute). Exemplu:
+                            2 zile → 2 × 1440 = 2880 minute. Lasă gol pentru valoarea implicită (1 zi).
                         </p>
                     </div>
 
