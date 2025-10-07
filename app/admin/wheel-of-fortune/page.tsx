@@ -294,6 +294,15 @@ const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
     const normalizedActive =
         typeof isActiveRaw !== "undefined" ? parseBoolean(isActiveRaw) : undefined;
 
+    const cooldownSource =
+        item.cooldown_minutes ??
+        item.spin_cooldown_minutes ??
+        item.cooldown ??
+        item.cooldownMinutes ??
+        item.spinCooldownMinutes ??
+        null;
+    const cooldownMinutes = toOptionalNumber(cooldownSource);
+
     const activeMonths = Array.isArray(item.active_months)
         ? item.active_months
               .map((entry) => Number(entry))
@@ -313,6 +322,16 @@ const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
         created_at: typeof item.created_at === "string" ? item.created_at : null,
         updated_at: typeof item.updated_at === "string" ? item.updated_at : null,
         active_months: activeMonths.length > 0 ? activeMonths : null,
+        cooldown_minutes:
+            typeof cooldownMinutes === "number" && Number.isFinite(cooldownMinutes) && cooldownMinutes > 0
+                ? cooldownMinutes
+                : typeof cooldownMinutes === "number" && cooldownMinutes === 0
+                    ? 0
+                    : null,
+        spin_cooldown_minutes:
+            typeof cooldownMinutes === "number" && Number.isFinite(cooldownMinutes)
+                ? cooldownMinutes
+                : null,
     };
 };
 
@@ -416,6 +435,7 @@ export default function WheelOfFortuneAdminPage() {
         isActive: true,
         description: "",
         activeMonths: [] as number[],
+        cooldownMinutes: "",
     });
 
     const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
@@ -545,6 +565,7 @@ export default function WheelOfFortuneAdminPage() {
             isActive: periods.length === 0,
             description: "",
             activeMonths: [],
+            cooldownMinutes: "",
         });
         setPeriodFormError(null);
         setIsPeriodModalOpen(true);
@@ -563,6 +584,13 @@ export default function WheelOfFortuneAdminPage() {
                       .map((value) => Number(value))
                       .filter((value) => Number.isFinite(value) && value >= 1 && value <= 12)
                 : [],
+            cooldownMinutes:
+                typeof period.cooldown_minutes === "number" && Number.isFinite(period.cooldown_minutes)
+                    ? String(period.cooldown_minutes)
+                    : typeof period.spin_cooldown_minutes === "number"
+                        && Number.isFinite(period.spin_cooldown_minutes)
+                        ? String(period.spin_cooldown_minutes)
+                        : "",
         });
         setPeriodFormError(null);
         setIsPeriodModalOpen(true);
@@ -590,6 +618,21 @@ export default function WheelOfFortuneAdminPage() {
             return;
         }
 
+        const trimmedCooldown = periodForm.cooldownMinutes.trim();
+        let cooldownMinutesValue: number | null = null;
+        if (trimmedCooldown.length > 0) {
+            const parsedCooldown = Number(trimmedCooldown.replace(/,/g, "."));
+            if (!Number.isFinite(parsedCooldown) || parsedCooldown < 0) {
+                setPeriodFormError("Introdu un număr valid de minute pentru fereastra de așteptare.");
+                return;
+            }
+            if (!Number.isInteger(parsedCooldown)) {
+                setPeriodFormError("Durata de cooldown trebuie să fie exprimată în minute întregi.");
+                return;
+            }
+            cooldownMinutesValue = parsedCooldown;
+        }
+
         setPeriodFormError(null);
         setPeriodSaving(true);
 
@@ -607,6 +650,7 @@ export default function WheelOfFortuneAdminPage() {
             is_active: periodForm.isActive,
             description: periodForm.description.trim() || undefined,
             active_months: normalizedMonths,
+            cooldown_minutes: typeof cooldownMinutesValue === "number" ? cooldownMinutesValue : null,
         };
 
         try {
@@ -1202,11 +1246,11 @@ export default function WheelOfFortuneAdminPage() {
                             Selectează lunile pentru care premiile din această perioadă sunt valabile. Dacă nu selectezi nimic,
                             premiile vor fi eligibile în orice lună.
                         </p>
-                        <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
-                            {MONTHS.map((month) => {
-                                const isChecked = periodForm.activeMonths.includes(month.value);
-                                return (
-                                    <label
+                    <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
+                        {MONTHS.map((month) => {
+                            const isChecked = periodForm.activeMonths.includes(month.value);
+                            return (
+                                <label
                                         key={month.value}
                                         className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm"
                                     >
@@ -1234,6 +1278,30 @@ export default function WheelOfFortuneAdminPage() {
                                 );
                             })}
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label htmlFor="period-cooldown" className="text-sm font-medium text-gray-700">
+                            Cooldown după rezervare (minute)
+                        </label>
+                        <Input
+                            id="period-cooldown"
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={periodForm.cooldownMinutes}
+                            onChange={(event) =>
+                                setPeriodForm((prev) => ({
+                                    ...prev,
+                                    cooldownMinutes: event.target.value,
+                                }))
+                            }
+                            placeholder="Ex. 1440 pentru 24h"
+                        />
+                        <p className="text-xs text-gray-500">
+                            Setează câte minute trebuie să treacă după folosirea unui premiu pentru a putea învârti din nou
+                            roata. Lasă gol pentru valoarea implicită (24h).
+                        </p>
                     </div>
 
                     <div className="space-y-2">

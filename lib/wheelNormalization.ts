@@ -42,6 +42,15 @@ export const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
     const activeRaw = item.active ?? item.is_active ?? item.enabled ?? item.status;
     const normalizedActive = normalizeActiveFlag(activeRaw);
 
+    const cooldownSource =
+        item.cooldown_minutes ??
+        item.spin_cooldown_minutes ??
+        item.cooldown ??
+        item.cooldownMinutes ??
+        item.spinCooldownMinutes ??
+        null;
+    const cooldownMinutes = toOptionalNumber(cooldownSource);
+
     const activeMonths = Array.isArray(item.active_months)
         ? item.active_months
               .map((entry) => Number(entry))
@@ -61,6 +70,16 @@ export const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
         created_at: typeof item.created_at === "string" ? item.created_at : null,
         updated_at: typeof item.updated_at === "string" ? item.updated_at : null,
         active_months: activeMonths.length > 0 ? activeMonths : null,
+        cooldown_minutes:
+            typeof cooldownMinutes === "number" && Number.isFinite(cooldownMinutes) && cooldownMinutes > 0
+                ? cooldownMinutes
+                : typeof cooldownMinutes === "number" && cooldownMinutes === 0
+                    ? 0
+                    : null,
+        spin_cooldown_minutes:
+            typeof cooldownMinutes === "number" && Number.isFinite(cooldownMinutes)
+                ? cooldownMinutes
+                : null,
         wheel_of_fortunes: Array.isArray(item.wheel_of_fortunes)
             ? item.wheel_of_fortunes
                   .map((entry) => mapPrize(entry, false))

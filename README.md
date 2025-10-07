@@ -84,6 +84,7 @@ Fiecare domeniu este izolat: componentele publice trăiesc în rădăcina `compo
 ### Stocarea premiilor din Roata Norocului
 - `WheelOfFortune` sincronizează premiile disponibile, folosește `wheelStorage` pentru a salva premiul câștigat cu TTL 30 de zile și expune câmpuri pentru validare și reactivare la următoarea vizită.
 - `wheelFormatting` descrie textual tipul premiului și formatul reducerilor pentru afișare coerentă în admin și în ecranele publice.
+- Durata ferestrei de cooldown după folosirea unui premiu se configurează din consola admin, per perioadă activă, iar backend-ul expune această valoare pentru a bloca reînvârtirea roții până la expirare.
 
 ### Calendar flotă și rezervări
 - `CarRentalCalendar` aduce în pagină sute de rezervări cu paginare incrementală, permite selecții multiple, crearea de booking-uri și navigarea pe ani/luni într-o interfață optimizată pentru densitate mare de date.
@@ -97,7 +98,6 @@ Aplicația presupune un backend Laravel ce expune API-uri REST securizate.
 | `NEXT_PUBLIC_API_URL` | Punctul de intrare al API-ului public (mașini, rezervări, wheel). | `http://localhost:8000/api/v1` |
 | `NEXT_PUBLIC_BACKEND_URL` | Baza pentru proxy-ul de fișiere (PDF, contracte). | `http://127.0.0.1:8000` |
 | `NEXT_PUBLIC_STORAGE_URL` | URL-ul pentru imaginile din storage Laravel (folosit în cardurile mașinilor). | `https://backend.dacars.ro/storage` |
-| `NEXT_PUBLIC_WHEEL_COOLDOWN_MINUTES` | Durata (în minute) a perioadei de așteptare după ce premiul este șters la finalizarea unei rezervări. Controlează când utilizatorul poate reînvârti roata. | `1440` |
 | `IMAGE_PROXY_ALLOWLIST` | (Opțional) listă suplimentară de host-uri, separată prin virgulă, acceptate de API-ul de proxy pentru imagini. | – |
 | `CUSTOM_KEY` | Cheie opțională pentru logica custom din `next.config.js`. | – |
 | `ANALYZE` | Activează bundle analyzer (setare Next.js). | – |

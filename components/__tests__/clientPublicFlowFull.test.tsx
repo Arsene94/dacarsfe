@@ -215,6 +215,7 @@ const buildWheelPrize = (): StoredWheelPrizeEntry => ({
   prize_id: 7,
   saved_at: '2030-05-01T00:00:00Z',
   expires_at: '2030-12-31T00:00:00Z',
+  period_cooldown_minutes: 2880,
 });
 
 describe('Fluxul complet al clienților DaCars', () => {
@@ -632,7 +633,10 @@ describe('Fluxul complet al clienților DaCars', () => {
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/success'));
     expect(clearStoredWheelPrizeMock).toHaveBeenCalledWith(
-      expect.objectContaining({ startCooldown: true }),
+      expect.objectContaining({
+        startCooldown: true,
+        cooldownMs: 2880 * 60 * 1000,
+      }),
     );
 
     const storedReservation = window.localStorage.getItem('reservationData');

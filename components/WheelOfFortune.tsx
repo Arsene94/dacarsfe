@@ -524,6 +524,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                     ?? (responsePrize ?? prize).id,
                 savedAt: typeof record?.created_at === "string" ? record.created_at : null,
                 expiresAt: typeof record?.expires_at === "string" ? record.expires_at : null,
+                periodCooldownMinutes:
+                    responsePrize?.period?.cooldown_minutes
+                    ?? responsePrize?.period?.spin_cooldown_minutes
+                    ?? prize.period?.cooldown_minutes
+                    ?? prize.period?.spin_cooldown_minutes
+                    ?? activePeriod?.cooldown_minutes
+                    ?? activePeriod?.spin_cooldown_minutes
+                    ?? null,
             });
             setStoredPrizeRecord(stored);
             setSaveState("success");
@@ -535,7 +543,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 error instanceof Error ? error.message : saveFallbackMessage,
             );
         }
-    }, [clientIp, saveFallbackMessage]);
+    }, [activePeriod, clientIp, saveFallbackMessage]);
 
     const focusField = useCallback((element: HTMLInputElement | null) => {
         if (!element) return;
@@ -632,6 +640,12 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                 const stored = storeWheelPrize({
                     prize: winningPrize,
                     winner: normalizedParticipant,
+                    periodCooldownMinutes:
+                        winningPrize.period?.cooldown_minutes
+                        ?? winningPrize.period?.spin_cooldown_minutes
+                        ?? activePeriod?.cooldown_minutes
+                        ?? activePeriod?.spin_cooldown_minutes
+                        ?? null,
                 });
                 setStoredPrizeRecord(stored);
                 setSpinsLeft(0);

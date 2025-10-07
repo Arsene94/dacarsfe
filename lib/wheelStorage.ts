@@ -6,27 +6,7 @@ export const WHEEL_PRIZE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export const WHEEL_COOLDOWN_STORAGE_KEY = "dacars.wheel-cooldown";
 export const WHEEL_COOLDOWN_STORAGE_VERSION = 1;
-
-const parseCooldownMinutes = (value: unknown): number | null => {
-    if (typeof value === "number" && Number.isFinite(value)) {
-        return value > 0 ? value : null;
-    }
-    if (typeof value === "string") {
-        const normalized = value.trim();
-        if (!normalized) return null;
-        const parsed = Number(normalized);
-        if (Number.isFinite(parsed) && parsed > 0) {
-            return parsed;
-        }
-    }
-    return null;
-};
-
-const resolvedCooldownMinutes = parseCooldownMinutes(
-    process.env.NEXT_PUBLIC_WHEEL_COOLDOWN_MINUTES,
-);
-
-export const WHEEL_COOLDOWN_DEFAULT_MINUTES = resolvedCooldownMinutes ?? 24 * 60; // 24 hours
+export const WHEEL_COOLDOWN_DEFAULT_MINUTES = 24 * 60; // 24 hours
 export const WHEEL_COOLDOWN_DEFAULT_MS = WHEEL_COOLDOWN_DEFAULT_MINUTES * 60 * 1000;
 
 export interface StoredWheelPrizeEntry {
@@ -40,6 +20,7 @@ export interface StoredWheelPrizeEntry {
     prize_id?: number | null;
     saved_at: string;
     expires_at: string;
+    period_cooldown_minutes?: number | null;
     /**
      * @deprecated Folosit doar pentru compatibilitate cu versiunile vechi care salvau `expiration_date`.
      */
@@ -192,7 +173,34 @@ export const parseStoredWheelPrize = (
         prize_id: typeof prizeId === "number" ? prizeId : null,
         saved_at: savedAt,
         expires_at: expiresAt,
+        period_cooldown_minutes: null,
     };
+
+    const rawPrize = isPlainObject(raw.prize) ? (raw.prize as Record<string, unknown>) : null;
+    const rawPeriod = rawPrize && isPlainObject(rawPrize.period)
+        ? (rawPrize.period as Record<string, unknown>)
+        : isPlainObject(raw.period)
+            ? (raw.period as Record<string, unknown>)
+            : null;
+    const cooldownSource =
+        raw.period_cooldown_minutes ??
+        raw.cooldown_minutes ??
+        raw.periodCooldownMinutes ??
+        raw.cooldownMinutes ??
+        (rawPeriod
+            ? rawPeriod.cooldown_minutes
+                ?? rawPeriod.spin_cooldown_minutes
+                ?? rawPeriod.cooldownMinutes
+                ?? rawPeriod.spinCooldownMinutes
+            : null);
+    const normalizedCooldown = normalizeOptionalNumber(cooldownSource);
+    if (
+        typeof normalizedCooldown === "number"
+        && Number.isFinite(normalizedCooldown)
+        && normalizedCooldown >= 0
+    ) {
+        record.period_cooldown_minutes = normalizedCooldown;
+    }
 
     if (typeof legacyExpiration === "string") {
         record.expiration_date = legacyExpiration;
@@ -320,13 +328,43 @@ export const clearStoredWheelPrize = (options?: {
     startedAt?: string | Date | null;
 }) => {
     if (typeof window === "undefined") return;
+    let existingRecord: StoredWheelPrizeEntry | null = null;
+    const hasValidExplicitCooldown =
+        typeof options?.cooldownMs === "number"
+        && Number.isFinite(options.cooldownMs)
+        && options.cooldownMs > 0;
+
+    if (options?.startCooldown && !hasValidExplicitCooldown) {
+        existingRecord = getStoredWheelPrize();
+    }
+
     window.localStorage.removeItem(WHEEL_PRIZE_STORAGE_KEY);
     if (options?.startCooldown) {
-        startWheelCooldown({
-            durationMs: options.cooldownMs ?? undefined,
-            reason: options.reason ?? null,
-            startedAt: options.startedAt ?? null,
-        });
+        let shouldStart = true;
+        let resolvedDurationMs: number | undefined;
+
+        if (hasValidExplicitCooldown) {
+            resolvedDurationMs = options?.cooldownMs ?? undefined;
+        } else if (existingRecord) {
+            const normalizedMinutes = normalizeOptionalNumber(existingRecord.period_cooldown_minutes);
+            if (
+                typeof normalizedMinutes === "number"
+                && Number.isFinite(normalizedMinutes)
+                && normalizedMinutes > 0
+            ) {
+                resolvedDurationMs = normalizedMinutes * 60 * 1000;
+            } else if (typeof normalizedMinutes === "number" && normalizedMinutes === 0) {
+                shouldStart = false;
+            }
+        }
+
+        if (shouldStart) {
+            startWheelCooldown({
+                durationMs: resolvedDurationMs ?? undefined,
+                reason: options.reason ?? null,
+                startedAt: options.startedAt ?? null,
+            });
+        }
     }
 };
 
@@ -337,6 +375,7 @@ export const storeWheelPrize = (params: {
     wheel_of_fortune_id?: number;
     savedAt?: string | Date | null;
     expiresAt?: string | Date | null;
+    periodCooldownMinutes?: number | null;
 }): StoredWheelPrizeEntry => {
     const sanitizedPrize = sanitizePrizeForStorage(params.prize);
     const savedAtIso = normalizeDateIso(params.savedAt) ?? new Date().toISOString();
@@ -344,6 +383,27 @@ export const storeWheelPrize = (params: {
         ?? new Date(new Date(savedAtIso).getTime() + WHEEL_PRIZE_TTL_MS).toISOString();
     const wheelId = normalizeNumber(params.wheel_of_fortune_id) ?? sanitizedPrize.id;
     const prizeId = normalizeOptionalNumber(params.prizeId);
+
+    const prizeRecord = params.prize as unknown as Record<string, unknown>;
+    const prizePeriod = params.prize?.period as
+        | (Record<string, unknown> & { cooldown_minutes?: unknown; spin_cooldown_minutes?: unknown })
+        | null
+        | undefined;
+    const periodCooldownSource =
+        params.periodCooldownMinutes ??
+        (prizePeriod
+            ? prizePeriod.cooldown_minutes ?? prizePeriod.spin_cooldown_minutes ?? null
+            : null) ??
+        prizeRecord?.period_cooldown_minutes ??
+        prizeRecord?.cooldown_minutes ??
+        null;
+    const normalizedPeriodCooldown = normalizeOptionalNumber(periodCooldownSource);
+    const periodCooldownMinutes =
+        typeof normalizedPeriodCooldown === "number"
+        && Number.isFinite(normalizedPeriodCooldown)
+        && normalizedPeriodCooldown >= 0
+            ? normalizedPeriodCooldown
+            : null;
 
     const winnerName = normalizeString(params.winner.name) ?? "";
     const winnerPhone = normalizeString(params.winner.phone) ?? "";
@@ -359,6 +419,7 @@ export const storeWheelPrize = (params: {
         prize_id: typeof prizeId === "number" ? prizeId : null,
         saved_at: savedAtIso,
         expires_at: expiresAtIso,
+        period_cooldown_minutes: periodCooldownMinutes,
     };
 
     if (typeof window !== "undefined") {

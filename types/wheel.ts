@@ -61,6 +61,8 @@ export interface WheelOfFortunePeriod {
   updated_at?: string | null;
   active_months?: number[] | null;
   wheel_of_fortunes?: WheelPrize[] | null;
+  cooldown_minutes?: number | null;
+  spin_cooldown_minutes?: number | null;
 }
 
 export interface WheelOfFortunePrizePayload {

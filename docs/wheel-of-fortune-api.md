@@ -142,8 +142,8 @@ Response includes nested wheels when `with=wheelOfFortunes` is requested.
 
 - Frontend-ul DaCars salvează ultimul premiu câștigat în `localStorage` sub cheia `dacars.wheel-prize` și setează automat o
   fereastră de așteptare în `dacars.wheel-cooldown` atunci când premiul este consumat la finalizarea rezervării.
-- Durata implicită a cooldown-ului este de 24 de ore și poate fi modificată prin variabila de mediu `NEXT_PUBLIC_WHEEL_COOLDOWN_MINUTES`
-  (valoare în minute).
+- Durata ferestrei este trimisă de backend prin câmpul `cooldown_minutes` al perioadei active și se configurează în consola admin
+  pentru fiecare perioadă. Dacă backend-ul nu expune valoarea (pentru perioade mai vechi), frontend-ul revine la fereastra implicită de 24h.
 - `clearStoredWheelPrize({ startCooldown: true })` este apelată după confirmarea rezervării pentru a elimina premiul și a porni cooldown-ul.
   Componenta publică blochează butonul Roții Norocului și afișează mesajul de așteptare până la expirarea ferestrei configurate.
 
