@@ -28,8 +28,34 @@ type LocaleProviderProps = {
 
 const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 an
 
+const resolveInitialLocale = (explicitLocale?: Locale): Locale => {
+    if (explicitLocale) {
+        return explicitLocale;
+    }
+
+    if (typeof document !== "undefined") {
+        const dataLocale = document.documentElement.getAttribute("data-locale");
+        if (dataLocale && isLocale(dataLocale)) {
+            return dataLocale;
+        }
+    }
+
+    if (typeof window !== "undefined") {
+        try {
+            const storedLocale = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+            if (storedLocale && isLocale(storedLocale)) {
+                return storedLocale;
+            }
+        } catch (error) {
+            console.warn("Nu am putut citi limba preferată din localStorage înainte de hidratare", error);
+        }
+    }
+
+    return DEFAULT_LOCALE;
+};
+
 export const LocaleProvider = ({ children, initialLocale }: LocaleProviderProps) => {
-    const [locale, setLocaleState] = useState<Locale>(initialLocale ?? DEFAULT_LOCALE);
+    const [locale, setLocaleState] = useState<Locale>(() => resolveInitialLocale(initialLocale));
 
     useEffect(() => {
         if (typeof window === "undefined" || typeof document === "undefined") {
