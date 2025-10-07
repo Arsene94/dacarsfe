@@ -129,7 +129,7 @@ Example request:
   "ends_at": "2025-03-31T23:59:59",
   "active": true,
   "active_months": [11, 12],
-  "cooldown_minutes": 1440
+  "cooldown_minutes": 2880
 }
 ```
 
@@ -137,7 +137,7 @@ Example request:
 prizes will only be eligible for bookings that overlap at least one of those months, even if the reservation dates fall inside the
 `starts_at`/`ends_at` interval.
 
-`cooldown_minutes` definește, în minute, perioada minimă dintre două învârtiri după ce un utilizator revendică sau consumă un premiu. Valoarea poate fi:
+`cooldown_minutes` definește, în minute, perioada minimă dintre două învârtiri după ce un utilizator revendică sau consumă un premiu. În consola de administrare câmpul este expus ca „Cooldown după rezervare (zile)” și acceptă un număr de zile cu zecimale; aplicația îl transformă apoi în minute prin înmulțirea valorii introduse cu `1440` (numărul de minute dintr-o zi). În exemplul de mai sus au fost setate `2` zile, iar frontend-ul a salvat `2 × 1440 = 2880` minute. Valoarea poate fi:
 
 - un număr întreg pozitiv pentru a seta durata de așteptare;
 - `0` pentru a dezactiva complet cooldown-ul pe perioada respectivă;
