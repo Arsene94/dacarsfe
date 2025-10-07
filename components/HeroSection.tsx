@@ -27,7 +27,6 @@ const HeroBookingFormSkeleton = () => (
 const HeroBookingForm = dynamic<HeroBookingFormProps>(
     () => import("./HeroBookingForm"),
     {
-        ssr: false,
         loading: () => <HeroBookingFormSkeleton />,
     },
 );
