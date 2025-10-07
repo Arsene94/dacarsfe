@@ -272,6 +272,8 @@ const extractDataArray = (response: unknown): unknown[] => {
     return [];
 };
 
+const MINUTES_PER_DAY = 60 * 24;
+
 const mapPeriod = (item: unknown): WheelOfFortunePeriod | null => {
     if (!isRecord(item)) return null;
     const id = Number(item.id ?? item.period_id ?? item.value);
@@ -408,6 +410,17 @@ const mapWinner = (item: unknown): WheelOfFortunePrizeWinner | null => {
     };
 };
 
+const formatCooldownDays = (minutes: number) => {
+    if (!Number.isFinite(minutes)) return "";
+    const daysValue = minutes / MINUTES_PER_DAY;
+    if (!Number.isFinite(daysValue)) return "";
+    if (Number.isInteger(daysValue)) {
+        return String(daysValue);
+    }
+    const rounded = Math.round(daysValue * 1000) / 1000;
+    return String(rounded);
+};
+
 export default function WheelOfFortuneAdminPage() {
     const [periods, setPeriods] = useState<WheelOfFortunePeriod[]>([]);
     const [periodLoading, setPeriodLoading] = useState(false);
@@ -435,7 +448,7 @@ export default function WheelOfFortuneAdminPage() {
         isActive: true,
         description: "",
         activeMonths: [] as number[],
-        cooldownMinutes: "",
+        cooldownDays: "",
     });
 
     const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
@@ -565,7 +578,7 @@ export default function WheelOfFortuneAdminPage() {
             isActive: periods.length === 0,
             description: "",
             activeMonths: [],
-            cooldownMinutes: "",
+            cooldownDays: "",
         });
         setPeriodFormError(null);
         setIsPeriodModalOpen(true);
@@ -584,12 +597,12 @@ export default function WheelOfFortuneAdminPage() {
                       .map((value) => Number(value))
                       .filter((value) => Number.isFinite(value) && value >= 1 && value <= 12)
                 : [],
-            cooldownMinutes:
+            cooldownDays:
                 typeof period.cooldown_minutes === "number" && Number.isFinite(period.cooldown_minutes)
-                    ? String(period.cooldown_minutes)
+                    ? formatCooldownDays(period.cooldown_minutes)
                     : typeof period.spin_cooldown_minutes === "number"
                         && Number.isFinite(period.spin_cooldown_minutes)
-                        ? String(period.spin_cooldown_minutes)
+                        ? formatCooldownDays(period.spin_cooldown_minutes)
                         : "",
         });
         setPeriodFormError(null);
@@ -618,19 +631,20 @@ export default function WheelOfFortuneAdminPage() {
             return;
         }
 
-        const trimmedCooldown = periodForm.cooldownMinutes.trim();
+        const trimmedCooldown = periodForm.cooldownDays.trim();
         let cooldownMinutesValue: number | null = null;
         if (trimmedCooldown.length > 0) {
             const parsedCooldown = Number(trimmedCooldown.replace(/,/g, "."));
             if (!Number.isFinite(parsedCooldown) || parsedCooldown < 0) {
-                setPeriodFormError("Introdu un număr valid de minute pentru fereastra de așteptare.");
+                setPeriodFormError("Introdu un număr valid de zile pentru fereastra de așteptare.");
                 return;
             }
-            if (!Number.isInteger(parsedCooldown)) {
-                setPeriodFormError("Durata de cooldown trebuie să fie exprimată în minute întregi.");
+            const cooldownMinutes = Math.round(parsedCooldown * MINUTES_PER_DAY);
+            if (!Number.isFinite(cooldownMinutes) || cooldownMinutes < 0) {
+                setPeriodFormError("Durata de cooldown este invalidă. Încearcă din nou.");
                 return;
             }
-            cooldownMinutesValue = parsedCooldown;
+            cooldownMinutesValue = cooldownMinutes;
         }
 
         setPeriodFormError(null);
@@ -1282,25 +1296,25 @@ export default function WheelOfFortuneAdminPage() {
 
                     <div className="space-y-2">
                         <label htmlFor="period-cooldown" className="text-sm font-medium text-gray-700">
-                            Cooldown după rezervare (minute)
+                            Cooldown după rezervare (zile)
                         </label>
                         <Input
                             id="period-cooldown"
                             type="number"
                             min={0}
-                            step={1}
-                            value={periodForm.cooldownMinutes}
+                            step={0.1}
+                            value={periodForm.cooldownDays}
                             onChange={(event) =>
                                 setPeriodForm((prev) => ({
                                     ...prev,
-                                    cooldownMinutes: event.target.value,
+                                    cooldownDays: event.target.value,
                                 }))
                             }
-                            placeholder="Ex. 1440 pentru 24h"
+                            placeholder="Ex. 1 pentru 24h"
                         />
                         <p className="text-xs text-gray-500">
-                            Setează câte minute trebuie să treacă după folosirea unui premiu pentru a putea învârti din nou
-                            roata. Lasă gol pentru valoarea implicită (24h).
+                            Setează câte zile trebuie să treacă după folosirea unui premiu pentru a putea învârti din nou
+                            roata. Lasă gol pentru valoarea implicită (1 zi).
                         </p>
                     </div>
 
