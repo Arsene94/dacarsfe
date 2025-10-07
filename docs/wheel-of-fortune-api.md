@@ -117,8 +117,8 @@ Validation failures (missing phone, invalid ID) return HTTP 422.
 | --- | --- | --- |
 | GET `/api/wheel-of-fortune-periods` | List periods (includes related wheels). | `wheel_of_fortune_periods.view` |
 | GET `/api/wheel-of-fortune-periods/{id}` | Retrieve a period. | `wheel_of_fortune_periods.view` |
-| POST `/api/wheel-of-fortune-periods` | Create a period (`name`, optional `starts_at`, `ends_at`, `active`, `active_months`). | `wheel_of_fortune_periods.create` |
-| PUT/PATCH `/api/wheel-of-fortune-periods/{id}` | Update. | `wheel_of_fortune_periods.update` |
+| POST `/api/wheel-of-fortune-periods` | Create a period (`name`, optional `starts_at`, `ends_at`, `active`, `active_months`, `cooldown_minutes`). | `wheel_of_fortune_periods.create` |
+| PUT/PATCH `/api/wheel-of-fortune-periods/{id}` | Update. Accepts the same câmpuri ca la creare, inclusiv `cooldown_minutes`. | `wheel_of_fortune_periods.update` |
 | DELETE `/api/wheel-of-fortune-periods/{id}` | Delete. | `wheel_of_fortune_periods.delete` |
 
 Example request:
@@ -128,13 +128,22 @@ Example request:
   "starts_at": "2025-03-01T00:00:00",
   "ends_at": "2025-03-31T23:59:59",
   "active": true,
-  "active_months": [11, 12]
+  "active_months": [11, 12],
+  "cooldown_minutes": 1440
 }
 ```
 
 `active_months` accepts an array of month numbers (1 = ianuarie, 12 = decembrie). When it is populated the associated wheel
 prizes will only be eligible for bookings that overlap at least one of those months, even if the reservation dates fall inside the
 `starts_at`/`ends_at` interval.
+
+`cooldown_minutes` definește, în minute, perioada minimă dintre două învârtiri după ce un utilizator revendică sau consumă un premiu. Valoarea poate fi:
+
+- un număr întreg pozitiv pentru a seta durata de așteptare;
+- `0` pentru a dezactiva complet cooldown-ul pe perioada respectivă;
+- `null` sau omis pentru a reveni la comportamentul implicit (frontend-ul aplică fereastra istorică de 24h când backend-ul nu trimite câmpul).
+
+Răspunsurile includ câmpul `cooldown_minutes` (sau `spin_cooldown_minutes` pentru compatibilitate inversă) și frontend-ul DaCars normalizează oricare dintre denumiri. Backend-ul trebuie să persiste și să trimită această valoare pentru ca restricția de reînvârtire să fie respectată.
 
 Response includes nested wheels when `with=wheelOfFortunes` is requested.
 
