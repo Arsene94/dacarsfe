@@ -172,6 +172,7 @@ export const TIKTOK_EVENTS = {
     ADD_TO_CART: "AddToCart",
     INITIATE_CHECKOUT: "InitiateCheckout",
     SUBMIT_FORM: "SubmitForm",
+    LEAD: "Lead",
     COMPLETE_PAYMENT: "CompletePayment",
     CONTACT: "Contact",
 } as const;

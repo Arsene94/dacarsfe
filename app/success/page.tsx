@@ -135,7 +135,7 @@ const SuccessPage = () => {
                   .filter((id): id is number => typeof id === "number" && Number.isFinite(id))
             : [];
 
-        trackTikTokEvent(TIKTOK_EVENTS.COMPLETE_PAYMENT, {
+        trackTikTokEvent(TIKTOK_EVENTS.LEAD, {
             value: totalAmount ?? undefined,
             currency: DEFAULT_CURRENCY,
             contents: [
@@ -162,7 +162,7 @@ const SuccessPage = () => {
         const carIdString =
             carId !== undefined && carId !== null ? String(carId) : undefined;
 
-        trackMetaPixelEvent(META_PIXEL_EVENTS.PURCHASE, {
+        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
             value: totalAmount ?? undefined,
             currency: DEFAULT_CURRENCY,
             content_ids: carIdString ? [carIdString] : undefined,
