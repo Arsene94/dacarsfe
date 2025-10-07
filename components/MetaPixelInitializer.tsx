@@ -7,7 +7,11 @@ import { initMetaPixel, trackMetaPixelPageView, isMetaPixelConfigured } from "@/
 const MetaPixelInitializer = () => {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const hasTrackedInitialRef = useRef(false);
+    const hasInitializedRef = useRef(false);
+    const previousLocationRef = useRef<{ pathname: string; searchParamsKey: string }>({
+        pathname: "",
+        searchParamsKey: "",
+    });
 
     const searchParamsKey = useMemo(() => {
         if (!searchParams) {
@@ -25,10 +29,31 @@ const MetaPixelInitializer = () => {
             return;
         }
 
-        if (!hasTrackedInitialRef.current) {
-            hasTrackedInitialRef.current = true;
+        const normalizedPathname = typeof pathname === "string" ? pathname : "";
+        const normalizedSearchParamsKey = typeof searchParamsKey === "string" ? searchParamsKey : "";
+
+        if (!hasInitializedRef.current) {
+            hasInitializedRef.current = true;
+            previousLocationRef.current = {
+                pathname: normalizedPathname,
+                searchParamsKey: normalizedSearchParamsKey,
+            };
             return;
         }
+
+        const { pathname: previousPathname, searchParamsKey: previousSearchParamsKey } = previousLocationRef.current;
+
+        if (
+            previousPathname === normalizedPathname &&
+            previousSearchParamsKey === normalizedSearchParamsKey
+        ) {
+            return;
+        }
+
+        previousLocationRef.current = {
+            pathname: normalizedPathname,
+            searchParamsKey: normalizedSearchParamsKey,
+        };
 
         trackMetaPixelPageView();
     }, [pathname, searchParamsKey]);
