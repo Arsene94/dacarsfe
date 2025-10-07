@@ -1696,7 +1696,19 @@ const ReservationPage = () => {
                     reservationId,
                 }),
             );
-            clearStoredWheelPrize();
+            const cooldownMinutes = wheelPrizeRecord?.period_cooldown_minutes;
+            const clearOptions: Parameters<typeof clearStoredWheelPrize>[0] = {
+                startCooldown: true,
+                reason: "reservation_completed",
+            };
+            if (
+                typeof cooldownMinutes === "number"
+                && Number.isFinite(cooldownMinutes)
+                && cooldownMinutes > 0
+            ) {
+                clearOptions.cooldownMs = cooldownMinutes * 60 * 1000;
+            }
+            clearStoredWheelPrize(clearOptions);
             setWheelPrizeRecord(null);
             router.push("/success");
         } catch (error) {

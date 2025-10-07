@@ -225,6 +225,10 @@
       "suffix": ". The prize is valid until {{expiry}} and you can redeem it directly during checkout.",
       "noExpiry": "automatic expiration"
     },
+    "cooldown": {
+      "message": "You recently completed a reservation using your prize. Try again after {{time}}.",
+      "noTime": "You recently completed a reservation using your prize. Please try again in a few hours."
+    },
     "errors": {
       "load": "Something went wrong while loading the wheel. Please try again later.",
       "form": "Please fill in all the fields before spinning.",
@@ -243,6 +247,7 @@
       "spinning": "Spinning...",
       "activePrize": "Active prize",
       "outOfSpins": "No spins left",
+      "cooldown": "Try again later",
       "reset": "Reset (Demo)",
       "close": "Close",
       "tryAgain": "Try again",

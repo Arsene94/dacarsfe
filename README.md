@@ -84,6 +84,7 @@ Fiecare domeniu este izolat: componentele publice trăiesc în rădăcina `compo
 ### Stocarea premiilor din Roata Norocului
 - `WheelOfFortune` sincronizează premiile disponibile, folosește `wheelStorage` pentru a salva premiul câștigat cu TTL 30 de zile și expune câmpuri pentru validare și reactivare la următoarea vizită.
 - `wheelFormatting` descrie textual tipul premiului și formatul reducerilor pentru afișare coerentă în admin și în ecranele publice.
+- Durata ferestrei de cooldown după folosirea unui premiu se configurează din consola admin, per perioadă activă, iar backend-ul expune această valoare pentru a bloca reînvârtirea roții până la expirare.
 
 ### Calendar flotă și rezervări
 - `CarRentalCalendar` aduce în pagină sute de rezervări cu paginare incrementală, permite selecții multiple, crearea de booking-uri și navigarea pe ani/luni într-o interfață optimizată pentru densitate mare de date.

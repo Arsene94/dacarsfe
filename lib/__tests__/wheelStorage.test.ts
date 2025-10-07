@@ -1,15 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  WHEEL_COOLDOWN_DEFAULT_MS,
+  WHEEL_COOLDOWN_STORAGE_KEY,
   WHEEL_PRIZE_STORAGE_KEY,
   WHEEL_PRIZE_TTL_MS,
   clearStoredWheelPrize,
+  clearWheelCooldown,
   getStoredWheelPrize,
+  getWheelCooldown,
   isStoredWheelPrizeActive,
+  isWheelCooldownActive,
   parseStoredWheelPrize,
+  startWheelCooldown,
   storeWheelPrize,
 } from '@/lib/wheelStorage';
-import type { StoredWheelPrizeEntry } from '@/lib/wheelStorage';
+import type { StoredWheelPrizeEntry, StoredWheelCooldownEntry } from '@/lib/wheelStorage';
 import type { WheelPrize } from '@/types/wheel';
 
 describe('wheelStorage utilities', () => {
@@ -19,6 +25,7 @@ describe('wheelStorage utilities', () => {
 
   afterEach(() => {
     localStorage.clear();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -45,6 +52,7 @@ describe('wheelStorage utilities', () => {
       prize_id: '11',
       saved_at: '2024-01-03T10:00:00Z',
       expire_at: '2024-02-03T10:00:00Z',
+      cooldown_minutes: '180',
     };
 
     const parsed = parseStoredWheelPrize(raw);
@@ -71,6 +79,7 @@ describe('wheelStorage utilities', () => {
       prize_id: 11,
       saved_at: new Date('2024-01-03T10:00:00Z').toISOString(),
       expires_at: new Date('2024-02-03T10:00:00Z').toISOString(),
+      period_cooldown_minutes: 180,
     });
   });
 
@@ -106,6 +115,7 @@ describe('wheelStorage utilities', () => {
       winner: { name: '  Bob  ', phone: '  0711222333 ' },
       savedAt,
       expiresAt: undefined,
+      periodCooldownMinutes: 90,
     });
 
     expect(entry.version).toBe(1);
@@ -128,6 +138,7 @@ describe('wheelStorage utilities', () => {
     expect(entry.expires_at).toBe(
       new Date(new Date(savedAt).getTime() + WHEEL_PRIZE_TTL_MS).toISOString(),
     );
+    expect(entry.period_cooldown_minutes).toBe(90);
 
     const stored = localStorage.getItem(WHEEL_PRIZE_STORAGE_KEY);
     expect(stored).not.toBeNull();
@@ -181,6 +192,80 @@ describe('wheelStorage utilities', () => {
     expect(localStorage.getItem(WHEEL_PRIZE_STORAGE_KEY)).toBeNull();
   });
 
+  it('can start a cooldown window when clearing the prize', () => {
+    vi.useFakeTimers();
+    const now = new Date('2024-05-01T12:00:00Z');
+    vi.setSystemTime(now);
+
+    localStorage.setItem(WHEEL_PRIZE_STORAGE_KEY, JSON.stringify({ some: 'value' }));
+    clearStoredWheelPrize({ startCooldown: true, cooldownMs: 60_000, reason: 'reservation_completed' });
+
+    expect(localStorage.getItem(WHEEL_PRIZE_STORAGE_KEY)).toBeNull();
+    const cooldownRaw = localStorage.getItem(WHEEL_COOLDOWN_STORAGE_KEY);
+    expect(cooldownRaw).not.toBeNull();
+
+    const cooldown = JSON.parse(cooldownRaw as string) as StoredWheelCooldownEntry;
+    expect(cooldown.reason).toBe('reservation_completed');
+    expect(cooldown.started_at).toBe(now.toISOString());
+    expect(new Date(cooldown.expires_at).getTime()).toBe(now.getTime() + 60_000);
+  });
+
+  it('derivează durata cooldown-ului din premiul salvat atunci când nu este specificată', () => {
+    vi.useFakeTimers();
+    const now = new Date('2024-05-03T09:30:00Z');
+    vi.setSystemTime(now);
+
+    storeWheelPrize({
+      prize: {
+        id: 12,
+        period_id: 3,
+        title: 'Voucher 50€',
+        description: null,
+        amount: 50,
+        color: '#ffaa00',
+        probability: 1,
+        type: 'voucher',
+        created_at: null,
+        updated_at: null,
+      },
+      winner: { name: 'Ana', phone: '0712345678' },
+      savedAt: now,
+      periodCooldownMinutes: 45,
+    });
+
+    clearStoredWheelPrize({ startCooldown: true, reason: 'reservation_completed' });
+
+    const cooldownRaw = localStorage.getItem(WHEEL_COOLDOWN_STORAGE_KEY);
+    expect(cooldownRaw).not.toBeNull();
+    const cooldown = JSON.parse(cooldownRaw as string) as StoredWheelCooldownEntry;
+    expect(cooldown.reason).toBe('reservation_completed');
+    expect(new Date(cooldown.expires_at).getTime()).toBe(now.getTime() + 45 * 60 * 1000);
+  });
+
+  it('nu pornește cooldown-ul dacă premiul are fereastra setată la zero minute', () => {
+    storeWheelPrize({
+      prize: {
+        id: 13,
+        period_id: 4,
+        title: 'Fără cooldown',
+        description: null,
+        amount: null,
+        color: '#111111',
+        probability: 0.5,
+        type: 'other',
+        created_at: null,
+        updated_at: null,
+      },
+      winner: { name: 'Dan', phone: '0711999888' },
+      savedAt: '2024-05-05T08:00:00Z',
+      periodCooldownMinutes: 0,
+    });
+
+    clearStoredWheelPrize({ startCooldown: true, reason: 'reservation_completed' });
+
+    expect(localStorage.getItem(WHEEL_COOLDOWN_STORAGE_KEY)).toBeNull();
+  });
+
   it('determines whether a stored prize is still active', () => {
     const now = new Date('2024-01-01T12:00:00Z');
     const active: StoredWheelPrizeEntry = {
@@ -210,5 +295,38 @@ describe('wheelStorage utilities', () => {
     expect(isStoredWheelPrizeActive(expired, now)).toBe(false);
     expect(isStoredWheelPrizeActive(null, now)).toBe(false);
     expect(isStoredWheelPrizeActive({ ...active, expires_at: 'invalid-date' }, now)).toBe(false);
+  });
+
+  it('stores and reads cooldown entries', () => {
+    vi.useFakeTimers();
+    const now = new Date('2024-05-02T08:00:00Z');
+    vi.setSystemTime(now);
+
+    const entry = startWheelCooldown();
+    expect(entry.started_at).toBe(now.toISOString());
+    expect(entry.expires_at).toBe(new Date(now.getTime() + WHEEL_COOLDOWN_DEFAULT_MS).toISOString());
+
+    const stored = getWheelCooldown();
+    expect(stored).not.toBeNull();
+    expect(stored?.expires_at).toBe(entry.expires_at);
+
+    expect(isWheelCooldownActive(stored, now)).toBe(true);
+    const afterExpiry = new Date(new Date(entry.expires_at).getTime() + 1);
+    expect(isWheelCooldownActive(stored, afterExpiry)).toBe(false);
+
+    clearWheelCooldown();
+    expect(getWheelCooldown()).toBeNull();
+    expect(localStorage.getItem(WHEEL_COOLDOWN_STORAGE_KEY)).toBeNull();
+  });
+
+  it('purges invalid cooldown payloads', () => {
+    localStorage.setItem(WHEEL_COOLDOWN_STORAGE_KEY, JSON.stringify({}));
+    expect(getWheelCooldown()).toBeNull();
+    expect(localStorage.getItem(WHEEL_COOLDOWN_STORAGE_KEY)).toBeNull();
+
+    localStorage.setItem(WHEEL_COOLDOWN_STORAGE_KEY, '{invalid-json');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(getWheelCooldown()).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
   });
 });
