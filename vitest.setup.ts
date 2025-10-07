@@ -30,7 +30,7 @@ if (typeof window !== 'undefined') {
 vi.mock('next/image', () => ({
   __esModule: true,
   default: (props: any) => {
-    const { src, alt, ...rest } = props ?? {};
+    const { src, alt, priority: _priority, fill: _fill, ...rest } = props ?? {};
     const resolvedSrc = typeof src === 'string' ? src : src?.src ?? '';
     return React.createElement('img', {
       alt,
