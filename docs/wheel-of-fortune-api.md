@@ -138,6 +138,15 @@ prizes will only be eligible for bookings that overlap at least one of those mon
 
 Response includes nested wheels when `with=wheelOfFortunes` is requested.
 
+## Cooldown și comportament pe frontend
+
+- Frontend-ul DaCars salvează ultimul premiu câștigat în `localStorage` sub cheia `dacars.wheel-prize` și setează automat o
+  fereastră de așteptare în `dacars.wheel-cooldown` atunci când premiul este consumat la finalizarea rezervării.
+- Durata implicită a cooldown-ului este de 24 de ore și poate fi modificată prin variabila de mediu `NEXT_PUBLIC_WHEEL_COOLDOWN_MINUTES`
+  (valoare în minute).
+- `clearStoredWheelPrize({ startCooldown: true })` este apelată după confirmarea rezervării pentru a elimina premiul și a porni cooldown-ul.
+  Componenta publică blochează butonul Roții Norocului și afișează mesajul de așteptare până la expirarea ferestrei configurate.
+
 ## Error handling
 - Missing IDs return HTTP 404.
 - Invalid `type` values trigger `422` with messages such as `"The selected type is invalid."`.

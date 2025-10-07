@@ -4,6 +4,31 @@ export const WHEEL_PRIZE_STORAGE_KEY = "dacars.wheel-prize";
 export const WHEEL_PRIZE_STORAGE_VERSION = 1;
 export const WHEEL_PRIZE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
+export const WHEEL_COOLDOWN_STORAGE_KEY = "dacars.wheel-cooldown";
+export const WHEEL_COOLDOWN_STORAGE_VERSION = 1;
+
+const parseCooldownMinutes = (value: unknown): number | null => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return value > 0 ? value : null;
+    }
+    if (typeof value === "string") {
+        const normalized = value.trim();
+        if (!normalized) return null;
+        const parsed = Number(normalized);
+        if (Number.isFinite(parsed) && parsed > 0) {
+            return parsed;
+        }
+    }
+    return null;
+};
+
+const resolvedCooldownMinutes = parseCooldownMinutes(
+    process.env.NEXT_PUBLIC_WHEEL_COOLDOWN_MINUTES,
+);
+
+export const WHEEL_COOLDOWN_DEFAULT_MINUTES = resolvedCooldownMinutes ?? 24 * 60; // 24 hours
+export const WHEEL_COOLDOWN_DEFAULT_MS = WHEEL_COOLDOWN_DEFAULT_MINUTES * 60 * 1000;
+
 export interface StoredWheelPrizeEntry {
     version: number;
     prize: WheelPrize;
@@ -19,6 +44,13 @@ export interface StoredWheelPrizeEntry {
      * @deprecated Folosit doar pentru compatibilitate cu versiunile vechi care salvau `expiration_date`.
      */
     expiration_date?: string | null;
+}
+
+export interface StoredWheelCooldownEntry {
+    version: number;
+    started_at: string;
+    expires_at: string;
+    reason?: string | null;
 }
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => (
@@ -169,6 +201,28 @@ export const parseStoredWheelPrize = (
     return record;
 };
 
+const parseStoredWheelCooldown = (
+    raw: unknown,
+): StoredWheelCooldownEntry | null => {
+    if (!isPlainObject(raw)) return null;
+
+    const startedAt = normalizeDateIso(raw.started_at ?? raw.startedAt ?? raw.created_at);
+    const expiresAt = normalizeDateIso(raw.expires_at ?? raw.expiresAt ?? raw.valid_until);
+    if (!startedAt || !expiresAt) {
+        return null;
+    }
+
+    const reason = normalizeString(raw.reason);
+    const version = typeof raw.version === "number" ? raw.version : WHEEL_COOLDOWN_STORAGE_VERSION;
+
+    return {
+        version,
+        started_at: startedAt,
+        expires_at: expiresAt,
+        reason: reason ?? null,
+    };
+};
+
 export const getStoredWheelPrize = (): StoredWheelPrizeEntry | null => {
     if (typeof window === "undefined") return null;
     try {
@@ -188,9 +242,28 @@ export const getStoredWheelPrize = (): StoredWheelPrizeEntry | null => {
     }
 };
 
-export const clearStoredWheelPrize = () => {
+export const getWheelCooldown = (): StoredWheelCooldownEntry | null => {
+    if (typeof window === "undefined") return null;
+    try {
+        const raw = window.localStorage.getItem(WHEEL_COOLDOWN_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        const record = parseStoredWheelCooldown(parsed);
+        if (!record) {
+            window.localStorage.removeItem(WHEEL_COOLDOWN_STORAGE_KEY);
+            return null;
+        }
+        return record;
+    } catch (error) {
+        console.warn("Failed to parse wheel cooldown", error);
+        window.localStorage.removeItem(WHEEL_COOLDOWN_STORAGE_KEY);
+        return null;
+    }
+};
+
+export const clearWheelCooldown = () => {
     if (typeof window === "undefined") return;
-    window.localStorage.removeItem(WHEEL_PRIZE_STORAGE_KEY);
+    window.localStorage.removeItem(WHEEL_COOLDOWN_STORAGE_KEY);
 };
 
 export const isStoredWheelPrizeActive = (
@@ -201,6 +274,60 @@ export const isStoredWheelPrizeActive = (
     const expiryTime = Date.parse(record.expires_at);
     if (Number.isNaN(expiryTime)) return false;
     return expiryTime > referenceDate.getTime();
+};
+
+export const isWheelCooldownActive = (
+    record: StoredWheelCooldownEntry | null | undefined,
+    referenceDate: Date = new Date(),
+): boolean => {
+    if (!record) return false;
+    const expiryTime = Date.parse(record.expires_at);
+    if (Number.isNaN(expiryTime)) return false;
+    return expiryTime > referenceDate.getTime();
+};
+
+export const startWheelCooldown = (params?: {
+    durationMs?: number | null;
+    reason?: string | null;
+    startedAt?: string | Date | null;
+}): StoredWheelCooldownEntry => {
+    const durationMs =
+        typeof params?.durationMs === "number" && Number.isFinite(params.durationMs) && params.durationMs > 0
+            ? params.durationMs
+            : WHEEL_COOLDOWN_DEFAULT_MS;
+    const startedAtIso = normalizeDateIso(params?.startedAt) ?? new Date().toISOString();
+    const expiresAtIso = new Date(new Date(startedAtIso).getTime() + durationMs).toISOString();
+    const reason = normalizeString(params?.reason);
+
+    const record: StoredWheelCooldownEntry = {
+        version: WHEEL_COOLDOWN_STORAGE_VERSION,
+        started_at: startedAtIso,
+        expires_at: expiresAtIso,
+        reason: reason ?? null,
+    };
+
+    if (typeof window !== "undefined") {
+        window.localStorage.setItem(WHEEL_COOLDOWN_STORAGE_KEY, JSON.stringify(record));
+    }
+
+    return record;
+};
+
+export const clearStoredWheelPrize = (options?: {
+    startCooldown?: boolean;
+    cooldownMs?: number | null;
+    reason?: string | null;
+    startedAt?: string | Date | null;
+}) => {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(WHEEL_PRIZE_STORAGE_KEY);
+    if (options?.startCooldown) {
+        startWheelCooldown({
+            durationMs: options.cooldownMs ?? undefined,
+            reason: options.reason ?? null,
+            startedAt: options.startedAt ?? null,
+        });
+    }
 };
 
 export const storeWheelPrize = (params: {
@@ -235,6 +362,7 @@ export const storeWheelPrize = (params: {
     };
 
     if (typeof window !== "undefined") {
+        clearWheelCooldown();
         window.localStorage.setItem(WHEEL_PRIZE_STORAGE_KEY, JSON.stringify(record));
     }
 

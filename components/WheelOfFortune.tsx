@@ -10,6 +10,7 @@ import React, {
 import Image from "next/image";
 import {
     AlertCircle,
+    Clock,
     Gift,
     Loader2,
     RotateCcw,
@@ -32,10 +33,14 @@ import {
 } from "@/lib/wheelNormalization";
 import {
     clearStoredWheelPrize,
+    clearWheelCooldown,
     getStoredWheelPrize,
+    getWheelCooldown,
     isStoredWheelPrizeActive,
+    isWheelCooldownActive,
     storeWheelPrize,
     type StoredWheelPrizeEntry,
+    type StoredWheelCooldownEntry,
 } from "@/lib/wheelStorage";
 import type {
     WheelOfFortunePeriod,
@@ -172,6 +177,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     const [saveError, setSaveError] = useState<string | null>(null);
     const [clientIp, setClientIp] = useState<string | null>(null);
     const [storedPrizeRecord, setStoredPrizeRecord] = useState<StoredWheelPrizeEntry | null>(null);
+    const [cooldownRecord, setCooldownRecord] = useState<StoredWheelCooldownEntry | null>(null);
 
     const mountedRef = useRef(true);
     const spinTimeoutRef = useRef<number | null>(null);
@@ -193,6 +199,10 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         prefix?: string;
         suffix?: string;
         noExpiry?: string;
+    };
+    const wheelCooldown = (wheelMessages.cooldown ?? {}) as {
+        message?: string;
+        noTime?: string;
     };
     const wheelErrors = (wheelMessages.errors ?? {}) as Record<string, string>;
     const wheelButtons = (wheelMessages.buttons ?? {}) as Record<string, string>;
@@ -336,6 +346,39 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         }
     }, []);
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const storedCooldown = getWheelCooldown();
+        if (!storedCooldown) return;
+        if (isWheelCooldownActive(storedCooldown)) {
+            setCooldownRecord(storedCooldown);
+            setSpinsLeft(0);
+        } else {
+            clearWheelCooldown();
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!cooldownRecord) return;
+        const expiryTime = Date.parse(cooldownRecord.expires_at);
+        if (Number.isNaN(expiryTime)) return;
+        const refreshState = () => {
+            clearWheelCooldown();
+            setCooldownRecord(null);
+            setSpinsLeft((prev) => (
+                prev <= 0 && !isStoredWheelPrizeActive(storedPrizeRecord) ? 1 : prev
+            ));
+        };
+        const remaining = expiryTime - Date.now();
+        if (remaining <= 0) {
+            refreshState();
+            return;
+        }
+        if (typeof window === "undefined") return;
+        const timeoutId = window.setTimeout(refreshState, remaining);
+        return () => window.clearTimeout(timeoutId);
+    }, [cooldownRecord, storedPrizeRecord]);
+
     const fetchWheelData = useCallback(async () => {
         setAvailabilityStatus("unknown");
         setIsLoading(true);
@@ -448,6 +491,11 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         [storedPrizeRecord],
     );
 
+    const hasCooldown = useMemo(
+        () => isWheelCooldownActive(cooldownRecord),
+        [cooldownRecord],
+    );
+
     const persistPrizeResult = useCallback(async (prize: WheelPrize, info: { name: string; phone: string }) => {
         const normalizedParticipant = {
             name: info.name.trim(),
@@ -496,8 +544,22 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     }, []);
 
     const handleSpin = () => {
-        if (isSpinning || spinsLeft <= 0) return;
+        if (isSpinning) return;
         if (isLoading) return;
+
+        if (hasCooldown) {
+            const expiryLabel = cooldownRecord?.expires_at ? formatDateLabel(cooldownRecord.expires_at) : null;
+            const cooldownMessage = expiryLabel
+                ? (wheelCooldown.message ?? "Ai finalizat recent o rezervare folosind premiul câștigat. Poți încerca din nou după {{time}}.")
+                    .replace("{{time}}", expiryLabel)
+                : wheelCooldown.noTime
+                    ?? "Ai finalizat recent o rezervare folosind premiul câștigat. Reîncearcă în câteva ore.";
+            setFormError(cooldownMessage);
+            return;
+        }
+
+        if (spinsLeft <= 0) return;
+
         if (prizes.length === 0) {
             setFormError(unavailableMessage);
             return;
@@ -586,7 +648,9 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
 
     const resetSpins = () => {
         clearStoredWheelPrize();
+        clearWheelCooldown();
         setStoredPrizeRecord(null);
+        setCooldownRecord(null);
         setSpinsLeft(1);
         setRotation(0);
         setSelectedPrize(null);
@@ -608,7 +672,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
         if (onClose) onClose();
     };
 
-    const canSpin = !isSpinning && spinsLeft > 0 && prizes.length > 0 && !isLoading && !hasStoredPrize;
+    const canSpin = !isSpinning && spinsLeft > 0 && prizes.length > 0 && !isLoading && !hasStoredPrize && !hasCooldown;
     const selectedPrizeAmountLabel = selectedPrize ? describeWheelPrizeAmount(selectedPrize) : null;
     const storedPrizeAmountLabel = storedPrizeRecord
         ? describeWheelPrizeAmount(storedPrizeRecord.prize)
@@ -616,6 +680,17 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
     const storedPrizeExpiryLabel = storedPrizeRecord?.expires_at
         ? formatDateLabel(storedPrizeRecord.expires_at)
         : null;
+    const cooldownExpiryLabel = cooldownRecord?.expires_at
+        ? formatDateLabel(cooldownRecord.expires_at)
+        : null;
+
+    const cooldownButtonLabel = wheelButtons.cooldown ?? "Reîncearcă mai târziu";
+    const cooldownMessage = cooldownExpiryLabel
+        ? (wheelCooldown.message
+            ?? "Ai finalizat recent o rezervare folosind premiul câștigat. Poți încerca din nou după {{time}}.")
+            .replace("{{time}}", cooldownExpiryLabel)
+        : wheelCooldown.noTime
+            ?? "Ai finalizat recent o rezervare folosind premiul câștigat. Reîncearcă în câteva ore.";
 
     const winnerModal = showModal && selectedPrize ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -917,6 +992,10 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                             <>
                                 <RotateCcw className="mr-3 h-6 w-6 animate-spin" /> {spinningLabel}
                             </>
+                        ) : hasCooldown ? (
+                            <>
+                                <Clock className="mr-3 h-6 w-6" /> {cooldownButtonLabel}
+                            </>
                         ) : hasStoredPrize ? (
                             <>
                                 <Gift className="mr-3 h-6 w-6" /> {activePrizeLabel}
@@ -932,7 +1011,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isPopup = false, onClos
                         )}
                     </button>
 
-                    {spinsLeft <= 0 && !hasStoredPrize && (
+                    {hasCooldown && (
+                        <div className="flex w-full max-w-xs items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                            <AlertCircle className="mt-0.5 h-4 w-4" />
+                            <span>{cooldownMessage}</span>
+                        </div>
+                    )}
+
+                    {spinsLeft <= 0 && !hasStoredPrize && !hasCooldown && (
                         <button
                             type="button"
                             onClick={resetSpins}

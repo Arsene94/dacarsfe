@@ -219,13 +219,17 @@
       },
       "consent": "Datele sunt necesare pentru validarea premiului conform regulamentului DaCars."
     },
-    "storedPrize": {
-      "title": "Premiu activ din Roata Norocului",
-      "prefix": "Ai câștigat ",
-      "suffix": ". Premiul este valabil până la {{expiry}} și îl poți folosi direct în pagina de checkout.",
-      "noExpiry": "expirarea automată"
-    },
-    "errors": {
+  "storedPrize": {
+    "title": "Premiu activ din Roata Norocului",
+    "prefix": "Ai câștigat ",
+    "suffix": ". Premiul este valabil până la {{expiry}} și îl poți folosi direct în pagina de checkout.",
+    "noExpiry": "expirarea automată"
+  },
+  "cooldown": {
+    "message": "Ai finalizat recent o rezervare folosind premiul câștigat. Poți încerca din nou după {{time}}.",
+    "noTime": "Ai finalizat recent o rezervare folosind premiul câștigat. Reîncearcă în câteva ore."
+  },
+  "errors": {
       "load": "A apărut o eroare la încărcarea roții. Încearcă din nou mai târziu.",
       "form": "Completează toate câmpurile pentru a continua.",
       "loadNoPeriod": "Momentan nu există o perioadă activă pentru roata norocului.",
@@ -242,8 +246,9 @@
       "spin": "Învârte Roata",
       "spinning": "Se învârte...",
       "activePrize": "Premiu activ",
-      "outOfSpins": "Încercări epuizate",
-      "reset": "Resetează (Demo)",
+    "outOfSpins": "Încercări epuizate",
+    "cooldown": "Reîncearcă mai târziu",
+    "reset": "Resetează (Demo)",
       "close": "Închide",
       "tryAgain": "Încearcă din nou",
       "retrySave": "Reîncearcă salvarea",

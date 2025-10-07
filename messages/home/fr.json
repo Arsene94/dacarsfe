@@ -225,6 +225,10 @@
       "suffix": ". Le prix est valable jusqu'au {{expiry}} et vous pouvez l'utiliser directement lors du paiement.",
       "noExpiry": "expiration automatique"
     },
+    "cooldown": {
+      "message": "Vous avez récemment finalisé une réservation en utilisant votre prix. Vous pourrez réessayer après {{time}}.",
+      "noTime": "Vous avez récemment finalisé une réservation en utilisant votre prix. Réessayez dans quelques heures."
+    },
     "errors": {
       "load": "Une erreur est survenue lors du chargement de la roue. Veuillez réessayer plus tard.",
       "form": "Veuillez remplir tous les champs avant de lancer la roue.",
@@ -243,6 +247,7 @@
       "spinning": "En rotation...",
       "activePrize": "Prix actif",
       "outOfSpins": "Plus de tours disponibles",
+      "cooldown": "Réessayez plus tard",
       "reset": "Réinitialiser (Démo)",
       "close": "Fermer",
       "tryAgain": "Réessayer",

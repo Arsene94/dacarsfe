@@ -631,7 +631,9 @@ describe('Fluxul complet al clienților DaCars', () => {
     });
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/success'));
-    expect(clearStoredWheelPrizeMock).toHaveBeenCalled();
+    expect(clearStoredWheelPrizeMock).toHaveBeenCalledWith(
+      expect.objectContaining({ startCooldown: true }),
+    );
 
     const storedReservation = window.localStorage.getItem('reservationData');
     expect(storedReservation).toBeTruthy();

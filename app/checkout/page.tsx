@@ -1696,7 +1696,7 @@ const ReservationPage = () => {
                     reservationId,
                 }),
             );
-            clearStoredWheelPrize();
+            clearStoredWheelPrize({ startCooldown: true, reason: "reservation_completed" });
             setWheelPrizeRecord(null);
             router.push("/success");
         } catch (error) {

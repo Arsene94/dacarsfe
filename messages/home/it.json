@@ -225,6 +225,10 @@
       "suffix": ". Il premio è valido fino al {{expiry}} e puoi riscattarlo direttamente al checkout.",
       "noExpiry": "scadenza automatica"
     },
+    "cooldown": {
+      "message": "Hai finalizzato di recente una prenotazione utilizzando il premio. Potrai riprovare dopo {{time}}.",
+      "noTime": "Hai finalizzato di recente una prenotazione utilizzando il premio. Riprova tra qualche ora."
+    },
     "errors": {
       "load": "Si è verificato un errore durante il caricamento della ruota. Riprova più tardi.",
       "form": "Compila tutti i campi prima di girare.",
@@ -243,6 +247,7 @@
       "spinning": "Giro in corso...",
       "activePrize": "Premio attivo",
       "outOfSpins": "Nessun giro disponibile",
+      "cooldown": "Riprova più tardi",
       "reset": "Reset (Demo)",
       "close": "Chiudi",
       "tryAgain": "Riprova",

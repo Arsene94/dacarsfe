@@ -1,15 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  WHEEL_COOLDOWN_DEFAULT_MS,
+  WHEEL_COOLDOWN_STORAGE_KEY,
   WHEEL_PRIZE_STORAGE_KEY,
   WHEEL_PRIZE_TTL_MS,
   clearStoredWheelPrize,
+  clearWheelCooldown,
   getStoredWheelPrize,
+  getWheelCooldown,
   isStoredWheelPrizeActive,
+  isWheelCooldownActive,
   parseStoredWheelPrize,
+  startWheelCooldown,
   storeWheelPrize,
 } from '@/lib/wheelStorage';
-import type { StoredWheelPrizeEntry } from '@/lib/wheelStorage';
+import type { StoredWheelPrizeEntry, StoredWheelCooldownEntry } from '@/lib/wheelStorage';
 import type { WheelPrize } from '@/types/wheel';
 
 describe('wheelStorage utilities', () => {
@@ -19,6 +25,7 @@ describe('wheelStorage utilities', () => {
 
   afterEach(() => {
     localStorage.clear();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -181,6 +188,24 @@ describe('wheelStorage utilities', () => {
     expect(localStorage.getItem(WHEEL_PRIZE_STORAGE_KEY)).toBeNull();
   });
 
+  it('can start a cooldown window when clearing the prize', () => {
+    vi.useFakeTimers();
+    const now = new Date('2024-05-01T12:00:00Z');
+    vi.setSystemTime(now);
+
+    localStorage.setItem(WHEEL_PRIZE_STORAGE_KEY, JSON.stringify({ some: 'value' }));
+    clearStoredWheelPrize({ startCooldown: true, cooldownMs: 60_000, reason: 'reservation_completed' });
+
+    expect(localStorage.getItem(WHEEL_PRIZE_STORAGE_KEY)).toBeNull();
+    const cooldownRaw = localStorage.getItem(WHEEL_COOLDOWN_STORAGE_KEY);
+    expect(cooldownRaw).not.toBeNull();
+
+    const cooldown = JSON.parse(cooldownRaw as string) as StoredWheelCooldownEntry;
+    expect(cooldown.reason).toBe('reservation_completed');
+    expect(cooldown.started_at).toBe(now.toISOString());
+    expect(new Date(cooldown.expires_at).getTime()).toBe(now.getTime() + 60_000);
+  });
+
   it('determines whether a stored prize is still active', () => {
     const now = new Date('2024-01-01T12:00:00Z');
     const active: StoredWheelPrizeEntry = {
@@ -210,5 +235,38 @@ describe('wheelStorage utilities', () => {
     expect(isStoredWheelPrizeActive(expired, now)).toBe(false);
     expect(isStoredWheelPrizeActive(null, now)).toBe(false);
     expect(isStoredWheelPrizeActive({ ...active, expires_at: 'invalid-date' }, now)).toBe(false);
+  });
+
+  it('stores and reads cooldown entries', () => {
+    vi.useFakeTimers();
+    const now = new Date('2024-05-02T08:00:00Z');
+    vi.setSystemTime(now);
+
+    const entry = startWheelCooldown();
+    expect(entry.started_at).toBe(now.toISOString());
+    expect(entry.expires_at).toBe(new Date(now.getTime() + WHEEL_COOLDOWN_DEFAULT_MS).toISOString());
+
+    const stored = getWheelCooldown();
+    expect(stored).not.toBeNull();
+    expect(stored?.expires_at).toBe(entry.expires_at);
+
+    expect(isWheelCooldownActive(stored, now)).toBe(true);
+    const afterExpiry = new Date(new Date(entry.expires_at).getTime() + 1);
+    expect(isWheelCooldownActive(stored, afterExpiry)).toBe(false);
+
+    clearWheelCooldown();
+    expect(getWheelCooldown()).toBeNull();
+    expect(localStorage.getItem(WHEEL_COOLDOWN_STORAGE_KEY)).toBeNull();
+  });
+
+  it('purges invalid cooldown payloads', () => {
+    localStorage.setItem(WHEEL_COOLDOWN_STORAGE_KEY, JSON.stringify({}));
+    expect(getWheelCooldown()).toBeNull();
+    expect(localStorage.getItem(WHEEL_COOLDOWN_STORAGE_KEY)).toBeNull();
+
+    localStorage.setItem(WHEEL_COOLDOWN_STORAGE_KEY, '{invalid-json');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(getWheelCooldown()).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
   });
 });

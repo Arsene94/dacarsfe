@@ -225,6 +225,10 @@
       "suffix": " gewonnen. Der Gewinn ist bis {{expiry}} gültig und kann direkt beim Checkout eingelöst werden.",
       "noExpiry": "automatisches Ablaufdatum"
     },
+    "cooldown": {
+      "message": "Du hast vor Kurzem eine Buchung mit deinem Gewinn abgeschlossen. Du kannst nach {{time}} erneut drehen.",
+      "noTime": "Du hast vor Kurzem eine Buchung mit deinem Gewinn abgeschlossen. Versuche es in ein paar Stunden erneut."
+    },
     "errors": {
       "load": "Beim Laden des Rads ist etwas schiefgelaufen. Bitte versuche es später erneut.",
       "form": "Bitte fülle alle Felder aus, bevor du drehst.",
@@ -243,6 +247,7 @@
       "spinning": "Dreht...",
       "activePrize": "Aktiver Gewinn",
       "outOfSpins": "Keine Drehungen mehr",
+      "cooldown": "Später erneut versuchen",
       "reset": "Zurücksetzen (Demo)",
       "close": "Schließen",
       "tryAgain": "Noch einmal versuchen",

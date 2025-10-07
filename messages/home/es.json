@@ -225,6 +225,10 @@
       "suffix": ". El premio es válido hasta {{expiry}} y puedes canjearlo directamente durante el checkout.",
       "noExpiry": "caducidad automática"
     },
+    "cooldown": {
+      "message": "Has completado recientemente una reserva usando tu premio. Podrás volver a girar después de {{time}}.",
+      "noTime": "Has completado recientemente una reserva usando tu premio. Vuelve a intentarlo en unas horas."
+    },
     "errors": {
       "load": "Algo salió mal al cargar la ruleta. Por favor, inténtalo de nuevo más tarde.",
       "form": "Completa todos los campos antes de girar.",
@@ -243,6 +247,7 @@
       "spinning": "Girando...",
       "activePrize": "Premio activo",
       "outOfSpins": "Sin giros disponibles",
+      "cooldown": "Vuelve más tarde",
       "reset": "Reiniciar (Demo)",
       "close": "Cerrar",
       "tryAgain": "Intentar de nuevo",
