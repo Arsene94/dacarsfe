@@ -1656,6 +1656,54 @@ const BookingForm: React.FC<BookingFormProps> = ({
         }
     }, [bookingInfo]);
 
+    const recalcTotals = useCallback((info: AdminBookingFormValues): AdminBookingFormValues => {
+        const normalizedType = normalizeManualCouponType(info.coupon_type);
+        const parsedCouponAmount = toOptionalNumber(info.coupon_amount);
+        const resolvedCouponAmount =
+            normalizedType === "code"
+                ? 0
+                : parsedCouponAmount ?? (typeof info.coupon_amount === "number" ? info.coupon_amount : 0);
+
+        const fallbackBase =
+            toOptionalNumber(info.base_price) ??
+            toOptionalNumber(info.price_per_day) ??
+            toOptionalNumber(info.original_price_per_day);
+        const fallbackCasco =
+            toOptionalNumber(info.base_price_casco) ??
+            toOptionalNumber(info.base_price) ??
+            fallbackBase;
+
+        const nextBase =
+            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
+                ? resolvedCouponAmount
+                : fallbackBase ?? null;
+        const nextBaseCasco =
+            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
+                ? resolvedCouponAmount
+                : fallbackCasco ?? null;
+        const nextOriginal = info.original_price_per_day ?? fallbackBase ?? null;
+
+        const hasChanges =
+            info.coupon_type !== normalizedType ||
+            info.coupon_amount !== (normalizedType === "code" ? 0 : resolvedCouponAmount) ||
+            info.base_price !== nextBase ||
+            info.base_price_casco !== (nextBaseCasco ?? nextBase) ||
+            info.original_price_per_day !== nextOriginal;
+
+        if (!hasChanges) {
+            return info;
+        }
+
+        return {
+            ...info,
+            coupon_type: normalizedType,
+            coupon_amount: normalizedType === "code" ? 0 : resolvedCouponAmount,
+            base_price: nextBase,
+            base_price_casco: nextBaseCasco ?? nextBase,
+            original_price_per_day: nextOriginal,
+        };
+    }, []);
+
     const applyPlanSnapshot = useCallback(
         (prev: AdminBookingFormValues, nextWithDeposit: boolean): AdminBookingFormValues => {
             const targetPlan: "deposit" | "casco" = nextWithDeposit ? "deposit" : "casco";
@@ -1918,54 +1966,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }, [customerSearch, fetchCustomers, customerSearchActive]);
 
     // Populate customer details only when a suggestion is selected
-
-    const recalcTotals = useCallback((info: AdminBookingFormValues): AdminBookingFormValues => {
-        const normalizedType = normalizeManualCouponType(info.coupon_type);
-        const parsedCouponAmount = toOptionalNumber(info.coupon_amount);
-        const resolvedCouponAmount =
-            normalizedType === "code"
-                ? 0
-                : parsedCouponAmount ?? (typeof info.coupon_amount === "number" ? info.coupon_amount : 0);
-
-        const fallbackBase =
-            toOptionalNumber(info.base_price) ??
-            toOptionalNumber(info.price_per_day) ??
-            toOptionalNumber(info.original_price_per_day);
-        const fallbackCasco =
-            toOptionalNumber(info.base_price_casco) ??
-            toOptionalNumber(info.base_price) ??
-            fallbackBase;
-
-        const nextBase =
-            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
-                ? resolvedCouponAmount
-                : fallbackBase ?? null;
-        const nextBaseCasco =
-            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
-                ? resolvedCouponAmount
-                : fallbackCasco ?? null;
-        const nextOriginal = info.original_price_per_day ?? fallbackBase ?? null;
-
-        const hasChanges =
-            info.coupon_type !== normalizedType ||
-            info.coupon_amount !== (normalizedType === "code" ? 0 : resolvedCouponAmount) ||
-            info.base_price !== nextBase ||
-            info.base_price_casco !== (nextBaseCasco ?? nextBase) ||
-            info.original_price_per_day !== nextOriginal;
-
-        if (!hasChanges) {
-            return info;
-        }
-
-        return {
-            ...info,
-            coupon_type: normalizedType,
-            coupon_amount: normalizedType === "code" ? 0 : resolvedCouponAmount,
-            base_price: nextBase,
-            base_price_casco: nextBaseCasco ?? nextBase,
-            original_price_per_day: nextOriginal,
-        };
-    }, []);
 
     useEffect(() => {
         if (!open || !bookingCarId) return;
