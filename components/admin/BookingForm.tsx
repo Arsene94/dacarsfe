@@ -1089,10 +1089,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
         subtotal: 0,
         total: 0,
     });
-    const planSnapshotsRef = useRef<{ deposit: PlanSnapshot; casco: PlanSnapshot }>({
+    const [planSnapshots, setPlanSnapshots] = useState<{
+        deposit: PlanSnapshot;
+        casco: PlanSnapshot;
+    }>(() => ({
         deposit: createEmptyPlanSnapshot(),
         casco: createEmptyPlanSnapshot(),
-    });
+    }));
     const lastQuoteKeyRef = useRef<string | null>(null);
 
     const updateBookingInfo = useCallback(
@@ -1338,6 +1341,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
     useEffect(() => {
         setQuote(null);
         lastQuoteKeyRef.current = null;
+        setPlanSnapshots({
+            deposit: createEmptyPlanSnapshot(),
+            casco: createEmptyPlanSnapshot(),
+        });
     }, [bookingInfo?.id]);
 
     useEffect(() => {
@@ -1479,9 +1486,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         ? normalizedTotalCasco ?? previousTotal ?? normalizedTotalDeposit
                         : normalizedTotalDeposit ?? previousTotal ?? normalizedTotalCasco;
 
-                    const previousSnapshots = planSnapshotsRef.current;
-                    planSnapshotsRef.current = {
-                        deposit: mergePlanSnapshot(previousSnapshots.deposit, {
+                    setPlanSnapshots((prevSnapshots) => ({
+                        deposit: mergePlanSnapshot(prevSnapshots.deposit, {
                             pricePerDay: normalizedDepositRate ?? undefined,
                             subtotal:
                                 typeof normalizedSubtotalDeposit === "number"
@@ -1501,7 +1507,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     : undefined,
                             days: normalizedDays ?? undefined,
                         }),
-                        casco: mergePlanSnapshot(previousSnapshots.casco, {
+                        casco: mergePlanSnapshot(prevSnapshots.casco, {
                             pricePerDay: normalizedCascoRate ?? undefined,
                             subtotal:
                                 typeof normalizedSubtotalCasco === "number"
@@ -1521,7 +1527,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     : undefined,
                             days: normalizedDays ?? undefined,
                         }),
-                    };
+                    }));
 
                     return {
                         ...prev,
@@ -1643,18 +1649,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
             updates.days = bookingInfo.days;
         }
         if (Object.keys(updates).length > 0) {
-            planSnapshotsRef.current = {
-                ...planSnapshotsRef.current,
-                [activePlan]: mergePlanSnapshot(planSnapshotsRef.current[activePlan], updates),
-            };
+            setPlanSnapshots((prev) => ({
+                ...prev,
+                [activePlan]: mergePlanSnapshot(prev[activePlan], updates),
+            }));
         }
     }, [bookingInfo]);
 
     const applyPlanSnapshot = useCallback(
         (prev: AdminBookingFormValues, nextWithDeposit: boolean): AdminBookingFormValues => {
             const targetPlan: "deposit" | "casco" = nextWithDeposit ? "deposit" : "casco";
-            const snapshot = planSnapshotsRef.current[targetPlan];
-            const fallbackSnapshot = planSnapshotsRef.current[nextWithDeposit ? "casco" : "deposit"];
+            const snapshot = planSnapshots[targetPlan];
+            const fallbackSnapshot = planSnapshots[nextWithDeposit ? "casco" : "deposit"];
             const nextPricePerDay =
                 pickFirstNumber(
                     snapshot.pricePerDay,
@@ -1749,10 +1755,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         : undefined,
             };
 
-            planSnapshotsRef.current = {
-                ...planSnapshotsRef.current,
-                [targetPlan]: mergePlanSnapshot(planSnapshotsRef.current[targetPlan], snapshotUpdates),
-            };
+            const hasSnapshotUpdates = Object.values(snapshotUpdates).some(
+                (value) => value !== undefined,
+            );
+            if (hasSnapshotUpdates) {
+                setPlanSnapshots((currentSnapshots) => ({
+                    ...currentSnapshots,
+                    [targetPlan]: mergePlanSnapshot(currentSnapshots[targetPlan], snapshotUpdates),
+                }));
+            }
 
             return recalcTotals({
                 ...prev,
@@ -1767,7 +1778,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 total_before_wheel_prize: normalizedTotalBefore,
             });
         },
-        [recalcTotals],
+        [planSnapshots, recalcTotals, setPlanSnapshots],
     );
 
 
@@ -2251,7 +2262,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     if (!bookingInfo) return null;
 
-    const days = quote?.days ?? bookingInfo.days ?? 0;
     const pricePerDayValue = toOptionalNumber(bookingInfo.price_per_day);
     const originalRateFromBooking = toOptionalNumber(bookingInfo.original_price_per_day);
     const depositQuoteRate = pickFirstNumber(
@@ -2265,7 +2275,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
         toOptionalNumber(quote?.base_price_casco),
     );
     const isWithDeposit = bookingInfo.with_deposit !== false;
+    const depositPlanSnapshot = planSnapshots.deposit;
+    const cascoPlanSnapshot = planSnapshots.casco;
+    const activePlanSnapshot = isWithDeposit ? depositPlanSnapshot : cascoPlanSnapshot;
+    const days =
+        typeof activePlanSnapshot.days === "number" && Number.isFinite(activePlanSnapshot.days)
+            ? activePlanSnapshot.days
+            : quote?.days ?? bookingInfo.days ?? 0;
     const depositPlanBaseRate = pickFirstNumber(
+        depositPlanSnapshot.pricePerDay,
         depositQuoteRate,
         toOptionalNumber(quote?.base_price),
         toOptionalNumber(bookingInfo.base_price),
@@ -2273,6 +2291,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         originalRateFromBooking,
     );
     const cascoPlanBaseRate = pickFirstNumber(
+        cascoPlanSnapshot.pricePerDay,
         cascoQuoteRate,
         toOptionalNumber(quote?.base_price_casco),
         toOptionalNumber(bookingInfo.base_price_casco),
@@ -2287,12 +2306,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
         0;
     const discountedRate = isWithDeposit
         ? pickFirstNumber(
+              depositPlanSnapshot.pricePerDay,
               depositQuoteRate,
               toOptionalNumber(quote?.price_per_day),
               toOptionalNumber(bookingInfo.price_per_day),
               depositPlanBaseRate,
           ) ?? baseRate
         : pickFirstNumber(
+              cascoPlanSnapshot.pricePerDay,
               cascoQuoteRate,
               toOptionalNumber((quote as { price_per_day_casco?: unknown })?.price_per_day_casco),
               toOptionalNumber(bookingInfo.price_per_day),
@@ -2301,19 +2322,27 @@ const BookingForm: React.FC<BookingFormProps> = ({
           ) ?? baseRate;
     const discountedSubtotal = isWithDeposit
         ? pickFirstNumber(
+              depositPlanSnapshot.subtotal,
               toOptionalNumber(quote?.sub_total),
               toOptionalNumber(bookingInfo.sub_total),
               toOptionalNumber((quote as { sub_total_casco?: unknown })?.sub_total_casco),
           )
         : pickFirstNumber(
+              cascoPlanSnapshot.subtotal,
               toOptionalNumber((quote as { sub_total_casco?: unknown })?.sub_total_casco),
               toOptionalNumber(bookingInfo.sub_total),
               toOptionalNumber(quote?.sub_total),
           );
     const discount = isWithDeposit
-        ? toOptionalNumber(quote?.discount) ?? 0
+        ? pickFirstNumber(
+              depositPlanSnapshot.discount,
+              toOptionalNumber(quote?.discount),
+              toOptionalNumber(bookingInfo.discount_applied),
+          ) ?? 0
         : pickFirstNumber(
+              cascoPlanSnapshot.discount,
               toOptionalNumber((quote as { discount_casco?: unknown })?.discount_casco),
+              toOptionalNumber(bookingInfo.discount_applied),
               toOptionalNumber(quote?.discount),
           ) ?? 0;
     const wheelPrizeDiscountValue =
@@ -2330,11 +2359,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
         typeof normalizedWheelPrizeDiscount === "number" && normalizedWheelPrizeDiscount !== 0;
     const discountedTotalQuote = isWithDeposit
         ? pickFirstNumber(
+              depositPlanSnapshot.total,
               toOptionalNumber(quote?.total),
               toOptionalNumber(bookingInfo.total),
               toOptionalNumber((quote as { total_casco?: unknown })?.total_casco),
           )
         : pickFirstNumber(
+              cascoPlanSnapshot.total,
               toOptionalNumber((quote as { total_casco?: unknown })?.total_casco),
               toOptionalNumber(bookingInfo.total),
               toOptionalNumber(quote?.total),
