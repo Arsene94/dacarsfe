@@ -642,6 +642,59 @@ const sanitizeAppliedOffersPayload = (
     return sanitized.length > 0 ? sanitized : null;
 };
 
+const sanitizeAppliedOffersForQuote = (
+    offers: ReservationAppliedOffer[] | null | undefined,
+): ReservationAppliedOffer[] | null => {
+    if (!Array.isArray(offers) || offers.length === 0) {
+        return null;
+    }
+
+    const sanitized = offers
+        .map((offer) => {
+            if (!offer || typeof offer.id !== "number" || Number.isNaN(offer.id)) {
+                return null;
+            }
+
+            const title = typeof offer.title === "string" ? offer.title.trim() : "";
+            if (!title) {
+                return null;
+            }
+
+            const normalized: ReservationAppliedOffer = {
+                id: offer.id,
+                title,
+                offer_type: offer.offer_type ?? null,
+                offer_value: offer.offer_value ?? null,
+                discount_label: offer.discount_label ?? null,
+            };
+
+            const percentDeposit = toOptionalNumber(offer.percent_discount_deposit);
+            if (percentDeposit != null) {
+                normalized.percent_discount_deposit = percentDeposit;
+            }
+
+            const percentCasco = toOptionalNumber(offer.percent_discount_casco);
+            if (percentCasco != null) {
+                normalized.percent_discount_casco = percentCasco;
+            }
+
+            const fixedDeposit = toOptionalNumber(offer.fixed_discount_deposit);
+            if (fixedDeposit != null) {
+                normalized.fixed_discount_deposit = fixedDeposit;
+            }
+
+            const fixedCasco = toOptionalNumber(offer.fixed_discount_casco);
+            if (fixedCasco != null) {
+                normalized.fixed_discount_casco = fixedCasco;
+            }
+
+            return normalized;
+        })
+        .filter((entry): entry is ReservationAppliedOffer => entry != null);
+
+    return sanitized.length > 0 ? sanitized : null;
+};
+
 const isOfferActiveForRange = (
     offer: AdminOfferOption,
     startDate: Date | null,
@@ -773,21 +826,11 @@ const buildQuotePayload = (
         payload.total_before_wheel_prize = totalBeforeWheelPrize;
     }
 
-    const offersDiscount = toOptionalNumber(values.offers_discount);
-    if (offersDiscount != null) {
-        payload.offers_discount = offersDiscount;
-    }
-
-    const offerFixedDiscount = toOptionalNumber(values.offer_fixed_discount);
-    if (offerFixedDiscount != null) {
-        payload.offer_fixed_discount = offerFixedDiscount;
-    }
-
     if (values.deposit_waived === true) {
         payload.deposit_waived = true;
     }
 
-    const appliedOffersPayload = sanitizeAppliedOffersPayload(values.applied_offers);
+    const appliedOffersPayload = sanitizeAppliedOffersForQuote(values.applied_offers);
     if (appliedOffersPayload) {
         payload.applied_offers = appliedOffersPayload;
     }
@@ -1240,6 +1283,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
         return primaryOffer ? String(primaryOffer.id) : "";
     }, [bookingInfo]);
 
+    const appliedOffersQuoteKey = useMemo(() => {
+        const sanitized = sanitizeAppliedOffersForQuote(bookingInfo?.applied_offers);
+        return JSON.stringify(sanitized ?? []);
+    }, [bookingInfo?.applied_offers]);
+
     useEffect(() => {
         setQuote(null);
         lastQuoteKeyRef.current = null;
@@ -1412,9 +1460,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo?.with_deposit,
         bookingInfo?.wheel_prize,
         bookingInfo?.wheel_prize_discount,
-        bookingInfo?.applied_offers,
-        bookingInfo?.offers_discount,
-        bookingInfo?.offer_fixed_discount,
+        appliedOffersQuoteKey,
         bookingInfo?.deposit_waived,
         bookingInfo?.total_before_wheel_prize,
     ]);
