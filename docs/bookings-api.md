@@ -206,6 +206,15 @@ enforces a booking window (`is_date_valid=true` together with `valid_start_date`
 `rental_start_date`/`rental_end_date` must fall inside that interval. Quotes outside the range are rejected with
 `Cuponul nu este valabil pentru perioada selectată.`
 
+Manual overrides can also be applied without a coupon code by providing `coupon_type` and `coupon_amount`:
+
+- `per_day` – subtract a fixed value from the computed daily rate.
+- `fixed_per_day` – force the daily rate to the supplied value.
+- `days` – make the given number of rental days free of charge.
+- `from_total` – subtract a flat amount from the computed subtotal.
+- `percentage` – subtract the given percentage (0–100) from the subtotal. Send `coupon_amount` as the percentage value, e.g. `10`
+  for a 10 % discount. The quote response returns the monetary value deducted via the usual `discount` / `coupon_amount` fields.
+
 ### Response
 ```json
 {

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import BookingForm from '@/components/admin/BookingForm';
 import apiClient from '@/lib/api';
 import { extractItem, extractList } from '@/lib/apiResponse';
+import { normalizeManualCouponType } from '@/lib/bookingDiscounts';
 import type { ApiCar } from '@/types/car';
 import { createEmptyBookingForm, type AdminBookingResource, type AdminBookingFormValues } from '@/types/admin';
 
@@ -1003,10 +1004,11 @@ const CarRentalCalendar: React.FC = () => {
                 baseForm.car_fuel;
             const carDeposit =
                 parseOptionalNumber(info.car_deposit ?? carInfo?.deposit) ?? baseForm.car_deposit;
-            const couponType =
+            const couponType = normalizeManualCouponType(
                 pickNonEmptyString(info.coupon_type) ??
-                pickNonEmptyString((info as { discount_type?: unknown }).discount_type) ??
-                baseForm.coupon_type;
+                    pickNonEmptyString((info as { discount_type?: unknown }).discount_type) ??
+                    baseForm.coupon_type,
+            );
             const couponCode = toSafeString(info.coupon_code, baseForm.coupon_code);
             const days = parseOptionalNumber(info.days) ?? baseForm.days;
             const status = toSafeString(info.status, baseForm.status);
