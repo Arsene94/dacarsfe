@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { mapPeriod } from "@/lib/wheelNormalization";
+import { normalizeManualCouponType } from "@/lib/bookingDiscounts";
 import {
     extractFirstCar,
     mapCustomerSearchResults,
@@ -202,17 +203,6 @@ const resolveServiceSelection = (
         }
     });
     return merged.sort((a, b) => a - b);
-};
-
-const normalizeCouponTypeValue = (raw: unknown): string => {
-    if (typeof raw !== "string") {
-        return "";
-    }
-    const trimmed = raw.trim();
-    if (trimmed === "from_total") {
-        return "per_total";
-    }
-    return trimmed;
 };
 
 const toApiDateTime = (value: string | null | undefined): string | undefined => {
@@ -756,7 +746,7 @@ const buildQuotePayload = (
         payload.total_services = totalServices;
     }
 
-    const couponType = normalizeCouponTypeValue(values.coupon_type);
+    const couponType = normalizeManualCouponType(values.coupon_type);
     if (couponType) {
         payload.coupon_type = couponType;
         if (couponType === "code") {
@@ -866,7 +856,7 @@ const buildBookingUpdatePayload = (
         payload.car_id = rawCarId.trim();
     }
 
-    const couponType = normalizeCouponTypeValue(values.coupon_type);
+    const couponType = normalizeManualCouponType(values.coupon_type);
     if (couponType) {
         payload.coupon_type = couponType;
     }
@@ -1106,6 +1096,17 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const bookingCarLicense = bookingInfo?.car_license_plate ?? "";
     const bookingCarTransmission = bookingInfo?.car_transmission ?? "";
     const bookingCarFuel = bookingInfo?.car_fuel ?? "";
+    const couponTypeValue = normalizeManualCouponType(bookingInfo?.coupon_type);
+    const couponValueLabel =
+        couponTypeValue === "code"
+            ? "Cod cupon"
+            : couponTypeValue === "percentage"
+                ? "Procentaj (%)"
+                : "Valoare";
+    const couponValueInputProps =
+        couponTypeValue === "percentage"
+            ? { min: 0, max: 100, step: 0.1 }
+            : {};
     const selectedCarOption = bookingInfo?.car_id
         ? normalizeAdminCarOption({
               id: bookingInfo.car_id,
@@ -1606,7 +1607,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     // Populate customer details only when a suggestion is selected
 
     const recalcTotals = useCallback((info: AdminBookingFormValues): AdminBookingFormValues => {
-        const normalizedType = normalizeCouponTypeValue(info.coupon_type);
+        const normalizedType = normalizeManualCouponType(info.coupon_type);
         const parsedCouponAmount = toOptionalNumber(info.coupon_amount);
         const resolvedCouponAmount =
             normalizedType === "code"
@@ -2256,10 +2257,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         <Label htmlFor="coupon-type">Tip discount</Label>
                         <Select
                             id="coupon-type"
-                            value={bookingInfo.coupon_type || ""}
+                            value={couponTypeValue}
                             onValueChange={(value) =>
                                 updateBookingInfo((prev) => {
-                                    const normalized = normalizeCouponTypeValue(value);
+                                    const normalized = normalizeManualCouponType(value);
                                     return recalcTotals({
                                         ...prev,
                                         coupon_type: normalized,
@@ -2273,26 +2274,26 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             <option value="fixed_per_day">Pret fix pe zi</option>
                             <option value="per_day">Reducere pret pe zi</option>
                             <option value="days">Zile</option>
-                            <option value="per_total">Din total</option>
+                            <option value="from_total">Din total</option>
+                            <option value="percentage">Procentaj</option>
                             <option value="code">Cupon</option>
                         </Select>
                     </div>
                     <div>
-                        <Label htmlFor="coupon-value">
-                            {bookingInfo.coupon_type === "code" ? "Cod cupon" : "Valoare"}
-                        </Label>
+                        <Label htmlFor="coupon-value">{couponValueLabel}</Label>
                         <Input
                             id="coupon-value"
-                            type={bookingInfo.coupon_type === "code" ? "text" : "number"}
+                            type={couponTypeValue === "code" ? "text" : "number"}
+                            {...couponValueInputProps}
                             value={
-                                bookingInfo.coupon_type === "code"
+                                couponTypeValue === "code"
                                     ? bookingInfo.coupon_code ?? ""
                                     : bookingInfo.coupon_amount ?? 0
                             }
                             onChange={(e) => {
                                 const rawValue = e.target.value;
                                 updateBookingInfo((prev) => {
-                                    const nextType = normalizeCouponTypeValue(
+                                    const nextType = normalizeManualCouponType(
                                         prev.coupon_type && prev.coupon_type.length > 0
                                             ? prev.coupon_type
                                             : "fixed_per_day",

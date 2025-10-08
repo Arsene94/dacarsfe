@@ -46,7 +46,7 @@ Default is `azi` (today).
       "advance_payment": 100,
       "price_per_day": 36,
       "coupon_amount": 15,
-      "coupon_type": "percent",
+      "coupon_type": "percentage",
       "with_deposit": true,
       "services": [
         { "id": 1, "name": "Scaun copil" },
@@ -70,6 +70,8 @@ Default is `azi` (today).
   }
 }
 ```
+
+Discount metadata mirrors the booking quote contract: `coupon_type` reuses the manual override values accepted by `/api/bookings/quote` (including the new `percentage` option), while `coupon_amount` and `discount` expose the applied currency value so the UI can still surface the original percentage configured in the admin form.
 
 ---
 
