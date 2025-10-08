@@ -1350,8 +1350,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         toOptionalNumber(data.base_price_casco) ??
                         toOptionalNumber(prev.base_price_casco);
                     const selectedRateCandidate = preferCasco
-                        ? cascoRateCandidate ?? depositRateCandidate ?? prevPricePerDay
-                        : depositRateCandidate ?? cascoRateCandidate ?? prevPricePerDay;
+                        ? cascoRateCandidate ?? prevPricePerDay ?? depositRateCandidate
+                        : depositRateCandidate ?? prevPricePerDay ?? cascoRateCandidate;
                     const normalizedSelectedRate =
                         typeof selectedRateCandidate === "number" && Number.isFinite(selectedRateCandidate)
                             ? Math.round(selectedRateCandidate * 100) / 100
@@ -1419,12 +1419,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         toOptionalNumber(normalizedWheelPrize?.prize_id) ??
                         toOptionalNumber(prev.wheel_of_fortune_prize_id);
 
+                    const previousSubtotal = toOptionalNumber(prev.sub_total);
+                    const previousTotal = toOptionalNumber(prev.total);
                     const nextSubtotal = preferCasco
-                        ? normalizedSubtotalCasco ?? normalizedSubtotalDeposit
-                        : normalizedSubtotalDeposit ?? normalizedSubtotalCasco;
+                        ? normalizedSubtotalCasco ?? previousSubtotal ?? normalizedSubtotalDeposit
+                        : normalizedSubtotalDeposit ?? previousSubtotal ?? normalizedSubtotalCasco;
                     const nextTotal = preferCasco
-                        ? normalizedTotalCasco ?? normalizedTotalDeposit
-                        : normalizedTotalDeposit ?? normalizedTotalCasco;
+                        ? normalizedTotalCasco ?? previousTotal ?? normalizedTotalDeposit
+                        : normalizedTotalDeposit ?? previousTotal ?? normalizedTotalCasco;
 
                     return {
                         ...prev,
