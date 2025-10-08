@@ -64,6 +64,7 @@ const HeroSection = () => {
                         alt="Fundal aeroport"
                         fill
                         priority
+                        media="(max-width: 639px)"
                         placeholder="blur"
                         sizes="(max-width: 639px) 100vw, 0vw"
                         quality={60}
@@ -76,6 +77,7 @@ const HeroSection = () => {
                         alt="Fundal aeroport"
                         fill
                         priority
+                        media="(min-width: 640px)"
                         placeholder="blur"
                         sizes="(min-width: 640px) 100vw, 0vw"
                         quality={60}
