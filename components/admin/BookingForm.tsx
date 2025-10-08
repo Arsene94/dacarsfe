@@ -1340,22 +1340,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     const prevPricePerDay = toOptionalNumber(prev.price_per_day);
                     const prevOriginalPrice = toOptionalNumber(prev.original_price_per_day);
                     const depositRateCandidate =
-                        typeof data.rental_rate === "number"
-                            ? data.rental_rate
-                            : typeof data.base_price === "number"
-                              ? data.base_price
-                              : typeof data.price_per_day === "number"
-                                ? data.price_per_day
-                                : toOptionalNumber(prev.base_price);
+                        toOptionalNumber(data.rental_rate) ??
+                        toOptionalNumber(data.base_price) ??
+                        toOptionalNumber((data as { price_per_day?: unknown }).price_per_day) ??
+                        toOptionalNumber(prev.base_price);
                     const cascoRateCandidate =
-                        typeof data.rental_rate_casco === "number"
-                            ? data.rental_rate_casco
-                            : typeof data.base_price_casco === "number"
-                                ? data.base_price_casco
-                                : toOptionalNumber(prev.base_price_casco);
+                        toOptionalNumber(data.rental_rate_casco) ??
+                        toOptionalNumber((data as { price_per_day_casco?: unknown }).price_per_day_casco) ??
+                        toOptionalNumber(data.base_price_casco) ??
+                        toOptionalNumber(prev.base_price_casco);
                     const selectedRateCandidate = preferCasco
-                        ? cascoRateCandidate ?? prevPricePerDay ?? depositRateCandidate
-                        : depositRateCandidate ?? prevPricePerDay ?? cascoRateCandidate;
+                        ? cascoRateCandidate ?? depositRateCandidate ?? prevPricePerDay
+                        : depositRateCandidate ?? cascoRateCandidate ?? prevPricePerDay;
                     const normalizedSelectedRate =
                         typeof selectedRateCandidate === "number" && Number.isFinite(selectedRateCandidate)
                             ? Math.round(selectedRateCandidate * 100) / 100
@@ -1368,32 +1364,49 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         typeof cascoRateCandidate === "number" && Number.isFinite(cascoRateCandidate)
                             ? Math.round(cascoRateCandidate * 100) / 100
                             : null;
+                    const normalizedSubtotalDeposit =
+                        toOptionalNumber(data.sub_total) ?? toOptionalNumber(prev.sub_total);
+                    const normalizedSubtotalCasco =
+                        toOptionalNumber((data as { sub_total_casco?: unknown }).sub_total_casco) ??
+                        toOptionalNumber(prev.sub_total);
+                    const normalizedTotalDeposit =
+                        toOptionalNumber(data.total) ?? toOptionalNumber(prev.total);
+                    const normalizedTotalCasco =
+                        toOptionalNumber((data as { total_casco?: unknown }).total_casco) ??
+                        toOptionalNumber(prev.total);
+                    const normalizedDiscount =
+                        toOptionalNumber(data.discount) ??
+                        (typeof prev.discount_applied === "number"
+                            ? prev.discount_applied
+                            : toOptionalNumber(prev.discount_applied));
+                    const normalizedWheelPrizeDiscount =
+                        toOptionalNumber(data.wheel_prize_discount) ??
+                        toOptionalNumber(prev.wheel_prize_discount) ??
+                        0;
+                    const normalizedTotalBefore =
+                        toOptionalNumber(data.total_before_wheel_prize) ??
+                        toOptionalNumber(prev.total_before_wheel_prize);
+                    const normalizedOffersDiscount =
+                        toOptionalNumber(data.offers_discount) ??
+                        (typeof prev.offers_discount === "number"
+                            ? prev.offers_discount
+                            : toOptionalNumber(prev.offers_discount) ?? 0);
+                    const normalizedOfferFixedDiscount =
+                        toOptionalNumber(data.offer_fixed_discount) ??
+                        (typeof prev.offer_fixed_discount === "number"
+                            ? prev.offer_fixed_discount
+                            : toOptionalNumber(prev.offer_fixed_discount) ?? 0);
+                    const normalizedTotalServices =
+                        toOptionalNumber(data.total_services) ??
+                        toOptionalNumber(prev.total_services);
 
                     const normalizedWheelPrize =
                         normalizeWheelPrizeSummary(data.wheel_prize) ?? prev.wheel_prize ?? null;
-                    const normalizedWheelPrizeDiscount =
-                        typeof data.wheel_prize_discount === "number"
-                            ? data.wheel_prize_discount
-                            : prev.wheel_prize_discount ?? 0;
-                    const normalizedTotalBefore =
-                        typeof data.total_before_wheel_prize === "number"
-                            ? data.total_before_wheel_prize
-                            : prev.total_before_wheel_prize ?? null;
                     const normalizedAppliedOffers = normalizeAppliedOffers(data.applied_offers);
                     const nextAppliedOffers =
                         normalizedAppliedOffers.length > 0
                             ? normalizedAppliedOffers
                             : prev.applied_offers ?? [];
-                    const normalizedOffersDiscount =
-                        typeof data.offers_discount === "number"
-                            ? data.offers_discount
-                            : prev.offers_discount ?? 0;
-                    const normalizedOfferFixedDiscount =
-                        typeof data.offer_fixed_discount === "number"
-                            ? data.offer_fixed_discount
-                            : typeof prev.offer_fixed_discount === "number"
-                                ? prev.offer_fixed_discount
-                                : 0;
                     const normalizedDepositWaived =
                         typeof data.deposit_waived === "boolean"
                             ? data.deposit_waived
@@ -1407,35 +1420,61 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         toOptionalNumber(prev.wheel_of_fortune_prize_id);
 
                     const nextSubtotal = preferCasco
-                        ? data.sub_total_casco ?? data.sub_total ?? prev.sub_total
-                        : data.sub_total ?? data.sub_total_casco ?? prev.sub_total;
+                        ? normalizedSubtotalCasco ?? normalizedSubtotalDeposit
+                        : normalizedSubtotalDeposit ?? normalizedSubtotalCasco;
                     const nextTotal = preferCasco
-                        ? data.total_casco ?? data.total ?? prev.total
-                        : data.total ?? data.total_casco ?? prev.total;
+                        ? normalizedTotalCasco ?? normalizedTotalDeposit
+                        : normalizedTotalDeposit ?? normalizedTotalCasco;
 
                     return {
                         ...prev,
                         days: typeof data.days === "number" ? data.days : prev.days ?? 0,
                         price_per_day: normalizedSelectedRate ?? prev.price_per_day,
-                        original_price_per_day: prevOriginalPrice ??
+                        original_price_per_day:
+                            prevOriginalPrice ??
                             (typeof prevPricePerDay === "number" && Number.isFinite(prevPricePerDay)
                                 ? Math.round(prevPricePerDay * 100) / 100
                                 : normalizedSelectedRate ?? null),
-                        base_price: normalizedDepositRate ?? prev.base_price ?? data.base_price ?? null,
-                        base_price_casco: normalizedCascoRate ?? prev.base_price_casco ?? data.base_price_casco ?? null,
-                        sub_total: typeof nextSubtotal === "number" ? nextSubtotal : prev.sub_total,
-                        total: typeof nextTotal === "number" ? nextTotal : prev.total,
-                        discount_applied: data.discount ?? null,
-                        total_services: data.total_services ?? prev.total_services,
+                        base_price:
+                            normalizedDepositRate ??
+                            toOptionalNumber(prev.base_price) ??
+                            toOptionalNumber(data.base_price) ??
+                            null,
+                        base_price_casco:
+                            normalizedCascoRate ??
+                            toOptionalNumber(prev.base_price_casco) ??
+                            toOptionalNumber(data.base_price_casco) ??
+                            null,
+                        sub_total:
+                            typeof nextSubtotal === "number" && Number.isFinite(nextSubtotal)
+                                ? Math.round(nextSubtotal * 100) / 100
+                                : prev.sub_total,
+                        total:
+                            typeof nextTotal === "number" && Number.isFinite(nextTotal)
+                                ? Math.round(nextTotal * 100) / 100
+                                : prev.total,
+                        discount_applied: normalizedDiscount ?? null,
+                        total_services:
+                            typeof normalizedTotalServices === "number"
+                                ? Math.round(normalizedTotalServices * 100) / 100
+                                : prev.total_services,
                         wheel_prize: normalizedWheelPrize,
                         wheel_prize_discount: normalizedWheelPrizeDiscount,
                         total_before_wheel_prize:
                             typeof normalizedTotalBefore === "number"
-                                ? normalizedTotalBefore
+                                ? Math.round(normalizedTotalBefore * 100) / 100
                                 : prev.total_before_wheel_prize,
                         applied_offers: nextAppliedOffers,
-                        offers_discount: normalizedOffersDiscount,
-                        offer_fixed_discount: normalizedOfferFixedDiscount,
+                        offers_discount:
+                            typeof normalizedOffersDiscount === "number"
+                                ? Math.round(normalizedOffersDiscount * 100) / 100
+                                : prev.offers_discount,
+                        offer_fixed_discount:
+                            typeof normalizedOfferFixedDiscount === "number"
+                                ? Math.round(normalizedOfferFixedDiscount * 100) / 100
+                                : typeof prev.offer_fixed_discount === "number"
+                                  ? prev.offer_fixed_discount
+                                  : 0,
                         deposit_waived: normalizedDepositWaived,
                         wheel_of_fortune_prize_id:
                             typeof normalizedWheelPrizeId === "number"
