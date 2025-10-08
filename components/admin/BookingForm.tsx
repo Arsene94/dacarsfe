@@ -1379,6 +1379,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     return;
                 }
                 setQuote(data);
+                let pendingSnapshotUpdates: {
+                    deposit: Partial<PlanSnapshot>;
+                    casco: Partial<PlanSnapshot>;
+                } | null = null;
+
                 updateBookingInfo((prev) => {
                     const preferCasco = prev.with_deposit === false;
                     const prevPricePerDay = toOptionalNumber(prev.price_per_day);
@@ -1486,8 +1491,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         ? normalizedTotalCasco ?? previousTotal ?? normalizedTotalDeposit
                         : normalizedTotalDeposit ?? previousTotal ?? normalizedTotalCasco;
 
-                    setPlanSnapshots((prevSnapshots) => ({
-                        deposit: mergePlanSnapshot(prevSnapshots.deposit, {
+                    pendingSnapshotUpdates = {
+                        deposit: {
                             pricePerDay: normalizedDepositRate ?? undefined,
                             subtotal:
                                 typeof normalizedSubtotalDeposit === "number"
@@ -1506,8 +1511,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     ? Math.round(normalizedTotalBefore * 100) / 100
                                     : undefined,
                             days: normalizedDays ?? undefined,
-                        }),
-                        casco: mergePlanSnapshot(prevSnapshots.casco, {
+                        },
+                        casco: {
                             pricePerDay: normalizedCascoRate ?? undefined,
                             subtotal:
                                 typeof normalizedSubtotalCasco === "number"
@@ -1526,8 +1531,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     ? Math.round(normalizedTotalBeforeCasco * 100) / 100
                                     : undefined,
                             days: normalizedDays ?? undefined,
-                        }),
-                    }));
+                        },
+                    };
 
                     return {
                         ...prev,
@@ -1585,6 +1590,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 : prev.wheel_of_fortune_prize_id ?? null,
                     };
                 });
+
+                if (pendingSnapshotUpdates) {
+                    setPlanSnapshots((prevSnapshots) => ({
+                        deposit: mergePlanSnapshot(
+                            prevSnapshots.deposit,
+                            pendingSnapshotUpdates?.deposit ?? {},
+                        ),
+                        casco: mergePlanSnapshot(
+                            prevSnapshots.casco,
+                            pendingSnapshotUpdates?.casco ?? {},
+                        ),
+                    }));
+                }
             } catch (error) {
                 if (lastQuoteKeyRef.current === quoteKey) {
                     lastQuoteKeyRef.current = null;
