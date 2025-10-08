@@ -1284,8 +1284,8 @@ const ReservationsPage = () => {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3 sm:gap-4">
               <Link
                 href="/admin"
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1298,14 +1298,14 @@ const ReservationsPage = () => {
               </h1>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex w-full flex-wrap items-center gap-2 justify-start sm:w-auto sm:flex-nowrap sm:gap-4 sm:justify-end">
               <Button
                 variant="yellow"
                 onClick={() => {
                   setContractReservation(null);
                   setContractOpen(true);
                 }}
-                className="flex items-center space-x-2 px-4 py-2"
+                className="flex items-center gap-2 px-4 py-2"
               >
                 <Newspaper className="h-4 w-4 me-1" />
                 Crează contract
@@ -1317,13 +1317,13 @@ const ReservationsPage = () => {
                   setBookingInfo({ ...EMPTY_BOOKING });
                   setEditPopupOpen(true);
                 }}
-                className="flex items-center space-x-2 px-4 py-2"
+                className="flex items-center gap-2 px-4 py-2"
               >
                 <Plus className="h-4 w-4 me-1" />
                 Crează rezervare
               </Button>
               <button
-                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 aria-label="Exportă rezervări"
               >
                 <Download className="h-4 w-4 text-gray-600" />
