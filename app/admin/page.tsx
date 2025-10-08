@@ -37,6 +37,7 @@ import type { ActivityReservation } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import {getStatusText} from "@/lib/utils";
 import { extractItem, extractList } from "@/lib/apiResponse";
+import { derivePercentageCouponInputValue, normalizeManualCouponType } from "@/lib/bookingDiscounts";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://backend.dacars.ro/storage';
@@ -811,6 +812,8 @@ const AdminDashboard = () => {
             const carInfo = info.car ?? null;
             const baseForm = createEmptyBookingForm();
             const couponAmount = parseOptionalNumber(info.coupon_amount) ?? 0;
+            const discountAmount =
+                parseOptionalNumber((info as { discount?: unknown }).discount) ?? couponAmount;
             const totalServices =
                 parseOptionalNumber(info.total_services) ?? 0;
             const subTotal = parseOptionalNumber(info.sub_total) ?? 0;
@@ -843,6 +846,8 @@ const AdminDashboard = () => {
                 0;
             const originalPricePerDay =
                 parseOptionalNumber(info.original_price_per_day) ?? pricePerDay;
+            const basePriceValue = parseOptionalNumber(info.base_price) ?? pricePerDay;
+            const basePriceCascoValue = parseOptionalNumber(info.base_price_casco) ?? pricePerDay;
             const total = parseOptionalNumber(info.total) ?? 0;
             const taxAmount = parseOptionalNumber(info.tax_amount) ?? 0;
             const advancePayment =
@@ -875,6 +880,7 @@ const AdminDashboard = () => {
                       "string"
                         ? String((info as { discount_type?: unknown }).discount_type)
                         : "";
+            const couponTypeNormalized = normalizeManualCouponType(couponType);
             const rawCurrencyId =
                 (info as { currency_id?: unknown }).currency_id ??
                 (info as { currencyId?: unknown }).currencyId;
@@ -888,6 +894,21 @@ const AdminDashboard = () => {
                 (info as { location?: unknown }).location,
                 baseForm.location ?? "",
             );
+            const daysValue = parseOptionalNumber(info.days) ?? 0;
+            const withDepositValue = normalizeBoolean(info.with_deposit, false);
+            const resolvedCouponAmount =
+                couponTypeNormalized === "percentage"
+                    ? derivePercentageCouponInputValue({
+                          couponType: couponTypeNormalized,
+                          couponAmount,
+                          discountAmount,
+                          days: daysValue,
+                          depositRate: basePriceValue,
+                          cascoRate: basePriceCascoValue,
+                          withDeposit: withDepositValue,
+                      }) ?? couponAmount
+                    : couponAmount;
+
             const formatted: AdminBookingFormValues = {
                 ...baseForm,
                 ...info,
@@ -896,8 +917,8 @@ const AdminDashboard = () => {
                     info.booking_number ?? info.id ?? activityDetails.id ?? null,
                 rental_start_date: toLocalDateTimeInput(info.rental_start_date),
                 rental_end_date: toLocalDateTimeInput(info.rental_end_date),
-                coupon_amount: couponAmount,
-                coupon_type: couponType,
+                coupon_amount: resolvedCouponAmount,
+                coupon_type: couponTypeNormalized,
                 coupon_code: toSafeString(info.coupon_code, ""),
                 customer_name: toSafeString(
                     info.customer_name ?? info.customer?.name,
@@ -928,13 +949,12 @@ const AdminDashboard = () => {
                 tax_amount: taxAmount,
                 price_per_day: pricePerDay,
                 original_price_per_day: originalPricePerDay,
-                base_price: parseOptionalNumber(info.base_price) ?? pricePerDay,
-                base_price_casco:
-                    parseOptionalNumber(info.base_price_casco) ?? pricePerDay,
-                days: parseOptionalNumber(info.days) ?? 0,
+                base_price: basePriceValue,
+                base_price_casco: basePriceCascoValue,
+                days: daysValue,
                 keep_old_price: normalizeBoolean(info.keep_old_price, true),
                 send_email: normalizeBoolean(info.send_email, false),
-                with_deposit: normalizeBoolean(info.with_deposit, false),
+                with_deposit: withDepositValue,
                 status: toSafeString(info.status, ""),
                 total_before_wheel_prize: totalBeforeWheelPrize,
                 wheel_prize_discount: wheelPrizeDiscount,

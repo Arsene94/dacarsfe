@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import BookingForm from '@/components/admin/BookingForm';
 import apiClient from '@/lib/api';
 import { extractItem, extractList } from '@/lib/apiResponse';
-import { normalizeManualCouponType } from '@/lib/bookingDiscounts';
+import { derivePercentageCouponInputValue, normalizeManualCouponType } from '@/lib/bookingDiscounts';
 import type { ApiCar } from '@/types/car';
 import { createEmptyBookingForm, type AdminBookingResource, type AdminBookingFormValues } from '@/types/admin';
 
@@ -924,6 +924,8 @@ const CarRentalCalendar: React.FC = () => {
             const carInfo = info.car ?? null;
             const baseForm = createEmptyBookingForm();
             const couponAmount = parseOptionalNumber(info.coupon_amount) ?? baseForm.coupon_amount;
+            const discountAmount =
+                parseOptionalNumber((info as { discount?: unknown }).discount) ?? couponAmount;
             const totalServices = parseOptionalNumber(info.total_services) ?? baseForm.total_services;
             const subTotal =
                 parseOptionalNumber(info.sub_total ?? (info as { subTotal?: unknown }).subTotal) ??
@@ -1011,6 +1013,19 @@ const CarRentalCalendar: React.FC = () => {
             );
             const couponCode = toSafeString(info.coupon_code, baseForm.coupon_code);
             const days = parseOptionalNumber(info.days) ?? baseForm.days;
+            const withDepositValue = toBoolean(info.with_deposit, baseForm.with_deposit);
+            const resolvedCouponAmount =
+                couponType === 'percentage'
+                    ? derivePercentageCouponInputValue({
+                          couponType,
+                          couponAmount,
+                          discountAmount,
+                          days,
+                          depositRate: basePrice,
+                          cascoRate: basePriceCasco,
+                          withDeposit: withDepositValue,
+                      }) ?? couponAmount
+                    : couponAmount;
             const status = toSafeString(info.status, baseForm.status);
             const note =
                 pickNonEmptyString(info.note) ??
@@ -1030,12 +1045,12 @@ const CarRentalCalendar: React.FC = () => {
                 booking_number: bookingNumber,
                 rental_start_date: rentalStart,
                 rental_end_date: rentalEnd,
-                with_deposit: toBoolean(info.with_deposit, baseForm.with_deposit),
+                with_deposit: withDepositValue,
                 service_ids: serviceIds,
                 services,
                 total_services: totalServices,
                 coupon_type: couponType,
-                coupon_amount: couponAmount,
+                coupon_amount: resolvedCouponAmount,
                 coupon_code: couponCode,
                 customer_name: customerName,
                 customer_phone: customerPhone,
