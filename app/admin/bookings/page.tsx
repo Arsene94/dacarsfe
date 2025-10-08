@@ -1098,6 +1098,8 @@ const ReservationsPage = () => {
         header: "Client",
         accessor: (r) => r.customerName,
         sortable: true,
+        headerClassName: "hidden sm:table-cell",
+        cellClassName: "hidden sm:table-cell",
         cell: (r) => (
           <div>
             <div className="font-dm-sans font-semibold text-gray-900 text-xs">
@@ -1113,6 +1115,8 @@ const ReservationsPage = () => {
         id: "car",
         header: "Mașină",
         accessor: (r) => r.carLicensePlate || r.carName,
+        headerClassName: "hidden sm:table-cell",
+        cellClassName: "hidden sm:table-cell",
         cell: (r) => (
           <div className="font-dm-sans text-gray-900 text-xs">
             {r.carLicensePlate || r.carName}
@@ -1123,6 +1127,8 @@ const ReservationsPage = () => {
         id: "period",
         header: "Perioada",
         accessor: (r) => new Date(r.startDate).getTime(),
+        headerClassName: "hidden sm:table-cell",
+        cellClassName: "hidden sm:table-cell",
         cell: (r) => (
           <div>
             <div className="font-dm-sans text-gray-900 text-xs">
@@ -1140,6 +1146,8 @@ const ReservationsPage = () => {
           id: "plan",
           header: "Tip Plan",
           accessor: (r) => r.plan,
+          headerClassName: "hidden sm:table-cell",
+          cellClassName: "hidden sm:table-cell",
           cell: (r) => (
               <span
                   className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getPlanColor(
@@ -1154,6 +1162,8 @@ const ReservationsPage = () => {
         id: "status",
         header: "Status",
         accessor: (r) => r.status,
+        headerClassName: "hidden sm:table-cell",
+        cellClassName: "hidden sm:table-cell",
         cell: (r) => (
           <span
             className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
@@ -1169,6 +1179,8 @@ const ReservationsPage = () => {
         header: "Total",
         accessor: (r) => r.total,
         sortable: true,
+        headerClassName: "hidden sm:table-cell",
+        cellClassName: "hidden sm:table-cell",
         cell: (r) => (
           <div className="font-dm-sans font-semibold text-berkeley text-xs">
             {r.total}€
@@ -1218,63 +1230,102 @@ const ReservationsPage = () => {
       extractWheelPrizeDisplay(r.wheelPrize, r.wheelPrizeDiscount, r.totalBeforeWheelPrize);
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-700 font-dm-sans">
-        <div className="flex items-center space-x-2">
-          <span className="font-bold">Preț per zi:</span>
-          <span>{formatEuro(r.pricePerDay ?? 0)}</span>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 text-sm text-gray-700 font-dm-sans sm:hidden">
+          <div>
+            <p className="font-semibold text-gray-900">Client</p>
+            <p>{r.customerName}</p>
+            <p className="text-xs text-gray-500">{r.phone}</p>
+            {r.email && <p className="text-xs text-gray-500">{r.email}</p>}
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">Mașină</p>
+            <p>{r.carLicensePlate || r.carName}</p>
+            {r.location && <p className="text-xs text-gray-500">{r.location}</p>}
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">Perioada</p>
+            <p>
+              {new Date(r.startDate).toLocaleDateString("ro-RO")} - {""}
+              {new Date(r.endDate).toLocaleDateString("ro-RO")}
+            </p>
+            {(r.pickupTime || r.dropoffTime) && (
+              <p className="text-xs text-gray-500">
+                {r.pickupTime} - {r.dropoffTime}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getPlanColor(r.plan)}`}>
+              {getPlanText(r.plan)}
+            </span>
+            <span className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getStatusColor(r.status)}`}>
+              {getStatusText(r.status)}
+            </span>
+            <span className="px-3 py-1 rounded-full bg-berkeley/10 text-berkeley font-semibold">
+              {formatEuro(r.total)}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <span className="font-bold">Zile:</span>
-          <span>{r.days}</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className="font-bold">Servicii:</span>
-          <span>{formatEuro(r.servicesPrice ?? 0)}</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className="font-bold">Subtotal:</span>
-          <span>{formatEuro(r.subTotal ?? 0)}</span>
-        </div>
-        {typeof totalBefore === "number" && (
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-700 font-dm-sans">
           <div className="flex items-center space-x-2">
-            <span className="font-bold">Total înainte premiu:</span>
-            <span>{formatEuro(totalBefore)}</span>
+            <span className="font-bold">Preț per zi:</span>
+            <span>{formatEuro(r.pricePerDay ?? 0)}</span>
           </div>
-        )}
-        <div className="flex items-center space-x-2">
-          <span className="font-bold">Roata Norocului:</span>
-          <span>{prize ? prize.title : "—"}</span>
+          <div className="flex items-center space-x-2">
+            <span className="font-bold">Zile:</span>
+            <span>{r.days}</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="font-bold">Servicii:</span>
+            <span>{formatEuro(r.servicesPrice ?? 0)}</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="font-bold">Subtotal:</span>
+            <span>{formatEuro(r.subTotal ?? 0)}</span>
+          </div>
+          {typeof totalBefore === "number" && (
+            <div className="flex items-center space-x-2">
+              <span className="font-bold">Total înainte premiu:</span>
+              <span>{formatEuro(totalBefore)}</span>
+            </div>
+          )}
+          <div className="flex items-center space-x-2">
+            <span className="font-bold">Roata Norocului:</span>
+            <span>{prize ? prize.title : "—"}</span>
+          </div>
+          {prize && amountLabel && (
+            <div className="flex items-center space-x-2 text-xs text-gray-600">
+              <span className="font-semibold">Valoare premiu:</span>
+              <span>{amountLabel}</span>
+            </div>
+          )}
+          {prize && discountValue > 0 && (
+            <div className="flex items-center space-x-2">
+              <span className="font-semibold">Reducere premiu:</span>
+              <span>-{formatEuro(discountValue)}</span>
+            </div>
+          )}
+          {prize && expiryLabel && (
+            <div className="flex items-center space-x-2 text-xs text-gray-600">
+              <span className="font-semibold">Valabil până la:</span>
+              <span>{expiryLabel}</span>
+            </div>
+          )}
+          {r.discountCode && (
+            <div className="flex items-center space-x-2">
+              <span className="font-semibold">Reducere:</span>
+              <span>{formatEuro(r.couponAmount ?? 0)}</span>
+            </div>
+          )}
+          {r.notes && (
+            <div className="md:col-span-4">
+              <span className="font-semibold">Notițe: </span>
+              {r.notes}
+            </div>
+          )}
         </div>
-        {prize && amountLabel && (
-          <div className="flex items-center space-x-2 text-xs text-gray-600">
-            <span className="font-semibold">Valoare premiu:</span>
-            <span>{amountLabel}</span>
-          </div>
-        )}
-        {prize && discountValue > 0 && (
-          <div className="flex items-center space-x-2">
-            <span className="font-semibold">Reducere premiu:</span>
-            <span>-{formatEuro(discountValue)}</span>
-          </div>
-        )}
-        {prize && expiryLabel && (
-          <div className="flex items-center space-x-2 text-xs text-gray-600">
-            <span className="font-semibold">Valabil până la:</span>
-            <span>{expiryLabel}</span>
-          </div>
-        )}
-        {r.discountCode && (
-          <div className="flex items-center space-x-2">
-            <span className="font-semibold">Reducere:</span>
-            <span>{formatEuro(r.couponAmount ?? 0)}</span>
-          </div>
-        )}
-        {r.notes && (
-          <div className="md:col-span-4">
-            <span className="font-semibold">Notițe: </span>
-            {r.notes}
-          </div>
-        )}
       </div>
     );
   };
@@ -1284,8 +1335,8 @@ const ReservationsPage = () => {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3 sm:gap-4">
               <Link
                 href="/admin"
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1298,14 +1349,14 @@ const ReservationsPage = () => {
               </h1>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex w-full flex-wrap items-center gap-2 justify-start sm:w-auto sm:flex-nowrap sm:gap-4 sm:justify-end">
               <Button
                 variant="yellow"
                 onClick={() => {
                   setContractReservation(null);
                   setContractOpen(true);
                 }}
-                className="flex items-center space-x-2 px-4 py-2"
+                className="flex items-center gap-2 px-4 py-2"
               >
                 <Newspaper className="h-4 w-4 me-1" />
                 Crează contract
@@ -1317,13 +1368,13 @@ const ReservationsPage = () => {
                   setBookingInfo({ ...EMPTY_BOOKING });
                   setEditPopupOpen(true);
                 }}
-                className="flex items-center space-x-2 px-4 py-2"
+                className="flex items-center gap-2 px-4 py-2"
               >
                 <Plus className="h-4 w-4 me-1" />
                 Crează rezervare
               </Button>
               <button
-                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 aria-label="Exportă rezervări"
               >
                 <Download className="h-4 w-4 text-gray-600" />

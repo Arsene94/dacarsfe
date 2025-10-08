@@ -26,6 +26,8 @@ export interface Column<T, V extends ColumnValue = ColumnValue> {
   accessor: (row: T) => V;
   cell?: (row: T) => React.ReactNode;
   sortable?: boolean;
+  headerClassName?: string;
+  cellClassName?: string;
 }
 
 export interface SortState<T, V extends ColumnValue = ColumnValue> {
