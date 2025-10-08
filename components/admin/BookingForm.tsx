@@ -75,6 +75,15 @@ const toDisplayString = (value: unknown, fallback = ""): string => {
     return fallback;
 };
 
+const pickFirstNumber = (...values: Array<number | null | undefined>): number | null => {
+    for (const value of values) {
+        if (typeof value === "number" && Number.isFinite(value)) {
+            return value;
+        }
+    }
+    return null;
+};
+
 const resolveAdminCarName = (
     car: AdminBookingCarOption | null | undefined,
     fallback: string,
@@ -1952,21 +1961,35 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const days = quote?.days ?? bookingInfo.days ?? 0;
     const pricePerDayValue = toOptionalNumber(bookingInfo.price_per_day);
     const originalRateFromBooking = toOptionalNumber(bookingInfo.original_price_per_day);
-    const originalRateFromPlan = bookingInfo.with_deposit
-        ? toOptionalNumber(bookingInfo.base_price)
-        : toOptionalNumber(bookingInfo.base_price_casco);
-    const originalRateFromQuote = bookingInfo.with_deposit
-        ? toOptionalNumber(quote?.base_price ?? quote?.rental_rate)
-        : toOptionalNumber(quote?.base_price_casco ?? quote?.rental_rate_casco);
-    const baseRate =
-        originalRateFromPlan ??
-        originalRateFromQuote ??
-        originalRateFromBooking ??
-        pricePerDayValue ??
-        0;
+    const depositQuoteRate = pickFirstNumber(
+        toOptionalNumber(quote?.rental_rate),
+        toOptionalNumber(quote?.price_per_day),
+        toOptionalNumber(quote?.base_price),
+    );
+    const cascoQuoteRate = pickFirstNumber(
+        toOptionalNumber(quote?.rental_rate_casco),
+        toOptionalNumber((quote as { price_per_day_casco?: unknown })?.price_per_day_casco),
+        toOptionalNumber(quote?.base_price_casco),
+    );
+    const depositBaseRate = pickFirstNumber(
+        toOptionalNumber(bookingInfo.base_price),
+        depositQuoteRate,
+        pricePerDayValue,
+        originalRateFromBooking,
+    );
+    const cascoBaseRate = pickFirstNumber(
+        toOptionalNumber(bookingInfo.base_price_casco),
+        cascoQuoteRate,
+        pricePerDayValue,
+        originalRateFromBooking,
+    );
+    const baseRateCandidateOrder = bookingInfo.with_deposit
+        ? [depositBaseRate, pricePerDayValue, cascoBaseRate, depositQuoteRate, originalRateFromBooking]
+        : [cascoBaseRate, pricePerDayValue, depositBaseRate, cascoQuoteRate, originalRateFromBooking];
+    const baseRate = pickFirstNumber(...baseRateCandidateOrder) ?? 0;
     const discountedRate = bookingInfo.with_deposit
-        ? quote?.rental_rate ?? quote?.price_per_day ?? pricePerDayValue ?? baseRate
-        : quote?.rental_rate_casco ?? quote?.price_per_day ?? pricePerDayValue ?? baseRate;
+        ? pickFirstNumber(depositQuoteRate, pricePerDayValue, depositBaseRate, cascoBaseRate) ?? baseRate
+        : pickFirstNumber(cascoQuoteRate, pricePerDayValue, cascoBaseRate, depositBaseRate) ?? baseRate;
     const discountedSubtotal = bookingInfo.with_deposit
         ? quote?.sub_total ?? quote?.sub_total_casco ?? null
         : quote?.sub_total_casco ?? quote?.sub_total ?? null;
