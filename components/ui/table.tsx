@@ -111,7 +111,8 @@ export function DataTable<T>({
                 onClick={() => toggleSort(col)}
                 className={cn(
                   'py-3 px-4 font-dm-sans font-semibold text-gray-600',
-                  col.sortable && 'cursor-pointer select-none'
+                  col.sortable && 'cursor-pointer select-none',
+                  col.headerClassName
                 )}
               >
                 <div className="flex items-center">
@@ -167,7 +168,7 @@ export function DataTable<T>({
                   </td>
                 )}
                 {columns.map((col) => (
-                  <td key={col.id} className="py-3 px-4">
+                  <td key={col.id} className={cn('py-3 px-4', col.cellClassName)}>
                     {col.cell ? col.cell(row) : renderColumnValue(col.accessor(row))}
                   </td>
                 ))}
