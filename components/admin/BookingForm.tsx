@@ -1965,8 +1965,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
         pricePerDayValue ??
         0;
     const discountedRate = bookingInfo.with_deposit
-        ? quote?.price_per_day ?? quote?.rental_rate ?? pricePerDayValue ?? baseRate
-        : quote?.price_per_day ?? quote?.rental_rate_casco ?? pricePerDayValue ?? baseRate;
+        ? quote?.rental_rate ?? quote?.price_per_day ?? pricePerDayValue ?? baseRate
+        : quote?.rental_rate_casco ?? quote?.price_per_day ?? pricePerDayValue ?? baseRate;
     const discountedSubtotal = bookingInfo.with_deposit
         ? quote?.sub_total ?? quote?.sub_total_casco ?? null
         : quote?.sub_total_casco ?? quote?.sub_total ?? null;
@@ -2416,10 +2416,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 ...prev,
                                                 with_deposit: true,
                                                 price_per_day:
-                                                    quote?.price_per_day != null
-                                                        ? parsePrice(quote.price_per_day)
-                                                        : quote?.rental_rate != null
-                                                          ? parsePrice(quote.rental_rate)
+                                                    quote?.rental_rate != null
+                                                        ? parsePrice(quote.rental_rate)
+                                                        : quote?.price_per_day != null
+                                                          ? parsePrice(quote.price_per_day)
                                                           : prev.price_per_day,
                                                 original_price_per_day:
                                                     toOptionalNumber(prev.original_price_per_day) ??
@@ -2457,10 +2457,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 ...prev,
                                                 with_deposit: false,
                                                 price_per_day:
-                                                    quote?.price_per_day != null
-                                                        ? parsePrice(quote.price_per_day)
-                                                        : quote?.rental_rate_casco != null
-                                                          ? parsePrice(quote.rental_rate_casco)
+                                                    quote?.rental_rate_casco != null
+                                                        ? parsePrice(quote.rental_rate_casco)
+                                                        : quote?.price_per_day != null
+                                                          ? parsePrice(quote.price_per_day)
                                                           : prev.price_per_day,
                                                 original_price_per_day:
                                                     toOptionalNumber(prev.original_price_per_day) ??
