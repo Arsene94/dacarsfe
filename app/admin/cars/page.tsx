@@ -1526,8 +1526,8 @@ const CarsPage = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3 sm:gap-4">
               <Link
                 href="/admin"
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1540,14 +1540,16 @@ const CarsPage = () => {
               </h1>
             </div>
 
-            <Button
-              onClick={handleOpenCreate}
-              className="flex items-center space-x-2 px-4 py-2"
-              aria-label="Adaugă Mașină"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="font-dm-sans font-semibold">Adaugă Mașină</span>
-            </Button>
+            <div className="flex w-full justify-start sm:w-auto sm:justify-end">
+              <Button
+                onClick={handleOpenCreate}
+                className="w-full gap-2 px-4 py-2 sm:w-auto"
+                aria-label="Adaugă Mașină"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="font-dm-sans font-semibold">Adaugă Mașină</span>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

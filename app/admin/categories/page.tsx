@@ -376,14 +376,16 @@ export default function CategoriesPage() {
 
   return (
     <div className="p-4 md:p-8">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold">Categorii</h1>
-        <button
-          onClick={openAddModal}
-          className="inline-flex items-center px-4 py-2 rounded-md bg-jade text-white hover:bg-jade/90"
-        >
-          <Plus className="h-4 w-4 mr-2" /> Adaugă categorie
-        </button>
+        <div className="flex w-full justify-start sm:w-auto sm:justify-end">
+          <button
+            onClick={openAddModal}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-jade px-4 py-2 text-white transition-colors hover:bg-jade/90 sm:w-auto"
+          >
+            <Plus className="h-4 w-4" /> Adaugă categorie
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">

@@ -217,11 +217,13 @@ const AdditionalServicesPage = () => {
 
     return (
         <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h1 className="text-xl font-semibold">Servicii adiționale</h1>
-                <Button onClick={openAddModal}>
-                    <Plus className="mr-2 h-4 w-4" /> Adaugă
-                </Button>
+                <div className="flex w-full justify-start sm:w-auto sm:justify-end">
+                    <Button onClick={openAddModal} className="w-full sm:w-auto gap-2">
+                        <Plus className="h-4 w-4" /> Adaugă
+                    </Button>
+                </div>
             </div>
             <DataTable data={services} columns={columns} />
 
