@@ -1959,9 +1959,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
         ? toOptionalNumber(quote?.base_price ?? quote?.rental_rate)
         : toOptionalNumber(quote?.base_price_casco ?? quote?.rental_rate_casco);
     const baseRate =
-        originalRateFromBooking ??
         originalRateFromPlan ??
         originalRateFromQuote ??
+        originalRateFromBooking ??
         pricePerDayValue ??
         0;
     const discountedRate = bookingInfo.with_deposit
