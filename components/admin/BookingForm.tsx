@@ -642,6 +642,59 @@ const sanitizeAppliedOffersPayload = (
     return sanitized.length > 0 ? sanitized : null;
 };
 
+const sanitizeAppliedOffersForQuote = (
+    offers: ReservationAppliedOffer[] | null | undefined,
+): ReservationAppliedOffer[] | null => {
+    if (!Array.isArray(offers) || offers.length === 0) {
+        return null;
+    }
+
+    const sanitized = offers
+        .map((offer) => {
+            if (!offer || typeof offer.id !== "number" || Number.isNaN(offer.id)) {
+                return null;
+            }
+
+            const title = typeof offer.title === "string" ? offer.title.trim() : "";
+            if (!title) {
+                return null;
+            }
+
+            const normalized: ReservationAppliedOffer = {
+                id: offer.id,
+                title,
+                offer_type: offer.offer_type ?? null,
+                offer_value: offer.offer_value ?? null,
+                discount_label: offer.discount_label ?? null,
+            };
+
+            const percentDeposit = toOptionalNumber(offer.percent_discount_deposit);
+            if (percentDeposit != null) {
+                normalized.percent_discount_deposit = percentDeposit;
+            }
+
+            const percentCasco = toOptionalNumber(offer.percent_discount_casco);
+            if (percentCasco != null) {
+                normalized.percent_discount_casco = percentCasco;
+            }
+
+            const fixedDeposit = toOptionalNumber(offer.fixed_discount_deposit);
+            if (fixedDeposit != null) {
+                normalized.fixed_discount_deposit = fixedDeposit;
+            }
+
+            const fixedCasco = toOptionalNumber(offer.fixed_discount_casco);
+            if (fixedCasco != null) {
+                normalized.fixed_discount_casco = fixedCasco;
+            }
+
+            return normalized;
+        })
+        .filter((entry): entry is ReservationAppliedOffer => entry != null);
+
+    return sanitized.length > 0 ? sanitized : null;
+};
+
 const isOfferActiveForRange = (
     offer: AdminOfferOption,
     startDate: Date | null,
@@ -773,21 +826,11 @@ const buildQuotePayload = (
         payload.total_before_wheel_prize = totalBeforeWheelPrize;
     }
 
-    const offersDiscount = toOptionalNumber(values.offers_discount);
-    if (offersDiscount != null) {
-        payload.offers_discount = offersDiscount;
-    }
-
-    const offerFixedDiscount = toOptionalNumber(values.offer_fixed_discount);
-    if (offerFixedDiscount != null) {
-        payload.offer_fixed_discount = offerFixedDiscount;
-    }
-
     if (values.deposit_waived === true) {
         payload.deposit_waived = true;
     }
 
-    const appliedOffersPayload = sanitizeAppliedOffersPayload(values.applied_offers);
+    const appliedOffersPayload = sanitizeAppliedOffersForQuote(values.applied_offers);
     if (appliedOffersPayload) {
         payload.applied_offers = appliedOffersPayload;
     }
@@ -1240,6 +1283,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
         return primaryOffer ? String(primaryOffer.id) : "";
     }, [bookingInfo]);
 
+    const appliedOffersQuoteKey = useMemo(() => {
+        const sanitized = sanitizeAppliedOffersForQuote(bookingInfo?.applied_offers);
+        return JSON.stringify(sanitized ?? []);
+    }, [bookingInfo?.applied_offers]);
+
     useEffect(() => {
         setQuote(null);
         lastQuoteKeyRef.current = null;
@@ -1359,8 +1407,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         ...prev,
                         days: typeof data.days === "number" ? data.days : prev.days ?? 0,
                         price_per_day: normalizedSelectedRate ?? prev.price_per_day,
-                        original_price_per_day:
-                            normalizedSelectedRate ?? prevOriginalPrice ?? prev.original_price_per_day ?? prev.price_per_day ?? null,
+                        original_price_per_day: prevOriginalPrice ??
+                            (typeof prevPricePerDay === "number" && Number.isFinite(prevPricePerDay)
+                                ? Math.round(prevPricePerDay * 100) / 100
+                                : normalizedSelectedRate ?? null),
                         base_price: normalizedDepositRate ?? prev.base_price ?? data.base_price ?? null,
                         base_price_casco: normalizedCascoRate ?? prev.base_price_casco ?? data.base_price_casco ?? null,
                         sub_total: typeof nextSubtotal === "number" ? nextSubtotal : prev.sub_total,
@@ -1412,9 +1462,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo?.with_deposit,
         bookingInfo?.wheel_prize,
         bookingInfo?.wheel_prize_discount,
-        bookingInfo?.applied_offers,
-        bookingInfo?.offers_discount,
-        bookingInfo?.offer_fixed_discount,
+        appliedOffersQuoteKey,
         bookingInfo?.deposit_waived,
         bookingInfo?.total_before_wheel_prize,
     ]);
@@ -1901,10 +1949,23 @@ const BookingForm: React.FC<BookingFormProps> = ({
     if (!bookingInfo) return null;
 
     const days = quote?.days ?? bookingInfo.days ?? 0;
-    const baseRate = bookingInfo.with_deposit
-        ? quote?.rental_rate ?? bookingInfo.price_per_day ?? 0
-        : quote?.rental_rate_casco ?? bookingInfo.price_per_day ?? 0;
-    const discountedRate = quote?.price_per_day ?? baseRate;
+    const pricePerDayValue = toOptionalNumber(bookingInfo.price_per_day);
+    const originalRateFromBooking = toOptionalNumber(bookingInfo.original_price_per_day);
+    const originalRateFromPlan = bookingInfo.with_deposit
+        ? toOptionalNumber(bookingInfo.base_price)
+        : toOptionalNumber(bookingInfo.base_price_casco);
+    const originalRateFromQuote = bookingInfo.with_deposit
+        ? toOptionalNumber(quote?.base_price ?? quote?.rental_rate)
+        : toOptionalNumber(quote?.base_price_casco ?? quote?.rental_rate_casco);
+    const baseRate =
+        originalRateFromBooking ??
+        originalRateFromPlan ??
+        originalRateFromQuote ??
+        pricePerDayValue ??
+        0;
+    const discountedRate = bookingInfo.with_deposit
+        ? quote?.price_per_day ?? quote?.rental_rate ?? pricePerDayValue ?? baseRate
+        : quote?.price_per_day ?? quote?.rental_rate_casco ?? pricePerDayValue ?? baseRate;
     const discountedSubtotal = bookingInfo.with_deposit
         ? quote?.sub_total ?? quote?.sub_total_casco ?? null
         : quote?.sub_total_casco ?? quote?.sub_total ?? null;
@@ -1924,8 +1985,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const discountedTotalQuote = bookingInfo.with_deposit
         ? quote?.total ?? quote?.total_casco ?? null
         : quote?.total_casco ?? quote?.total ?? null;
-    const subtotalDisplay = discountedSubtotal ?? originalTotals.current.subtotal;
-    const totalDisplay = discountedTotalQuote ?? originalTotals.current.total;
+    const subtotalDisplay =
+        typeof discountedSubtotal === "number"
+            ? discountedSubtotal
+            : Number(originalTotals.current.subtotal ?? 0);
+    const totalDisplay =
+        typeof discountedTotalQuote === "number"
+            ? discountedTotalQuote
+            : Number(originalTotals.current.total ?? 0);
     const advancePaymentValue = toOptionalNumber(bookingInfo.advance_payment) ?? 0;
     const totalServicesValue =
         typeof quote?.total_services === "number"
@@ -1943,11 +2010,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const restToPayLei = formatLeiAmount(restToPay);
     const discountLei = formatLeiAmount(discount);
     const wheelPrizeDiscountLei = formatLeiAmount(normalizedWheelPrizeDiscount);
+    const roundedBaseRate = Math.round(baseRate * 100) / 100;
     const baseRateLei = formatLeiAmount(baseRate);
-    const roundedDiscountedRate = Math.round(discountedRate);
+    const roundedDiscountedRate = Math.round(discountedRate * 100) / 100;
     const roundedDiscountedRateLei = formatLeiAmount(roundedDiscountedRate);
     const advancePaymentLei = formatLeiAmount(advancePaymentValue);
     const hasDiscountDetails = discount !== 0 && (discountedTotalQuote ?? 0) > 0;
+    const originalTotalValue = hasDiscountDetails ? totalDisplay + discount : totalDisplay;
+    const originalTotalRounded = Math.round(originalTotalValue * 100) / 100;
+    const originalTotalLei = formatLeiAmount(originalTotalRounded);
+    const discountedTotalLei = formatLeiAmount(totalDisplay);
 
     const handleUpdateBooking = async () => {
         if (!bookingInfo || bookingInfo.id == null) {
@@ -2343,13 +2415,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 ...prev,
                                                 with_deposit: true,
                                                 price_per_day:
-                                                    quote?.rental_rate != null
-                                                        ? parsePrice(quote.rental_rate)
-                                                        : prev.price_per_day,
+                                                    quote?.price_per_day != null
+                                                        ? parsePrice(quote.price_per_day)
+                                                        : quote?.rental_rate != null
+                                                          ? parsePrice(quote.rental_rate)
+                                                          : prev.price_per_day,
                                                 original_price_per_day:
-                                                    quote?.rental_rate != null
-                                                        ? parsePrice(quote.rental_rate)
-                                                        : prev.original_price_per_day,
+                                                    toOptionalNumber(prev.original_price_per_day) ??
+                                                    (quote?.base_price != null
+                                                        ? parsePrice(quote.base_price)
+                                                        : parsePrice(
+                                                              prev.base_price ?? prev.price_per_day ?? 0,
+                                                          )),
                                             }),
                                         )
                                     }
@@ -2379,13 +2456,21 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 ...prev,
                                                 with_deposit: false,
                                                 price_per_day:
-                                                    quote?.rental_rate_casco != null
-                                                        ? parsePrice(quote.rental_rate_casco)
-                                                        : prev.price_per_day,
+                                                    quote?.price_per_day != null
+                                                        ? parsePrice(quote.price_per_day)
+                                                        : quote?.rental_rate_casco != null
+                                                          ? parsePrice(quote.rental_rate_casco)
+                                                          : prev.price_per_day,
                                                 original_price_per_day:
-                                                    quote?.rental_rate_casco != null
-                                                        ? parsePrice(quote.rental_rate_casco)
-                                                        : prev.original_price_per_day,
+                                                    toOptionalNumber(prev.original_price_per_day) ??
+                                                    (quote?.base_price_casco != null
+                                                        ? parsePrice(quote.base_price_casco)
+                                                        : parsePrice(
+                                                              prev.base_price_casco ??
+                                                                  prev.base_price ??
+                                                                  prev.price_per_day ??
+                                                                  0,
+                                                          )),
                                             }),
                                         )
                                     }
@@ -2563,7 +2648,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         Detalii discount:
                                         <ul className="list-disc">
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Preț nou pe zi:</span>
+                                                <span>Preț inițial pe zi:</span>
+                                                <span>
+                                                    {baseRateLei ? `${baseRateLei} x ${days} zile` : "—"}
+                                                </span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Preț cu discount pe zi:</span>
                                                 <span>
                                                     {roundedDiscountedRateLei
                                                         ? `${roundedDiscountedRateLei} x ${days} zile`
@@ -2577,8 +2668,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 </li>
                                             )}
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Total:</span>
-                                                <span>{totalLei ?? "—"}</span>
+                                                <span>Total inițial:</span>
+                                                <span>{originalTotalLei ?? "—"}</span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Total cu discount:</span>
+                                                <span>{discountedTotalLei ?? "—"}</span>
                                             </li>
                                         </ul>
                                     </div>
@@ -2638,8 +2733,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         Detalii discount:
                                         <ul className="list-disc">
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Preț nou pe zi:</span>
-                                                <span>{Math.round(discountedRate)}€ x {days} zile</span>
+                                                <span>Preț inițial pe zi:</span>
+                                                <span>{roundedBaseRate}€ x {days} zile</span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Preț cu discount pe zi:</span>
+                                                <span>{roundedDiscountedRate}€ x {days} zile</span>
                                             </li>
                                             {discount > 0 && (
                                                 <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
@@ -2648,7 +2747,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 </li>
                                             )}
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Total:</span>
+                                                <span>Total inițial:</span>
+                                                <span>{originalTotalRounded}€</span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Total cu discount:</span>
                                                 <span>{totalDisplay}€</span>
                                             </li>
                                         </ul>
