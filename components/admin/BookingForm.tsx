@@ -1950,26 +1950,27 @@ const BookingForm: React.FC<BookingFormProps> = ({
     if (!bookingInfo) return null;
 
     const days = quote?.days ?? bookingInfo.days ?? 0;
+    const preferCasco = bookingInfo.with_deposit === false;
     const pricePerDayValue = toOptionalNumber(bookingInfo.price_per_day);
     const originalRateFromBooking = toOptionalNumber(bookingInfo.original_price_per_day);
-    const originalRateFromPlan = bookingInfo.with_deposit
-        ? toOptionalNumber(bookingInfo.base_price)
-        : toOptionalNumber(bookingInfo.base_price_casco);
-    const originalRateFromQuote = bookingInfo.with_deposit
-        ? toOptionalNumber(quote?.base_price ?? quote?.rental_rate)
-        : toOptionalNumber(quote?.base_price_casco ?? quote?.rental_rate_casco);
+    const originalRateFromPlan = preferCasco
+        ? toOptionalNumber(bookingInfo.base_price_casco)
+        : toOptionalNumber(bookingInfo.base_price);
+    const originalRateFromQuote = preferCasco
+        ? toOptionalNumber(quote?.base_price_casco ?? quote?.rental_rate_casco)
+        : toOptionalNumber(quote?.base_price ?? quote?.rental_rate);
     const baseRate =
         originalRateFromBooking ??
         originalRateFromPlan ??
         originalRateFromQuote ??
         pricePerDayValue ??
         0;
-    const discountedRate = bookingInfo.with_deposit
-        ? quote?.price_per_day ?? quote?.rental_rate ?? pricePerDayValue ?? baseRate
-        : quote?.price_per_day ?? quote?.rental_rate_casco ?? pricePerDayValue ?? baseRate;
-    const discountedSubtotal = bookingInfo.with_deposit
-        ? quote?.sub_total ?? quote?.sub_total_casco ?? null
-        : quote?.sub_total_casco ?? quote?.sub_total ?? null;
+    const discountedRate = preferCasco
+        ? quote?.rental_rate_casco ?? quote?.base_price_casco ?? pricePerDayValue ?? baseRate
+        : quote?.price_per_day ?? quote?.rental_rate ?? quote?.base_price ?? pricePerDayValue ?? baseRate;
+    const discountedSubtotal = preferCasco
+        ? quote?.sub_total_casco ?? quote?.sub_total ?? null
+        : quote?.sub_total ?? quote?.sub_total_casco ?? null;
     const discount = quote?.discount ?? 0;
     const wheelPrizeDiscountValue =
         typeof quote?.wheel_prize_discount === "number"
@@ -1983,9 +1984,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
             : null;
     const hasWheelPrizeDiscount =
         typeof normalizedWheelPrizeDiscount === "number" && normalizedWheelPrizeDiscount !== 0;
-    const discountedTotalQuote = bookingInfo.with_deposit
-        ? quote?.total ?? quote?.total_casco ?? null
-        : quote?.total_casco ?? quote?.total ?? null;
+    const discountedTotalQuote = preferCasco
+        ? quote?.total_casco ?? quote?.total ?? null
+        : quote?.total ?? quote?.total_casco ?? null;
     const subtotalDisplay =
         typeof discountedSubtotal === "number"
             ? discountedSubtotal
