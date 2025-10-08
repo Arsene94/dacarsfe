@@ -1947,10 +1947,21 @@ const BookingForm: React.FC<BookingFormProps> = ({
     if (!bookingInfo) return null;
 
     const days = quote?.days ?? bookingInfo.days ?? 0;
+    const pricePerDayValue = toOptionalNumber(bookingInfo.price_per_day);
+    const storedOriginalRate = bookingInfo.with_deposit
+        ? toOptionalNumber(bookingInfo.base_price)
+        : toOptionalNumber(bookingInfo.base_price_casco);
+    const fallbackOriginalRate =
+        toOptionalNumber(bookingInfo.original_price_per_day) ??
+        storedOriginalRate ??
+        pricePerDayValue ??
+        0;
     const baseRate = bookingInfo.with_deposit
-        ? quote?.rental_rate ?? bookingInfo.price_per_day ?? 0
-        : quote?.rental_rate_casco ?? bookingInfo.price_per_day ?? 0;
-    const discountedRate = quote?.price_per_day ?? baseRate;
+        ? quote?.base_price ?? quote?.rental_rate ?? fallbackOriginalRate
+        : quote?.base_price_casco ?? quote?.rental_rate_casco ?? fallbackOriginalRate;
+    const discountedRate = bookingInfo.with_deposit
+        ? quote?.price_per_day ?? quote?.rental_rate ?? pricePerDayValue ?? baseRate
+        : quote?.price_per_day ?? quote?.rental_rate_casco ?? pricePerDayValue ?? baseRate;
     const discountedSubtotal = bookingInfo.with_deposit
         ? quote?.sub_total ?? quote?.sub_total_casco ?? null
         : quote?.sub_total_casco ?? quote?.sub_total ?? null;
