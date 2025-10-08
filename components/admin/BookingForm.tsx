@@ -137,6 +137,36 @@ const toOptionalNumber = (value: unknown): number | null => {
     return null;
 };
 
+const pickFirstNumber = (candidates: unknown[]): number | null => {
+    for (const candidate of candidates) {
+        const parsed = toOptionalNumber(candidate);
+        if (typeof parsed === "number") {
+            return parsed;
+        }
+    }
+    return null;
+};
+
+const resolvePlanNumber = (
+    preferCasco: boolean,
+    depositValue: unknown,
+    cascoValue: unknown,
+): number | null => {
+    const depositNumeric = toOptionalNumber(depositValue);
+    const cascoNumeric = toOptionalNumber(cascoValue);
+    return preferCasco ? cascoNumeric ?? depositNumeric : depositNumeric ?? cascoNumeric;
+};
+
+const resolvePlanAmount = (
+    preferCasco: boolean,
+    depositCandidates: unknown[],
+    cascoCandidates: unknown[],
+): number | null => {
+    const depositValue = pickFirstNumber(depositCandidates);
+    const cascoValue = pickFirstNumber(cascoCandidates);
+    return resolvePlanNumber(preferCasco, depositValue, cascoValue);
+};
+
 const normalizeServiceIds = (values: unknown): number[] => {
     if (!Array.isArray(values)) return [];
 
@@ -1330,20 +1360,24 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     const preferCasco = prev.with_deposit === false;
                     const prevPricePerDay = toOptionalNumber(prev.price_per_day);
                     const prevOriginalPrice = toOptionalNumber(prev.original_price_per_day);
-                    const depositRateCandidate =
-                        typeof data.rental_rate === "number"
-                            ? data.rental_rate
-                            : typeof data.base_price === "number"
-                              ? data.base_price
-                              : typeof data.price_per_day === "number"
-                                ? data.price_per_day
-                                : toOptionalNumber(prev.base_price);
-                    const cascoRateCandidate =
-                        typeof data.rental_rate_casco === "number"
-                            ? data.rental_rate_casco
-                            : typeof data.base_price_casco === "number"
-                                ? data.base_price_casco
-                                : toOptionalNumber(prev.base_price_casco);
+                    const prevDiscountApplied = toOptionalNumber(prev.discount_applied);
+                    const prevTotalBeforeValue = toOptionalNumber(prev.total_before_wheel_prize);
+                    const prevOffersDiscount = toOptionalNumber(prev.offers_discount);
+                    const prevOfferFixedDiscount = toOptionalNumber(prev.offer_fixed_discount);
+                    const depositRateCandidate = pickFirstNumber([
+                        (data as { rental_rate?: unknown }).rental_rate,
+                        (data as { base_price?: unknown }).base_price,
+                        (data as { price_per_day?: unknown }).price_per_day,
+                        prev.base_price,
+                        prev.price_per_day,
+                    ]);
+                    const cascoRateCandidate = pickFirstNumber([
+                        (data as { rental_rate_casco?: unknown }).rental_rate_casco,
+                        (data as { base_price_casco?: unknown }).base_price_casco,
+                        (data as { price_per_day_casco?: unknown }).price_per_day_casco,
+                        prev.base_price_casco,
+                        prev.price_per_day,
+                    ]);
                     const selectedRateCandidate = preferCasco
                         ? cascoRateCandidate ?? prevPricePerDay ?? depositRateCandidate
                         : depositRateCandidate ?? prevPricePerDay ?? cascoRateCandidate;
@@ -1362,33 +1396,52 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
                     const normalizedWheelPrize =
                         normalizeWheelPrizeSummary(data.wheel_prize) ?? prev.wheel_prize ?? null;
-                    const normalizedWheelPrizeDiscount =
-                        typeof data.wheel_prize_discount === "number"
-                            ? data.wheel_prize_discount
-                            : prev.wheel_prize_discount ?? 0;
+                    const planWheelPrizeDiscount =
+                        resolvePlanAmount(
+                            preferCasco,
+                            [
+                                (data as { wheel_prize_discount?: unknown }).wheel_prize_discount,
+                                normalizedWheelPrize?.discount_value_deposit,
+                                prev.wheel_prize_discount,
+                                prev.wheel_prize?.discount_value_deposit,
+                                normalizedWheelPrize?.discount_value,
+                            ],
+                            [
+                                (data as { wheel_prize_discount_casco?: unknown }).wheel_prize_discount_casco,
+                                normalizedWheelPrize?.discount_value_casco,
+                                prev.wheel_prize_discount,
+                                prev.wheel_prize?.discount_value_casco,
+                                normalizedWheelPrize?.discount_value,
+                            ],
+                        ) ?? 0;
                     const normalizedTotalBefore =
-                        typeof data.total_before_wheel_prize === "number"
-                            ? data.total_before_wheel_prize
-                            : prev.total_before_wheel_prize ?? null;
+                        toOptionalNumber(
+                            (data as { total_before_wheel_prize?: unknown }).total_before_wheel_prize,
+                        ) ??
+                        prevTotalBeforeValue ??
+                        null;
                     const normalizedAppliedOffers = normalizeAppliedOffers(data.applied_offers);
                     const nextAppliedOffers =
                         normalizedAppliedOffers.length > 0
                             ? normalizedAppliedOffers
                             : prev.applied_offers ?? [];
                     const normalizedOffersDiscount =
-                        typeof data.offers_discount === "number"
-                            ? data.offers_discount
-                            : prev.offers_discount ?? 0;
+                        toOptionalNumber((data as { offers_discount?: unknown }).offers_discount) ??
+                        prevOffersDiscount ??
+                        0;
                     const normalizedOfferFixedDiscount =
-                        typeof data.offer_fixed_discount === "number"
-                            ? data.offer_fixed_discount
-                            : typeof prev.offer_fixed_discount === "number"
-                                ? prev.offer_fixed_discount
-                                : 0;
+                        toOptionalNumber((data as { offer_fixed_discount?: unknown }).offer_fixed_discount) ??
+                        prevOfferFixedDiscount ??
+                        0;
+                    const depositWaivedRaw = (data as { deposit_waived?: unknown }).deposit_waived;
                     const normalizedDepositWaived =
-                        typeof data.deposit_waived === "boolean"
-                            ? data.deposit_waived
-                            : prev.deposit_waived ?? false;
+                        typeof depositWaivedRaw === "boolean"
+                            ? depositWaivedRaw
+                            : typeof depositWaivedRaw === "number"
+                                ? depositWaivedRaw !== 0
+                                : typeof depositWaivedRaw === "string"
+                                    ? ["1", "true"].includes(depositWaivedRaw.trim().toLowerCase())
+                                    : prev.deposit_waived ?? false;
                     const normalizedWheelPrizeId =
                         toOptionalNumber(
                             (data as { wheel_of_fortune_prize_id?: unknown }).wheel_of_fortune_prize_id,
@@ -1397,33 +1450,81 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         toOptionalNumber(normalizedWheelPrize?.prize_id) ??
                         toOptionalNumber(prev.wheel_of_fortune_prize_id);
 
-                    const nextSubtotal = preferCasco
-                        ? data.sub_total_casco ?? data.sub_total ?? prev.sub_total
-                        : data.sub_total ?? data.sub_total_casco ?? prev.sub_total;
-                    const nextTotal = preferCasco
-                        ? data.total_casco ?? data.total ?? prev.total
-                        : data.total ?? data.total_casco ?? prev.total;
+                    const nextSubtotalValue =
+                        resolvePlanAmount(
+                            preferCasco,
+                            [
+                                (data as { sub_total?: unknown }).sub_total,
+                                (data as { subtotal?: unknown }).subtotal,
+                            ],
+                            [
+                                (data as { sub_total_casco?: unknown }).sub_total_casco,
+                                (data as { subtotal_casco?: unknown }).subtotal_casco,
+                            ],
+                        ) ?? toOptionalNumber(prev.sub_total);
+                    const nextTotalValue =
+                        resolvePlanAmount(
+                            preferCasco,
+                            [(data as { total?: unknown }).total],
+                            [(data as { total_casco?: unknown }).total_casco],
+                        ) ?? toOptionalNumber(prev.total);
+
+                    const normalizedDiscountApplied =
+                        resolvePlanAmount(
+                            preferCasco,
+                            [
+                                (data as { discount?: unknown }).discount,
+                                (data as { coupon_amount?: unknown }).coupon_amount,
+                            ],
+                            [
+                                (data as { discount_casco?: unknown }).discount_casco,
+                                (data as { discount_amount_casco?: unknown }).discount_amount_casco,
+                            ],
+                        ) ?? prevDiscountApplied;
+
+                    const totalServicesValue =
+                        toOptionalNumber((data as { total_services?: unknown }).total_services) ??
+                        toOptionalNumber(prev.total_services) ??
+                        0;
+
+                    const normalizedDays =
+                        toOptionalNumber((data as { days?: unknown }).days) ?? toOptionalNumber(prev.days) ?? 0;
 
                     return {
                         ...prev,
-                        days: typeof data.days === "number" ? data.days : prev.days ?? 0,
+                        days: normalizedDays,
                         price_per_day: normalizedSelectedRate ?? prev.price_per_day,
-                        original_price_per_day: prevOriginalPrice ??
+                        original_price_per_day:
+                            prevOriginalPrice ??
                             (typeof prevPricePerDay === "number" && Number.isFinite(prevPricePerDay)
                                 ? Math.round(prevPricePerDay * 100) / 100
                                 : normalizedSelectedRate ?? null),
-                        base_price: normalizedDepositRate ?? prev.base_price ?? data.base_price ?? null,
-                        base_price_casco: normalizedCascoRate ?? prev.base_price_casco ?? data.base_price_casco ?? null,
-                        sub_total: typeof nextSubtotal === "number" ? nextSubtotal : prev.sub_total,
-                        total: typeof nextTotal === "number" ? nextTotal : prev.total,
-                        discount_applied: data.discount ?? null,
-                        total_services: data.total_services ?? prev.total_services,
+                        base_price:
+                            normalizedDepositRate ??
+                            toOptionalNumber((data as { base_price?: unknown }).base_price) ??
+                            prev.base_price ??
+                            null,
+                        base_price_casco:
+                            normalizedCascoRate ??
+                            toOptionalNumber((data as { base_price_casco?: unknown }).base_price_casco) ??
+                            prev.base_price_casco ??
+                            null,
+                        sub_total:
+                            typeof nextSubtotalValue === "number" && Number.isFinite(nextSubtotalValue)
+                                ? nextSubtotalValue
+                                : prev.sub_total,
+                        total:
+                            typeof nextTotalValue === "number" && Number.isFinite(nextTotalValue)
+                                ? nextTotalValue
+                                : prev.total,
+                        discount_applied:
+                            typeof normalizedDiscountApplied === "number" && Number.isFinite(normalizedDiscountApplied)
+                                ? normalizedDiscountApplied
+                                : prevDiscountApplied ?? null,
+                        total_services: totalServicesValue,
                         wheel_prize: normalizedWheelPrize,
-                        wheel_prize_discount: normalizedWheelPrizeDiscount,
-                        total_before_wheel_prize:
-                            typeof normalizedTotalBefore === "number"
-                                ? normalizedTotalBefore
-                                : prev.total_before_wheel_prize,
+                        wheel_prize_discount: planWheelPrizeDiscount,
+                        total_before_wheel_prize: normalizedTotalBefore,
                         applied_offers: nextAppliedOffers,
                         offers_discount: normalizedOffersDiscount,
                         offer_fixed_discount: normalizedOfferFixedDiscount,
@@ -1951,49 +2052,118 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     const days = quote?.days ?? bookingInfo.days ?? 0;
     const pricePerDayValue = toOptionalNumber(bookingInfo.price_per_day);
+    const preferCascoPlan = bookingInfo.with_deposit === false;
     const originalRateFromBooking = toOptionalNumber(bookingInfo.original_price_per_day);
-    const originalRateFromPlan = bookingInfo.with_deposit
-        ? toOptionalNumber(bookingInfo.base_price)
-        : toOptionalNumber(bookingInfo.base_price_casco);
-    const originalRateFromQuote = bookingInfo.with_deposit
-        ? toOptionalNumber(quote?.base_price ?? quote?.rental_rate)
-        : toOptionalNumber(quote?.base_price_casco ?? quote?.rental_rate_casco);
+    const bookingBasePriceDeposit = toOptionalNumber(bookingInfo.base_price);
+    const bookingBasePriceCasco = toOptionalNumber(bookingInfo.base_price_casco);
+    const quotePricePerDayCascoRaw = (quote as { price_per_day_casco?: unknown })?.price_per_day_casco;
+    const quoteBasePriceCascoRaw = (quote as { base_price_casco?: unknown })?.base_price_casco;
+    const quotePricePerDayDeposit = toOptionalNumber(quote?.price_per_day);
+    const quotePricePerDayCasco = toOptionalNumber(quotePricePerDayCascoRaw);
+    const quoteBasePriceDeposit = toOptionalNumber(quote?.base_price);
+    const quoteBasePriceCasco = toOptionalNumber(quoteBasePriceCascoRaw);
+    const quoteRentalRateDeposit = toOptionalNumber(quote?.rental_rate);
+    const quoteRentalRateCasco = toOptionalNumber(quote?.rental_rate_casco);
+
+    const normalizedDepositRate =
+        pickFirstNumber([
+            quotePricePerDayDeposit,
+            quoteRentalRateDeposit,
+            quoteBasePriceDeposit,
+            bookingBasePriceDeposit,
+            pricePerDayValue,
+            originalRateFromBooking,
+        ]) ?? null;
+    const normalizedCascoRate =
+        pickFirstNumber([
+            quotePricePerDayCasco,
+            quotePricePerDayDeposit,
+            quoteRentalRateCasco,
+            quoteBasePriceCasco,
+            bookingBasePriceCasco,
+            pricePerDayValue,
+            originalRateFromBooking,
+        ]) ?? null;
     const baseRate =
-        originalRateFromBooking ??
-        originalRateFromPlan ??
-        originalRateFromQuote ??
-        pricePerDayValue ??
-        0;
-    const discountedRate = bookingInfo.with_deposit
-        ? quote?.price_per_day ?? quote?.rental_rate ?? pricePerDayValue ?? baseRate
-        : quote?.price_per_day ?? quote?.rental_rate_casco ?? pricePerDayValue ?? baseRate;
-    const discountedSubtotal = bookingInfo.with_deposit
-        ? quote?.sub_total ?? quote?.sub_total_casco ?? null
-        : quote?.sub_total_casco ?? quote?.sub_total ?? null;
-    const discount = quote?.discount ?? 0;
-    const wheelPrizeDiscountValue =
-        typeof quote?.wheel_prize_discount === "number"
-            ? quote.wheel_prize_discount
-            : toOptionalNumber(bookingInfo.wheel_prize_discount) ??
-              toOptionalNumber(bookingInfo.wheel_prize?.discount_value) ??
-              null;
+        (preferCascoPlan
+            ? normalizedCascoRate ?? normalizedDepositRate
+            : normalizedDepositRate ?? normalizedCascoRate) ?? 0;
+    const discountedRate =
+        (preferCascoPlan
+            ? pickFirstNumber([
+                  quotePricePerDayCasco,
+                  quotePricePerDayDeposit,
+                  quoteRentalRateCasco,
+                  normalizedCascoRate,
+              ])
+            : pickFirstNumber([
+                  quotePricePerDayDeposit,
+                  quoteRentalRateDeposit,
+                  normalizedDepositRate,
+              ])) ??
+        (preferCascoPlan
+            ? normalizedDepositRate ?? normalizedCascoRate ?? baseRate
+            : normalizedCascoRate ?? normalizedDepositRate ?? baseRate) ??
+        baseRate;
+    const discountedSubtotal = resolvePlanNumber(
+        preferCascoPlan,
+        quote?.sub_total,
+        quote?.sub_total_casco,
+    );
+    const discount =
+        resolvePlanAmount(
+            preferCascoPlan,
+            [
+                quote?.discount,
+                (quote as { discount_amount?: unknown })?.discount_amount,
+                bookingInfo.discount_applied,
+                bookingInfo.offers_discount,
+                bookingInfo.offer_fixed_discount,
+            ],
+            [
+                (quote as { discount_casco?: unknown })?.discount_casco,
+                (quote as { discount_amount_casco?: unknown })?.discount_amount_casco,
+                bookingInfo.discount_applied,
+                bookingInfo.offers_discount,
+                bookingInfo.offer_fixed_discount,
+            ],
+        ) ?? 0;
+    const normalizedQuoteWheelPrize = normalizeWheelPrizeSummary(quote?.wheel_prize);
+    const activeWheelPrize = normalizedQuoteWheelPrize ?? bookingInfo.wheel_prize ?? null;
+    const wheelPrizeDiscountValue = resolvePlanAmount(
+        preferCascoPlan,
+        [
+            quote?.wheel_prize_discount,
+            activeWheelPrize?.discount_value_deposit,
+            bookingInfo.wheel_prize_discount,
+            activeWheelPrize?.discount_value,
+        ],
+        [
+            (quote as { wheel_prize_discount_casco?: unknown })?.wheel_prize_discount_casco,
+            activeWheelPrize?.discount_value_casco,
+            bookingInfo.wheel_prize_discount,
+            activeWheelPrize?.discount_value,
+        ],
+    );
     const normalizedWheelPrizeDiscount =
         typeof wheelPrizeDiscountValue === "number"
             ? Math.round(wheelPrizeDiscountValue * 100) / 100
             : null;
     const hasWheelPrizeDiscount =
         typeof normalizedWheelPrizeDiscount === "number" && normalizedWheelPrizeDiscount !== 0;
-    const discountedTotalQuote = bookingInfo.with_deposit
-        ? quote?.total ?? quote?.total_casco ?? null
-        : quote?.total_casco ?? quote?.total ?? null;
+    const discountedTotalQuote = resolvePlanNumber(
+        preferCascoPlan,
+        quote?.total,
+        quote?.total_casco,
+    );
     const subtotalDisplay =
         typeof discountedSubtotal === "number"
             ? discountedSubtotal
-            : Number(originalTotals.current.subtotal ?? 0);
+            : toOptionalNumber(bookingInfo.sub_total) ?? Number(originalTotals.current.subtotal ?? 0);
     const totalDisplay =
         typeof discountedTotalQuote === "number"
             ? discountedTotalQuote
-            : Number(originalTotals.current.total ?? 0);
+            : toOptionalNumber(bookingInfo.total) ?? Number(originalTotals.current.total ?? 0);
     const advancePaymentValue = toOptionalNumber(bookingInfo.advance_payment) ?? 0;
     const totalServicesValue =
         typeof quote?.total_services === "number"
@@ -2457,15 +2627,17 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 ...prev,
                                                 with_deposit: false,
                                                 price_per_day:
-                                                    quote?.price_per_day != null
-                                                        ? parsePrice(quote.price_per_day)
+                                                    quotePricePerDayCascoRaw != null
+                                                        ? parsePrice(quotePricePerDayCascoRaw)
                                                         : quote?.rental_rate_casco != null
                                                           ? parsePrice(quote.rental_rate_casco)
-                                                          : prev.price_per_day,
+                                                          : quote?.price_per_day != null
+                                                            ? parsePrice(quote.price_per_day)
+                                                            : prev.price_per_day,
                                                 original_price_per_day:
                                                     toOptionalNumber(prev.original_price_per_day) ??
-                                                    (quote?.base_price_casco != null
-                                                        ? parsePrice(quote.base_price_casco)
+                                                    (quoteBasePriceCascoRaw != null
+                                                        ? parsePrice(quoteBasePriceCascoRaw)
                                                         : parsePrice(
                                                               prev.base_price_casco ??
                                                                   prev.base_price ??
