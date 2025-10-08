@@ -1948,17 +1948,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     const days = quote?.days ?? bookingInfo.days ?? 0;
     const pricePerDayValue = toOptionalNumber(bookingInfo.price_per_day);
-    const storedOriginalRate = bookingInfo.with_deposit
+    const originalRateFromBooking = toOptionalNumber(bookingInfo.original_price_per_day);
+    const originalRateFromPlan = bookingInfo.with_deposit
         ? toOptionalNumber(bookingInfo.base_price)
         : toOptionalNumber(bookingInfo.base_price_casco);
-    const fallbackOriginalRate =
-        toOptionalNumber(bookingInfo.original_price_per_day) ??
-        storedOriginalRate ??
+    const originalRateFromQuote = bookingInfo.with_deposit
+        ? toOptionalNumber(quote?.base_price ?? quote?.rental_rate)
+        : toOptionalNumber(quote?.base_price_casco ?? quote?.rental_rate_casco);
+    const baseRate =
+        originalRateFromBooking ??
+        originalRateFromPlan ??
+        originalRateFromQuote ??
         pricePerDayValue ??
         0;
-    const baseRate = bookingInfo.with_deposit
-        ? quote?.base_price ?? quote?.rental_rate ?? fallbackOriginalRate
-        : quote?.base_price_casco ?? quote?.rental_rate_casco ?? fallbackOriginalRate;
     const discountedRate = bookingInfo.with_deposit
         ? quote?.price_per_day ?? quote?.rental_rate ?? pricePerDayValue ?? baseRate
         : quote?.price_per_day ?? quote?.rental_rate_casco ?? pricePerDayValue ?? baseRate;
@@ -2411,13 +2413,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 ...prev,
                                                 with_deposit: true,
                                                 price_per_day:
-                                                    quote?.rental_rate != null
-                                                        ? parsePrice(quote.rental_rate)
-                                                        : prev.price_per_day,
+                                                    quote?.price_per_day != null
+                                                        ? parsePrice(quote.price_per_day)
+                                                        : quote?.rental_rate != null
+                                                          ? parsePrice(quote.rental_rate)
+                                                          : prev.price_per_day,
                                                 original_price_per_day:
-                                                    quote?.rental_rate != null
-                                                        ? parsePrice(quote.rental_rate)
-                                                        : prev.original_price_per_day,
+                                                    quote?.base_price != null
+                                                        ? parsePrice(quote.base_price)
+                                                        : prev.original_price_per_day ??
+                                                          parsePrice(
+                                                              prev.base_price ?? prev.price_per_day ?? 0,
+                                                          ),
                                             }),
                                         )
                                     }
@@ -2447,13 +2454,21 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 ...prev,
                                                 with_deposit: false,
                                                 price_per_day:
-                                                    quote?.rental_rate_casco != null
-                                                        ? parsePrice(quote.rental_rate_casco)
-                                                        : prev.price_per_day,
+                                                    quote?.price_per_day != null
+                                                        ? parsePrice(quote.price_per_day)
+                                                        : quote?.rental_rate_casco != null
+                                                          ? parsePrice(quote.rental_rate_casco)
+                                                          : prev.price_per_day,
                                                 original_price_per_day:
-                                                    quote?.rental_rate_casco != null
-                                                        ? parsePrice(quote.rental_rate_casco)
-                                                        : prev.original_price_per_day,
+                                                    quote?.base_price_casco != null
+                                                        ? parsePrice(quote.base_price_casco)
+                                                        : prev.original_price_per_day ??
+                                                          parsePrice(
+                                                              prev.base_price_casco ??
+                                                                  prev.base_price ??
+                                                                  prev.price_per_day ??
+                                                                  0,
+                                                          ),
                                             }),
                                         )
                                     }
