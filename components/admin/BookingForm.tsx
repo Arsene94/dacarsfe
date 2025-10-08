@@ -116,6 +116,39 @@ const resolveRelationLabel = (relation: CarRelation, fallback = ""): string => {
     return fallback;
 };
 
+type PlanSnapshot = {
+    pricePerDay: number | null;
+    subtotal: number | null;
+    total: number | null;
+    discount: number | null;
+    totalBeforeWheel: number | null;
+    days: number | null;
+};
+
+const createEmptyPlanSnapshot = (): PlanSnapshot => ({
+    pricePerDay: null,
+    subtotal: null,
+    total: null,
+    discount: null,
+    totalBeforeWheel: null,
+    days: null,
+});
+
+const mergePlanSnapshot = (
+    snapshot: PlanSnapshot,
+    updates: Partial<PlanSnapshot>,
+): PlanSnapshot => {
+    const next = { ...snapshot };
+    (Object.entries(updates) as Array<
+        [keyof PlanSnapshot, PlanSnapshot[keyof PlanSnapshot]]
+    >).forEach(([key, value]) => {
+        if (value !== undefined) {
+            next[key] = value;
+        }
+    });
+    return next;
+};
+
 type AdminOfferOption = Pick<
     Offer,
     "id" | "title" | "status" | "starts_at" | "ends_at" | "discount_label" | "badge" | "offer_type" | "offer_value"
@@ -1056,6 +1089,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
         subtotal: 0,
         total: 0,
     });
+    const planSnapshotsRef = useRef<{ deposit: PlanSnapshot; casco: PlanSnapshot }>({
+        deposit: createEmptyPlanSnapshot(),
+        casco: createEmptyPlanSnapshot(),
+    });
     const lastQuoteKeyRef = useRef<string | null>(null);
 
     const updateBookingInfo = useCallback(
@@ -1379,6 +1416,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         (typeof prev.discount_applied === "number"
                             ? prev.discount_applied
                             : toOptionalNumber(prev.discount_applied));
+                    const normalizedDiscountDeposit = toOptionalNumber(data.discount);
+                    const normalizedDiscountCasco = toOptionalNumber(
+                        (data as { discount_casco?: unknown }).discount_casco,
+                    );
                     const normalizedWheelPrizeDiscount =
                         toOptionalNumber(data.wheel_prize_discount) ??
                         toOptionalNumber(prev.wheel_prize_discount) ??
@@ -1386,6 +1427,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     const normalizedTotalBefore =
                         toOptionalNumber(data.total_before_wheel_prize) ??
                         toOptionalNumber(prev.total_before_wheel_prize);
+                    const normalizedTotalBeforeCasco = toOptionalNumber(
+                        (data as { total_before_wheel_prize_casco?: unknown })
+                            .total_before_wheel_prize_casco,
+                    );
+                    const normalizedDays =
+                        typeof data.days === "number" && Number.isFinite(data.days)
+                            ? data.days
+                            : typeof prev.days === "number" && Number.isFinite(prev.days)
+                                ? prev.days
+                                : null;
                     const normalizedOffersDiscount =
                         toOptionalNumber(data.offers_discount) ??
                         (typeof prev.offers_discount === "number"
@@ -1427,6 +1478,50 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     const nextTotal = preferCasco
                         ? normalizedTotalCasco ?? previousTotal ?? normalizedTotalDeposit
                         : normalizedTotalDeposit ?? previousTotal ?? normalizedTotalCasco;
+
+                    const previousSnapshots = planSnapshotsRef.current;
+                    planSnapshotsRef.current = {
+                        deposit: mergePlanSnapshot(previousSnapshots.deposit, {
+                            pricePerDay: normalizedDepositRate ?? undefined,
+                            subtotal:
+                                typeof normalizedSubtotalDeposit === "number"
+                                    ? Math.round(normalizedSubtotalDeposit * 100) / 100
+                                    : undefined,
+                            total:
+                                typeof normalizedTotalDeposit === "number"
+                                    ? Math.round(normalizedTotalDeposit * 100) / 100
+                                    : undefined,
+                            discount:
+                                typeof normalizedDiscountDeposit === "number"
+                                    ? Math.round(normalizedDiscountDeposit * 100) / 100
+                                    : undefined,
+                            totalBeforeWheel:
+                                typeof normalizedTotalBefore === "number"
+                                    ? Math.round(normalizedTotalBefore * 100) / 100
+                                    : undefined,
+                            days: normalizedDays ?? undefined,
+                        }),
+                        casco: mergePlanSnapshot(previousSnapshots.casco, {
+                            pricePerDay: normalizedCascoRate ?? undefined,
+                            subtotal:
+                                typeof normalizedSubtotalCasco === "number"
+                                    ? Math.round(normalizedSubtotalCasco * 100) / 100
+                                    : undefined,
+                            total:
+                                typeof normalizedTotalCasco === "number"
+                                    ? Math.round(normalizedTotalCasco * 100) / 100
+                                    : undefined,
+                            discount:
+                                typeof normalizedDiscountCasco === "number"
+                                    ? Math.round(normalizedDiscountCasco * 100) / 100
+                                    : undefined,
+                            totalBeforeWheel:
+                                typeof normalizedTotalBeforeCasco === "number"
+                                    ? Math.round(normalizedTotalBeforeCasco * 100) / 100
+                                    : undefined,
+                            days: normalizedDays ?? undefined,
+                        }),
+                    };
 
                     return {
                         ...prev,
@@ -1517,6 +1612,163 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo?.deposit_waived,
         bookingInfo?.total_before_wheel_prize,
     ]);
+
+    useEffect(() => {
+        if (!bookingInfo) {
+            return;
+        }
+        const activePlan: "deposit" | "casco" = bookingInfo.with_deposit === false ? "casco" : "deposit";
+        const updates: Partial<PlanSnapshot> = {};
+        const pricePerDayValue = toOptionalNumber(bookingInfo.price_per_day);
+        if (typeof pricePerDayValue === "number" && Number.isFinite(pricePerDayValue)) {
+            updates.pricePerDay = Math.round(pricePerDayValue * 100) / 100;
+        }
+        const subtotalValue = toOptionalNumber(bookingInfo.sub_total);
+        if (typeof subtotalValue === "number" && Number.isFinite(subtotalValue)) {
+            updates.subtotal = Math.round(subtotalValue * 100) / 100;
+        }
+        const totalValue = toOptionalNumber(bookingInfo.total);
+        if (typeof totalValue === "number" && Number.isFinite(totalValue)) {
+            updates.total = Math.round(totalValue * 100) / 100;
+        }
+        const discountValue = toOptionalNumber(bookingInfo.discount_applied);
+        if (typeof discountValue === "number" && Number.isFinite(discountValue)) {
+            updates.discount = Math.round(discountValue * 100) / 100;
+        }
+        const totalBeforeValue = toOptionalNumber(bookingInfo.total_before_wheel_prize);
+        if (typeof totalBeforeValue === "number" && Number.isFinite(totalBeforeValue)) {
+            updates.totalBeforeWheel = Math.round(totalBeforeValue * 100) / 100;
+        }
+        if (typeof bookingInfo.days === "number" && Number.isFinite(bookingInfo.days)) {
+            updates.days = bookingInfo.days;
+        }
+        if (Object.keys(updates).length > 0) {
+            planSnapshotsRef.current = {
+                ...planSnapshotsRef.current,
+                [activePlan]: mergePlanSnapshot(planSnapshotsRef.current[activePlan], updates),
+            };
+        }
+    }, [bookingInfo]);
+
+    const applyPlanSnapshot = useCallback(
+        (prev: AdminBookingFormValues, nextWithDeposit: boolean): AdminBookingFormValues => {
+            const targetPlan: "deposit" | "casco" = nextWithDeposit ? "deposit" : "casco";
+            const snapshot = planSnapshotsRef.current[targetPlan];
+            const fallbackSnapshot = planSnapshotsRef.current[nextWithDeposit ? "casco" : "deposit"];
+            const nextPricePerDay =
+                pickFirstNumber(
+                    snapshot.pricePerDay,
+                    nextWithDeposit
+                        ? toOptionalNumber(prev.base_price)
+                        : toOptionalNumber(prev.base_price_casco),
+                    toOptionalNumber(prev.price_per_day),
+                    fallbackSnapshot.pricePerDay,
+                ) ?? toOptionalNumber(prev.price_per_day) ?? 0;
+
+            const daysCount =
+                typeof snapshot.days === "number" && Number.isFinite(snapshot.days)
+                    ? snapshot.days
+                    : typeof prev.days === "number" && Number.isFinite(prev.days)
+                        ? prev.days
+                        : 0;
+
+            const snapshotSubtotal =
+                snapshot.subtotal ??
+                (typeof snapshot.pricePerDay === "number" && Number.isFinite(snapshot.pricePerDay)
+                    ? Math.round(snapshot.pricePerDay * daysCount * 100) / 100
+                    : null);
+
+            const previousSubtotalValue =
+                typeof prev.sub_total === "number"
+                    ? prev.sub_total
+                    : toOptionalNumber(prev.sub_total) ?? 0;
+            const normalizedSubtotal =
+                typeof snapshotSubtotal === "number" && Number.isFinite(snapshotSubtotal)
+                    ? Math.round(snapshotSubtotal * 100) / 100
+                    : previousSubtotalValue;
+
+            const previousTotalValue =
+                typeof prev.total === "number"
+                    ? prev.total
+                    : toOptionalNumber(prev.total) ?? previousSubtotalValue;
+            const snapshotTotal = snapshot.total;
+            const normalizedTotal =
+                typeof snapshotTotal === "number" && Number.isFinite(snapshotTotal)
+                    ? Math.round(snapshotTotal * 100) / 100
+                    : previousTotalValue;
+
+            const previousDiscountValue =
+                typeof prev.discount_applied === "number"
+                    ? prev.discount_applied
+                    : toOptionalNumber(prev.discount_applied) ?? 0;
+            const snapshotDiscount = snapshot.discount;
+            const normalizedDiscount =
+                typeof snapshotDiscount === "number" && Number.isFinite(snapshotDiscount)
+                    ? Math.round(snapshotDiscount * 100) / 100
+                    : Math.round(previousDiscountValue * 100) / 100;
+
+            const normalizedTotalBefore =
+                typeof snapshot.totalBeforeWheel === "number" &&
+                Number.isFinite(snapshot.totalBeforeWheel)
+                    ? Math.round(snapshot.totalBeforeWheel * 100) / 100
+                    : prev.total_before_wheel_prize ?? null;
+
+            const nextOriginal =
+                toOptionalNumber(prev.original_price_per_day) ??
+                (typeof snapshot.pricePerDay === "number" && Number.isFinite(snapshot.pricePerDay)
+                    ? Math.round(snapshot.pricePerDay * 100) / 100
+                    : prev.original_price_per_day ?? null);
+
+            const nextBasePrice = nextWithDeposit ? nextPricePerDay : prev.base_price;
+            const nextBasePriceCasco = nextWithDeposit ? prev.base_price_casco : nextPricePerDay;
+
+            const snapshotUpdates: Partial<PlanSnapshot> = {
+                pricePerDay:
+                    typeof nextPricePerDay === "number" && Number.isFinite(nextPricePerDay)
+                        ? Math.round(nextPricePerDay * 100) / 100
+                        : undefined,
+                subtotal:
+                    typeof normalizedSubtotal === "number" && Number.isFinite(normalizedSubtotal)
+                        ? Math.round(normalizedSubtotal * 100) / 100
+                        : undefined,
+                total:
+                    typeof normalizedTotal === "number" && Number.isFinite(normalizedTotal)
+                        ? Math.round(normalizedTotal * 100) / 100
+                        : undefined,
+                discount:
+                    typeof normalizedDiscount === "number" && Number.isFinite(normalizedDiscount)
+                        ? Math.round(normalizedDiscount * 100) / 100
+                        : undefined,
+                totalBeforeWheel:
+                    typeof normalizedTotalBefore === "number" && Number.isFinite(normalizedTotalBefore)
+                        ? Math.round(normalizedTotalBefore * 100) / 100
+                        : undefined,
+                days:
+                    typeof daysCount === "number" && Number.isFinite(daysCount)
+                        ? daysCount
+                        : undefined,
+            };
+
+            planSnapshotsRef.current = {
+                ...planSnapshotsRef.current,
+                [targetPlan]: mergePlanSnapshot(planSnapshotsRef.current[targetPlan], snapshotUpdates),
+            };
+
+            return recalcTotals({
+                ...prev,
+                with_deposit: nextWithDeposit,
+                price_per_day: nextPricePerDay,
+                original_price_per_day: nextOriginal,
+                base_price: nextBasePrice,
+                base_price_casco: nextBasePriceCasco,
+                sub_total: normalizedSubtotal,
+                total: normalizedTotal,
+                discount_applied: normalizedDiscount,
+                total_before_wheel_prize: normalizedTotalBefore,
+            });
+        },
+        [recalcTotals],
+    );
 
 
     useEffect(() => {
@@ -2512,35 +2764,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     name="withDeposit"
                                     checked={!!bookingInfo.with_deposit}
                                     onChange={() =>
-                                        updateBookingInfo((prev) =>
-                                            recalcTotals({
-                                                ...prev,
-                                                with_deposit: true,
-                                                price_per_day:
-                                                    quote?.rental_rate != null
-                                                        ? parsePrice(quote.rental_rate)
-                                                        : quote?.price_per_day != null
-                                                          ? parsePrice(quote.price_per_day)
-                                                          : quote?.base_price != null
-                                                            ? parsePrice(quote.base_price)
-                                                            : parsePrice(
-                                                                  prev.base_price ??
-                                                                      prev.price_per_day ??
-                                                                      prev.base_price_casco ??
-                                                                      0,
-                                                              ),
-                                                original_price_per_day:
-                                                    toOptionalNumber(prev.original_price_per_day) ??
-                                                    (quote?.base_price != null
-                                                        ? parsePrice(quote.base_price)
-                                                        : parsePrice(
-                                                              prev.base_price ??
-                                                                  prev.price_per_day ??
-                                                                  prev.base_price_casco ??
-                                                                  0,
-                                                          )),
-                                            }),
-                                        )
+                                        updateBookingInfo((prev) => applyPlanSnapshot(prev, true))
                                     }
                                     className="mt-1 h-4 w-4 text-jade focus:ring-jade border-gray-300"
                                 />
@@ -2563,41 +2787,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     name="withDeposit"
                                     checked={!bookingInfo.with_deposit}
                                     onChange={() =>
-                                        updateBookingInfo((prev) =>
-                                            recalcTotals({
-                                                ...prev,
-                                                with_deposit: false,
-                                                price_per_day:
-                                                    quote?.rental_rate_casco != null
-                                                        ? parsePrice(quote.rental_rate_casco)
-                                                        : (quote as {
-                                                              price_per_day_casco?: unknown;
-                                                          })?.price_per_day_casco != null
-                                                          ? parsePrice(
-                                                                (quote as {
-                                                                    price_per_day_casco?: unknown;
-                                                                }).price_per_day_casco,
-                                                            )
-                                                          : quote?.base_price_casco != null
-                                                            ? parsePrice(quote.base_price_casco)
-                                                            : parsePrice(
-                                                                  prev.base_price_casco ??
-                                                                      prev.price_per_day ??
-                                                                      prev.base_price ??
-                                                                      0,
-                                                              ),
-                                                original_price_per_day:
-                                                    toOptionalNumber(prev.original_price_per_day) ??
-                                                    (quote?.base_price_casco != null
-                                                        ? parsePrice(quote.base_price_casco)
-                                                        : parsePrice(
-                                                              prev.base_price_casco ??
-                                                                  prev.base_price ??
-                                                                  prev.price_per_day ??
-                                                                  0,
-                                                          )),
-                                            }),
-                                        )
+                                        updateBookingInfo((prev) => applyPlanSnapshot(prev, false))
                                     }
                                     className="mt-1 h-4 w-4 text-jade focus:ring-jade border-gray-300"
                                 />
