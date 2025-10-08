@@ -2010,29 +2010,58 @@ const BookingForm: React.FC<BookingFormProps> = ({
         toOptionalNumber((quote as { price_per_day_casco?: unknown })?.price_per_day_casco),
         toOptionalNumber(quote?.base_price_casco),
     );
-    const depositBaseRate = pickFirstNumber(
-        toOptionalNumber(bookingInfo.base_price),
+    const isWithDeposit = bookingInfo.with_deposit !== false;
+    const depositPlanBaseRate = pickFirstNumber(
         depositQuoteRate,
-        pricePerDayValue,
+        toOptionalNumber(quote?.base_price),
+        toOptionalNumber(bookingInfo.base_price),
+        isWithDeposit ? pricePerDayValue : null,
         originalRateFromBooking,
     );
-    const cascoBaseRate = pickFirstNumber(
-        toOptionalNumber(bookingInfo.base_price_casco),
+    const cascoPlanBaseRate = pickFirstNumber(
         cascoQuoteRate,
-        pricePerDayValue,
+        toOptionalNumber(quote?.base_price_casco),
+        toOptionalNumber(bookingInfo.base_price_casco),
+        !isWithDeposit ? pricePerDayValue : null,
+        toOptionalNumber(bookingInfo.base_price),
         originalRateFromBooking,
     );
-    const baseRateCandidateOrder = bookingInfo.with_deposit
-        ? [depositBaseRate, pricePerDayValue, cascoBaseRate, depositQuoteRate, originalRateFromBooking]
-        : [cascoBaseRate, pricePerDayValue, depositBaseRate, cascoQuoteRate, originalRateFromBooking];
-    const baseRate = pickFirstNumber(...baseRateCandidateOrder) ?? 0;
-    const discountedRate = bookingInfo.with_deposit
-        ? pickFirstNumber(depositQuoteRate, pricePerDayValue, depositBaseRate, cascoBaseRate) ?? baseRate
-        : pickFirstNumber(cascoQuoteRate, pricePerDayValue, cascoBaseRate, depositBaseRate) ?? baseRate;
-    const discountedSubtotal = bookingInfo.with_deposit
-        ? quote?.sub_total ?? quote?.sub_total_casco ?? null
-        : quote?.sub_total_casco ?? quote?.sub_total ?? null;
-    const discount = quote?.discount ?? 0;
+    const baseRate =
+        (isWithDeposit ? depositPlanBaseRate : cascoPlanBaseRate) ??
+        depositPlanBaseRate ??
+        cascoPlanBaseRate ??
+        0;
+    const discountedRate = isWithDeposit
+        ? pickFirstNumber(
+              depositQuoteRate,
+              toOptionalNumber(quote?.price_per_day),
+              toOptionalNumber(bookingInfo.price_per_day),
+              depositPlanBaseRate,
+          ) ?? baseRate
+        : pickFirstNumber(
+              cascoQuoteRate,
+              toOptionalNumber((quote as { price_per_day_casco?: unknown })?.price_per_day_casco),
+              toOptionalNumber(bookingInfo.price_per_day),
+              cascoPlanBaseRate,
+              depositPlanBaseRate,
+          ) ?? baseRate;
+    const discountedSubtotal = isWithDeposit
+        ? pickFirstNumber(
+              toOptionalNumber(quote?.sub_total),
+              toOptionalNumber(bookingInfo.sub_total),
+              toOptionalNumber((quote as { sub_total_casco?: unknown })?.sub_total_casco),
+          )
+        : pickFirstNumber(
+              toOptionalNumber((quote as { sub_total_casco?: unknown })?.sub_total_casco),
+              toOptionalNumber(bookingInfo.sub_total),
+              toOptionalNumber(quote?.sub_total),
+          );
+    const discount = isWithDeposit
+        ? toOptionalNumber(quote?.discount) ?? 0
+        : pickFirstNumber(
+              toOptionalNumber((quote as { discount_casco?: unknown })?.discount_casco),
+              toOptionalNumber(quote?.discount),
+          ) ?? 0;
     const wheelPrizeDiscountValue =
         typeof quote?.wheel_prize_discount === "number"
             ? quote.wheel_prize_discount
@@ -2045,9 +2074,17 @@ const BookingForm: React.FC<BookingFormProps> = ({
             : null;
     const hasWheelPrizeDiscount =
         typeof normalizedWheelPrizeDiscount === "number" && normalizedWheelPrizeDiscount !== 0;
-    const discountedTotalQuote = bookingInfo.with_deposit
-        ? quote?.total ?? quote?.total_casco ?? null
-        : quote?.total_casco ?? quote?.total ?? null;
+    const discountedTotalQuote = isWithDeposit
+        ? pickFirstNumber(
+              toOptionalNumber(quote?.total),
+              toOptionalNumber(bookingInfo.total),
+              toOptionalNumber((quote as { total_casco?: unknown })?.total_casco),
+          )
+        : pickFirstNumber(
+              toOptionalNumber((quote as { total_casco?: unknown })?.total_casco),
+              toOptionalNumber(bookingInfo.total),
+              toOptionalNumber(quote?.total),
+          );
     const subtotalDisplay =
         typeof discountedSubtotal === "number"
             ? discountedSubtotal
@@ -2482,13 +2519,23 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                         ? parsePrice(quote.rental_rate)
                                                         : quote?.price_per_day != null
                                                           ? parsePrice(quote.price_per_day)
-                                                          : prev.price_per_day,
+                                                          : quote?.base_price != null
+                                                            ? parsePrice(quote.base_price)
+                                                            : parsePrice(
+                                                                  prev.base_price ??
+                                                                      prev.price_per_day ??
+                                                                      prev.base_price_casco ??
+                                                                      0,
+                                                              ),
                                                 original_price_per_day:
                                                     toOptionalNumber(prev.original_price_per_day) ??
                                                     (quote?.base_price != null
                                                         ? parsePrice(quote.base_price)
                                                         : parsePrice(
-                                                              prev.base_price ?? prev.price_per_day ?? 0,
+                                                              prev.base_price ??
+                                                                  prev.price_per_day ??
+                                                                  prev.base_price_casco ??
+                                                                  0,
                                                           )),
                                             }),
                                         )
@@ -2521,9 +2568,22 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 price_per_day:
                                                     quote?.rental_rate_casco != null
                                                         ? parsePrice(quote.rental_rate_casco)
-                                                        : quote?.price_per_day != null
-                                                          ? parsePrice(quote.price_per_day)
-                                                          : prev.price_per_day,
+                                                        : (quote as {
+                                                              price_per_day_casco?: unknown;
+                                                          })?.price_per_day_casco != null
+                                                          ? parsePrice(
+                                                                (quote as {
+                                                                    price_per_day_casco?: unknown;
+                                                                }).price_per_day_casco,
+                                                            )
+                                                          : quote?.base_price_casco != null
+                                                            ? parsePrice(quote.base_price_casco)
+                                                            : parsePrice(
+                                                                  prev.base_price_casco ??
+                                                                      prev.price_per_day ??
+                                                                      prev.base_price ??
+                                                                      0,
+                                                              ),
                                                 original_price_per_day:
                                                     toOptionalNumber(prev.original_price_per_day) ??
                                                     (quote?.base_price_casco != null
