@@ -44,6 +44,7 @@ import {
   formatWheelPrizeExpiry,
 } from "@/lib/wheelFormatting";
 import { generatePaginationSequence } from "@/lib/pagination";
+import { derivePercentageCouponInputValue, normalizeManualCouponType } from "@/lib/bookingDiscounts";
 
 const EMPTY_BOOKING = createEmptyBookingForm();
 
@@ -209,6 +210,8 @@ const mergeBookingResourceIntoForm = (
     info.advance_payment ?? (info as { advancePayment?: unknown }).advancePayment,
   );
   const couponAmountRaw = parseOptionalNumber(info.coupon_amount ?? info.discount);
+  const discountAmountRaw =
+    parseOptionalNumber((info as { discount?: unknown }).discount) ?? couponAmountRaw;
   const subTotalRaw =
     parseOptionalNumber(info.sub_total) ?? parseOptionalNumber((info as { subTotal?: unknown }).subTotal);
   const totalRaw = parseOptionalNumber(info.total) ?? parseOptionalNumber(info.total_price);
@@ -221,6 +224,7 @@ const mergeBookingResourceIntoForm = (
     info.offer_fixed_discount ?? (info as { offerFixedDiscount?: unknown }).offerFixedDiscount,
   );
   const depositWaived = normalizeBoolean(info.deposit_waived, base.deposit_waived ?? false);
+  const withDepositValue = normalizeBoolean(info?.with_deposit, base.with_deposit ?? true);
   const appliedOffers = normalizeAppliedOffersList(info.applied_offers);
   const wheelOfFortunePrizeIdRaw = parseOptionalNumber(
     info.wheel_of_fortune_prize_id ?? (info as { wheelPrizeId?: unknown }).wheelPrizeId,
@@ -234,6 +238,7 @@ const mergeBookingResourceIntoForm = (
 
   const couponType =
     pickNonEmptyString(info?.coupon_type) ?? pickNonEmptyString(info?.discount_type) ?? base.coupon_type ?? "";
+  const normalizedCouponType = normalizeManualCouponType(couponType);
 
   const carImage =
     pickNonEmptyString((info as { car_image?: unknown }).car_image) ??
@@ -260,6 +265,24 @@ const mergeBookingResourceIntoForm = (
   const basePriceResolved = basePriceRaw ?? base.base_price ?? pricePerDayResolved;
   const basePriceCascoResolved = basePriceCascoRaw ?? base.base_price_casco ?? basePriceResolved;
 
+  const rentalDays =
+    parseOptionalNumber(info?.days) ??
+    parseOptionalNumber((info as { total_days?: unknown }).total_days) ??
+    base.days;
+
+  const resolvedCouponAmount =
+    normalizedCouponType === "percentage"
+      ? derivePercentageCouponInputValue({
+          couponType: normalizedCouponType,
+          couponAmount: couponAmountRaw,
+          discountAmount: discountAmountRaw,
+          days: rentalDays,
+          depositRate: basePriceResolved,
+          cascoRate: basePriceCascoResolved,
+          withDeposit: withDepositValue,
+        }) ?? (couponAmountRaw ?? base.coupon_amount)
+      : couponAmountRaw ?? base.coupon_amount;
+
   return {
     ...base,
     id: info?.id ?? base.id,
@@ -267,8 +290,8 @@ const mergeBookingResourceIntoForm = (
       toIdString(info?.booking_number) ?? toIdString(info?.id) ?? base.booking_number ?? EMPTY_BOOKING.booking_number,
     rental_start_date: toLocalDateTimeInput(info?.rental_start_date) ?? base.rental_start_date,
     rental_end_date: toLocalDateTimeInput(info?.rental_end_date) ?? base.rental_end_date,
-    coupon_amount: couponAmountRaw ?? base.coupon_amount,
-    coupon_type: pickNonEmptyString(couponType) ?? base.coupon_type,
+    coupon_amount: resolvedCouponAmount,
+    coupon_type: normalizedCouponType || base.coupon_type,
     coupon_code: pickNonEmptyString(info?.coupon_code) ?? base.coupon_code,
     customer_name:
       pickNonEmptyString(info?.customer_name) ?? pickNonEmptyString(info?.customer?.name) ?? base.customer_name,
@@ -300,13 +323,10 @@ const mergeBookingResourceIntoForm = (
     original_price_per_day: originalPricePerDayResolved,
     base_price: basePriceResolved,
     base_price_casco: basePriceCascoResolved,
-    days:
-      parseOptionalNumber(info?.days) ??
-      parseOptionalNumber((info as { total_days?: unknown }).total_days) ??
-      base.days,
+    days: rentalDays,
     keep_old_price: normalizeBoolean(info?.keep_old_price, base.keep_old_price ?? true),
     send_email: normalizeBoolean(info?.send_email, base.send_email ?? false),
-    with_deposit: normalizeBoolean(info?.with_deposit, base.with_deposit ?? true),
+    with_deposit: withDepositValue,
     status: pickNonEmptyString(info?.status) ?? base.status,
     total_before_wheel_prize: totalBeforeWheelPrize ?? base.total_before_wheel_prize,
     wheel_prize_discount: wheelPrizeDiscountRaw ?? base.wheel_prize_discount,
