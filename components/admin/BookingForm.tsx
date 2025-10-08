@@ -1407,8 +1407,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         ...prev,
                         days: typeof data.days === "number" ? data.days : prev.days ?? 0,
                         price_per_day: normalizedSelectedRate ?? prev.price_per_day,
-                        original_price_per_day:
-                            normalizedSelectedRate ?? prevOriginalPrice ?? prev.original_price_per_day ?? prev.price_per_day ?? null,
+                        original_price_per_day: prevOriginalPrice ??
+                            (typeof prevPricePerDay === "number" && Number.isFinite(prevPricePerDay)
+                                ? Math.round(prevPricePerDay * 100) / 100
+                                : normalizedSelectedRate ?? null),
                         base_price: normalizedDepositRate ?? prev.base_price ?? data.base_price ?? null,
                         base_price_casco: normalizedCascoRate ?? prev.base_price_casco ?? data.base_price_casco ?? null,
                         sub_total: typeof nextSubtotal === "number" ? nextSubtotal : prev.sub_total,
@@ -2419,12 +2421,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                           ? parsePrice(quote.rental_rate)
                                                           : prev.price_per_day,
                                                 original_price_per_day:
-                                                    quote?.base_price != null
+                                                    toOptionalNumber(prev.original_price_per_day) ??
+                                                    (quote?.base_price != null
                                                         ? parsePrice(quote.base_price)
-                                                        : prev.original_price_per_day ??
-                                                          parsePrice(
+                                                        : parsePrice(
                                                               prev.base_price ?? prev.price_per_day ?? 0,
-                                                          ),
+                                                          )),
                                             }),
                                         )
                                     }
@@ -2460,15 +2462,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                           ? parsePrice(quote.rental_rate_casco)
                                                           : prev.price_per_day,
                                                 original_price_per_day:
-                                                    quote?.base_price_casco != null
+                                                    toOptionalNumber(prev.original_price_per_day) ??
+                                                    (quote?.base_price_casco != null
                                                         ? parsePrice(quote.base_price_casco)
-                                                        : prev.original_price_per_day ??
-                                                          parsePrice(
+                                                        : parsePrice(
                                                               prev.base_price_casco ??
                                                                   prev.base_price ??
                                                                   prev.price_per_day ??
                                                                   0,
-                                                          ),
+                                                          )),
                                             }),
                                         )
                                     }
