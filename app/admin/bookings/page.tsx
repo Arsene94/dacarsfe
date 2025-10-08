@@ -43,6 +43,7 @@ import {
   describeWheelPrizeSummaryAmount,
   formatWheelPrizeExpiry,
 } from "@/lib/wheelFormatting";
+import { generatePaginationSequence } from "@/lib/pagination";
 
 const EMPTY_BOOKING = createEmptyBookingForm();
 
@@ -732,6 +733,10 @@ const ReservationsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
+  const paginationSegments = React.useMemo(
+    () => generatePaginationSequence(currentPage, lastPage),
+    [currentPage, lastPage],
+  );
   const [totalReservations, setTotalReservations] = useState(0);
   const [contractOpen, setContractOpen] = useState(false);
   const [contractReservation, setContractReservation] =
@@ -1274,13 +1279,6 @@ const ReservationsPage = () => {
     );
   };
 
-  const getPageNumbers = (): (number | "ellipsis")[] => {
-    if (lastPage <= 6) {
-      return Array.from({ length: lastPage }, (_, i) => i + 1);
-    }
-    return [1, 2, 3, "ellipsis", lastPage - 2, lastPage - 1, lastPage];
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1505,7 +1503,7 @@ const ReservationsPage = () => {
               >
                 Anterior
               </button>
-              {getPageNumbers().map((page, idx) =>
+              {paginationSegments.map((page, idx) =>
                 page === "ellipsis" ? (
                   <span key={`ellipsis-${idx}`} className="px-2 py-1">
                     ...
