@@ -1364,6 +1364,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     const prevTotalBeforeValue = toOptionalNumber(prev.total_before_wheel_prize);
                     const prevOffersDiscount = toOptionalNumber(prev.offers_discount);
                     const prevOfferFixedDiscount = toOptionalNumber(prev.offer_fixed_discount);
+                    const manualCouponType = normalizeManualCouponType(prev.coupon_type);
+                    const manualCouponAmount = toOptionalNumber(prev.coupon_amount);
+                    const hasFixedPerDayOverride =
+                        manualCouponType === "fixed_per_day" &&
+                        typeof manualCouponAmount === "number" &&
+                        Number.isFinite(manualCouponAmount) &&
+                        manualCouponAmount > 0;
                     const depositRateCandidate = pickFirstNumber([
                         (data as { rental_rate?: unknown }).rental_rate,
                         (data as { base_price?: unknown }).base_price,
@@ -1449,6 +1456,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         toOptionalNumber(normalizedWheelPrize?.wheel_of_fortune_prize_id) ??
                         toOptionalNumber(normalizedWheelPrize?.prize_id) ??
                         toOptionalNumber(prev.wheel_of_fortune_prize_id);
+                    const manualOverrideRate = hasFixedPerDayOverride
+                        ? Math.round(manualCouponAmount * 100) / 100
+                        : null;
 
                     const nextSubtotalValue =
                         resolvePlanAmount(
@@ -1493,18 +1503,21 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     return {
                         ...prev,
                         days: normalizedDays,
-                        price_per_day: normalizedSelectedRate ?? prev.price_per_day,
+                        price_per_day:
+                            manualOverrideRate ?? normalizedSelectedRate ?? prev.price_per_day,
                         original_price_per_day:
                             prevOriginalPrice ??
                             (typeof prevPricePerDay === "number" && Number.isFinite(prevPricePerDay)
                                 ? Math.round(prevPricePerDay * 100) / 100
                                 : normalizedSelectedRate ?? null),
                         base_price:
+                            manualOverrideRate ??
                             normalizedDepositRate ??
                             toOptionalNumber((data as { base_price?: unknown }).base_price) ??
                             prev.base_price ??
                             null,
                         base_price_casco:
+                            manualOverrideRate ??
                             normalizedCascoRate ??
                             toOptionalNumber((data as { base_price_casco?: unknown }).base_price_casco) ??
                             prev.base_price_casco ??
