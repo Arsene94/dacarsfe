@@ -1170,7 +1170,7 @@ const ReservationsPage = () => {
           cellClassName: "hidden sm:table-cell",
           cell: (r) => (
               <span
-                  className={`px-12 py-1 rounded-full text-xs font-dm-sans ${getPlanColor(
+                  className={`px-[5rem] py-1 rounded-full text-xs font-dm-sans ${getPlanColor(
                       r.plan,
                   )}`}
               >
@@ -1186,7 +1186,7 @@ const ReservationsPage = () => {
         cellClassName: "hidden sm:table-cell",
         cell: (r) => (
           <span
-            className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
+            className={`px-[5rem] py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
               r.status,
             )}`}
           >
