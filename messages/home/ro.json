@@ -192,8 +192,7 @@
       "clientDialog": [
         { "speaker": "Client", "message": "Pai si? Dupa ce fac?" },
         { "speaker": "DaCars", "message": "Apoi ne întâlnim în fața stației CFR, în fața cupolei verde de sticlă, la terminalul Sosiri." },
-        { "speaker": "Client", "message": "Bine bossu meu, asa facem" }
-      ]
+§      ]
     }
   },
   "wheel": {
