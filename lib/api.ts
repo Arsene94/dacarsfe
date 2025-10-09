@@ -431,6 +431,7 @@ export class ApiClient {
         page?: number;
         perPage?: number;
         language?: string;
+        status?: string;
     } = {}): Promise<ApiListResult<ApiCar>> {
         const { language, ...filters } = params || {};
         const searchParams = new URLSearchParams();
