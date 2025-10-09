@@ -6,6 +6,7 @@ import {
     useContext,
     useEffect,
     useMemo,
+    useRef,
     useState,
     type ReactNode,
 } from "react";
@@ -56,11 +57,18 @@ const resolveInitialLocale = (explicitLocale?: Locale): Locale => {
 
 export const LocaleProvider = ({ children, initialLocale }: LocaleProviderProps) => {
     const [locale, setLocaleState] = useState<Locale>(() => resolveInitialLocale(initialLocale));
+    const hasSyncedFromExternalSources = useRef(false);
 
     useEffect(() => {
+        if (hasSyncedFromExternalSources.current) {
+            return;
+        }
+
         if (typeof window === "undefined" || typeof document === "undefined") {
             return;
         }
+
+        hasSyncedFromExternalSources.current = true;
 
         const dataLocale = document.documentElement.getAttribute("data-locale");
         if (dataLocale && isLocale(dataLocale) && dataLocale !== locale) {
@@ -68,9 +76,13 @@ export const LocaleProvider = ({ children, initialLocale }: LocaleProviderProps)
             return;
         }
 
-        const storedLocale = window.localStorage.getItem(LOCALE_STORAGE_KEY);
-        if (storedLocale && isLocale(storedLocale) && storedLocale !== locale) {
-            setLocaleState(storedLocale);
+        try {
+            const storedLocale = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+            if (storedLocale && isLocale(storedLocale) && storedLocale !== locale) {
+                setLocaleState(storedLocale);
+            }
+        } catch (error) {
+            console.warn("Nu am putut citi limba preferată din localStorage înainte de hidratare", error);
         }
     }, [locale]);
 
@@ -83,14 +95,18 @@ export const LocaleProvider = ({ children, initialLocale }: LocaleProviderProps)
             return;
         }
 
-        window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+        try {
+            window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+        } catch (error) {
+            console.warn("Nu am putut salva limba preferată în localStorage", error);
+        }
         document.cookie = `${LOCALE_STORAGE_KEY}=${locale}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; SameSite=Lax`;
         document.documentElement.lang = locale;
         document.documentElement.setAttribute("data-locale", locale);
     }, [locale]);
 
     const handleSetLocale = useCallback((nextLocale: Locale) => {
-        setLocaleState(nextLocale);
+        setLocaleState((currentLocale) => (currentLocale === nextLocale ? currentLocale : nextLocale));
     }, []);
 
     const value = useMemo<LocaleContextValue>(() => ({
