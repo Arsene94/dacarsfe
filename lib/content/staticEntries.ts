@@ -35,28 +35,6 @@ export const STATIC_DOCS_PAGES: StaticDocPage[] = [
         ],
     },
     {
-        slug: "configurare-tarife",
-        title: "Configurarea tarifelor dinamice",
-        description: "Cum setăm grilele tarifare pentru sezon, flotă și promoții locale.",
-        lastUpdated: "2024-12-17",
-        sections: [
-            {
-                heading: "Tarife de bază",
-                body: [
-                    "Fiecare mașină pornește de la un tarif zilnic recomandat. Tariful poate fi ajustat direct din fișa vehiculului.",
-                    "Pentru perioade de peste 7 zile se aplică automat discountul configurat în secțiunea Promotii.",
-                ],
-            },
-            {
-                heading: "Suplimente și garanții",
-                body: [
-                    "Adăugați suplimente (scaun copii, asigurare extinsă) din secțiunea Add-ons. Sistemul calculează TVA-ul în mod automat.",
-                    "Pentru rezervările fără garanție este necesară aprobarea manuală a unui administrator înainte de confirmare.",
-                ],
-            },
-        ],
-    },
-    {
         slug: "rapoarte-si-analiza",
         title: "Rapoarte și analiză",
         description: "Monitorizarea performanței flotei și raportarea către departamentul financiar.",
