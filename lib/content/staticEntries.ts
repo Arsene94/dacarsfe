@@ -158,6 +158,11 @@ export const STATIC_PAGES = [
         priority: 0.7,
     },
     {
+        path: "/termeni-si-conditii",
+        changeFrequency: "yearly" as const,
+        priority: 0.4,
+    },
+    {
         path: "/docs",
         changeFrequency: "weekly" as const,
         priority: 0.8,
