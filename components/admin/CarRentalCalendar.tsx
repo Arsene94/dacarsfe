@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import BookingForm from '@/components/admin/BookingForm';
 import apiClient from '@/lib/api';
 import { extractItem, extractList } from '@/lib/apiResponse';
-import { derivePercentageCouponInputValue, normalizeManualCouponType } from '@/lib/bookingDiscounts';
+import { normalizeManualCouponType, resolveManualCouponInputValue } from '@/lib/bookingDiscounts';
 import type { ApiCar } from '@/types/car';
 import { createEmptyBookingForm, type AdminBookingResource, type AdminBookingFormValues } from '@/types/admin';
 
@@ -1015,17 +1015,19 @@ const CarRentalCalendar: React.FC = () => {
             const days = parseOptionalNumber(info.days) ?? baseForm.days;
             const withDepositValue = toBoolean(info.with_deposit, baseForm.with_deposit);
             const resolvedCouponAmount =
-                couponType === 'percentage'
-                    ? derivePercentageCouponInputValue({
-                          couponType,
-                          couponAmount,
-                          discountAmount,
-                          days,
-                          depositRate: basePrice,
-                          cascoRate: basePriceCasco,
-                          withDeposit: withDepositValue,
-                      }) ?? couponAmount
-                    : couponAmount;
+                resolveManualCouponInputValue({
+                    couponType,
+                    couponAmount,
+                    discountAmount,
+                    days,
+                    depositRate: basePrice,
+                    cascoRate: basePriceCasco,
+                    withDeposit: withDepositValue,
+                    pricePerDay,
+                    basePrice,
+                    basePriceCasco,
+                    originalPricePerDay: originalPrice,
+                }) ?? couponAmount;
             const status = toSafeString(info.status, baseForm.status);
             const note =
                 pickNonEmptyString(info.note) ??

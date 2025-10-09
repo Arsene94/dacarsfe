@@ -127,3 +127,44 @@ export const derivePercentageCouponInputValue = (
     const normalized = Math.round(percentage * 100) / 100;
     return normalized >= 0 ? normalized : 0;
 };
+
+type ManualCouponInputContext = PercentageCouponContext & {
+    pricePerDay?: unknown;
+    basePrice?: unknown;
+    basePriceCasco?: unknown;
+    originalPricePerDay?: unknown;
+};
+
+/**
+ * Normalize coupon amount values returned by the API so the admin forms can
+ * display the expected input for each manual override type.
+ */
+export const resolveManualCouponInputValue = (
+    context: ManualCouponInputContext,
+): number | null => {
+    const normalizedType = normalizeManualCouponType(context.couponType);
+
+    if (normalizedType === "fixed_per_day") {
+        const candidates: unknown[] = [
+            context.pricePerDay,
+            context.basePrice,
+            context.basePriceCasco,
+            context.originalPricePerDay,
+        ];
+
+        for (const candidate of candidates) {
+            const parsed = toFiniteNumber(candidate);
+            if (parsed != null) {
+                return parsed;
+            }
+        }
+
+        return toFiniteNumber(context.couponAmount);
+    }
+
+    if (normalizedType === "percentage") {
+        return derivePercentageCouponInputValue(context);
+    }
+
+    return toFiniteNumber(context.couponAmount);
+};

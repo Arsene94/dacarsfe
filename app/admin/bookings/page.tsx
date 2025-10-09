@@ -44,7 +44,7 @@ import {
   formatWheelPrizeExpiry,
 } from "@/lib/wheelFormatting";
 import { generatePaginationSequence } from "@/lib/pagination";
-import { derivePercentageCouponInputValue, normalizeManualCouponType } from "@/lib/bookingDiscounts";
+import { normalizeManualCouponType, resolveManualCouponInputValue } from "@/lib/bookingDiscounts";
 
 const EMPTY_BOOKING = createEmptyBookingForm();
 
@@ -271,17 +271,19 @@ const mergeBookingResourceIntoForm = (
     base.days;
 
   const resolvedCouponAmount =
-    normalizedCouponType === "percentage"
-      ? derivePercentageCouponInputValue({
-          couponType: normalizedCouponType,
-          couponAmount: couponAmountRaw,
-          discountAmount: discountAmountRaw,
-          days: rentalDays,
-          depositRate: basePriceResolved,
-          cascoRate: basePriceCascoResolved,
-          withDeposit: withDepositValue,
-        }) ?? (couponAmountRaw ?? base.coupon_amount)
-      : couponAmountRaw ?? base.coupon_amount;
+    resolveManualCouponInputValue({
+      couponType: normalizedCouponType,
+      couponAmount: couponAmountRaw,
+      discountAmount: discountAmountRaw,
+      days: rentalDays,
+      depositRate: basePriceResolved,
+      cascoRate: basePriceCascoResolved,
+      withDeposit: withDepositValue,
+      pricePerDay: pricePerDayResolved,
+      basePrice: basePriceResolved,
+      basePriceCasco: basePriceCascoResolved,
+      originalPricePerDay: originalPricePerDayResolved,
+    }) ?? base.coupon_amount ?? null;
 
   return {
     ...base,

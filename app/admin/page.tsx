@@ -40,7 +40,7 @@ import type { ActivityReservation } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import {getStatusText} from "@/lib/utils";
 import { extractItem, extractList } from "@/lib/apiResponse";
-import { derivePercentageCouponInputValue, normalizeManualCouponType } from "@/lib/bookingDiscounts";
+import { normalizeManualCouponType, resolveManualCouponInputValue } from "@/lib/bookingDiscounts";
 
 const STORAGE_BASE =
     process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://backend.dacars.ro/storage';
@@ -930,17 +930,19 @@ const AdminDashboard = () => {
             const daysValue = parseOptionalNumber(info.days) ?? 0;
             const withDepositValue = normalizeBoolean(info.with_deposit, false);
             const resolvedCouponAmount =
-                couponTypeNormalized === "percentage"
-                    ? derivePercentageCouponInputValue({
-                          couponType: couponTypeNormalized,
-                          couponAmount,
-                          discountAmount,
-                          days: daysValue,
-                          depositRate: basePriceValue,
-                          cascoRate: basePriceCascoValue,
-                          withDeposit: withDepositValue,
-                      }) ?? couponAmount
-                    : couponAmount;
+                resolveManualCouponInputValue({
+                    couponType: couponTypeNormalized,
+                    couponAmount,
+                    discountAmount,
+                    days: daysValue,
+                    depositRate: basePriceValue,
+                    cascoRate: basePriceCascoValue,
+                    withDeposit: withDepositValue,
+                    pricePerDay,
+                    basePrice: basePriceValue,
+                    basePriceCasco: basePriceCascoValue,
+                    originalPricePerDay: originalPricePerDay,
+                }) ?? couponAmount;
 
             const formatted: AdminBookingFormValues = {
                 ...baseForm,
