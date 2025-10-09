@@ -120,7 +120,7 @@ const FleetSection = () => {
         let cancelled = false;
 
         (async () => {
-            const response = await apiClient.getHomePageCars({ limit: 4, language: locale });
+            const response = await apiClient.getHomePageCars({ limit: 4, language: locale, status: "active" });
             const list = extractList<ApiCar>(response);
 
             const mapped: FleetCar[] = list.map((c) => ({
