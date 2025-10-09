@@ -347,8 +347,8 @@ const isPeriodActiveForRange = (
     const activeMonths = Array.isArray(period.active_months) ? period.active_months : null;
     if (activeMonths && activeMonths.length > 0 && rangeStart) {
         const monthsInRange = collectMonthsInRange(rangeStart, rangeEnd ?? rangeStart);
-        const hasOverlap = monthsInRange.some((month) => activeMonths.includes(month));
-        if (!hasOverlap) {
+        const isWithinActiveMonths = monthsInRange.every((month) => activeMonths.includes(month));
+        if (!isWithinActiveMonths) {
             return false;
         }
     }
