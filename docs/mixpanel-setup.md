@@ -1,111 +1,92 @@
 # Configurare Mixpanel pentru DaCars
 
-Această notă descrie pașii necesari pentru conectarea corectă a proiectului la Mixpanel și evenimentele trimise din aplicație.
+Această notă explică modul în care aplicația folosește Mixpanel după migrarea la noul snippet oficial.
 
-## 1. Variabile de mediu
-Adaugă în `.env.local` următoarele variabile (folosite în `lib/mixpanelClient.ts`):
+## 1. SDK și inițializare
+- `lib/mixpanelClient.ts` importă direct SDK-ul și apelează snippet-ul recomandat de Mixpanel:
+  ```ts
+  import mixpanel from "mixpanel-browser";
 
-| Variabilă | Rol |
-| --- | --- |
-| `NEXT_PUBLIC_MIXPANEL_TOKEN` | Tokenul proiectului Mixpanel. Fără el SDK-ul nu se inițializează. |
-| `NEXT_PUBLIC_MIXPANEL_DEBUG` (opțional) | `true` activează log-uri detaliate în consolă pentru debugging; setează `false` în producție dacă vrei să oprești complet log-urile. |
+  mixpanel.init("a53fd216120538a8317818b44e4e50a3", {
+      autocapture: true,
+      record_sessions_percent: 100,
+      api_host: "https://api-eu.mixpanel.com",
+  });
+  ```
+- Token-ul este integrat în cod – nu mai sunt necesare variabile de mediu precum `NEXT_PUBLIC_MIXPANEL_TOKEN` sau flag-ul de debug.
+- Inițializarea se face o singură dată pe client (`ensureMixpanel()` păstrează un flag `isInitialized`).
 
-După modificarea `.env.local`, repornește serverul Next.js (`npm run dev`) pentru ca valoarea token-ului să fie injectată.
+## 2. Page views și rute
+`components/MixpanelInitializer.tsx` rulează din `app/layout.tsx` și:
+1. Apelează `initMixpanel()` la montare și pe fiecare schimbare de rută.
+2. Trimite `trackPageView()` (evenimentul `"Page View"`) cu proprietatea `url` atunci când ruta s-a schimbat.
 
-## 2. Inițializare și page views
-`components/MixpanelInitializer.tsx` rulează global din `app/layout.tsx`. Pe fiecare schimbare de rută:
+Nu este nevoie de configurări suplimentare în Mixpanel pentru a vizualiza aceste page views.
 
-1. Apelează `initMixpanel()` – configurează SDK-ul cu setările din `lib/mixpanelClient.ts` (`autocapture`, persistarea în cookie, fallback fără `localStorage`).
-2. Trimite evenimentul `Page View` (nume exact `"Page View"`) cu proprietăți standard: `url`, `path`, `title`, `referrer`, `locale`, `timestamp`.
+## 3. Identitate
+`context/AuthContext.tsx` folosește helper-ele expuse din `lib/mixpanelClient.ts`:
+- `identifyMixpanelUser(id, traits)` identifică utilizatorii autentificați și setează proprietăți People prin `mixpanel.people.set`.
+- `identifyAnonymousMixpanelVisitor()` generează un ID `anon:<uuid>` atunci când nu există identitate și îl înregistrează ca vizitator anonim.
+- `resetMixpanelIdentity()` resetează complet starea Mixpanel (folosit la logout).
 
-Nu este nevoie de configurări suplimentare în Mixpanel pentru page views, dar poți defini un raport/funnel folosind evenimentul `Page View`.
-
-## 3. Identitate și super proprietăți
-`AuthContext` gestionează identitatea:
-
-- Utilizatorii autentificați sunt identificați cu `identifyMixpanelUser`, folosind ID-ul din backend (`user.id`) și trăsături precum email, roluri, permisiuni.
-- Vizitatorii anonimi sunt identificați cu `identifyAnonymousMixpanelVisitor`. Se folosește IP-ul expus de endpoint-ul `app/api/ip/route.ts`; dacă IP-ul nu poate fi obținut, se generează un ID `anon:<uuid>`.
-- Super proprietăți comune pentru toate evenimentele: `is_authenticated`, `mixpanel_user_id`, iar pentru anonimi `anonymous_identity_source`.
-
-Asigură-te că infrastructura (reverse proxy / CDN) forwardează headerele IP (ex. `x-forwarded-for`) către Next.js, pentru ca endpoint-ul `/api/ip` să funcționeze.
+Helper-ele sanitizează proprietățile înainte de a le trimite, eliminând valorile `undefined` și convertind datele la formate compatibile (Date → ISO, obiecte imbricate etc.).
 
 ## 4. Evenimente custom trimise din aplicație
-Codul trimite explicit următoarele evenimente (numele sunt sensibile la literă și trebuie folosite **exact** la configurarea în Mixpanel → Lexicon). Coloana „Display name” este doar recomandată pentru lizibilitate în interfață.
+Următoarele evenimente sunt trimise explicit. Numele sunt sensibile la literă și trebuie folosite **exact** în Mixpanel → Lexicon.
 
-| Nume eveniment (exact) | Display name recomandat | Locație în cod | Descriere |
-| --- | --- | --- | --- |
-| `landing_view` | „Landing view” | `components/home/HomePageClient.tsx` | Se trimite o singură dată după ce landing-ul a încărcat datele promoției curente. |
-| `hero_search_submitted` | „Hero search submitted” | `components/HeroSection.tsx` | Capturarea căutărilor făcute din formularul principal de pe landing. |
-| `fleet_filters_updated` | „Fleet filters updated” | `components/cars/CarsPageClient.tsx` | Orice schimbare a filtrelor/listării din pagina de flotă. |
-| `car_cta_clicked` | „Car CTA clicked” | `components/cars/CarsPageClient.tsx` | Utilizatorul apasă pe CTA-ul unei mașini pentru a merge spre checkout. |
-| `checkout_loaded` | „Checkout loaded” | `app/checkout/page.tsx` | Checkout-ul se încarcă cu oferta selectată și serviciile implicite. |
-| `checkout_submitted` | „Checkout submitted” | `app/checkout/page.tsx` | Rezervarea este trimisă către backend (după validări locale). |
+| Nume eveniment (exact) | Locație în cod | Descriere |
+| --- | --- | --- |
+| `landing_view` | `components/home/HomePageClient.tsx` | Trimis după ce landing-ul a încărcat promoțiile și starea roții norocului. |
+| `hero_form_submit` | `components/HeroBookingForm.tsx` | Utilizatorul trimite formularul principal de căutare. |
+| `fleet_filters_updated` | `components/cars/CarsPageClient.tsx` | Orice schimbare de filtru în pagina de flotă. |
+| `car_cta_clicked` | `components/cars/CarsPageClient.tsx` | Utilizatorul apasă CTA-ul unei mașini pentru a continua spre checkout. |
+| `checkout_loaded` | `app/checkout/page.tsx` | Checkout-ul se încarcă cu selecțiile curente. |
+| `checkout_submitted` | `app/checkout/page.tsx` | Rezervarea este trimisă către backend. |
 
 ### Proprietăți trimise pentru fiecare eveniment
-În Lexicon → tab-ul „Properties” setează aceleași nume ca în coloana „Nume proprietate” (nu le traduce și nu introduce spații). Tipurile sunt deduse automat, dar le poți marca manual pentru rapoarte mai clare.
-
-| Eveniment | Nume proprietate | Tip recomandat | Semnificație |
-| --- | --- | --- | --- |
-| `landing_view` | `has_booking_range` | Boolean | Indică dacă landing-ul are deja un interval de rezervare (venit din context). |
-|  | `booking_range_key` | String | Cheia internă a intervalului selectat (ex. `this-weekend`). |
-|  | `wheel_popup_shown` | Boolean | A fost afișat pop-up-ul cu roata norocului. |
-|  | `wheel_period_id` | String | ID-ul perioadei active din campania roții (sau `null`). |
-|  | `wheel_active_month_match` | Boolean | Intervalul ales se suprapune cu lunile eligibile pentru premiu. |
-| `hero_search_submitted` | `start_date` | Date (string ISO) | Data de început selectată în căutare. |
-|  | `end_date` | Date (string ISO) | Data de final selectată. |
-|  | `location` | String | Locația aleasă din selector. |
-|  | `car_type` | String | Tipul de mașină selectat (slug intern). |
-|  | `booking_synced` | Boolean | Dacă selecția a fost sincronizată cu contextul de booking. |
-| `fleet_filters_updated` | `filter_key` | String | Numele filtrului modificat (ex. `transmission`). |
-|  | `filter_value` | String / Array | Valoarea aplicată filtrului (sanitizată la string sau listă). |
-|  | `view_mode` | String | Mod de afișare flotă (`grid`/`list`). |
-|  | `search_term` | String | Termenul liber introdus în căutare. |
-|  | `sort_by` | String | Criteriul de sortare activ. |
-|  | `page` | Number | Indexul paginii din lista de rezultate. |
-|  | `total_results` | Number | Numărul de mașini disponibile după filtrare. |
-| `car_cta_clicked` | `car_id` | String | ID-ul mașinii. |
-|  | `car_name` | String | Numele afișat al mașinii. |
-|  | `with_deposit` | Boolean | Dacă oferta curentă include depozit. |
-|  | `car_price_plan` | String | Planul de preț selectat (ex. `standard`). |
-|  | `car_price_per_day` | Number | Prețul/zi în euro. |
-|  | `car_total` | Number | Total estimat pentru perioada selectată. |
-|  | `start_date` | Date (string ISO) | Data începerii rezervării. |
-|  | `end_date` | Date (string ISO) | Data încheierii rezervării. |
-|  | `view_mode` | String | Mod de afișare când s-a apăsat CTA-ul (`grid`/`list`). |
-| `checkout_loaded` | `selected_car_id` | String | Mașina preselectată. |
-|  | `selected_car_name` | String | Numele mașinii preselectate. |
-|  | `with_deposit` | Boolean | Dacă oferta curentă implică depozit. |
-|  | `booking_start` | Date (string ISO) | Data de început din checkout. |
-|  | `booking_end` | Date (string ISO) | Data de final din checkout. |
-|  | `preselected_service_ids` | Array | ID-urile serviciilor pre-activate. |
-|  | `applied_offer_ids` | Array | ID-urile ofertelor aplicate. |
-|  | `has_wheel_prize` | Boolean | Există premiu câștigat la roată pentru rezervare. |
-|  | `wheel_prize_id` | String | ID-ul premiului din roată (dacă există). |
-|  | `quote_ready` | Boolean | Oferta backend este gata și sincronizată. |
-| `checkout_submitted` | `reservation_id` | String | ID-ul rezervării returnat de backend. |
-|  | `car_id` | String | ID-ul mașinii rezervate. |
-|  | `with_deposit` | Boolean | Rezervarea finală implică depozit. |
-|  | `price_per_day` | Number | Prețul/zi final. |
-|  | `sub_total` | Number | Subtotalul înainte de reduceri. |
-|  | `total` | Number | Totalul plătit de client. |
-|  | `total_services` | Number | Valoarea cumulată a serviciilor extra. |
-|  | `coupon_amount` | Number | Reducerea aplicată prin cupon. |
-|  | `offers_discount` | Number | Reducerea totală din oferte. |
-|  | `wheel_prize_discount` | Number | Discount provenit din premiul roții. |
-|  | `deposit_waived` | Boolean | Depozitul a fost eliminat. |
-|  | `wheel_prize_id` | String | ID-ul premiului folosit în această rezervare. |
-|  | `applied_offer_ids` | Array | ID-urile ofertelor aplicate la momentul trimiterii. |
-
-Toate payload-urile trec printr-un sanitizator (`sanitizeMixpanelProperties`) care elimină valorile `undefined`, conversiile `Date → ISO`, listele goale, etc. Nu este nevoie de transformări suplimentare în Mixpanel.
-
-### Recomandări în Mixpanel
-- Creează dashboards pentru funnel-ul „Landing → Hero search → Fleet filter → Checkout Loaded → Checkout Submitted”.
-- Definirea de proprietăți user-level (People properties) va prelua automat câmpurile trimise la identificare (`email`, `roles`, etc.).
-- Activează „Lexicon” în proiectul Mixpanel și adaugă descrierile de mai sus pentru a păstra consistența între echipe.
+| Eveniment | Nume proprietate | Semnificație |
+| --- | --- | --- |
+| `landing_view` | `has_booking_range` | Există un interval de rezervare activ în context. |
+|  | `booking_range_key` | Cheia intervalului selectat (ex. `this-weekend`). |
+|  | `wheel_popup_shown` | Pop-up-ul cu roata norocului a fost afișat. |
+|  | `wheel_period_id` | ID-ul perioadei active din campanie (sau `null`). |
+|  | `wheel_active_month_match` | Intervalul rezervării se suprapune cu lunile eligibile. |
+| `hero_form_submit` | `start_date`, `end_date` | Intervalul selectat în formular (string ISO). |
+|  | `location` | Locația aleasă pentru ridicare. |
+|  | `car_type` | Tipul de mașină selectat (slug). |
+| `fleet_filters_updated` | `filter_key` | Filtrul modificat (`transmission`, `car_type`, etc.). |
+|  | `filter_value` | Valoarea aplicată filtrului. |
+|  | `view_mode` | Modul de afișare curent (`grid` / `list`). |
+|  | `search_term` | Termenul de căutare liber (sau `null`). |
+|  | `sort_by` | Criteriul de sortare activ. |
+|  | `page` | Indexul paginii după aplicarea filtrului. |
+|  | `total_results` | Numărul de mașini disponibile după filtrare. |
+| `car_cta_clicked` | `car_id`, `car_name` | Mașina selectată. |
+|  | `with_deposit` | Dacă oferta implică depozit. |
+|  | `car_price_plan` | Planul de preț (`with_deposit` / `no_deposit`). |
+|  | `car_price_per_day` | Prețul pe zi (număr). |
+|  | `car_total` | Totalul estimat pentru intervalul curent. |
+|  | `start_date`, `end_date` | Intervalul rezervării (sau `null`). |
+|  | `view_mode` | Modul de afișare în momentul click-ului. |
+| `checkout_loaded` | `selected_car_id`, `selected_car_name` | Mașina selectată în checkout. |
+|  | `with_deposit` | Starea selecției privind depozitul (`true` / `false` / `null`). |
+|  | `booking_start`, `booking_end` | Intervalul curent din checkout (sau `null`). |
+|  | `preselected_service_ids` | ID-urile serviciilor preselectate. |
+|  | `applied_offer_ids` | ID-urile ofertelor aplicate în ofertă. |
+|  | `has_wheel_prize` | Există premiu de la roata norocului. |
+|  | `wheel_prize_id` | ID-ul premiului (sau `null`). |
+|  | `quote_ready` | Oferta backend este disponibilă. |
+| `checkout_submitted` | `reservation_id` | ID-ul rezervării returnat de backend (fallback random). |
+|  | `car_id` | ID-ul mașinii rezervate. |
+|  | `with_deposit` | Starea depozitului în payload-ul trimis. |
+|  | `price_per_day`, `sub_total`, `total`, `total_services` | Detalii de cost. |
+|  | `coupon_amount`, `offers_discount`, `wheel_prize_discount` | Reduceri aplicate (sau `null`). |
+|  | `deposit_waived` | Depozitul a fost eliminat. |
+|  | `wheel_prize_id` | ID-ul premiului folosit (sau `null`). |
+|  | `applied_offer_ids` | Ofertelor aplicate în momentul trimiterii. |
 
 ## 5. Debug și verificare
-- În dezvoltare setează `NEXT_PUBLIC_MIXPANEL_DEBUG=true` pentru a vedea în consolă log-uri grupate (`[Mixpanel][timestamp] ...`).
-- Confirmă în Developer Tools → Network că request-urile către `https://api.mixpanel.com/track/` sau `1/track` conțin token-ul corect și proprietățile așteptate.
-- Dacă migrezi proiectul în producție, setează `NEXT_PUBLIC_MIXPANEL_DEBUG=false` și validează că domeniul public are acces la token-ul Mixpanel potrivit mediului.
+- Confirmă în Developer Tools → Network că request-urile merg către `https://api-eu.mixpanel.com` și conțin token-ul `a53fd216120538a8317818b44e4e50a3`.
+- Pentru depanare rapidă, folosește Mixpanel → Live View și filtrează după evenimentele de mai sus.
 
-Respectând pașii de mai sus, integrarea Mixpanel va funcționa out-of-the-box cu codul existent.
+Respectând aceste note, integrarea Mixpanel va funcționa out-of-the-box cu noul snippet.
