@@ -66,7 +66,7 @@ const Footer = () => {
                         <ul className="space-y-3 font-dm-sans text-gray-300">
                             <li className="flex items-center space-x-3">
                                 <Phone className="h-4 w-4 text-jade" />
-                                <span>{footer.contact?.items?.phone ?? "+40 723 817 551"}</span>
+                                <span><Link target="_blank" href={`https://wa.me/${footer.contact?.items?.phone ?? "https://wa.me/40 723 817 551"}`}>{footer.contact?.items?.phone ?? "+40 723 817 551"}</Link></span>
                             </li>
                             <li className="flex items-center space-x-3">
                                 <Mail className="h-4 w-4 text-jade" />
