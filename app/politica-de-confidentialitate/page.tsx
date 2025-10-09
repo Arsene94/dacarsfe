@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
 
 import TermsContent from "@/app/termeni-si-conditii/TermsContent";
 import { buildMetadata } from "@/lib/seo/meta";
-import { AVAILABLE_LOCALES, DEFAULT_LOCALE, LOCALE_STORAGE_KEY, type Locale } from "@/lib/i18n/config";
+import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale";
 
 type PrivacyCopy = {
     heading: string;
@@ -76,62 +76,10 @@ const PRIVACY_BY_LOCALE: Record<Locale, string> = AVAILABLE_LOCALES.reduce((acc,
     return acc;
 }, {} as Record<Locale, string>);
 
-const SUPPORTED_LOCALES = new Set<string>(AVAILABLE_LOCALES);
-
-const normalizeLocaleCandidate = (candidate: string | null | undefined): Locale | null => {
-    if (!candidate) {
-        return null;
-    }
-
-    const trimmed = candidate.trim().toLowerCase();
-    if (!trimmed) {
-        return null;
-    }
-
-    if (SUPPORTED_LOCALES.has(trimmed)) {
-        return trimmed as Locale;
-    }
-
-    const base = trimmed.split(/[-_]/)[0];
-    if (SUPPORTED_LOCALES.has(base)) {
-        return base as Locale;
-    }
-
-    return null;
-};
-
-const parseAcceptLanguage = (value: string | null): string[] => {
-    if (!value) {
-        return [];
-    }
-    return value
-        .split(",")
-        .map((part) => part.split(";")[0]?.trim())
-        .filter((part): part is string => Boolean(part));
-};
-
-const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
-
-const resolvePreferredLocale = (): Locale => {
-    const cookieStore = cookies();
-    const cookieLocale = normalizeLocaleCandidate(cookieStore.get(LOCALE_STORAGE_KEY)?.value);
-    if (cookieLocale) {
-        return cookieLocale;
-    }
-
-    const acceptedLocales = parseAcceptLanguage(headers().get("accept-language"));
-    for (const candidate of acceptedLocales) {
-        const normalized = normalizeLocaleCandidate(candidate);
-        if (normalized) {
-            return normalized;
-        }
-    }
-
-    return FALLBACK_LOCALE;
-};
+const FALLBACK_LOCALE: Locale = getFallbackLocale();
 
 export const generateMetadata = (): Metadata => {
-    const locale = resolvePreferredLocale();
+    const locale = resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
     const copy = PRIVACY_COPY[locale] ?? PRIVACY_COPY[FALLBACK_LOCALE];
 
     return buildMetadata({
@@ -144,7 +92,7 @@ export const generateMetadata = (): Metadata => {
 };
 
 const PrivacyPolicyPage = () => {
-    const locale = resolvePreferredLocale();
+    const locale = resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
     const copy = PRIVACY_COPY[locale] ?? PRIVACY_COPY[FALLBACK_LOCALE];
 
     return (
