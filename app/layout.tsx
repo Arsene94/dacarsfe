@@ -19,7 +19,6 @@ import TikTokPixelInitializer from "../components/TikTokPixelInitializer";
 import MetaPixelScript from "../components/MetaPixelScript";
 import MetaPixelInitializer from "../components/MetaPixelInitializer";
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
-import mixpanel from "mixpanel-browser";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -75,12 +74,6 @@ const localeBootstrapConfig = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const bootstrapPayload = JSON.stringify(localeBootstrapConfig);
-
-    mixpanel.init('a53fd216120538a8317818b44e4e50a3', {
-        autocapture: true,
-        record_sessions_percent: 100,
-        api_host: 'https://api-eu.mixpanel.com',
-    })
 
   return (
     <html
