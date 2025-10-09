@@ -108,6 +108,12 @@ export interface ReservationAppliedOffer {
   discount_amount?: number | null;
 }
 
+export type CouponTotalDiscountDetails<T = number> = {
+  deposit?: T | null;
+  casco?: T | null;
+  [key: string]: T | null | undefined;
+};
+
 export interface ReservationPayload extends ReservationFormData {
   services?: Service[];
   service_ids?: Array<number | string>;
@@ -115,6 +121,8 @@ export interface ReservationPayload extends ReservationFormData {
   total_services?: number;
   coupon_amount?: number;
   coupon_type?: string | null;
+  coupon_total_discount?: number;
+  coupon_total_discount_details?: CouponTotalDiscountDetails | null;
   offers_discount?: number;
   deposit_waived?: boolean;
   total?: number;
@@ -201,6 +209,8 @@ export interface QuotePriceResponse {
   coupon_amount?: number;
   coupon_code?: string | null;
   coupon_type?: string | null;
+  coupon_total_discount?: number;
+  coupon_total_discount_details?: CouponTotalDiscountDetails | null;
   offers_discount?: number;
   offer_fixed_discount?: number;
   deposit_waived?: boolean;

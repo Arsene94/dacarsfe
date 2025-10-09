@@ -506,7 +506,12 @@ describe('Fluxul complet al clienților DaCars', () => {
       total_services: 25,
       offers_discount: 15,
       coupon_amount: 20,
-      coupon_type: 'percent',
+      coupon_type: 'percentage',
+      coupon_total_discount: 20,
+      coupon_total_discount_details: {
+        deposit: 12,
+        casco: 8,
+      },
       wheel_prize_discount: 10,
       deposit_waived: false,
       applied_offers: [

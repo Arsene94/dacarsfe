@@ -215,6 +215,10 @@ Manual overrides can also be applied without a coupon code by providing `coupon_
 - `percentage` – subtract the given percentage (0–100) from the subtotal. Send `coupon_amount` as the percentage value, e.g. `10`
   for a 10 % discount. The quote response returns the monetary value deducted via the usual `discount` / `coupon_amount` fields.
 
+The response additionally reports `coupon_total_discount` (the aggregated value removed from the subtotal) and
+`coupon_total_discount_details`, which breaks the amount down for deposit vs CASCO pricing so the frontend can reconstruct totals
+when toggling between plans.
+
 ### Response
 ```json
 {
@@ -226,6 +230,11 @@ Manual overrides can also be applied without a coupon code by providing `coupon_
   "discount": 15,
   "coupon_amount": 15,
   "coupon_code": "SPRING15",
+  "coupon_total_discount": 0,
+  "coupon_total_discount_details": {
+    "deposit": 15,
+    "casco": 18
+  },
   "total_services": 12,
   "service_ids": [1, 3],
   "total": 247,

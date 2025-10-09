@@ -1,6 +1,7 @@
 import type { ApiCar, CarLookup } from "@/types/car";
 import type { Offer, OfferIcon, OfferStatus } from "@/types/offer";
 import type {
+  CouponTotalDiscountDetails,
   ReservationAppliedOffer,
   ReservationWheelPrizeSummary,
   ServiceStatus,
@@ -235,6 +236,10 @@ export interface AdminBookingResource {
   coupon_type?: string | null;
   coupon_amount?: number | string | null;
   coupon_code?: string | null;
+  coupon_total_discount?: number | string | null;
+  coupon_total_discount_details?:
+    | CouponTotalDiscountDetails<number | string>
+    | null;
   offer_fixed_discount?: number | string | null;
   customer_name?: string | null;
   customer_phone?: string | null;
@@ -311,6 +316,8 @@ export interface AdminBookingFormValues {
   total_services: number;
   coupon_type: string;
   coupon_amount: number;
+  coupon_total_discount?: number | null;
+  coupon_total_discount_details?: CouponTotalDiscountDetails | null;
   coupon_code: string;
   customer_name: string;
   customer_phone: string;
