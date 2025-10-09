@@ -13,6 +13,7 @@ import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
+import { normalizeManualCouponType } from "@/lib/bookingDiscounts";
 import {
     getStoredWheelPrize,
     isStoredWheelPrizeActive,
@@ -24,6 +25,7 @@ import type { BookingAppliedOffer } from "@/types/booking";
 import {
     ReservationFormData,
     Service,
+    type CouponTotalDiscountDetails,
     type DiscountValidationPayload,
     type QuotePricePayload,
     type QuotePriceResponse,
@@ -62,6 +64,32 @@ const parsePrice = (raw: unknown): number => {
     } catch {
         return 0;
     }
+};
+
+const resolveCouponTypeValue = (value: unknown): string | null => {
+    const normalized = normalizeManualCouponType(value);
+    return normalized.length > 0 ? normalized : null;
+};
+
+const sanitizeCouponDiscountDetails = (
+    raw: unknown,
+): CouponTotalDiscountDetails | null => {
+    if (!raw || typeof raw !== "object") {
+        return null;
+    }
+
+    const normalized: CouponTotalDiscountDetails = {};
+    let hasEntries = false;
+
+    for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+        const parsed = parseMaybeNumber(value);
+        if (parsed !== null) {
+            normalized[key] = parsed;
+            hasEntries = true;
+        }
+    }
+
+    return hasEntries ? normalized : {};
 };
 
 const parseMaybeNumber = (value: unknown): number | null => {
@@ -397,6 +425,7 @@ const ReservationPage = () => {
         typeof window !== "undefined"
             ? JSON.parse(localStorage.getItem("discount") || "null")
             : null;
+    const storedCouponType = resolveCouponTypeValue(storedDiscount?.couponType);
     const storedOriginalCar =
         typeof window !== "undefined"
             ? JSON.parse(localStorage.getItem("originalCar") || "null")
@@ -540,7 +569,7 @@ const ReservationPage = () => {
                 messageKey: "success",
                 discount: String(storedDiscount.discount ?? "0"),
                 discountCasco: String(storedDiscount.discountCasco ?? "0"),
-                couponType: storedDiscount.couponType ?? null,
+                couponType: storedCouponType,
             }
             : null,
     );
@@ -754,9 +783,9 @@ const ReservationPage = () => {
                             : typeof coupon?.type === "string"
                                 ? coupon.type
                                 : null;
-                    const normalizedCouponType = couponTypeCandidate?.trim()
-                        ? couponTypeCandidate.trim()
-                        : null;
+                    const normalizedCouponType = resolveCouponTypeValue(
+                        couponTypeCandidate,
+                    );
                     const discountData = {
                         code: couponCode,
                         discount: coupon?.discount_deposit ?? "0",
@@ -1241,8 +1270,11 @@ const ReservationPage = () => {
                         if (couponAmountCandidate !== null && couponAmountCandidate > 0) {
                             payload.coupon_amount = Math.round(couponAmountCandidate * 100) / 100;
                         }
-                        if (discountStatus.couponType) {
-                            payload.coupon_type = discountStatus.couponType;
+                        const couponTypeForPayload = resolveCouponTypeValue(
+                            discountStatus.couponType,
+                        );
+                        if (couponTypeForPayload) {
+                            payload.coupon_type = couponTypeForPayload;
                         }
                     }
                 }
@@ -1342,9 +1374,18 @@ const ReservationPage = () => {
     const displayPerDayPrice = typeof quoteResult?.price_per_day === "number"
         ? quoteResult.price_per_day
         : estimatedPerDayPrice;
-    const quoteCouponType = quoteResult?.coupon_type ?? discountStatus?.couponType ?? null;
+    const quoteCouponType = resolveCouponTypeValue(
+        quoteResult?.coupon_type ?? discountStatus?.couponType ?? null,
+    );
     const quoteWheelPrizeDetails = quoteResult?.wheel_prize ?? null;
     const isQuoteWheelPrizeEligible = quoteWheelPrizeDetails?.eligible !== false;
+    const quoteCouponTotalDiscount =
+        typeof quoteResult?.coupon_total_discount === "number"
+            ? quoteResult.coupon_total_discount
+            : null;
+    const quoteCouponTotalDiscountDetails = sanitizeCouponDiscountDetails(
+        quoteResult?.coupon_total_discount_details,
+    );
 
     const handleDiscountCodeValidation = async (
         force = false,
@@ -1403,9 +1444,9 @@ const ReservationPage = () => {
                         : typeof coupon?.type === "string"
                             ? coupon.type
                             : null;
-                const normalizedCouponType = couponTypeCandidate?.trim()
-                    ? couponTypeCandidate.trim()
-                    : null;
+                const normalizedCouponType = resolveCouponTypeValue(
+                    couponTypeCandidate,
+                );
                 const discountData = {
                     code: formData.coupon_code,
                     discount: coupon?.discount_deposit ?? "0",
@@ -1588,6 +1629,12 @@ const ReservationPage = () => {
             coupon_amount: couponAmountValue,
             coupon_code: formData.coupon_code,
             coupon_type: quoteCouponType ?? undefined,
+            coupon_total_discount:
+                typeof quoteCouponTotalDiscount === "number"
+                    ? quoteCouponTotalDiscount
+                    : undefined,
+            coupon_total_discount_details:
+                quoteCouponTotalDiscountDetails ?? undefined,
             offers_discount: offersDiscountValue,
             deposit_waived: depositWaived,
             total: totalAfterAdjustments,
@@ -1684,6 +1731,12 @@ const ReservationPage = () => {
                     total_services: normalizedServicesAmount,
                     coupon_amount: couponAmountValue,
                     coupon_type: quoteCouponType,
+                    coupon_total_discount:
+                        typeof quoteCouponTotalDiscount === "number"
+                            ? quoteCouponTotalDiscount
+                            : undefined,
+                    coupon_total_discount_details:
+                        quoteCouponTotalDiscountDetails ?? undefined,
                     offers_discount: offersDiscountValue,
                     deposit_waived: depositWaived,
                     selectedCar: selectedCar,

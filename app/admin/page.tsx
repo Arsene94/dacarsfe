@@ -32,7 +32,10 @@ import {
     type AdminBookingResource,
     createEmptyBookingForm,
 } from "@/types/admin";
-import type { ReservationAppliedOffer } from "@/types/reservation";
+import type {
+    CouponTotalDiscountDetails,
+    ReservationAppliedOffer,
+} from "@/types/reservation";
 import type { ActivityReservation } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import {getStatusText} from "@/lib/utils";
@@ -89,6 +92,27 @@ const parseOptionalNumber = (value: unknown): number | null => {
         return Number.isFinite(parsed) ? parsed : null;
     }
     return null;
+};
+
+const sanitizeCouponTotalDiscountDetails = (
+    raw: unknown,
+): CouponTotalDiscountDetails | null => {
+    if (!raw || typeof raw !== "object") {
+        return null;
+    }
+
+    const normalized: CouponTotalDiscountDetails = {};
+    let hasEntries = false;
+
+    for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+        const parsed = parseOptionalNumber(value);
+        if (parsed !== null) {
+            normalized[key] = parsed;
+            hasEntries = true;
+        }
+    }
+
+    return hasEntries ? normalized : {};
 };
 
 const normalizeBoolean = (value: unknown, defaultValue = false): boolean => {
@@ -817,6 +841,15 @@ const AdminDashboard = () => {
             const totalServices =
                 parseOptionalNumber(info.total_services) ?? 0;
             const subTotal = parseOptionalNumber(info.sub_total) ?? 0;
+            const couponTotalDiscount =
+                parseOptionalNumber(
+                    info.coupon_total_discount ??
+                        (info as { couponTotalDiscount?: unknown }).couponTotalDiscount,
+                ) ?? null;
+            const couponTotalDiscountDetails = sanitizeCouponTotalDiscountDetails(
+                info.coupon_total_discount_details ??
+                    (info as { couponTotalDiscountDetails?: unknown }).couponTotalDiscountDetails,
+            );
             const serviceIds = resolveServiceIds(info);
             const carId = parseOptionalNumber(info.car_id) ?? null;
             const carImage = toSafeString(
@@ -918,6 +951,8 @@ const AdminDashboard = () => {
                 rental_start_date: toLocalDateTimeInput(info.rental_start_date),
                 rental_end_date: toLocalDateTimeInput(info.rental_end_date),
                 coupon_amount: resolvedCouponAmount,
+                coupon_total_discount: couponTotalDiscount,
+                coupon_total_discount_details: couponTotalDiscountDetails,
                 coupon_type: couponTypeNormalized,
                 coupon_code: toSafeString(info.coupon_code, ""),
                 customer_name: toSafeString(
