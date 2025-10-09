@@ -60,7 +60,7 @@
       "copyright": "© 2024 DaCars. Alle Rechte vorbehalten.",
       "links": [
         { "label": "AGB", "href": "/termeni-si-conditii", "aria": "AGB" },
-        { "label": "Datenschutz", "href": "#", "aria": "Datenschutz" }
+        { "label": "Datenschutz", "href": "/politica-de-confidentialitate", "aria": "Datenschutz" }
       ]
     }
   }

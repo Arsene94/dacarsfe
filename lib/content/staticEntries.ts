@@ -163,6 +163,11 @@ export const STATIC_PAGES = [
         priority: 0.4,
     },
     {
+        path: "/politica-de-confidentialitate",
+        changeFrequency: "yearly" as const,
+        priority: 0.4,
+    },
+    {
         path: "/docs",
         changeFrequency: "weekly" as const,
         priority: 0.8,
