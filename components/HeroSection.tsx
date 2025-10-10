@@ -7,6 +7,10 @@ import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { HeroBookingFormProps, LocationOption } from "./HeroBookingForm";
 
 import heroBackground from "@/public/images/bg-hero-1920x1080.webp";
+import {
+    HERO_BACKGROUND_QUALITY,
+    HERO_BACKGROUND_SIZES,
+} from "@/config/hero-image";
 
 const HeroBookingFormSkeleton = () => (
     <div
@@ -64,10 +68,9 @@ const HeroSection = () => {
                         fill
                         priority
                         loading="eager"
-                        fetchPriority="high"
                         placeholder="blur"
-                        sizes="(max-width: 639px) 100vw, (max-width: 1279px) 100vw, 100vw"
-                        quality={60}
+                        sizes={HERO_BACKGROUND_SIZES}
+                        quality={HERO_BACKGROUND_QUALITY}
                         className="object-cover"
                     />
                 </div>

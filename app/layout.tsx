@@ -22,6 +22,11 @@ import MetaPixelInitializer from "../components/MetaPixelInitializer";
 import { GoogleAnalytics } from '@next/third-parties/google'
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 import heroBackground from "@/public/images/bg-hero-1920x1080.webp";
+import {
+  HERO_BACKGROUND_QUALITY,
+  HERO_BACKGROUND_SIZES,
+  HERO_BACKGROUND_WIDTHS,
+} from "@/config/hero-image";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -75,12 +80,10 @@ const localeBootstrapConfig = {
   supportedLocales,
 };
 
-const heroImageQuality = 60;
-const heroImageWidths = [360, 414, 480, 640, 750, 828, 1080, 1200, 1920];
 const heroOptimizedSource = encodeURIComponent(heroBackground.src);
-const heroPreloadSrc = `/_next/image?url=${heroOptimizedSource}&w=${Math.max(...heroImageWidths)}&q=${heroImageQuality}`;
-const heroPreloadSrcSet = heroImageWidths
-  .map((width) => `/_next/image?url=${heroOptimizedSource}&w=${width}&q=${heroImageQuality} ${width}w`)
+const heroPreloadSrc = `/_next/image?url=${heroOptimizedSource}&w=${Math.max(...HERO_BACKGROUND_WIDTHS)}&q=${HERO_BACKGROUND_QUALITY}`;
+const heroPreloadSrcSet = HERO_BACKGROUND_WIDTHS
+  .map((width) => `/_next/image?url=${heroOptimizedSource}&w=${width}&q=${HERO_BACKGROUND_QUALITY} ${width}w`)
   .join(", ");
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
@@ -107,9 +110,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           as="image"
           href={heroPreloadSrc}
           imageSrcSet={heroPreloadSrcSet}
-          imageSizes="100vw"
+          imageSizes={HERO_BACKGROUND_SIZES}
           type="image/webp"
-          fetchPriority="high"
+          fetchpriority="high"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="dns-prefetch" href="//vercel.app" />
