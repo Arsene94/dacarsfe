@@ -70,8 +70,8 @@ const BLOG_POST_SEO_COPY: Record<Locale, BlogPostSeoCopy> = {
     },
 };
 
-const resolveBlogPostSeo = async () => {
-    const locale = await resolveRequestLocale();
+const resolveBlogPostSeo = () => {
+    const locale = resolveRequestLocale();
     const copy = BLOG_POST_SEO_COPY[locale] ?? BLOG_POST_SEO_COPY[FALLBACK_LOCALE];
     return { locale, copy };
 };
@@ -87,7 +87,7 @@ const resolveDescription = (post: (typeof STATIC_BLOG_POSTS)[number]): string =>
 
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
     const { slug } = await params;
-    const { locale, copy } = await resolveBlogPostSeo();
+    const { locale, copy } = resolveBlogPostSeo();
     const post = findPost(slug);
 
     if (!post) {
@@ -115,7 +115,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
     const { slug } = await params;
-    const { copy } = await resolveBlogPostSeo();
+    const { copy } = resolveBlogPostSeo();
     const post = findPost(slug);
 
     if (!post) {

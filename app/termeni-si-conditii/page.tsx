@@ -78,8 +78,8 @@ const TERMS_BY_LOCALE: Record<Locale, string> = AVAILABLE_LOCALES.reduce((acc, l
 
 const FALLBACK_LOCALE: Locale = getFallbackLocale();
 
-export const generateMetadata = async (): Promise<Metadata> => {
-    const locale = await resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
+export const generateMetadata = (): Metadata => {
+    const locale = resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
     const copy = TERMS_COPY[locale] ?? TERMS_COPY[FALLBACK_LOCALE];
 
     return buildMetadata({
@@ -91,8 +91,8 @@ export const generateMetadata = async (): Promise<Metadata> => {
     });
 };
 
-const TermsAndConditionsPage = async () => {
-    const locale = await resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
+const TermsAndConditionsPage = () => {
+    const locale = resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
     const copy = TERMS_COPY[locale] ?? TERMS_COPY[FALLBACK_LOCALE];
 
     return (

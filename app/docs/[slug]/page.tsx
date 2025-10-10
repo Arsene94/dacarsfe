@@ -25,7 +25,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: DocPageProps): Promise<Metadata> {
     const { slug } = await params;
-    const { locale, copy } = await resolveDocsSeo();
+    const { locale, copy } = resolveDocsSeo();
     const doc = findDocBySlug(slug);
 
     if (!doc) {
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: DocPageProps): Promise<Metada
 
 export default async function DocPage({ params }: DocPageProps) {
     const { slug } = await params;
-    const { copy } = await resolveDocsSeo();
+    const { copy } = resolveDocsSeo();
     const doc = findDocBySlug(slug);
 
     if (!doc) {

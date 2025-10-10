@@ -541,14 +541,14 @@ const buildFallbackCategory = (copy: FaqSeoCopy): NormalizedFaqCategory => ({
     })),
 });
 
-const resolveFaqSeo = async () => {
-    const locale = await resolveRequestLocale();
+const resolveFaqSeo = () => {
+    const locale = resolveRequestLocale();
     const copy = FAQ_COPY[locale] ?? FAQ_COPY[FALLBACK_LOCALE];
     return { locale, copy };
 };
 
-export async function generateMetadata(): Promise<Metadata> {
-    const { locale, copy } = await resolveFaqSeo();
+export function generateMetadata(): Metadata {
+    const { locale, copy } = resolveFaqSeo();
 
     return buildMetadata({
         title: copy.metaTitle,
@@ -562,7 +562,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const FaqPage = async () => {
-    const { locale, copy } = await resolveFaqSeo();
+    const { locale, copy } = resolveFaqSeo();
     const categories = await fetchFaqCategories(locale);
     const categoriesToRender =
         categories.length > 0 ? categories : [buildFallbackCategory(copy)];

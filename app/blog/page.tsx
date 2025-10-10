@@ -83,14 +83,14 @@ const BLOG_SEO_COPY: Record<Locale, BlogSeoCopy> = {
     },
 };
 
-const resolveBlogSeo = async () => {
-    const locale = await resolveRequestLocale();
+const resolveBlogSeo = () => {
+    const locale = resolveRequestLocale();
     const copy = BLOG_SEO_COPY[locale] ?? BLOG_SEO_COPY[FALLBACK_LOCALE];
     return { locale, copy };
 };
 
-export async function generateMetadata(): Promise<Metadata> {
-    const { locale, copy } = await resolveBlogSeo();
+export function generateMetadata(): Metadata {
+    const { locale, copy } = resolveBlogSeo();
 
     return buildMetadata({
         title: copy.metaTitle,
@@ -112,8 +112,8 @@ const postsItemList = itemList(
     })),
 );
 
-const BlogIndexPage = async () => {
-    const { copy } = await resolveBlogSeo();
+const BlogIndexPage = () => {
+    const { copy } = resolveBlogSeo();
     const structuredData = [
         blog({ description: copy.metaDescription }),
         postsItemList,

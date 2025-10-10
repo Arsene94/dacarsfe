@@ -86,8 +86,10 @@ const heroPreloadSrcSet = HERO_BACKGROUND_WIDTHS
   .map((width) => `/_next/image?url=${heroOptimizedSource}&w=${width}&q=${HERO_BACKGROUND_QUALITY} ${width}w`)
   .join(", ");
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const initialLocale = await resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
+export const runtime = "edge";
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  const initialLocale = resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
   const bootstrapPayload = JSON.stringify({
     ...localeBootstrapConfig,
     initialLocale,

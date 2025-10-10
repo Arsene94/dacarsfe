@@ -48,20 +48,20 @@ type ResolveRequestLocaleOptions = {
     headerName?: string;
 };
 
-export const resolveRequestLocale = async (
+export const resolveRequestLocale = (
     options: ResolveRequestLocaleOptions = {},
-): Promise<Locale> => {
+): Locale => {
     const fallbackLocale = options.fallbackLocale ?? DEFAULT_LOCALE;
     const cookieKey = options.cookieKey ?? LOCALE_STORAGE_KEY;
     const headerName = options.headerName ?? "accept-language";
 
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const cookieLocale = normalizeLocaleCandidate(cookieStore.get(cookieKey)?.value);
     if (cookieLocale) {
         return cookieLocale;
     }
 
-    const headerList = await headers();
+    const headerList = headers();
     const acceptedLocales = parseAcceptLanguage(headerList.get(headerName));
     for (const candidate of acceptedLocales) {
         const normalized = normalizeLocaleCandidate(candidate);
