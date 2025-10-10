@@ -74,7 +74,7 @@ const Footer = () => {
                             </li>
                             <li className="flex items-center space-x-3">
                                 <MapPin className="h-4 w-4 text-jade" />
-                                <span>{footer.contact?.items?.address ?? "Aeroportul Henri Coandă, Otopeni"}</span>
+                                <span>{footer.contact?.items?.address ?? "Calea Bucureștilor 305, Otopeni, Ilfov"}</span>
                             </li>
                             <li className="flex items-center space-x-3">
                                 <Clock className="h-4 w-4 text-jade" />
@@ -90,7 +90,7 @@ const Footer = () => {
                             <p>{footer.schedule?.days ?? "Luni - Duminică"}</p>
                             <p className="text-white font-semibold">{footer.schedule?.hours ?? "24/7"}</p>
                             <p className="text-sm mt-4">
-                                {footer.schedule?.note ?? "Predare și ridicare non-stop la aeroport"}
+                                {footer.schedule?.note ?? "Program non-stop la sediul DaCars din Calea Bucureștilor 305"}
                             </p>
                         </div>
                     </div>

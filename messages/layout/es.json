@@ -48,15 +48,15 @@
       "items": {
         "phone": "+40 723 817 551",
         "email": "contact@dacars.ro",
-        "address": "Aeropuerto Henri Coandă, Otopeni",
-        "schedule": "Disponible 24/7"
+        "address": "Calea Bucurestilor 305, Otopeni, Ilfov",
+        "schedule": "Disponible 24/7 (non-stop)"
       }
     },
     "schedule": {
       "title": "Horario",
-      "days": "Lunes - Domingo",
+      "days": "Servicio continuo",
       "hours": "24/7",
-      "note": "Recogida y entrega en el aeropuerto, sin interrupción"
+      "note": "Recogida y entrega non-stop en la sede DaCars de Calea Bucurestilor 305"
     },
     "bottom": {
       "copyright": "© 2024 DaCars. Todos los derechos reservados.",

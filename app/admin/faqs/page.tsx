@@ -560,8 +560,8 @@ const AdminFaqPage = () => {
                 typeof values.description === "string" ? values.description.trim() : "";
 
             const payload: FaqCategoryTranslationPayload = {
-                name: nameValue.length > 0 ? nameValue : null,
-                description: descriptionValue.length > 0 ? descriptionValue : null,
+                name: nameValue.length > 0 ? nameValue : undefined,
+                description: descriptionValue.length > 0 ? descriptionValue : undefined,
             };
 
             await apiClient.upsertFaqCategoryTranslation(categoryTranslationTarget.id, lang, payload);
@@ -624,8 +624,8 @@ const AdminFaqPage = () => {
             const answerTrimmed = answerRaw.trim();
 
             const payload: FaqTranslationPayload = {
-                question: questionValue.length > 0 ? questionValue : null,
-                answer: answerTrimmed.length > 0 ? answerRaw : null,
+                question: questionValue.length > 0 ? questionValue : undefined,
+                answer: answerTrimmed.length > 0 ? answerRaw : undefined,
             };
 
             await apiClient.upsertFaqTranslation(faqTranslationTarget.id, lang, payload);
