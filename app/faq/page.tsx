@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import StructuredData from "@/components/StructuredData";
+import { createApiClient } from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveRequestLocale } from "@/lib/i18n/server";
 import { buildFaqJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/meta";
+import type { Faq, FaqCategory } from "@/types/faq";
 
 type FaqEntry = { question: string; answer: string };
 
@@ -375,6 +378,158 @@ const FAQ_COPY: Record<Locale, FaqSeoCopy> = {
     },
 };
 
+type NormalizedFaq = FaqEntry & { id: string };
+
+type NormalizedFaqCategory = {
+    id: string;
+    name: string;
+    description: string | null;
+    order: number;
+    faqs: NormalizedFaq[];
+};
+
+const parseOrderValue = (value: unknown): number | null => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return value;
+    }
+    if (typeof value === "string") {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) {
+            return parsed;
+        }
+    }
+    return null;
+};
+
+const isPublishedStatus = (value: unknown): boolean => {
+    if (typeof value !== "string") {
+        return false;
+    }
+    return value.trim().toLowerCase() === "published";
+};
+
+const toNormalizedFaq = (faq: Faq): NormalizedFaq | null => {
+    if (!faq) {
+        return null;
+    }
+
+    const question = typeof faq.question === "string" ? faq.question.trim() : "";
+    const answer = typeof faq.answer === "string" ? faq.answer.trim() : "";
+
+    if (question.length === 0 || answer.length === 0) {
+        return null;
+    }
+
+    if (faq.status && !isPublishedStatus(faq.status)) {
+        return null;
+    }
+
+    const idCandidate =
+        typeof faq.id === "number" && Number.isFinite(faq.id)
+            ? faq.id.toString()
+            : typeof faq.id === "string"
+                ? faq.id.trim()
+                : "";
+
+    const id = idCandidate.length > 0 ? idCandidate : question;
+
+    return { id, question, answer };
+};
+
+const toNormalizedCategory = (category: FaqCategory): NormalizedFaqCategory | null => {
+    if (!category) {
+        return null;
+    }
+
+    if (category.status && !isPublishedStatus(category.status)) {
+        return null;
+    }
+
+    const name = typeof category.name === "string" ? category.name.trim() : "";
+    if (name.length === 0) {
+        return null;
+    }
+
+    const idCandidate =
+        typeof category.id === "number" && Number.isFinite(category.id)
+            ? category.id.toString()
+            : typeof (category as { id?: string }).id === "string"
+                ? ((category as { id?: string }).id ?? "").trim()
+                : "";
+
+    const description =
+        typeof category.description === "string" && category.description.trim().length > 0
+            ? category.description.trim()
+            : null;
+
+    const order = parseOrderValue(category.order) ?? Number.MAX_SAFE_INTEGER;
+
+    const faqs = Array.isArray(category.faqs) ? category.faqs : [];
+    const normalizedFaqs = faqs
+        .map((item) => toNormalizedFaq(item))
+        .filter((item): item is NormalizedFaq => item !== null);
+
+    if (normalizedFaqs.length === 0) {
+        return null;
+    }
+
+    return {
+        id: idCandidate.length > 0 ? idCandidate : name,
+        name,
+        description,
+        order,
+        faqs: normalizedFaqs,
+    };
+};
+
+const fetchFaqCategories = async (locale: Locale): Promise<NormalizedFaqCategory[]> => {
+    try {
+        const client = createApiClient();
+        client.setLanguage(locale);
+        const response = await client.getFaqCategories({
+            language: locale,
+            include: "faqs",
+            status: "published",
+            limit: 100,
+        });
+        const categories = extractList<FaqCategory>(response);
+        return categories
+            .map((category, index) => {
+                const normalized = toNormalizedCategory(category);
+                if (!normalized) {
+                    return null;
+                }
+                return { ...normalized, orderIndex: index };
+            })
+            .filter(
+                (category): category is NormalizedFaqCategory & { orderIndex: number } =>
+                    category !== null,
+            )
+            .sort((a, b) => {
+                if (a.order !== b.order) {
+                    return a.order - b.order;
+                }
+                return a.orderIndex - b.orderIndex;
+            })
+            .map(({ orderIndex: _ignored, ...category }) => category);
+    } catch (error) {
+        console.error("Nu am putut încărca FAQ-urile", error);
+        return [];
+    }
+};
+
+const buildFallbackCategory = (copy: FaqSeoCopy): NormalizedFaqCategory => ({
+    id: "fallback",
+    name: copy.pageTitle,
+    description: copy.pageDescription,
+    order: Number.MAX_SAFE_INTEGER,
+    faqs: copy.items.map((item, index) => ({
+        id: `fallback-${index}`,
+        question: item.question,
+        answer: item.answer,
+    })),
+});
+
 const resolveFaqSeo = async () => {
     const locale = await resolveRequestLocale();
     const copy = FAQ_COPY[locale] ?? FAQ_COPY[FALLBACK_LOCALE];
@@ -396,8 +551,20 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const FaqPage = async () => {
-    const { copy } = await resolveFaqSeo();
-    const faqJsonLd = buildFaqJsonLd(copy.items);
+    const { locale, copy } = await resolveFaqSeo();
+    const categories = await fetchFaqCategories(locale);
+    const categoriesToRender =
+        categories.length > 0 ? categories : [buildFallbackCategory(copy)];
+    const faqItems =
+        categories.length > 0
+            ? categories.flatMap((category) =>
+                  category.faqs.map((item): FaqEntry => ({
+                      question: item.question,
+                      answer: item.answer,
+                  })),
+              )
+            : copy.items;
+    const faqJsonLd = buildFaqJsonLd(faqItems);
 
     return (
         <main className="mx-auto max-w-4xl px-6 py-16">
@@ -407,23 +574,38 @@ const FaqPage = async () => {
                 <p className="mt-4 text-base text-gray-600">{copy.pageDescription}</p>
             </header>
 
-            <section className="space-y-4" aria-label={copy.pageTitle}>
-                {copy.items.map((item, index) => (
-                    <details key={item.question} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                        <summary className="cursor-pointer text-lg font-medium text-gray-900">
-                            <span className="flex items-center justify-between">
-                                <span>
-                                    {index + 1}. {item.question}
-                                </span>
-                                <span aria-hidden="true" className="text-berkeley">
-                                    +
-                                </span>
-                            </span>
-                        </summary>
-                        <div className="mt-3 text-base text-gray-700">
-                            <p>{item.answer}</p>
+            <section className="space-y-10" aria-label={copy.pageTitle}>
+                {categoriesToRender.map((category) => (
+                    <article key={category.id} className="space-y-4">
+                        <div className="text-left">
+                            <h2 className="text-2xl font-semibold text-gray-900">{category.name}</h2>
+                            {category.description && (
+                                <p className="mt-2 text-base text-gray-600">{category.description}</p>
+                            )}
                         </div>
-                    </details>
+                        <div className="space-y-4">
+                            {category.faqs.map((item, index) => (
+                                <details
+                                    key={`${category.id}-${item.id}`}
+                                    className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                                >
+                                    <summary className="cursor-pointer text-lg font-medium text-gray-900">
+                                        <span className="flex items-center justify-between">
+                                            <span>
+                                                {index + 1}. {item.question}
+                                            </span>
+                                            <span aria-hidden="true" className="text-berkeley">
+                                                +
+                                            </span>
+                                        </span>
+                                    </summary>
+                                    <div className="mt-3 text-base text-gray-700">
+                                        <p>{item.answer}</p>
+                                    </div>
+                                </details>
+                            ))}
+                        </div>
+                    </article>
                 ))}
             </section>
         </main>
