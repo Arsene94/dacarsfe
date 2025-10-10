@@ -21,67 +21,56 @@ if (isProduction) {
 
 const noscriptStyles = '<link rel="stylesheet" href="/tailwind.css" />';
 const CRITICAL_STYLE_ID = "critical-tailwind";
-const TAILWIND_ASYNC_ATTR = "tailwind-preload";
+const TAILWIND_HREF = "/tailwind.css";
 
-const enableAsyncTailwindScript = `
+const loadDeferredTailwindScript = `
   (function() {
-    var link = document.querySelector('link[data-async-css="${TAILWIND_ASYNC_ATTR}"]');
-    if (!link) {
+    var href = '${TAILWIND_HREF}';
+    var marker = 'tailwind-inline-cache';
+    var existing = document.querySelector('link[data-inline-cache="' + marker + '"]');
+    if (existing) {
       return;
     }
 
-    var critical = document.getElementById('${CRITICAL_STYLE_ID}');
+    var inject = function() {
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      link.media = 'print';
+      link.setAttribute('data-inline-cache', marker);
 
-    var enableStylesheet = function() {
-      if (!link) {
-        return;
-      }
+      var critical = document.getElementById('${CRITICAL_STYLE_ID}');
 
-      if (link.rel !== 'stylesheet') {
-        try {
-          link.rel = 'stylesheet';
-        } catch (error) {
-          link.setAttribute('rel', 'stylesheet');
+      link.addEventListener('load', function() {
+        link.media = 'all';
+        if (critical && critical.parentNode) {
+          critical.parentNode.removeChild(critical);
         }
-      }
-
-      if (link.hasAttribute('as')) {
-        link.removeAttribute('as');
-      }
-
-      if (link.dataset && Object.prototype.hasOwnProperty.call(link.dataset, 'asyncCss')) {
-        try {
-          delete link.dataset.asyncCss;
-        } catch (error) {
-          link.removeAttribute('data-async-css');
-        }
-      } else {
-        link.removeAttribute('data-async-css');
-      }
+      }, { once: true });
 
       if (critical && critical.parentNode) {
-        critical.parentNode.removeChild(critical);
+        critical.parentNode.insertBefore(link, critical.nextSibling);
+      } else {
+        (document.head || document.documentElement).appendChild(link);
       }
     };
 
-    if (link.rel === 'stylesheet') {
-      enableStylesheet();
-      return;
-    }
-
-    var finalize = function() {
-      enableStylesheet();
+    var schedule = function() {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(function() {
+          inject();
+        }, { timeout: 3000 });
+      } else {
+        window.setTimeout(inject, 500);
+      }
     };
 
-    link.addEventListener('load', finalize, { once: true });
-    link.addEventListener('error', finalize, { once: true });
-
-    if (link.sheet) {
-      enableStylesheet();
+    if (document.readyState === 'complete') {
+      schedule();
       return;
     }
 
-    window.setTimeout(enableStylesheet, 3000);
+    window.addEventListener('load', schedule, { once: true });
   })();
 `.trim();
 
@@ -103,15 +92,8 @@ export function GlobalStyles(): JSX.Element | null {
         id={CRITICAL_STYLE_ID}
         dangerouslySetInnerHTML={{ __html: inlineTailwindCss }}
       />
-      {/* eslint-disable-next-line @next/next/no-css-tags */}
-      <link
-        rel="preload"
-        as="style"
-        href="/tailwind.css"
-        data-async-css={TAILWIND_ASYNC_ATTR}
-      />
       <script
-        dangerouslySetInnerHTML={{ __html: enableAsyncTailwindScript }}
+        dangerouslySetInnerHTML={{ __html: loadDeferredTailwindScript }}
       />
       <noscript dangerouslySetInnerHTML={{ __html: noscriptStyles }} />
     </>
