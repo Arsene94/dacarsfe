@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
+import { resolveMediaUrl } from "@/lib/media";
 import { createVehicleItemListStructuredData } from "@/lib/seo/structuredData";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { useBooking } from "@/context/useBooking";
@@ -23,14 +24,11 @@ import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
 
-const STORAGE_BASE = "https://backend.dacars.ro/storage";
-
-const toImageUrl = (p?: string | null): string => {
-    if (!p) return "/images/placeholder-car.svg";
-    if (/^https?:\/\//i.test(p)) return p;
-    const base = STORAGE_BASE.replace(/\/$/, "");
-    const path = String(p).replace(/^\//, "");
-    return `${base}/${path}`;
+const resolveCarImageUrl = (value?: string | null): string => {
+    const resolved = resolveMediaUrl(value);
+    return typeof resolved === "string" && resolved.trim().length > 0
+        ? resolved
+        : "/images/placeholder-car.svg";
 };
 
 const toFiniteInteger = (value: unknown, fallback: number): number => {
@@ -99,12 +97,16 @@ const FleetPage = () => {
             }
 
             const gallery = Array.from(
-                new Set(galleryCandidates.map((candidate) => toImageUrl(candidate))),
-            ).filter((src) => src.trim().length > 0);
+                new Set(
+                    galleryCandidates
+                        .map((candidate) => resolveMediaUrl(candidate))
+                        .filter((src): src is string => typeof src === "string" && src.trim().length > 0),
+                ),
+            );
             if (gallery.length === 0) {
-                gallery.push(toImageUrl(null));
+                gallery.push(resolveCarImageUrl(null));
             }
-            const primaryImage = gallery[0];
+            const primaryImage = gallery[0] ?? resolveCarImageUrl(null);
 
             const resolvedName =
                 typeof c.name === "string" && c.name.trim().length > 0

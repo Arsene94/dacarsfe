@@ -14,6 +14,7 @@ import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
 import { normalizeManualCouponType } from "@/lib/bookingDiscounts";
+import { resolveMediaUrl } from "@/lib/media";
 import {
     getStoredWheelPrize,
     isStoredWheelPrizeActive,
@@ -39,15 +40,13 @@ import checkoutMessagesRo from "@/messages/checkout/ro.json";
 
 type CheckoutMessages = typeof checkoutMessagesRo;
 
-const STORAGE_BASE = "https://backend.dacars.ro/storage";
 const DEFAULT_CURRENCY = "RON";
 
-const toImageUrl = (p?: string | null): string => {
-    if (!p) return "/images/placeholder-car.svg";
-    if (/^https?:\/\//i.test(p)) return p;
-    const base = STORAGE_BASE.replace(/\/$/, "");
-    const path = p.replace(/^\//, "");
-    return `${base}/${path}`;
+const toImageUrl = (value?: string | null): string => {
+    const resolved = resolveMediaUrl(value);
+    return typeof resolved === "string" && resolved.trim().length > 0
+        ? resolved
+        : "/images/placeholder-car.svg";
 };
 
 const parsePrice = (raw: unknown): number => {
@@ -212,12 +211,16 @@ const mapApiCarToCar = (apiCar: ApiCar, fallbackName: string): Car => {
         registerImage(apiCar.type.image);
     }
     const gallery = Array.from(
-        new Set(galleryCandidates.map((candidate) => toImageUrl(candidate))),
-    ).filter((src) => src.trim().length > 0);
+        new Set(
+            galleryCandidates
+                .map((candidate) => resolveMediaUrl(candidate))
+                .filter((src): src is string => typeof src === "string" && src.trim().length > 0),
+        ),
+    );
     if (gallery.length === 0) {
         gallery.push(toImageUrl(null));
     }
-    const primaryImage = gallery[0];
+    const primaryImage = gallery[0] ?? toImageUrl(null);
 
     const typeName = resolveFirstString(apiCar.type?.name) ?? "—";
     const typeId = coerceId(apiCar.type?.id);

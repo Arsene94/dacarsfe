@@ -22,18 +22,16 @@ import {
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { ApiCar, CarCategory, FleetCar } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { resolveMediaUrl } from "@/lib/media";
 
-const STORAGE_BASE =
-    process.env.NEXT_PUBLIC_STORAGE_URL ?? "https://backend.dacars.ro/storage";
 const siteUrl = siteMetadata.siteUrl;
 const featuredFleetUrl = `${siteUrl}/cars`;
 
-const toImageUrl = (p?: string | null): string => {
-    if (!p) return "/images/placeholder-car.svg";
-    if (/^https?:\/\//i.test(p)) return p;
-    const base = STORAGE_BASE.replace(/\/$/, "");
-    const path = p.replace(/^\//, "");
-    return `${base}/${path}`;
+const toImageUrl = (value?: string | null): string => {
+    const resolved = resolveMediaUrl(value);
+    return typeof resolved === "string" && resolved.trim().length > 0
+        ? resolved
+        : "/images/placeholder-car.svg";
 };
 
 const parsePrice = (priceText?: string | null): number | undefined => {
