@@ -27,6 +27,10 @@
     box-shadow: 0 0 0 2px rgb(20 184 166 / 0.35) !important;
 }
 
+.rich-text-editor--faq-answer .ck.ck-editor__editable:not(.ck-editor__nested-editable) {
+    min-height: 160px;
+}
+
 .rich-text-editor--description .ck.ck-editor__editable:not(.ck-editor__nested-editable) {
     min-height: 120px;
 }

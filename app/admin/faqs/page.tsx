@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import CKEditor from "@/lib/vendors/ckeditor/react";
+import ClassicEditor from "@/lib/vendors/ckeditor/classic-editor";
 import apiClient from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import type {
@@ -16,6 +18,7 @@ import type {
     FaqPayload,
     FaqStatus,
 } from "@/types/faq";
+import type { ClassicEditorInstance } from "@/lib/vendors/ckeditor/loader";
 
 const statusLabels: Record<FaqStatus, string> = {
     published: "Publicat",
@@ -64,6 +67,27 @@ type FaqFormState = {
 
 const DEFAULT_STATUS: FaqStatus = "published";
 
+const answerEditorConfig: Record<string, unknown> = {
+    toolbar: [
+        "heading",
+        "|",
+        "bold",
+        "italic",
+        "link",
+        "bulletedList",
+        "numberedList",
+        "blockQuote",
+        "|",
+        "undo",
+        "redo",
+    ],
+    link: {
+        addTargetToExternalLinks: true,
+    },
+    placeholder: "Explică detaliat răspunsul pentru clienți",
+    shouldNotGroupWhenFull: true,
+};
+
 const createEmptyCategoryForm = (): CategoryFormState => ({
     id: null,
     name: "",
@@ -100,6 +124,15 @@ const parseOrderValue = (value: unknown): number => {
     }
     return Number.MAX_SAFE_INTEGER;
 };
+
+const extractPlainText = (value: string): string =>
+    value
+        .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, " ")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/&nbsp;|&#160;/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
 
 const AdminFaqPage = () => {
     const [categoryRecords, setCategoryRecords] = useState<NormalizedCategory[]>([]);
@@ -308,6 +341,14 @@ const AdminFaqPage = () => {
         setFormSuccess(null);
     }, []);
 
+    const handleAnswerChange = useCallback(
+        (_: unknown, editor: ClassicEditorInstance) => {
+            const data = editor.getData();
+            updateFormField("answer", typeof data === "string" ? data : String(data));
+        },
+        [updateFormField],
+    );
+
     const handleEditCategory = (category: NormalizedCategory) => {
         setCategoryFormState({
             id: category.id,
@@ -459,13 +500,14 @@ const AdminFaqPage = () => {
 
         const trimmedQuestion = formState.question.trim();
         const trimmedAnswer = formState.answer.trim();
+        const plainAnswer = extractPlainText(trimmedAnswer);
 
         if (trimmedQuestion.length === 0) {
             setFormError("Introdu o întrebare pentru FAQ.");
             return;
         }
 
-        if (trimmedAnswer.length === 0) {
+        if (plainAnswer.length === 0) {
             setFormError("Introdu un răspuns complet pentru FAQ.");
             return;
         }
@@ -777,15 +819,16 @@ const AdminFaqPage = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="answer">Răspuns</Label>
-                            <Textarea
-                                id="answer"
-                                value={formState.answer}
-                                onChange={(event) => updateFormField("answer", event.target.value)}
-                                placeholder="Explică detaliat răspunsul pentru clienți"
-                                rows={6}
-                                disabled={saving}
-                            />
+                            <Label htmlFor="answer-editor">Răspuns</Label>
+                            <div id="answer-editor" className="rich-text-editor rich-text-editor--faq-answer">
+                                <CKEditor
+                                    editor={ClassicEditor}
+                                    data={formState.answer}
+                                    config={answerEditorConfig}
+                                    disabled={saving}
+                                    onChange={handleAnswerChange}
+                                />
+                            </div>
                         </div>
 
                         <div className="space-y-2">
