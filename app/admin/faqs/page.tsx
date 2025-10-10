@@ -752,7 +752,8 @@ const AdminFaqPage = () => {
     };
 
     return (
-        <div className="space-y-8 p-6">
+        <>
+            <div className="space-y-8 p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-semibold text-gray-900">Administrare FAQ</h1>
@@ -1151,7 +1152,7 @@ const AdminFaqPage = () => {
                                             {formatTimestamp(faq.updatedAt ?? faq.createdAt)}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <div className="flex justify-end">
+                                            <div className="flex justify-end gap-2">
                                                 <Button
                                                     type="button"
                                                     variant="secondary"
@@ -1172,7 +1173,9 @@ const AdminFaqPage = () => {
                     )}
                 </div>
             </section>
-        </div>
+            </div>
+
+        </>
     );
 };
 

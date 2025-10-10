@@ -11,7 +11,10 @@ import apiClient from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { formatDateTime } from "@/lib/datetime";
 import type { Column } from "@/types/ui";
-import type { BlogCategory, BlogCategoryPayload } from "@/types/blog";
+import type {
+  BlogCategory,
+  BlogCategoryPayload,
+} from "@/types/blog";
 
 const EMPTY_FORM: CategoryFormState = {
   name: "",

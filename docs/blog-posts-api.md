@@ -21,6 +21,8 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
 
 > **Automatic translations** – Whenever a blog post is saved the OpenAI powered auto-translator writes missing translations for all configured target languages. Use the translation endpoints to override copy manually or trigger a batch re-translation of historic posts.
 
+> **Language negotiation** – Public `GET /api/blog-posts` and `GET /api/blog-posts/{id}` routes accept an optional trailing `/{lang}` segment (e.g. `/api/blog-posts/en`) to return translated titles, excerpts, content, and meta fields. When omitted, the API falls back to the source language configured in `dacars.translation_source_language`.
+
 ## Validation schema
 | Field | Required | Type | Notes |
 | --- | --- | --- | --- |

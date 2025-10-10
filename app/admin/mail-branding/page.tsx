@@ -607,10 +607,10 @@ const createDefaultPreviewContext = (
     booking_created_at: "2024-06-15 10:30",
     pickup_date: "2024-07-01",
     pickup_time: "08:30",
-    pickup_location: site?.address ?? "Aeroportul Henri Coandă, Otopeni",
+    pickup_location: site?.address ?? "Calea Bucureștilor 305, Otopeni, Ilfov",
     dropoff_date: "2024-07-07",
     dropoff_time: "09:00",
-    dropoff_location: site?.address ?? "Aeroportul Henri Coandă, Otopeni",
+    dropoff_location: site?.address ?? "Calea Bucureștilor 305, Otopeni, Ilfov",
     car: {
       name: "Dacia Logan",
       category: "Economy",
@@ -751,8 +751,8 @@ const EXACT_MOCK_VALUES: Record<string, unknown> = {
   dropoff_date: "2024-07-07",
   pickup_time: "08:30",
   dropoff_time: "09:00",
-  pickup_location: "Aeroportul Henri Coandă, Otopeni",
-  dropoff_location: "Aeroportul Henri Coandă, Otopeni",
+  pickup_location: "Calea Bucureștilor 305, Otopeni, Ilfov",
+  dropoff_location: "Calea Bucureștilor 305, Otopeni, Ilfov",
   total_price: "350 €",
   advance_paid: "50 €",
   balance_due: "300 €",
@@ -2703,7 +2703,7 @@ const MailBrandingPage = () => {
                     id="site-address"
                     value={brandingForm?.site.address ?? ""}
                     onChange={(event) => handleSiteFieldChange("address", event.target.value)}
-                    placeholder="Aeroportul Henri Coandă, Otopeni"
+                    placeholder="Calea Bucureștilor 305, Otopeni, Ilfov"
                   />
                 </div>
                 <div>

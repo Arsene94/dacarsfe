@@ -1,13 +1,18 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { User } from "lucide-react";
 import { formatDate } from "@/lib/datetime";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveMediaUrl } from "@/lib/media";
 import { getUserDisplayName } from "@/lib/users";
 import type { BlogPost } from "@/types/blog";
 
 type BlogPostCardProps = {
   post: BlogPost;
+  locale?: Locale | string;
+  ctaLabel: string;
 };
 
 const buildCategoryHref = (slug?: string | null, query?: string): string => {
@@ -23,10 +28,10 @@ const buildCategoryHref = (slug?: string | null, query?: string): string => {
   return queryString ? `/blog?${queryString}` : "/blog";
 };
 
-const BlogPostCard = ({ post }: BlogPostCardProps) => {
+const BlogPostCard = ({ post, locale = DEFAULT_LOCALE, ctaLabel }: BlogPostCardProps) => {
   const imageUrl = resolveMediaUrl(post.image ?? post.thumbnail ?? null);
   const authorName = post.author ? getUserDisplayName(post.author) : null;
-  const publishedLabel = formatDate(post.published_at ?? post.created_at);
+  const publishedLabel = formatDate(post.published_at ?? post.created_at, undefined, locale);
   const hasPublishedDate = publishedLabel !== "—";
   const categorySlug = post.category?.slug ?? null;
   const categoryName = post.category?.name ?? null;
@@ -94,7 +99,7 @@ const BlogPostCard = ({ post }: BlogPostCardProps) => {
             href={`/blog/${post.slug}`}
             className="inline-flex items-center text-sm font-semibold text-berkeley transition hover:text-berkeley/80"
           >
-            Citește articolul
+            {ctaLabel}
             <span className="ml-1">→</span>
           </Link>
         </div>

@@ -413,7 +413,7 @@ describe('ApiClient admin blog management', () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${baseURL}/blog-posts?page=3&per_page=15&limit=45&category_id=12&author_id=+9+&status=published&slug=top-destinatii-2024&title=road+trips&sort=-published_at&fields=id%2Ctitle&include=author%2Ccategory%2Ctags`,
+      `${baseURL}/blog-posts/ro?page=3&per_page=15&limit=45&category_id=12&author_id=+9+&status=published&slug=top-destinatii-2024&title=road+trips&sort=-published_at&fields=id%2Ctitle&include=author%2Ccategory%2Ctags`,
       expect.objectContaining({
         headers: expect.objectContaining({
           'Content-Type': 'application/json',
@@ -449,7 +449,7 @@ describe('ApiClient admin blog management', () => {
     const result = await client.getBlogPost(34);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${baseURL}/blog-posts/34`,
+      `${baseURL}/blog-posts/34/ro`,
       expect.objectContaining({
         headers: expect.objectContaining({
           'Content-Type': 'application/json',

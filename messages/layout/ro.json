@@ -5,6 +5,7 @@
       { "label": "Flotă", "href": "/cars", "aria": "Flotă" },
       { "label": "Oferte", "href": "/offers", "aria": "Oferte" },
       { "label": "Blog", "href": "/blog", "aria": "Blog" },
+      { "label": "Întrebări frecvente", "href": "/faq", "aria": "Întrebări frecvente" },
       { "label": "Contact", "href": "/contact", "aria": "Contact" }
     ],
     "cta": {
@@ -38,7 +39,8 @@
         { "label": "Acasă", "href": "/", "aria": "Acasă" },
         { "label": "Flota Auto", "href": "/cars", "aria": "Flota Auto" },
         { "label": "Oferte Speciale", "href": "/offers", "aria": "Oferte Speciale" },
-        { "label": "Blog", "href": "/blog", "aria": "Blog" }
+        { "label": "Blog", "href": "/blog", "aria": "Blog" },
+        { "label": "Întrebări frecvente", "href": "/faq", "aria": "Întrebări frecvente" }
       ]
     },
     "contact": {
@@ -46,15 +48,15 @@
       "items": {
         "phone": "+40 723 817 551",
         "email": "contact@dacars.ro",
-        "address": "Aeroportul Henri Coandă, Otopeni",
-        "schedule": "Disponibil 24/7"
+        "address": "Calea Bucureștilor 305, Otopeni, Ilfov",
+        "schedule": "Disponibil non-stop 24/7"
       }
     },
     "schedule": {
       "title": "Program",
-      "days": "Luni - Duminică",
+      "days": "Non-stop",
       "hours": "24/7",
-      "note": "Predare și ridicare non-stop la aeroport"
+      "note": "Predare și ridicare non-stop la sediul DaCars din Calea Bucureștilor 305"
     },
     "bottom": {
       "copyright": "© 2024 DaCars. Toate drepturile rezervate.",

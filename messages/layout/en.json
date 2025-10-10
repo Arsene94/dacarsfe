@@ -4,7 +4,8 @@
       { "label": "Home", "href": "/", "aria": "Home" },
       { "label": "Fleet", "href": "/cars", "aria": "Fleet" },
       { "label": "Offers", "href": "/offers", "aria": "Offers" },
-      { "label": "Booking", "href": "/checkout", "aria": "Booking" },
+      { "label": "Blog", "href": "/blog", "aria": "Blog" },
+      { "label": "FAQ", "href": "/faq", "aria": "FAQ" },
       { "label": "Contact", "href": "#contact", "aria": "Contact" }
     ],
     "cta": {
@@ -38,7 +39,8 @@
         { "label": "Home", "href": "/", "aria": "Home" },
         { "label": "Our Fleet", "href": "/cars", "aria": "Our Fleet" },
         { "label": "Special Offers", "href": "/offers", "aria": "Special Offers" },
-        { "label": "Booking", "href": "/checkout", "aria": "Booking" }
+        { "label": "Blog", "href": "/blog", "aria": "Blog" },
+        { "label": "FAQ", "href": "/faq", "aria": "FAQ" }
       ]
     },
     "contact": {
@@ -46,15 +48,15 @@
       "items": {
         "phone": "+40 723 817 551",
         "email": "contact@dacars.ro",
-        "address": "Henri Coandă Airport, Otopeni",
-        "schedule": "Available 24/7"
+        "address": "Calea Bucurestilor 305, Otopeni, Ilfov",
+        "schedule": "Available 24/7 (non-stop)"
       }
     },
     "schedule": {
       "title": "Schedule",
-      "days": "Monday - Sunday",
+      "days": "Non-stop",
       "hours": "24/7",
-      "note": "Pick-up and drop-off at the airport, non-stop"
+      "note": "Pick-up and drop-off non-stop at the DaCars hub on Calea Bucurestilor 305"
     },
     "bottom": {
       "copyright": "© 2024 DaCars. All rights reserved.",

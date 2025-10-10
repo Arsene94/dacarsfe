@@ -24,7 +24,7 @@ overrides).
       "phone_link": "+40723817551",
       "support_phone": "+40 722 123 456",
       "support_phone_link": "+40722123456",
-      "address": "Aeroportul Henri Coandă, Otopeni",
+      "address": "Calea Bucureștilor 305, Otopeni, Ilfov",
       "availability": "Disponibil 24/7",
       "menu_items": [
         { "label": "Acasă", "url": "/" },
@@ -58,7 +58,7 @@ overrides).
       "phone_link": "+40723817551",
       "support_phone": "+40 722 123 456",
       "support_phone_link": "+40722123456",
-      "address": "Aeroportul Henri Coandă, Otopeni",
+      "address": "Calea Bucureștilor 305, Otopeni, Ilfov",
       "availability": "Disponibil 24/7",
       "menu_items": [
         { "label": "Acasă", "url": "/" },
@@ -109,7 +109,7 @@ are replaced wholesale, so send the entire array when you edit a single entry. T
     "phone_link": "+40723817551",
     "support_phone": "+40 722 123 456",
     "support_phone_link": "+40722123456",
-    "address": "Aeroportul Henri Coandă, Otopeni",
+    "address": "Calea Bucureștilor 305, Otopeni, Ilfov",
     "availability": "Disponibil 24/7",
     "menu_items": [
       { "label": "Acasă", "url": "/" },
@@ -150,7 +150,7 @@ are replaced wholesale, so send the entire array when you edit a single entry. T
       "phone_link": "+40723817551",
       "support_phone": "+40 722 123 456",
       "support_phone_link": "+40722123456",
-      "address": "Aeroportul Henri Coandă, Otopeni",
+      "address": "Calea Bucureștilor 305, Otopeni, Ilfov",
       "availability": "Disponibil 24/7",
       "menu_items": [
         { "label": "Acasă", "url": "/" },
@@ -184,7 +184,7 @@ are replaced wholesale, so send the entire array when you edit a single entry. T
       "phone_link": "+40723817551",
       "support_phone": "+40 722 123 456",
       "support_phone_link": "+40722123456",
-      "address": "Aeroportul Henri Coandă, Otopeni",
+      "address": "Calea Bucureștilor 305, Otopeni, Ilfov",
       "availability": "Disponibil 24/7",
       "menu_items": [
         { "label": "Acasă", "url": "/" },
