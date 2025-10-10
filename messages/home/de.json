@@ -157,6 +157,12 @@
       "highlight": "jederzeit"
     },
     "description": "Wir sind 24/7 für dich da. Wähle einen der folgenden Kontaktwege.",
+    "quickLinks": {
+      "title": "Schnellzugriffe",
+      "offers": "Aktive Angebote",
+      "cars": "Verfügbare Flotte",
+      "faq": "FAQ"
+    },
     "items": {
       "phone": {
         "title": "Telefon",

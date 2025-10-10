@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import StructuredData from "@/components/StructuredData";
 import { createApiClient } from "@/lib/api";
@@ -46,12 +47,13 @@ const FAQ_COPY: Record<Locale, FaqSeoCopy> = {
             {
                 question: "Ce documente trebuie să prezint la ridicarea mașinii?",
                 answer:
-                    "Este nevoie de actul de identitate, permisul de conducere valabil și cardul bancar folosit la garanție.",
+                    "Este nevoie de actul de identitate, permisul de conducere valabil și cardul bancar folosit la garanție. " +
+                    '<span class="block mt-2">Dacă ai nelămuriri, scrie-ne din <a class="text-berkeley underline decoration-2 decoration-jade hover:text-jade" href="/contact">pagina de contact DaCars</a> și pregătim documentele împreună.</span>',
             },
             {
                 question: "Cum funcționează garanția fără depozit?",
                 answer:
-                    "Pentru rezervările eligibile, garanția este acoperită de asigurarea extinsă DaCars și nu se blochează nicio sumă pe card.",
+                    `Pentru rezervările eligibile, garanția este acoperită de asigurarea extinsă DaCars și nu se blochează nicio sumă pe card. <a class="text-berkeley underline decoration-2 decoration-jade hover:text-jade" href="/offers">Vezi ofertele active</a> pentru pachete cu garanție redusă sau bonusuri fără depozit.`,
             },
             {
                 question: "Pot prelungi rezervarea dacă mașina este deja închiriată?",
@@ -100,17 +102,19 @@ const FAQ_COPY: Record<Locale, FaqSeoCopy> = {
             {
                 question: "How can I modify the period of an existing reservation?",
                 answer:
-                    "Sign in to your DaCars account → My Reservations and use \"Edit dates\". Our team confirms the change within two working hours.",
+                    "Sign in to your DaCars account → My Reservations and use \"Edit dates\". Our team confirms the change within two working hours. " +
+                    '<span class="block mt-2">Need a tailored extension? Reach us via the <a class="text-berkeley underline decoration-2 decoration-jade hover:text-jade" href="/contact">DaCars contact page</a> and we secure your preferred vehicle.</span>',
             },
             {
                 question: "What documents do I need to present when picking up the car?",
                 answer:
-                    "Bring your identity card, a valid driving licence, and the bank card used for the deposit.",
+                    "Bring your identity card, a valid driving licence, and the bank card used for the deposit. " +
+                    '<span class="block mt-2">For extra peace of mind you can also check our <a class="text-berkeley underline decoration-2 decoration-jade hover:text-jade" href="/offers">current offers</a> that include pre-check and concierge support.</span>',
             },
             {
                 question: "How does the no-deposit guarantee work?",
                 answer:
-                    "Eligible bookings are covered by the DaCars extended insurance, so no amount is blocked on your card.",
+                    'Eligible bookings are covered by the DaCars extended insurance, so no amount is blocked on your card. <a class="text-berkeley underline decoration-2 decoration-jade hover:text-jade" href="/offers">Explore our live promotions</a> for bundles that remove the deposit entirely.',
             },
             {
                 question: "Can I extend the booking if I already have the car?",
@@ -159,17 +163,19 @@ const FAQ_COPY: Record<Locale, FaqSeoCopy> = {
             {
                 question: "Come posso modificare il periodo di una prenotazione esistente?",
                 answer:
-                    "Accedi al tuo account DaCars → Le mie prenotazioni e usa \"Modifica date\". Il nostro team conferma la modifica entro due ore lavorative.",
+                    "Accedi al tuo account DaCars → Le mie prenotazioni e usa \"Modifica date\". Il nostro team conferma la modifica entro due ore lavorative. " +
+                    '<span class="block mt-2">Per richieste urgenti scrivici dalla <a class="text-berkeley underline decoration-2 decoration-jade hover:text-jade" href="/contact">pagina contatti DaCars</a> e riserviamo l\'auto ideale per te.</span>',
             },
             {
                 question: "Quali documenti devo presentare al ritiro dell'auto?",
                 answer:
-                    "Porta la carta d'identità, una patente valida e la carta bancaria utilizzata per la cauzione.",
+                    "Porta la carta d'identità, una patente valida e la carta bancaria utilizzata per la cauzione. " +
+                    '<span class="block mt-2">Scopri anche le <a class="text-berkeley underline decoration-2 decoration-jade hover:text-jade" href="/offers">offerte attive</a> che includono assistenza concierge e controllo documenti anticipato.</span>',
             },
             {
                 question: "Come funziona la garanzia senza deposito?",
                 answer:
-                    "Per le prenotazioni idonee, la garanzia è coperta dall'assicurazione estesa DaCars, quindi non blocchiamo alcun importo sulla carta.",
+                    `Per le prenotazioni idonee, la garanzia è coperta dall'assicurazione estesa DaCars, quindi non blocchiamo alcun importo sulla carta. <a class="text-berkeley underline decoration-2 decoration-jade hover:text-jade" href="/offers">Scopri le promozioni disponibili</a> per pacchetti senza deposito o upgrade inclus.`,
             },
             {
                 question: "Posso prolungare la prenotazione se ho già la macchina?",
@@ -589,6 +595,35 @@ const FaqPage = async () => {
                 <h1 className="text-3xl font-semibold text-gray-900 sm:text-4xl">{copy.pageTitle}</h1>
                 <p className="mt-4 text-base text-gray-600">{copy.pageDescription}</p>
             </header>
+
+            <nav
+                aria-label="Legături rapide către paginile principale DaCars"
+                className="mb-12 rounded-2xl border border-berkeley/20 bg-white/70 p-6 shadow-sm"
+            >
+                <p className="mb-4 text-sm text-gray-700">
+                    Ai răspunsul și vrei să mergi mai departe? Continuă către paginile noastre esențiale.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                    <Link
+                        href="/offers"
+                        className="inline-flex items-center rounded-full bg-berkeley px-4 py-2 text-sm font-semibold text-white transition hover:bg-berkeley/90"
+                    >
+                        Vezi promoțiile active DaCars
+                    </Link>
+                    <Link
+                        href="/cars"
+                        className="inline-flex items-center rounded-full border border-berkeley px-4 py-2 text-sm font-semibold text-berkeley transition hover:bg-berkeley hover:text-white"
+                    >
+                        Explorează flota completă
+                    </Link>
+                    <Link
+                        href="/contact"
+                        className="inline-flex items-center rounded-full border border-jade px-4 py-2 text-sm font-semibold text-jade transition hover:bg-jade hover:text-white"
+                    >
+                        Contactează un consultant 24/7
+                    </Link>
+                </div>
+            </nav>
 
             <section className="space-y-10" aria-label={copy.pageTitle}>
                 {categoriesToRender.map((category) => (

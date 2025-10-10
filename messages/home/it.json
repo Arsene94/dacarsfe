@@ -157,6 +157,12 @@
       "highlight": "quando vuoi"
     },
     "description": "Siamo qui 24/7. Contattaci con una delle opzioni qui sotto.",
+    "quickLinks": {
+      "title": "Link rapidi",
+      "offers": "Offerte attive",
+      "cars": "Flotta disponibile",
+      "faq": "FAQ"
+    },
     "items": {
       "phone": {
         "title": "Telefono",

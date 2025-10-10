@@ -37,6 +37,12 @@
     },
     "description": "Descoperă toate mașinile disponibile și alege cea potrivită pentru călătoria ta."
   },
+  "interlink": {
+    "title": "Continuă către paginile cheie",
+    "offers": "Promoții verificate",
+    "faq": "Întrebări frecvente",
+    "contact": "Solicită un consultant"
+  },
   "search": {
     "placeholder": "Caută mașină...",
     "ariaLabel": "Caută mașină",

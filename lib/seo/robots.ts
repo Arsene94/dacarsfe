@@ -6,7 +6,15 @@ export const ROBOTS_CONFIG: MetadataRoute.Robots = {
         {
             userAgent: "*",
             allow: "/",
-            disallow: ["/admin/", "/account/", "/checkout/", "/cart/", "/*?*utm_*"]
+            disallow: [
+                "/admin/",
+                "/account/",
+                "/checkout/",
+                "/cart/",
+                "/politica-de-confidentialitate",
+                "/politica-cookie",
+                "/*?*utm_*",
+            ]
         },
         {
             userAgent: "GPTBot",

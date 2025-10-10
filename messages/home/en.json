@@ -157,6 +157,12 @@
       "highlight": "anytime"
     },
     "description": "We are here 24/7. Reach us using any of the options below.",
+    "quickLinks": {
+      "title": "Quick links",
+      "offers": "Active offers",
+      "cars": "Available fleet",
+      "faq": "FAQ"
+    },
     "items": {
       "phone": {
         "title": "Phone",

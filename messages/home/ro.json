@@ -157,6 +157,12 @@
       "highlight": "oricând"
     },
     "description": "Suntem aici să te ajutăm 24/7. Ia legătura cu noi prin oricare dintre metodele de mai jos.",
+    "quickLinks": {
+      "title": "Linkuri rapide",
+      "offers": "Promoții active",
+      "cars": "Flota disponibilă",
+      "faq": "Întrebări frecvente"
+    },
     "items": {
       "phone": {
         "title": "Telefon",

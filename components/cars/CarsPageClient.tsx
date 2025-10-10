@@ -798,6 +798,29 @@ const FleetPage = () => {
                         <p className="text-xl font-dm-sans text-gray-600 max-w-3xl mx-auto leading-relaxed">
                             {t("header.description")}
                         </p>
+                        <div className="mt-6 flex flex-wrap justify-center gap-3">
+                            <span className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-berkeley shadow-sm">
+                                {t("interlink.title", { fallback: "Continuă către paginile cheie" })}
+                            </span>
+                            <Link
+                                href="/offers"
+                                className="inline-flex items-center rounded-full border border-berkeley px-4 py-2 text-sm font-semibold text-berkeley transition hover:bg-berkeley hover:text-white"
+                            >
+                                {t("interlink.offers", { fallback: "Promoții verificate" })}
+                            </Link>
+                            <Link
+                                href="/faq"
+                                className="inline-flex items-center rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+                            >
+                                {t("interlink.faq", { fallback: "Întrebări frecvente" })}
+                            </Link>
+                            <Link
+                                href="/contact"
+                                className="inline-flex items-center rounded-full border border-jade px-4 py-2 text-sm font-semibold text-jade transition hover:bg-jade hover:text-white"
+                            >
+                                {t("interlink.contact", { fallback: "Solicită un consultant" })}
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Search & controls */}

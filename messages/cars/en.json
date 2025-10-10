@@ -37,6 +37,12 @@
     },
     "description": "Browse every available vehicle and choose the right one for your trip."
   },
+  "interlink": {
+    "title": "Continue towards the key pages",
+    "offers": "Browse active offers",
+    "faq": "Read the FAQ",
+    "contact": "Talk to a consultant"
+  },
   "search": {
     "placeholder": "Search for a car...",
     "ariaLabel": "Search for a car",

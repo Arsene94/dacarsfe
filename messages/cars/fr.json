@@ -37,6 +37,12 @@
     },
     "description": "Parcourez tous les véhicules disponibles et choisissez celui qui convient à votre trajet."
   },
+  "interlink": {
+    "title": "Poursuis vers les pages clés",
+    "offers": "Consulte les offres actives",
+    "faq": "Lis la FAQ",
+    "contact": "Parle à un conseiller"
+  },
   "search": {
     "placeholder": "Rechercher une voiture...",
     "ariaLabel": "Rechercher une voiture",

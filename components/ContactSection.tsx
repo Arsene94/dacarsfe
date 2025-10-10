@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
 import LazyMap from "./LazyMap";
 import { useTranslations } from "@/lib/i18n/useTranslations";
@@ -16,6 +17,12 @@ type ContactMessages = {
         email?: { title?: string; description?: string; aria?: string };
         location?: { title?: string; description?: string; address?: string; city?: string };
         schedule?: { title?: string; description?: string; details?: string[] };
+    };
+    quickLinks?: {
+        title?: string;
+        offers?: string;
+        cars?: string;
+        faq?: string;
     };
     map?: {
         title?: string;
@@ -34,6 +41,7 @@ const ContactSection = () => {
     const { messages, t } = useTranslations("home");
     const contact = (messages.contact ?? {}) as ContactMessages;
     const mapMessages = contact.map ?? {};
+    const quickLinks = contact.quickLinks ?? {};
 
     return (
         <section id="contact" className="py-20 bg-gray-50">
@@ -49,6 +57,29 @@ const ContactSection = () => {
                                 "Suntem aici să te ajutăm 24/7. Ia legătura cu noi prin oricare dintre metodele de mai jos.",
                         })}
                     </p>
+                    <div className="mt-6 flex flex-wrap justify-center gap-3">
+                        <span className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-berkeley shadow-sm">
+                            {quickLinks.title ?? t("contact.quickLinks.title", { fallback: "Linkuri rapide" })}
+                        </span>
+                        <Link
+                            href="/offers"
+                            className="inline-flex items-center rounded-full border border-berkeley px-4 py-2 text-sm font-semibold text-berkeley transition hover:bg-berkeley hover:text-white"
+                        >
+                            {quickLinks.offers ?? t("contact.quickLinks.offers", { fallback: "Promoții active" })}
+                        </Link>
+                        <Link
+                            href="/cars"
+                            className="inline-flex items-center rounded-full border border-jade px-4 py-2 text-sm font-semibold text-jade transition hover:bg-jade hover:text-white"
+                        >
+                            {quickLinks.cars ?? t("contact.quickLinks.cars", { fallback: "Flota disponibilă" })}
+                        </Link>
+                        <Link
+                            href="/faq"
+                            className="inline-flex items-center rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+                        >
+                            {quickLinks.faq ?? t("contact.quickLinks.faq", { fallback: "Întrebări frecvente" })}
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
