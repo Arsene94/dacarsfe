@@ -21,6 +21,7 @@ import MetaPixelScript from "../components/MetaPixelScript";
 import MetaPixelInitializer from "../components/MetaPixelInitializer";
 import { GoogleAnalytics } from '@next/third-parties/google'
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
+import heroBackground from "@/public/images/bg-hero-1920x1080.webp";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -74,6 +75,14 @@ const localeBootstrapConfig = {
   supportedLocales,
 };
 
+const heroImageQuality = 60;
+const heroImageWidths = [360, 414, 480, 640, 750, 828, 1080, 1200, 1920];
+const heroOptimizedSource = encodeURIComponent(heroBackground.src);
+const heroPreloadSrc = `/_next/image?url=${heroOptimizedSource}&w=${Math.max(...heroImageWidths)}&q=${heroImageQuality}`;
+const heroPreloadSrcSet = heroImageWidths
+  .map((width) => `/_next/image?url=${heroOptimizedSource}&w=${width}&q=${heroImageQuality} ${width}w`)
+  .join(", ");
+
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const initialLocale = await resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
   const bootstrapPayload = JSON.stringify({
@@ -96,10 +105,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <link
           rel="preload"
           as="image"
-          href="/images/bg-hero-mobile-960x1759.webp"
-          media="(max-width: 639px)"
-          imageSrcSet="/images/bg-hero-mobile-378x284.webp 378w, /images/bg-hero-mobile-480x879.webp 480w, /images/bg-hero-mobile-960x1759.webp 960w"
+          href={heroPreloadSrc}
+          imageSrcSet={heroPreloadSrcSet}
           imageSizes="100vw"
+          type="image/webp"
+          fetchPriority="high"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="dns-prefetch" href="//vercel.app" />
@@ -120,14 +130,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta httpEquiv="x-dns-prefetch-control" content="on" />
-        <link
-          rel="preload"
-          as="image"
-          href="/images/bg-hero-1920x1080.webp"
-          media="(min-width: 640px)"
-          imageSrcSet="/images/bg-hero-1920x1080.webp 1920w"
-          imageSizes="100vw"
-        />
       </head>
       <body className="min-h-screen bg-white">
         <Suspense fallback={null}>
