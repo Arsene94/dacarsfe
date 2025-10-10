@@ -82,8 +82,12 @@ import type {
     FaqCategory,
     FaqCategoryListParams,
     FaqCategoryPayload,
+    FaqCategoryTranslation,
+    FaqCategoryTranslationPayload,
     FaqListParams,
     FaqPayload,
+    FaqTranslation,
+    FaqTranslationPayload,
 } from "@/types/faq";
 import type {
     MailBrandingResponse,
@@ -1352,6 +1356,47 @@ export class ApiClient {
         });
     }
 
+    async getFaqCategoryTranslations(
+        id: number | string,
+    ): Promise<ApiListResult<FaqCategoryTranslation>> {
+        return this.request<ApiListResult<FaqCategoryTranslation>>(
+            `/faq-categories/${id}/translations`,
+        );
+    }
+
+    async upsertFaqCategoryTranslation(
+        id: number | string,
+        lang: string,
+        payload: FaqCategoryTranslationPayload,
+    ): Promise<ApiItemResult<FaqCategoryTranslation>> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a salva traducerea categoriei.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<FaqCategoryTranslation>>(
+            `/faq-categories/${id}/translations/${encodedLang}`,
+            {
+                method: 'PUT',
+                body: JSON.stringify(body),
+            },
+        );
+    }
+
+    async deleteFaqCategoryTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a șterge traducerea categoriei.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        return this.request<ApiDeleteResponse>(`/faq-categories/${id}/translations/${encodedLang}`, {
+            method: 'DELETE',
+        });
+    }
+
     async getFaqs(
         params: (FaqListParams & { language?: string }) = {},
     ): Promise<ApiListResult<Faq>> {
@@ -1437,6 +1482,40 @@ export class ApiClient {
 
     async deleteFaq(id: number | string): Promise<ApiDeleteResponse> {
         return this.request<ApiDeleteResponse>(`/faqs/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getFaqTranslations(id: number | string): Promise<ApiListResult<FaqTranslation>> {
+        return this.request<ApiListResult<FaqTranslation>>(`/faqs/${id}/translations`);
+    }
+
+    async upsertFaqTranslation(
+        id: number | string,
+        lang: string,
+        payload: FaqTranslationPayload,
+    ): Promise<ApiItemResult<FaqTranslation>> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a salva traducerea FAQ.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<FaqTranslation>>(`/faqs/${id}/translations/${encodedLang}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteFaqTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a șterge traducerea FAQ.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        return this.request<ApiDeleteResponse>(`/faqs/${id}/translations/${encodedLang}`, {
             method: 'DELETE',
         });
     }

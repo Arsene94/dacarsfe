@@ -21,6 +21,11 @@ export interface FaqCategoryTranslation {
     description?: string | null;
 }
 
+export interface FaqCategoryTranslationPayload {
+    name?: string;
+    description?: string | null;
+}
+
 export interface Faq {
     id: number;
     category_id: number;
@@ -35,6 +40,11 @@ export interface Faq {
 
 export interface FaqTranslation {
     lang?: string;
+    question?: string;
+    answer?: string;
+}
+
+export interface FaqTranslationPayload {
     question?: string;
     answer?: string;
 }
