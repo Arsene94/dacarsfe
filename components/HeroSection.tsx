@@ -159,7 +159,9 @@ const toLocations = (
                 return null;
             }
 
-            return { value: optionValue, label: optionLabel } satisfies LocationOption;
+            const location: LocationOption = { value: optionValue, label: optionLabel };
+
+            return location;
         })
         .filter((entry): entry is LocationOption => entry != null);
 
