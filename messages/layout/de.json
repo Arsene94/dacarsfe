@@ -4,7 +4,8 @@
       { "label": "Startseite", "href": "/", "aria": "Startseite" },
       { "label": "Flotte", "href": "/cars", "aria": "Flotte" },
       { "label": "Angebote", "href": "/offers", "aria": "Angebote" },
-      { "label": "Buchung", "href": "/checkout", "aria": "Buchung" },
+      { "label": "Blog", "href": "/blog", "aria": "Blog" },
+      { "label": "FAQ", "href": "/faq", "aria": "FAQ" },
       { "label": "Kontakt", "href": "#contact", "aria": "Kontakt" }
     ],
     "cta": {
@@ -38,7 +39,8 @@
         { "label": "Startseite", "href": "/", "aria": "Startseite" },
         { "label": "Unsere Flotte", "href": "/cars", "aria": "Unsere Flotte" },
         { "label": "Spezialangebote", "href": "/offers", "aria": "Spezialangebote" },
-        { "label": "Buchung", "href": "/checkout", "aria": "Buchung" }
+        { "label": "Blog", "href": "/blog", "aria": "Blog" },
+        { "label": "FAQ", "href": "/faq", "aria": "FAQ" }
       ]
     },
     "contact": {

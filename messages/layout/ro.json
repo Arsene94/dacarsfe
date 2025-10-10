@@ -5,6 +5,7 @@
       { "label": "Flotă", "href": "/cars", "aria": "Flotă" },
       { "label": "Oferte", "href": "/offers", "aria": "Oferte" },
       { "label": "Blog", "href": "/blog", "aria": "Blog" },
+      { "label": "Întrebări frecvente", "href": "/faq", "aria": "Întrebări frecvente" },
       { "label": "Contact", "href": "/contact", "aria": "Contact" }
     ],
     "cta": {
@@ -38,7 +39,8 @@
         { "label": "Acasă", "href": "/", "aria": "Acasă" },
         { "label": "Flota Auto", "href": "/cars", "aria": "Flota Auto" },
         { "label": "Oferte Speciale", "href": "/offers", "aria": "Oferte Speciale" },
-        { "label": "Blog", "href": "/blog", "aria": "Blog" }
+        { "label": "Blog", "href": "/blog", "aria": "Blog" },
+        { "label": "Întrebări Frecvente", "href": "/faq", "aria": "Întrebări Frecvente" }
       ]
     },
     "contact": {

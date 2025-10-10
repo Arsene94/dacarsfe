@@ -62,9 +62,13 @@ import type {
     BlogCategory,
     BlogCategoryListParams,
     BlogCategoryPayload,
+    BlogCategoryTranslation,
+    BlogCategoryTranslationPayload,
     BlogPost,
     BlogPostListParams,
     BlogPostPayload,
+    BlogPostTranslation,
+    BlogPostTranslationPayload,
     BlogTag,
     BlogTagListParams,
     BlogTagPayload,
@@ -2146,48 +2150,54 @@ export class ApiClient {
     }
 
     async getBlogCategories(
-        params: BlogCategoryListParams = {},
+        params: (BlogCategoryListParams & { language?: string }) = {},
     ): Promise<ApiListResult<BlogCategory>> {
+        const { language, ...filters } = params;
         const searchParams = new URLSearchParams();
-        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
-            searchParams.append('page', params.page.toString());
+        if (typeof filters.page === 'number' && Number.isFinite(filters.page)) {
+            searchParams.append('page', filters.page.toString());
         }
         const perPageCandidate =
-            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
-                ? params.perPage
-                : typeof params.per_page === 'number' && Number.isFinite(params.per_page)
-                    ? params.per_page
+            typeof filters.perPage === 'number' && Number.isFinite(filters.perPage)
+                ? filters.perPage
+                : typeof filters.per_page === 'number' && Number.isFinite(filters.per_page)
+                    ? filters.per_page
                     : undefined;
         if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
             searchParams.append('per_page', perPageCandidate.toString());
         }
-        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
-            searchParams.append('limit', params.limit.toString());
+        if (typeof filters.limit === 'number' && Number.isFinite(filters.limit)) {
+            searchParams.append('limit', filters.limit.toString());
         }
         const nameCandidate =
-            typeof params.name === 'string' && params.name.trim().length > 0
-                ? params.name.trim()
-                : typeof params.search === 'string' && params.search.trim().length > 0
-                    ? params.search.trim()
+            typeof filters.name === 'string' && filters.name.trim().length > 0
+                ? filters.name.trim()
+                : typeof filters.search === 'string' && filters.search.trim().length > 0
+                    ? filters.search.trim()
                     : null;
         if (nameCandidate) {
             searchParams.append('name', nameCandidate);
         }
-        if (typeof params.slug === 'string' && params.slug.trim().length > 0) {
-            searchParams.append('slug', params.slug.trim());
+        if (typeof filters.slug === 'string' && filters.slug.trim().length > 0) {
+            searchParams.append('slug', filters.slug.trim());
         }
-        if (typeof params.sort === 'string' && params.sort.trim().length > 0) {
-            searchParams.append('sort', params.sort.trim());
+        if (typeof filters.sort === 'string' && filters.sort.trim().length > 0) {
+            searchParams.append('sort', filters.sort.trim());
         }
-        if (typeof params.fields === 'string' && params.fields.trim().length > 0) {
-            searchParams.append('fields', params.fields.trim());
+        if (typeof filters.fields === 'string' && filters.fields.trim().length > 0) {
+            searchParams.append('fields', filters.fields.trim());
         }
         const query = searchParams.toString();
-        return this.request<ApiListResult<BlogCategory>>(`/blog-categories${query ? `?${query}` : ''}`);
+        const basePath = appendOptionalLanguage(`/blog-categories`, this.resolveLanguage(language));
+        return this.request<ApiListResult<BlogCategory>>(query.length > 0 ? `${basePath}?${query}` : basePath);
     }
 
-    async getBlogCategory(id: number | string): Promise<ApiItemResult<BlogCategory>> {
-        return this.request<ApiItemResult<BlogCategory>>(`/blog-categories/${id}`);
+    async getBlogCategory(
+        id: number | string,
+        params: { language?: string } = {},
+    ): Promise<ApiItemResult<BlogCategory>> {
+        const basePath = appendOptionalLanguage(`/blog-categories/${id}`, this.resolveLanguage(params.language));
+        return this.request<ApiItemResult<BlogCategory>>(basePath);
     }
 
     async createBlogCategory(payload: BlogCategoryPayload): Promise<ApiItemResult<BlogCategory>> {
@@ -2208,6 +2218,45 @@ export class ApiClient {
 
     async deleteBlogCategory(id: number | string): Promise<ApiDeleteResponse> {
         return this.request<ApiDeleteResponse>(`/blog-categories/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getBlogCategoryTranslations(
+        id: number | string,
+    ): Promise<ApiListResult<BlogCategoryTranslation>> {
+        return this.request<ApiListResult<BlogCategoryTranslation>>(`/blog-categories/${id}/translations`);
+    }
+
+    async upsertBlogCategoryTranslation(
+        id: number | string,
+        lang: string,
+        payload: BlogCategoryTranslationPayload,
+    ): Promise<ApiItemResult<BlogCategoryTranslation>> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a salva traducerea categoriei de blog.');
+        }
+
+        const body = sanitizePayload(payload);
+        const encodedLang = encodeURIComponent(normalizedLang);
+        return this.request<ApiItemResult<BlogCategoryTranslation>>(
+            `/blog-categories/${id}/translations/${encodedLang}`,
+            {
+                method: 'PUT',
+                body: JSON.stringify(body),
+            },
+        );
+    }
+
+    async deleteBlogCategoryTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a șterge traducerea categoriei de blog.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        return this.request<ApiDeleteResponse>(`/blog-categories/${id}/translations/${encodedLang}`, {
             method: 'DELETE',
         });
     }
@@ -2279,68 +2328,79 @@ export class ApiClient {
         });
     }
 
-    async getBlogPosts(params: BlogPostListParams = {}): Promise<ApiListResult<BlogPost>> {
+    async getBlogPosts(
+        params: (BlogPostListParams & { language?: string }) = {},
+    ): Promise<ApiListResult<BlogPost>> {
+        const { language, include, ...filters } = params;
         const searchParams = new URLSearchParams();
-        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
-            searchParams.append('page', params.page.toString());
+        if (typeof filters.page === 'number' && Number.isFinite(filters.page)) {
+            searchParams.append('page', filters.page.toString());
         }
         const perPageCandidate =
-            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
-                ? params.perPage
-                : typeof params.per_page === 'number' && Number.isFinite(params.per_page)
-                    ? params.per_page
+            typeof filters.perPage === 'number' && Number.isFinite(filters.perPage)
+                ? filters.perPage
+                : typeof filters.per_page === 'number' && Number.isFinite(filters.per_page)
+                    ? filters.per_page
                     : undefined;
         if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
             searchParams.append('per_page', perPageCandidate.toString());
         }
-        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
-            searchParams.append('limit', params.limit.toString());
+        if (typeof filters.limit === 'number' && Number.isFinite(filters.limit)) {
+            searchParams.append('limit', filters.limit.toString());
         }
         if (
-            typeof params.category_id !== 'undefined' &&
-            params.category_id !== null &&
-            String(params.category_id).length > 0
+            typeof filters.category_id !== 'undefined' &&
+            filters.category_id !== null &&
+            String(filters.category_id).length > 0
         ) {
-            searchParams.append('category_id', String(params.category_id));
+            searchParams.append('category_id', String(filters.category_id));
         }
         if (
-            typeof params.author_id !== 'undefined' &&
-            params.author_id !== null &&
-            String(params.author_id).trim().length > 0
+            typeof filters.author_id !== 'undefined' &&
+            filters.author_id !== null &&
+            String(filters.author_id).trim().length > 0
         ) {
-            searchParams.append('author_id', String(params.author_id));
+            searchParams.append('author_id', String(filters.author_id));
         }
-        if (typeof params.status === 'string' && params.status.trim().length > 0) {
-            searchParams.append('status', params.status.trim());
+        if (typeof filters.status === 'string' && filters.status.trim().length > 0) {
+            searchParams.append('status', filters.status.trim());
         }
-        if (typeof params.slug === 'string' && params.slug.trim().length > 0) {
-            searchParams.append('slug', params.slug.trim());
+        if (typeof filters.slug === 'string' && filters.slug.trim().length > 0) {
+            searchParams.append('slug', filters.slug.trim());
         }
         const titleCandidate =
-            typeof params.title === 'string' && params.title.trim().length > 0
-                ? params.title.trim()
-                : typeof params.search === 'string' && params.search.trim().length > 0
-                    ? params.search.trim()
+            typeof filters.title === 'string' && filters.title.trim().length > 0
+                ? filters.title.trim()
+                : typeof filters.search === 'string' && filters.search.trim().length > 0
+                    ? filters.search.trim()
                     : null;
         if (titleCandidate) {
             searchParams.append('title', titleCandidate);
         }
-        if (typeof params.sort === 'string' && params.sort.trim().length > 0) {
-            searchParams.append('sort', params.sort.trim());
+        if (typeof filters.sort === 'string' && filters.sort.trim().length > 0) {
+            searchParams.append('sort', filters.sort.trim());
         }
-        if (typeof params.fields === 'string' && params.fields.trim().length > 0) {
-            searchParams.append('fields', params.fields.trim());
+        if (typeof filters.fields === 'string' && filters.fields.trim().length > 0) {
+            searchParams.append('fields', filters.fields.trim());
         }
-        const includeValue = resolveIncludeParam(params.include);
+        const includeValue = resolveIncludeParam(include);
         if (includeValue) {
             searchParams.append('include', includeValue);
         }
         const query = searchParams.toString();
-        return this.request<ApiListResult<BlogPost>>(`/blog-posts${query ? `?${query}` : ''}`);
+        const basePath = appendOptionalLanguage(`/blog-posts`, this.resolveLanguage(language));
+        return this.request<ApiListResult<BlogPost>>(query.length > 0 ? `${basePath}?${query}` : basePath);
     }
 
-    async getBlogPost(id: number | string): Promise<ApiItemResult<BlogPost>> {
-        return this.request<ApiItemResult<BlogPost>>(`/blog-posts/${id}`);
+    async getBlogPost(
+        id: number | string,
+        params: { include?: string | readonly string[]; language?: string } = {},
+    ): Promise<ApiItemResult<BlogPost>> {
+        const { include, language } = params;
+        const includeValue = resolveIncludeParam(include);
+        const suffix = includeValue ? `?include=${includeValue}` : '';
+        const basePath = appendOptionalLanguage(`/blog-posts/${id}`, this.resolveLanguage(language));
+        return this.request<ApiItemResult<BlogPost>>(`${basePath}${suffix}`);
     }
 
     async createBlogPost(payload: BlogPostPayload | FormData): Promise<ApiItemResult<BlogPost>> {
@@ -2378,6 +2438,40 @@ export class ApiClient {
 
     async deleteBlogPost(id: number | string): Promise<ApiDeleteResponse> {
         return this.request<ApiDeleteResponse>(`/blog-posts/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getBlogPostTranslations(id: number | string): Promise<ApiListResult<BlogPostTranslation>> {
+        return this.request<ApiListResult<BlogPostTranslation>>(`/blog-posts/${id}/translations`);
+    }
+
+    async upsertBlogPostTranslation(
+        id: number | string,
+        lang: string,
+        payload: BlogPostTranslationPayload,
+    ): Promise<ApiItemResult<BlogPostTranslation>> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a salva traducerea articolului de blog.');
+        }
+
+        const body = sanitizePayload(payload);
+        const encodedLang = encodeURIComponent(normalizedLang);
+        return this.request<ApiItemResult<BlogPostTranslation>>(`/blog-posts/${id}/translations/${encodedLang}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteBlogPostTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a șterge traducerea articolului de blog.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        return this.request<ApiDeleteResponse>(`/blog-posts/${id}/translations/${encodedLang}`, {
             method: 'DELETE',
         });
     }

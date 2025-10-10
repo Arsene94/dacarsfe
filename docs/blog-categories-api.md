@@ -5,14 +5,19 @@ All endpoints live under the `/api` prefix. Read-only requests (`GET`) are publi
 ## Endpoint overview
 | Method | URL | Description | Required permission |
 | --- | --- | --- | --- |
-| GET | `/api/blog-categories` | Paginated list of categories with optional filters. | None (public) |
-| GET | `/api/blog-categories?limit=10` | Return the first N records without pagination metadata. | None (public) |
-| GET | `/api/blog-categories/{id}` | Retrieve a single category by id. | None (public) |
+| GET | `/api/blog-categories` | Paginated list of categories with optional filters. Append `/{lang}` to fetch a translated version (e.g. `/api/blog-categories/en`). | None (public) |
+| GET | `/api/blog-categories?limit=10` | Return the first N records without pagination metadata. Works with the optional `/{lang}` suffix. | None (public) |
+| GET | `/api/blog-categories/{id}` | Retrieve a single category by id. Append `/{lang}` for a translated payload. | None (public) |
 | POST | `/api/blog-categories` | Create a new category (slug is generated automatically). | `blog_categories.create` |
 | PUT | `/api/blog-categories/{id}` | Update an existing category. | `blog_categories.update` |
 | DELETE | `/api/blog-categories/{id}` | Soft-delete is not used; the record is removed permanently. | `blog_categories.delete` |
+| GET | `/api/blog-categories/{id}/translations` | List stored translations (all languages). | `blog_categories.view_translations` |
+| PUT | `/api/blog-categories/{id}/translations/{lang}` | Upsert the translated `name` and `description` for a specific language. | `blog_categories.update_translations` |
+| DELETE | `/api/blog-categories/{id}/translations/{lang}` | Remove a stored translation. | `blog_categories.delete_translations` |
 
 > **Slugging** – `BlogCategoryObserver` regenerates the `slug` whenever the `name` changes. You do not need to send a slug from the client.
+
+> **Translations** – Public routes automatically fall back to the source language (`dacars.translation_source_language`) when a translation is missing. Use the translation endpoints to override the generated content per language.
 
 ## GET `/api/blog-categories`
 
@@ -150,5 +155,36 @@ All endpoints live under the `/api` prefix. Read-only requests (`GET`) are publi
 ## DELETE `/api/blog-categories/{id}`
 ```json
 { "deleted": true }
+```
+
+## Translations
+
+### Payload schema
+- `name` – required, string max 120.
+- `description` – optional, string max 400.
+
+### Example request
+```http
+PUT /api/blog-categories/7/translations/en
+Content-Type: application/json
+
+{
+  "name": "Travel Guides",
+  "description": "Articles about the destinations where we deliver cars."
+}
+```
+
+### Example response
+```json
+{
+  "data": {
+    "language": "en",
+    "name": "Travel Guides",
+    "description": "Articles about the destinations where we deliver cars.",
+    "blog_category_id": 7,
+    "created_at": "2025-01-08T09:00:00Z",
+    "updated_at": "2025-01-08T09:00:00Z"
+  }
+}
 ```
 

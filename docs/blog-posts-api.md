@@ -5,14 +5,17 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
 ## Endpoint overview
 | Method | URL | Description | Required permission |
 | --- | --- | --- | --- |
-| GET | `/api/blog-posts` | Paginated list of posts including category, tags and author metadata. | None (public) |
-| GET | `/api/blog-posts?limit=5` | First N posts ordered by `id DESC`. | None (public) |
-| GET | `/api/blog-posts/{id}` | Retrieve a post with its relationships. | None (public) |
+| GET | `/api/blog-posts` | Paginated list of posts including category, tags and author metadata. Append `/{lang}` to fetch translated content (e.g. `/api/blog-posts/en`). | None (public) |
+| GET | `/api/blog-posts?limit=5` | First N posts ordered by `id DESC`. Works with the optional `/{lang}` suffix. | None (public) |
+| GET | `/api/blog-posts/{id}` | Retrieve a post with its relationships. Append `/{lang}` for a translated payload. | None (public) |
 | POST | `/api/blog-posts` | Create a new post and attach tags. | `blog_posts.create` |
 | PUT | `/api/blog-posts/{id}` | Update post fields and tag associations. | `blog_posts.update` |
 | DELETE | `/api/blog-posts/{id}` | Permanently delete a post (pivot rows cascade). | `blog_posts.delete` |
+| GET | `/api/blog-posts/{id}/translations` | List stored translations (all languages). | `blog_posts.view_translations` |
+| PUT | `/api/blog-posts/{id}/translations/{lang}` | Upsert a translation (`title`, `excerpt`, `content`, `meta_title`, `meta_description`). | `blog_posts.update_translations` |
+| DELETE | `/api/blog-posts/{id}/translations/{lang}` | Remove a stored translation. | `blog_posts.delete_translations` |
 
-> **Relationship loading** – `BlogPostController` sets `$with = ['category','tags','author']`, so responses already include nested data without needing `?include=`. The `fields` query parameter still works for sparse fieldsets.
+> **Relationship loading** – `BlogPostController` sets `$with = ['category','tags','author']`, so responses already include nested data without needing `?include=`. The `fields` query parameter still works for sparse fieldsets. When a translation is missing, the API falls back to the default language configured in `dacars.translation_source_language`.
 
 ## Validation schema
 | Field | Required | Type | Notes |
@@ -229,6 +232,46 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
     },
     "created_at": "2025-01-10T16:42:00Z",
     "updated_at": "2025-01-13T08:05:00Z"
+  }
+}
+```
+
+## Translations
+
+### Payload schema
+- `title` – optional string, max 200.
+- `excerpt` – optional string.
+- `content` – optional rich text / HTML string.
+- `meta_title` – optional string, max 200.
+- `meta_description` – optional string, max 400.
+
+### Example request
+```http
+PUT /api/blog-posts/24/translations/en
+Content-Type: application/json
+
+{
+  "title": "Complete guide for returning your car at Otopeni",
+  "excerpt": "Everything you should know before arriving at the airport drop-off.",
+  "content": "<p>For a stress-free drop-off...</p>",
+  "meta_title": "Car return checklist for Otopeni",
+  "meta_description": "Plan your DaCars return in Otopeni with our detailed checklist."
+}
+```
+
+### Example response
+```json
+{
+  "data": {
+    "language": "en",
+    "title": "Complete guide for returning your car at Otopeni",
+    "excerpt": "Everything you should know before arriving at the airport drop-off.",
+    "content": "<p>For a stress-free drop-off...</p>",
+    "meta_title": "Car return checklist for Otopeni",
+    "meta_description": "Plan your DaCars return in Otopeni with our detailed checklist.",
+    "blog_post_id": 24,
+    "created_at": "2025-01-12T09:30:00Z",
+    "updated_at": "2025-01-12T09:30:00Z"
   }
 }
 ```

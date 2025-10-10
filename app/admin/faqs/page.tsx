@@ -1,22 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { Languages, Loader2, Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Popup } from "@/components/ui/popup";
 import CKEditor from "@/lib/vendors/ckeditor/react";
 import ClassicEditor from "@/lib/vendors/ckeditor/classic-editor";
 import apiClient from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
+import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import type {
     FaqCategory,
     FaqCategoryPayload,
+    FaqCategoryTranslation,
+    FaqCategoryTranslationPayload,
     FaqPayload,
     FaqStatus,
+    FaqTranslation,
+    FaqTranslationPayload,
 } from "@/types/faq";
 import type { ClassicEditorInstance } from "@/lib/vendors/ckeditor/loader";
 
@@ -172,9 +178,408 @@ const AdminFaqPage = () => {
 
     const editingFaqIdRef = useRef<number | null>(null);
 
+    const translationLocales = useMemo<Locale[]>(
+        () => AVAILABLE_LOCALES.filter((locale) => locale !== DEFAULT_LOCALE),
+        [],
+    );
+    const [isCategoryTranslationModalOpen, setIsCategoryTranslationModalOpen] = useState(false);
+    const [categoryTranslationTarget, setCategoryTranslationTarget] = useState<NormalizedCategory | null>(null);
+    const [categoryTranslations, setCategoryTranslations] = useState<
+        Record<string, FaqCategoryTranslation>
+    >({});
+    const [persistedCategoryTranslations, setPersistedCategoryTranslations] = useState<
+        Record<string, boolean>
+    >({});
+    const [categoryTranslationLocale, setCategoryTranslationLocale] = useState<Locale>(
+        translationLocales[0] ?? DEFAULT_LOCALE,
+    );
+    const [categoryTranslationLoading, setCategoryTranslationLoading] = useState(false);
+    const [categoryTranslationError, setCategoryTranslationError] = useState<string | null>(null);
+    const [categoryTranslationSuccess, setCategoryTranslationSuccess] = useState<string | null>(null);
+    const [categoryTranslationSaving, setCategoryTranslationSaving] = useState(false);
+    const [categoryTranslationDeleting, setCategoryTranslationDeleting] = useState(false);
+
+    const [isFaqTranslationModalOpen, setIsFaqTranslationModalOpen] = useState(false);
+    const [faqTranslationTarget, setFaqTranslationTarget] = useState<NormalizedFaqRecord | null>(null);
+    const [faqTranslations, setFaqTranslations] = useState<Record<string, FaqTranslation>>({});
+    const [persistedFaqTranslations, setPersistedFaqTranslations] = useState<Record<string, boolean>>({});
+    const [faqTranslationLocale, setFaqTranslationLocale] = useState<Locale>(
+        translationLocales[0] ?? DEFAULT_LOCALE,
+    );
+    const [faqTranslationLoading, setFaqTranslationLoading] = useState(false);
+    const [faqTranslationError, setFaqTranslationError] = useState<string | null>(null);
+    const [faqTranslationSuccess, setFaqTranslationSuccess] = useState<string | null>(null);
+    const [faqTranslationSaving, setFaqTranslationSaving] = useState(false);
+    const [faqTranslationDeleting, setFaqTranslationDeleting] = useState(false);
+
+    const categoryTranslationBusy =
+        categoryTranslationLoading || categoryTranslationSaving || categoryTranslationDeleting;
+    const faqTranslationBusy = faqTranslationLoading || faqTranslationSaving || faqTranslationDeleting;
+
     useEffect(() => {
         editingFaqIdRef.current = editingFaqId;
     }, [editingFaqId]);
+
+    const safeString = (value: unknown): string => {
+        if (typeof value === "string") {
+            return value;
+        }
+        if (typeof value === "number") {
+            return value.toString();
+        }
+        return "";
+    };
+
+    const toNullable = (value: string | null | undefined): string | null => {
+        if (typeof value !== "string") {
+            return null;
+        }
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    };
+
+    const normalizeTranslationLanguage = (entry: { lang?: string; lang_code?: string } | null | undefined): string | null => {
+        if (!entry) {
+            return null;
+        }
+        if (typeof entry.lang === "string" && entry.lang.trim().length > 0) {
+            return entry.lang.trim();
+        }
+        if (typeof entry.lang_code === "string" && entry.lang_code.trim().length > 0) {
+            return entry.lang_code.trim();
+        }
+        return null;
+    };
+
+    const fetchCategoryTranslations = useCallback(async (categoryId: number) => {
+        setCategoryTranslationLoading(true);
+        try {
+            const response = await apiClient.getFaqCategoryTranslations(categoryId);
+            const list = extractList(response);
+            const nextTranslations: Record<string, FaqCategoryTranslation> = {};
+            const persisted: Record<string, boolean> = {};
+            list.forEach((entry) => {
+                const lang = normalizeTranslationLanguage(entry);
+                if (!lang) {
+                    return;
+                }
+                nextTranslations[lang] = {
+                    lang,
+                    name: safeString(entry?.name),
+                    description: safeString(entry?.description),
+                };
+                persisted[lang] = true;
+            });
+            setCategoryTranslations(nextTranslations);
+            setPersistedCategoryTranslations(persisted);
+            setCategoryTranslationError(null);
+        } catch (error) {
+            console.error("Nu am putut încărca traducerile categoriei FAQ", error);
+            setCategoryTranslationError("Nu am putut încărca traducerile pentru această categorie.");
+        } finally {
+            setCategoryTranslationLoading(false);
+        }
+    }, []);
+
+    const openCategoryTranslationModal = useCallback(
+        (category: NormalizedCategory) => {
+            if (translationLocales.length === 0) {
+                return;
+            }
+            setCategoryTranslationTarget(category);
+            const initialLocale = translationLocales[0] ?? DEFAULT_LOCALE;
+            setCategoryTranslationLocale(initialLocale);
+            setCategoryTranslations({});
+            setPersistedCategoryTranslations({});
+            setCategoryTranslationError(null);
+            setCategoryTranslationSuccess(null);
+            setIsCategoryTranslationModalOpen(true);
+            void fetchCategoryTranslations(category.id);
+        },
+        [fetchCategoryTranslations, translationLocales],
+    );
+
+    const closeCategoryTranslationModal = useCallback(() => {
+        setIsCategoryTranslationModalOpen(false);
+        setCategoryTranslationTarget(null);
+        setCategoryTranslations({});
+        setPersistedCategoryTranslations({});
+        setCategoryTranslationError(null);
+        setCategoryTranslationSuccess(null);
+        setCategoryTranslationLoading(false);
+        setCategoryTranslationSaving(false);
+        setCategoryTranslationDeleting(false);
+        setCategoryTranslationLocale(translationLocales[0] ?? DEFAULT_LOCALE);
+    }, [translationLocales]);
+
+    const updateCategoryTranslationDraft = useCallback(
+        (locale: Locale, field: keyof FaqCategoryTranslationPayload, value: string) => {
+            setCategoryTranslations((previous) => {
+                const existing = previous[locale] ?? { lang: locale };
+                return {
+                    ...previous,
+                    [locale]: {
+                        ...existing,
+                        lang: locale,
+                        [field]: value,
+                    },
+                };
+            });
+            setCategoryTranslationSuccess(null);
+            if (categoryTranslationError) {
+                setCategoryTranslationError(null);
+            }
+        },
+        [categoryTranslationError],
+    );
+
+    const handleCategoryTranslationLocaleChange = useCallback(
+        (value: string) => {
+            const candidate = value as Locale;
+            if (!translationLocales.includes(candidate)) {
+                return;
+            }
+            setCategoryTranslationLocale(candidate);
+            setCategoryTranslationSuccess(null);
+            setCategoryTranslationError(null);
+        },
+        [translationLocales],
+    );
+
+    const handleSaveCategoryTranslation = useCallback(async () => {
+        if (!categoryTranslationTarget) {
+            return;
+        }
+        const locale = categoryTranslationLocale;
+        const draft = categoryTranslations[locale] ?? { lang: locale, name: "", description: "" };
+        const payload: FaqCategoryTranslationPayload = {
+            name: toNullable(draft.name ?? ""),
+            description: toNullable(draft.description ?? ""),
+        };
+
+        setCategoryTranslationSaving(true);
+        try {
+            const response = await apiClient.upsertFaqCategoryTranslation(
+                categoryTranslationTarget.id,
+                locale,
+                payload,
+            );
+            const saved = extractItem(response);
+            setCategoryTranslations((previous) => ({
+                ...previous,
+                [locale]: {
+                    ...(saved ?? {}),
+                    lang: locale,
+                    name: safeString(saved?.name ?? payload.name ?? ""),
+                    description: safeString(saved?.description ?? payload.description ?? ""),
+                },
+            }));
+            setPersistedCategoryTranslations((previous) => ({
+                ...previous,
+                [locale]: true,
+            }));
+            setCategoryTranslationSuccess("Traducerea a fost salvată cu succes.");
+            setCategoryTranslationError(null);
+        } catch (error) {
+            console.error("Nu am putut salva traducerea categoriei FAQ", error);
+            setCategoryTranslationError("Nu am putut salva traducerea. Încearcă din nou.");
+            setCategoryTranslationSuccess(null);
+        } finally {
+            setCategoryTranslationSaving(false);
+        }
+    }, [categoryTranslationLocale, categoryTranslations, categoryTranslationTarget]);
+
+    const handleDeleteCategoryTranslation = useCallback(async () => {
+        if (!categoryTranslationTarget) {
+            return;
+        }
+        const locale = categoryTranslationLocale;
+        setCategoryTranslationDeleting(true);
+        try {
+            await apiClient.deleteFaqCategoryTranslation(categoryTranslationTarget.id, locale);
+            setCategoryTranslations((previous) => {
+                const next = { ...previous };
+                delete next[locale];
+                return next;
+            });
+            setPersistedCategoryTranslations((previous) => {
+                const next = { ...previous };
+                delete next[locale];
+                return next;
+            });
+            setCategoryTranslationSuccess("Traducerea a fost ștearsă.");
+            setCategoryTranslationError(null);
+        } catch (error) {
+            console.error("Nu am putut șterge traducerea categoriei FAQ", error);
+            setCategoryTranslationError("Nu am putut șterge traducerea. Încearcă din nou.");
+            setCategoryTranslationSuccess(null);
+        } finally {
+            setCategoryTranslationDeleting(false);
+        }
+    }, [categoryTranslationLocale, categoryTranslationTarget]);
+
+    const fetchFaqTranslations = useCallback(async (faqId: number) => {
+        setFaqTranslationLoading(true);
+        try {
+            const response = await apiClient.getFaqTranslations(faqId);
+            const list = extractList(response);
+            const nextTranslations: Record<string, FaqTranslation> = {};
+            const persisted: Record<string, boolean> = {};
+            list.forEach((entry) => {
+                const lang = normalizeTranslationLanguage(entry);
+                if (!lang) {
+                    return;
+                }
+                nextTranslations[lang] = {
+                    lang,
+                    question: safeString(entry?.question),
+                    answer: safeString(entry?.answer),
+                };
+                persisted[lang] = true;
+            });
+            setFaqTranslations(nextTranslations);
+            setPersistedFaqTranslations(persisted);
+            setFaqTranslationError(null);
+        } catch (error) {
+            console.error("Nu am putut încărca traducerile FAQ", error);
+            setFaqTranslationError("Nu am putut încărca traducerile pentru acest FAQ.");
+        } finally {
+            setFaqTranslationLoading(false);
+        }
+    }, []);
+
+    const openFaqTranslationModal = useCallback(
+        (faq: NormalizedFaqRecord) => {
+            if (translationLocales.length === 0) {
+                return;
+            }
+            setFaqTranslationTarget(faq);
+            const initialLocale = translationLocales[0] ?? DEFAULT_LOCALE;
+            setFaqTranslationLocale(initialLocale);
+            setFaqTranslations({});
+            setPersistedFaqTranslations({});
+            setFaqTranslationError(null);
+            setFaqTranslationSuccess(null);
+            setIsFaqTranslationModalOpen(true);
+            void fetchFaqTranslations(faq.id);
+        },
+        [fetchFaqTranslations, translationLocales],
+    );
+
+    const closeFaqTranslationModal = useCallback(() => {
+        setIsFaqTranslationModalOpen(false);
+        setFaqTranslationTarget(null);
+        setFaqTranslations({});
+        setPersistedFaqTranslations({});
+        setFaqTranslationError(null);
+        setFaqTranslationSuccess(null);
+        setFaqTranslationLoading(false);
+        setFaqTranslationSaving(false);
+        setFaqTranslationDeleting(false);
+        setFaqTranslationLocale(translationLocales[0] ?? DEFAULT_LOCALE);
+    }, [translationLocales]);
+
+    const updateFaqTranslationDraft = useCallback(
+        (locale: Locale, field: keyof FaqTranslationPayload, value: string) => {
+            setFaqTranslations((previous) => {
+                const existing = previous[locale] ?? { lang: locale };
+                return {
+                    ...previous,
+                    [locale]: {
+                        ...existing,
+                        lang: locale,
+                        [field]: value,
+                    },
+                };
+            });
+            setFaqTranslationSuccess(null);
+            if (faqTranslationError) {
+                setFaqTranslationError(null);
+            }
+        },
+        [faqTranslationError],
+    );
+
+    const handleFaqTranslationLocaleChange = useCallback(
+        (value: string) => {
+            const candidate = value as Locale;
+            if (!translationLocales.includes(candidate)) {
+                return;
+            }
+            setFaqTranslationLocale(candidate);
+            setFaqTranslationSuccess(null);
+            setFaqTranslationError(null);
+        },
+        [translationLocales],
+    );
+
+    const handleSaveFaqTranslation = useCallback(async () => {
+        if (!faqTranslationTarget) {
+            return;
+        }
+        const locale = faqTranslationLocale;
+        const draft = faqTranslations[locale] ?? { lang: locale, question: "", answer: "" };
+        const payload: FaqTranslationPayload = {
+            question: toNullable(draft.question ?? ""),
+            answer: toNullable(draft.answer ?? ""),
+        };
+
+        setFaqTranslationSaving(true);
+        try {
+            const response = await apiClient.upsertFaqTranslation(faqTranslationTarget.id, locale, payload);
+            const saved = extractItem(response);
+            setFaqTranslations((previous) => ({
+                ...previous,
+                [locale]: {
+                    ...(saved ?? {}),
+                    lang: locale,
+                    question: safeString(saved?.question ?? payload.question ?? ""),
+                    answer: safeString(saved?.answer ?? payload.answer ?? ""),
+                },
+            }));
+            setPersistedFaqTranslations((previous) => ({
+                ...previous,
+                [locale]: true,
+            }));
+            setFaqTranslationSuccess("Traducerea a fost salvată cu succes.");
+            setFaqTranslationError(null);
+        } catch (error) {
+            console.error("Nu am putut salva traducerea FAQ", error);
+            setFaqTranslationError("Nu am putut salva traducerea. Încearcă din nou.");
+            setFaqTranslationSuccess(null);
+        } finally {
+            setFaqTranslationSaving(false);
+        }
+    }, [faqTranslationLocale, faqTranslations, faqTranslationTarget]);
+
+    const handleDeleteFaqTranslation = useCallback(async () => {
+        if (!faqTranslationTarget) {
+            return;
+        }
+        const locale = faqTranslationLocale;
+        setFaqTranslationDeleting(true);
+        try {
+            await apiClient.deleteFaqTranslation(faqTranslationTarget.id, locale);
+            setFaqTranslations((previous) => {
+                const next = { ...previous };
+                delete next[locale];
+                return next;
+            });
+            setPersistedFaqTranslations((previous) => {
+                const next = { ...previous };
+                delete next[locale];
+                return next;
+            });
+            setFaqTranslationSuccess("Traducerea a fost ștearsă.");
+            setFaqTranslationError(null);
+        } catch (error) {
+            console.error("Nu am putut șterge traducerea FAQ", error);
+            setFaqTranslationError("Nu am putut șterge traducerea. Încearcă din nou.");
+            setFaqTranslationSuccess(null);
+        } finally {
+            setFaqTranslationDeleting(false);
+        }
+    }, [faqTranslationLocale, faqTranslationTarget]);
 
     const dateFormatter = useMemo(
         () =>
@@ -206,6 +611,26 @@ const AdminFaqPage = () => {
                     : category.label,
         }));
     }, [categoryOptions]);
+
+    const activeCategoryTranslation =
+        categoryTranslations[categoryTranslationLocale] ?? {
+            lang: categoryTranslationLocale,
+            name: "",
+            description: "",
+        };
+    const hasPersistedCategoryTranslation = Boolean(
+        persistedCategoryTranslations[categoryTranslationLocale],
+    );
+    const activeCategoryLocaleLabel = categoryTranslationLocale.toUpperCase();
+
+    const activeFaqTranslation =
+        faqTranslations[faqTranslationLocale] ?? {
+            lang: faqTranslationLocale,
+            question: "",
+            answer: "",
+        };
+    const hasPersistedFaqTranslation = Boolean(persistedFaqTranslations[faqTranslationLocale]);
+    const activeFaqLocaleLabel = faqTranslationLocale.toUpperCase();
 
     const isEditingCategory = categoryFormState.id !== null;
 
@@ -841,6 +1266,19 @@ const AdminFaqPage = () => {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-wrap justify-end gap-2">
+                                                    {translationLocales.length > 0 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="gap-2"
+                                                            onClick={() => openCategoryTranslationModal(category)}
+                                                            disabled={categoryTranslationBusy}
+                                                        >
+                                                            <Languages className="h-4 w-4" />
+                                                            Tradu
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         type="button"
                                                         variant="outline"
@@ -1151,7 +1589,20 @@ const AdminFaqPage = () => {
                                             {formatTimestamp(faq.updatedAt ?? faq.createdAt)}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <div className="flex justify-end">
+                                            <div className="flex flex-wrap justify-end gap-2">
+                                                {translationLocales.length > 0 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="gap-2"
+                                                        onClick={() => openFaqTranslationModal(faq)}
+                                                        disabled={faqTranslationBusy}
+                                                    >
+                                                        <Languages className="h-4 w-4" />
+                                                        Tradu
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     type="button"
                                                     variant="secondary"
@@ -1172,6 +1623,289 @@ const AdminFaqPage = () => {
                     )}
                 </div>
             </section>
+
+            <Popup
+                open={isCategoryTranslationModalOpen}
+                onClose={closeCategoryTranslationModal}
+                className="max-w-xl"
+            >
+                {translationLocales.length === 0 ? (
+                    <div className="space-y-4 p-6">
+                        <h2 className="text-lg font-semibold text-berkeley">Traduceri categorie</h2>
+                        <p className="text-sm text-gray-600">
+                            Nu sunt configurate limbi suplimentare pentru traducerile categoriilor de FAQ.
+                        </p>
+                        <div className="flex justify-end">
+                            <Button type="button" onClick={closeCategoryTranslationModal}>
+                                Închide
+                            </Button>
+                        </div>
+                    </div>
+                ) : categoryTranslationTarget ? (
+                    <div className="space-y-4 p-6">
+                        <div>
+                            <h2 className="text-lg font-semibold text-berkeley">Traduceri categorie</h2>
+                            <p className="text-sm text-gray-600">
+                                Actualizează numele și descrierea categoriei pentru limbile disponibile.
+                            </p>
+                        </div>
+                        <div className="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                            <p className="font-medium text-gray-900">{categoryTranslationTarget.name}</p>
+                            {categoryTranslationTarget.description && (
+                                <p className="mt-1 whitespace-pre-line">{categoryTranslationTarget.description}</p>
+                            )}
+                        </div>
+                        {translationLocales.length > 1 && (
+                            <div className="space-y-1">
+                                <Label htmlFor="faq-category-translation-locale">Limbă</Label>
+                                <Select
+                                    id="faq-category-translation-locale"
+                                    value={categoryTranslationLocale}
+                                    onValueChange={handleCategoryTranslationLocaleChange}
+                                    disabled={categoryTranslationBusy}
+                                >
+                                    {translationLocales.map((locale) => (
+                                        <option key={locale} value={locale}>
+                                            {locale.toUpperCase()}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </div>
+                        )}
+                        {categoryTranslationLoading ? (
+                            <p className="text-sm text-gray-500">Se încarcă traducerile...</p>
+                        ) : (
+                            <div className="space-y-4">
+                                {categoryTranslationError && (
+                                    <p className="text-sm text-red-600" role="alert">
+                                        {categoryTranslationError}
+                                    </p>
+                                )}
+                                {categoryTranslationSuccess && (
+                                    <p className="text-sm text-green-600">{categoryTranslationSuccess}</p>
+                                )}
+                                <div className="space-y-2">
+                                    <Label htmlFor="faq-category-translation-name">
+                                        Nume categorie ({activeCategoryLocaleLabel})
+                                    </Label>
+                                    <Input
+                                        id="faq-category-translation-name"
+                                        value={activeCategoryTranslation.name ?? ""}
+                                        onChange={(event) =>
+                                            updateCategoryTranslationDraft(
+                                                categoryTranslationLocale,
+                                                "name",
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Introdu numele tradus al categoriei"
+                                        disabled={categoryTranslationBusy}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="faq-category-translation-description">
+                                        Descriere ({activeCategoryLocaleLabel})
+                                    </Label>
+                                    <Textarea
+                                        id="faq-category-translation-description"
+                                        value={activeCategoryTranslation.description ?? ""}
+                                        onChange={(event) =>
+                                            updateCategoryTranslationDraft(
+                                                categoryTranslationLocale,
+                                                "description",
+                                                event.target.value,
+                                            )
+                                        }
+                                        rows={4}
+                                        placeholder="Descrierea categoriei în limba selectată"
+                                        disabled={categoryTranslationBusy}
+                                    />
+                                </div>
+                                <div className="flex flex-wrap justify-end gap-3 pt-2">
+                                    <Button
+                                        type="button"
+                                        onClick={handleSaveCategoryTranslation}
+                                        disabled={categoryTranslationBusy || categoryTranslationLoading}
+                                    >
+                                        {categoryTranslationSaving ? "Se salvează..." : "Salvează traducerea"}
+                                    </Button>
+                                    {hasPersistedCategoryTranslation && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={handleDeleteCategoryTranslation}
+                                            disabled={categoryTranslationDeleting}
+                                        >
+                                            {categoryTranslationDeleting ? "Se șterge..." : "Șterge traducerea"}
+                                        </Button>
+                                    )}
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={closeCategoryTranslationModal}
+                                        disabled={categoryTranslationBusy}
+                                    >
+                                        Închide
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="space-y-4 p-6">
+                        <p className="text-sm text-gray-600">
+                            Selectează o categorie pentru a gestiona traducerile disponibile.
+                        </p>
+                        <div className="flex justify-end">
+                            <Button type="button" onClick={closeCategoryTranslationModal}>
+                                Închide
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Popup>
+
+            <Popup
+                open={isFaqTranslationModalOpen}
+                onClose={closeFaqTranslationModal}
+                className="max-w-3xl max-h-[calc(100vh-3rem)] overflow-hidden p-0"
+            >
+                {translationLocales.length === 0 ? (
+                    <div className="space-y-4 p-6">
+                        <h2 className="text-lg font-semibold text-berkeley">Traduceri FAQ</h2>
+                        <p className="text-sm text-gray-600">
+                            Nu sunt configurate limbi suplimentare pentru traducerile întrebărilor.
+                        </p>
+                        <div className="flex justify-end">
+                            <Button type="button" onClick={closeFaqTranslationModal}>
+                                Închide
+                            </Button>
+                        </div>
+                    </div>
+                ) : faqTranslationTarget ? (
+                    <div className="flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
+                        <div className="min-h-0 flex-1 overflow-y-auto p-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-berkeley">Traduceri FAQ</h2>
+                                    <p className="text-sm text-gray-600">
+                                        Actualizează întrebarea și răspunsul pentru limbile disponibile.
+                                    </p>
+                                </div>
+                                <div className="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                                    <p className="font-medium text-gray-900">{faqTranslationTarget.question}</p>
+                                </div>
+                                {translationLocales.length > 1 && (
+                                    <div className="space-y-1">
+                                        <Label htmlFor="faq-translation-locale">Limbă</Label>
+                                        <Select
+                                            id="faq-translation-locale"
+                                            value={faqTranslationLocale}
+                                            onValueChange={handleFaqTranslationLocaleChange}
+                                            disabled={faqTranslationBusy}
+                                        >
+                                            {translationLocales.map((locale) => (
+                                                <option key={locale} value={locale}>
+                                                    {locale.toUpperCase()}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </div>
+                                )}
+                                {faqTranslationLoading ? (
+                                    <p className="text-sm text-gray-500">Se încarcă traducerile...</p>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {faqTranslationError && (
+                                            <p className="text-sm text-red-600" role="alert">
+                                                {faqTranslationError}
+                                            </p>
+                                        )}
+                                        {faqTranslationSuccess && (
+                                            <p className="text-sm text-green-600">{faqTranslationSuccess}</p>
+                                        )}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="faq-translation-question">
+                                                Întrebare ({activeFaqLocaleLabel})
+                                            </Label>
+                                            <Input
+                                                id="faq-translation-question"
+                                                value={activeFaqTranslation.question ?? ""}
+                                                onChange={(event) =>
+                                                    updateFaqTranslationDraft(
+                                                        faqTranslationLocale,
+                                                        "question",
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                placeholder="Introdu întrebarea tradusă"
+                                                disabled={faqTranslationBusy}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Răspuns ({activeFaqLocaleLabel})</Label>
+                                            <div className="rich-text-editor rich-text-editor--faq-answer">
+                                                <CKEditor
+                                                    editor={ClassicEditor}
+                                                    data={activeFaqTranslation.answer ?? ""}
+                                                    disabled={faqTranslationBusy}
+                                                    onChange={(_, editor) =>
+                                                        updateFaqTranslationDraft(
+                                                            faqTranslationLocale,
+                                                            "answer",
+                                                            editor.getData(),
+                                                        )
+                                                    }
+                                                    config={answerEditorConfig}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 p-4 md:flex-row md:items-center md:justify-end">
+                            <Button
+                                type="button"
+                                onClick={handleSaveFaqTranslation}
+                                disabled={faqTranslationBusy || faqTranslationLoading}
+                            >
+                                {faqTranslationSaving ? "Se salvează..." : "Salvează traducerea"}
+                            </Button>
+                            {hasPersistedFaqTranslation && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleDeleteFaqTranslation}
+                                    disabled={faqTranslationDeleting}
+                                >
+                                    {faqTranslationDeleting ? "Se șterge..." : "Șterge traducerea"}
+                                </Button>
+                            )}
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={closeFaqTranslationModal}
+                                disabled={faqTranslationBusy}
+                            >
+                                Închide
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-4 p-6">
+                        <p className="text-sm text-gray-600">
+                            Selectează un FAQ pentru a gestiona traducerile disponibile.
+                        </p>
+                        <div className="flex justify-end">
+                            <Button type="button" onClick={closeFaqTranslationModal}>
+                                Închide
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Popup>
+
         </div>
     );
 };

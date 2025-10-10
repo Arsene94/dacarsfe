@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Edit, Plus, Trash2, UploadCloud, X } from "lucide-react";
+import { Edit, Languages, Plus, Trash2, UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/table";
 import { Popup } from "@/components/ui/popup";
@@ -15,6 +15,7 @@ import { extractItem, extractList } from "@/lib/apiResponse";
 import { formatDateTime, toIsoStringFromInput, toLocalDatetimeInputValue } from "@/lib/datetime";
 import { resolveMediaUrl } from "@/lib/media";
 import { getUserDisplayName } from "@/lib/users";
+import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import type { Column } from "@/types/ui";
 import type {
   BlogCategory,
@@ -22,6 +23,8 @@ import type {
   BlogPostListParams,
   BlogPostPayload,
   BlogPostStatus,
+  BlogPostTranslation,
+  BlogPostTranslationPayload,
   BlogTag,
 } from "@/types/blog";
 import type { User } from "@/types/auth";
@@ -105,6 +108,239 @@ const BlogPostsPage = () => {
   const [searchValue, setSearchValue] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [imageState, setImageState] = useState<BlogPostImageState>(() => createEmptyImageState());
+  const translationLocales = useMemo<Locale[]>(
+    () => AVAILABLE_LOCALES.filter((locale) => locale !== DEFAULT_LOCALE),
+    [],
+  );
+  const [isTranslationModalOpen, setIsTranslationModalOpen] = useState(false);
+  const [translationTarget, setTranslationTarget] = useState<BlogPost | null>(null);
+  const [postTranslations, setPostTranslations] = useState<Record<string, BlogPostTranslation>>({});
+  const [persistedPostTranslations, setPersistedPostTranslations] = useState<Record<string, boolean>>({});
+  const [activeTranslationLocale, setActiveTranslationLocale] = useState<Locale>(
+    translationLocales[0] ?? DEFAULT_LOCALE,
+  );
+  const [isLoadingTranslations, setIsLoadingTranslations] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
+  const [translationSuccess, setTranslationSuccess] = useState<string | null>(null);
+  const [isSavingTranslation, setIsSavingTranslation] = useState(false);
+  const [isDeletingTranslation, setIsDeletingTranslation] = useState(false);
+  const translationBusy = isLoadingTranslations || isSavingTranslation || isDeletingTranslation;
+
+  const safeString = (value: unknown): string => {
+    if (typeof value === "string") {
+      return value;
+    }
+    if (typeof value === "number") {
+      return value.toString();
+    }
+    return "";
+  };
+
+  const toNullable = (value: string | null | undefined): string | null => {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  };
+
+  const normalizeTranslationLanguage = (
+    entry: BlogPostTranslation | null | undefined,
+  ): string | null => {
+    if (!entry) {
+      return null;
+    }
+    if (typeof entry.lang === "string" && entry.lang.trim().length > 0) {
+      return entry.lang.trim();
+    }
+    if (typeof entry.lang_code === "string" && entry.lang_code.trim().length > 0) {
+      return entry.lang_code.trim();
+    }
+    return null;
+  };
+
+  const fetchPostTranslations = useCallback(async (postId: number | string) => {
+    setIsLoadingTranslations(true);
+    try {
+      const response = await apiClient.getBlogPostTranslations(postId);
+      const list = extractList(response);
+      const nextTranslations: Record<string, BlogPostTranslation> = {};
+      const persisted: Record<string, boolean> = {};
+      list.forEach((entry) => {
+        const lang = normalizeTranslationLanguage(entry);
+        if (!lang) {
+          return;
+        }
+        nextTranslations[lang] = {
+          lang,
+          lang_code: lang,
+          title: safeString(entry?.title),
+          excerpt: safeString(entry?.excerpt),
+          content: safeString(entry?.content),
+          meta_title: safeString(entry?.meta_title),
+          meta_description: safeString(entry?.meta_description),
+        };
+        persisted[lang] = true;
+      });
+      setPostTranslations(nextTranslations);
+      setPersistedPostTranslations(persisted);
+      setTranslationError(null);
+    } catch (error) {
+      console.error("Nu am putut încărca traducerile articolului de blog", error);
+      setTranslationError("Nu am putut încărca traducerile pentru acest articol. Încearcă din nou.");
+    } finally {
+      setIsLoadingTranslations(false);
+    }
+  }, []);
+
+  const openTranslationModal = useCallback(
+    (post: BlogPost) => {
+      if (translationLocales.length === 0) {
+        return;
+      }
+      setTranslationTarget(post);
+      const initialLocale = translationLocales[0] ?? DEFAULT_LOCALE;
+      setActiveTranslationLocale(initialLocale);
+      setPostTranslations({});
+      setPersistedPostTranslations({});
+      setTranslationError(null);
+      setTranslationSuccess(null);
+      setIsTranslationModalOpen(true);
+      void fetchPostTranslations(post.id);
+    },
+    [fetchPostTranslations, translationLocales],
+  );
+
+  const closeTranslationModal = useCallback(() => {
+    setIsTranslationModalOpen(false);
+    setTranslationTarget(null);
+    setPostTranslations({});
+    setPersistedPostTranslations({});
+    setTranslationError(null);
+    setTranslationSuccess(null);
+    setIsLoadingTranslations(false);
+    setIsSavingTranslation(false);
+    setIsDeletingTranslation(false);
+    setActiveTranslationLocale(translationLocales[0] ?? DEFAULT_LOCALE);
+  }, [translationLocales]);
+
+  const updateTranslationDraft = useCallback(
+    (locale: Locale, field: keyof BlogPostTranslationPayload, value: string) => {
+      setPostTranslations((previous) => {
+        const existing = previous[locale] ?? { lang: locale, lang_code: locale };
+        return {
+          ...previous,
+          [locale]: {
+            ...existing,
+            lang: locale,
+            lang_code: locale,
+            [field]: value,
+          },
+        };
+      });
+      setTranslationSuccess(null);
+      if (translationError) {
+        setTranslationError(null);
+      }
+    },
+    [translationError],
+  );
+
+  const handleTranslationLocaleChange = useCallback(
+    (value: string) => {
+      const candidate = value as Locale;
+      if (!translationLocales.includes(candidate)) {
+        return;
+      }
+      setActiveTranslationLocale(candidate);
+      setTranslationSuccess(null);
+      setTranslationError(null);
+    },
+    [translationLocales],
+  );
+
+  const handleSaveTranslation = useCallback(async () => {
+    if (!translationTarget) {
+      return;
+    }
+    const locale = activeTranslationLocale;
+    const draft = postTranslations[locale] ?? {
+      lang: locale,
+      lang_code: locale,
+      title: "",
+      excerpt: "",
+      content: "",
+      meta_title: "",
+      meta_description: "",
+    };
+    const payload: BlogPostTranslationPayload = {
+      title: toNullable(draft.title),
+      excerpt: toNullable(draft.excerpt),
+      content: toNullable(draft.content),
+      meta_title: toNullable(draft.meta_title),
+      meta_description: toNullable(draft.meta_description),
+    };
+
+    setIsSavingTranslation(true);
+    try {
+      const response = await apiClient.upsertBlogPostTranslation(translationTarget.id, locale, payload);
+      const saved = extractItem(response);
+      setPostTranslations((previous) => ({
+        ...previous,
+        [locale]: {
+          ...(saved ?? {}),
+          lang: locale,
+          lang_code: locale,
+          title: safeString(saved?.title ?? payload.title ?? ""),
+          excerpt: safeString(saved?.excerpt ?? payload.excerpt ?? ""),
+          content: safeString(saved?.content ?? payload.content ?? ""),
+          meta_title: safeString(saved?.meta_title ?? payload.meta_title ?? ""),
+          meta_description: safeString(saved?.meta_description ?? payload.meta_description ?? ""),
+        },
+      }));
+      setPersistedPostTranslations((previous) => ({
+        ...previous,
+        [locale]: true,
+      }));
+      setTranslationSuccess("Traducerea a fost salvată cu succes.");
+      setTranslationError(null);
+    } catch (error) {
+      console.error("Nu am putut salva traducerea articolului de blog", error);
+      setTranslationError("Nu am putut salva traducerea. Încearcă din nou.");
+      setTranslationSuccess(null);
+    } finally {
+      setIsSavingTranslation(false);
+    }
+  }, [activeTranslationLocale, postTranslations, translationTarget]);
+
+  const handleDeleteTranslation = useCallback(async () => {
+    if (!translationTarget) {
+      return;
+    }
+    const locale = activeTranslationLocale;
+    setIsDeletingTranslation(true);
+    try {
+      await apiClient.deleteBlogPostTranslation(translationTarget.id, locale);
+      setPostTranslations((previous) => {
+        const next = { ...previous };
+        delete next[locale];
+        return next;
+      });
+      setPersistedPostTranslations((previous) => {
+        const next = { ...previous };
+        delete next[locale];
+        return next;
+      });
+      setTranslationSuccess("Traducerea a fost ștearsă.");
+      setTranslationError(null);
+    } catch (error) {
+      console.error("Nu am putut șterge traducerea articolului de blog", error);
+      setTranslationError("Nu am putut șterge traducerea. Încearcă din nou.");
+      setTranslationSuccess(null);
+    } finally {
+      setIsDeletingTranslation(false);
+    }
+  }, [activeTranslationLocale, translationTarget]);
 
   const resetImageState = useCallback(() => {
     setImageState((prev) => {
@@ -544,6 +780,19 @@ const BlogPostsPage = () => {
         accessor: () => "",
         cell: (row) => (
           <div className="flex items-center gap-3">
+            {translationLocales.length > 0 && (
+              <button
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openTranslationModal(row);
+                }}
+                className="text-berkeley hover:text-jade"
+                aria-label={`Tradu articolul ${row.title}`}
+                disabled={translationBusy}
+              >
+                <Languages className="h-4 w-4" />
+              </button>
+            )}
             <button
               onClick={(event) => {
                 event.stopPropagation();
@@ -568,8 +817,30 @@ const BlogPostsPage = () => {
         ),
       },
     ],
-    [handleDelete, openEditModal, resolveAuthorName],
+    [
+      handleDelete,
+      openEditModal,
+      resolveAuthorName,
+      openTranslationModal,
+      translationBusy,
+      translationLocales,
+    ],
   );
+
+  const activePostTranslation =
+    postTranslations[activeTranslationLocale] ?? {
+      lang: activeTranslationLocale,
+      lang_code: activeTranslationLocale,
+      title: "",
+      excerpt: "",
+      content: "",
+      meta_title: "",
+      meta_description: "",
+    };
+  const hasPersistedPostTranslation = Boolean(
+    persistedPostTranslations[activeTranslationLocale],
+  );
+  const activeLocaleLabel = activeTranslationLocale.toUpperCase();
 
   const handleSearchSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -676,6 +947,217 @@ const BlogPostsPage = () => {
           <p className="text-sm text-gray-500">Nu există articole care să corespundă filtrului curent.</p>
         )}
       </div>
+
+      <Popup
+        open={isTranslationModalOpen}
+        onClose={closeTranslationModal}
+        className="max-w-3xl max-h-[calc(100vh-3rem)] overflow-hidden p-0"
+      >
+        {translationLocales.length === 0 ? (
+          <div className="space-y-4 p-6">
+            <h2 className="text-lg font-semibold text-berkeley">Traduceri articol</h2>
+            <p className="text-sm text-gray-600">
+              Nu sunt configurate limbi suplimentare pentru traducerile articolelor de blog.
+            </p>
+            <div className="flex justify-end">
+              <Button type="button" onClick={closeTranslationModal}>
+                Închide
+              </Button>
+            </div>
+          </div>
+        ) : translationTarget ? (
+          <div className="flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-y-auto p-6">
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-berkeley">Traduceri articol</h2>
+                  <p className="text-sm text-gray-600">
+                    Editează titlul, conținutul și metadatele pentru limbile disponibile.
+                  </p>
+                </div>
+                <div className="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                  <p className="font-medium text-gray-900">{translationTarget.title}</p>
+                  {translationTarget.excerpt && (
+                    <p className="mt-1 text-gray-600">{translationTarget.excerpt}</p>
+                  )}
+                </div>
+                {translationLocales.length > 1 && (
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="blog-post-translation-language"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Limbă
+                    </label>
+                    <Select
+                      id="blog-post-translation-language"
+                      value={activeTranslationLocale}
+                      onValueChange={handleTranslationLocaleChange}
+                      disabled={translationBusy}
+                    >
+                      {translationLocales.map((locale) => (
+                        <option key={locale} value={locale}>
+                          {locale.toUpperCase()}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                )}
+                {isLoadingTranslations ? (
+                  <p className="text-sm text-gray-500">Se încarcă traducerile...</p>
+                ) : (
+                  <div className="space-y-4">
+                    {translationError && (
+                      <p className="text-sm text-red-600" role="alert">
+                        {translationError}
+                      </p>
+                    )}
+                    {translationSuccess && (
+                      <p className="text-sm text-green-600">{translationSuccess}</p>
+                    )}
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="blog-post-translation-title"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Titlu ({activeLocaleLabel})
+                      </label>
+                      <Input
+                        id="blog-post-translation-title"
+                        value={activePostTranslation.title ?? ""}
+                        onChange={(event) =>
+                          updateTranslationDraft(activeTranslationLocale, "title", event.target.value)
+                        }
+                        placeholder="Introdu titlul tradus"
+                        disabled={translationBusy}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="blog-post-translation-excerpt"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Rezumat ({activeLocaleLabel})
+                      </label>
+                      <Textarea
+                        id="blog-post-translation-excerpt"
+                        value={activePostTranslation.excerpt ?? ""}
+                        onChange={(event) =>
+                          updateTranslationDraft(activeTranslationLocale, "excerpt", event.target.value)
+                        }
+                        placeholder="Rezumatul articolului în limba selectată"
+                        rows={3}
+                        disabled={translationBusy}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="blog-post-translation-content"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Conținut ({activeLocaleLabel})
+                      </label>
+                      <Textarea
+                        id="blog-post-translation-content"
+                        value={activePostTranslation.content ?? ""}
+                        onChange={(event) =>
+                          updateTranslationDraft(activeTranslationLocale, "content", event.target.value)
+                        }
+                        placeholder="HTML sau Markdown tradus pentru articol"
+                        rows={8}
+                        disabled={translationBusy}
+                      />
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="blog-post-translation-meta-title"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Meta title ({activeLocaleLabel})
+                        </label>
+                        <Input
+                          id="blog-post-translation-meta-title"
+                          value={activePostTranslation.meta_title ?? ""}
+                          onChange={(event) =>
+                            updateTranslationDraft(
+                              activeTranslationLocale,
+                              "meta_title",
+                              event.target.value,
+                            )
+                          }
+                          placeholder="Titlu SEO tradus"
+                          disabled={translationBusy}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="blog-post-translation-meta-description"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Meta description ({activeLocaleLabel})
+                        </label>
+                        <Textarea
+                          id="blog-post-translation-meta-description"
+                          value={activePostTranslation.meta_description ?? ""}
+                          onChange={(event) =>
+                            updateTranslationDraft(
+                              activeTranslationLocale,
+                              "meta_description",
+                              event.target.value,
+                            )
+                          }
+                          placeholder="Descriere SEO tradusă"
+                          rows={3}
+                          disabled={translationBusy}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 p-4 md:flex-row md:items-center md:justify-end">
+              <Button
+                type="button"
+                onClick={handleSaveTranslation}
+                disabled={isSavingTranslation || isLoadingTranslations}
+              >
+                {isSavingTranslation ? "Se salvează..." : "Salvează traducerea"}
+              </Button>
+              {hasPersistedPostTranslation && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDeleteTranslation}
+                  disabled={isDeletingTranslation}
+                >
+                  {isDeletingTranslation ? "Se șterge..." : "Șterge traducerea"}
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={closeTranslationModal}
+                disabled={isSavingTranslation || isDeletingTranslation}
+              >
+                Închide
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4 p-6">
+            <p className="text-sm text-gray-600">
+              Selectează un articol pentru a vizualiza și edita traducerile disponibile.
+            </p>
+            <div className="flex justify-end">
+              <Button type="button" onClick={closeTranslationModal}>
+                Închide
+              </Button>
+            </div>
+          </div>
+        )}
+      </Popup>
 
       <Popup
         open={isModalOpen}

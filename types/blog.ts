@@ -11,6 +11,7 @@ export interface BlogCategory {
   is_default?: boolean | number | null;
   created_at?: string | null;
   updated_at?: string | null;
+  translations?: BlogCategoryTranslation[];
   [key: string]: unknown;
 }
 
@@ -24,6 +25,18 @@ export type BlogCategoryPayload = Partial<{
   is_featured: boolean | number | null;
   is_default: boolean | number | null;
 }> & Record<string, unknown>;
+
+export interface BlogCategoryTranslation {
+  lang?: string;
+  lang_code?: string;
+  name?: string | null;
+  description?: string | null;
+}
+
+export interface BlogCategoryTranslationPayload {
+  name?: string | null;
+  description?: string | null;
+}
 
 export interface BlogCategoryListParams {
   page?: number;
@@ -99,6 +112,7 @@ export interface BlogPost {
   updated_at?: string | null;
   meta_title?: string | null;
   meta_description?: string | null;
+  translations?: BlogPostTranslation[];
   [key: string]: unknown;
 }
 
@@ -116,6 +130,24 @@ export type BlogPostPayload = Partial<{
   meta_description: string | null;
   tag_ids: Array<number | string>;
 }> & Record<string, unknown>;
+
+export interface BlogPostTranslation {
+  lang?: string;
+  lang_code?: string;
+  title?: string | null;
+  excerpt?: string | null;
+  content?: string | null;
+  meta_title?: string | null;
+  meta_description?: string | null;
+}
+
+export interface BlogPostTranslationPayload {
+  title?: string | null;
+  excerpt?: string | null;
+  content?: string | null;
+  meta_title?: string | null;
+  meta_description?: string | null;
+}
 
 export interface BlogPostListParams {
   page?: number;
