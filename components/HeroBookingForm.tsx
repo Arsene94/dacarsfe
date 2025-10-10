@@ -4,8 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar, MapPin, Users } from "lucide-react";
 
-import { apiClient } from "@/lib/api";
-import { extractList } from "@/lib/apiResponse";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -13,9 +11,82 @@ import { Label } from "@/components/ui/label";
 import { useBooking } from "@/context/useBooking";
 import type { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
-import { trackMixpanelEvent } from "@/lib/mixpanelClient";
-import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
-import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
+
+type ApiModule = typeof import("@/lib/api");
+type ApiResponseModule = typeof import("@/lib/apiResponse");
+type MixpanelModule = typeof import("@/lib/mixpanelClient");
+type TikTokModule = typeof import("@/lib/tiktokPixel");
+type MetaPixelModule = typeof import("@/lib/metaPixel");
+
+type CategoryHelpers = {
+    apiClient: ApiModule["apiClient"];
+    extractList: ApiResponseModule["extractList"];
+};
+
+type TrackingHelpers = {
+    trackMixpanelEvent: MixpanelModule["trackMixpanelEvent"];
+    trackTikTokEvent: TikTokModule["trackTikTokEvent"];
+    TIKTOK_EVENTS: TikTokModule["TIKTOK_EVENTS"];
+    trackMetaPixelEvent: MetaPixelModule["trackMetaPixelEvent"];
+    META_PIXEL_EVENTS: MetaPixelModule["META_PIXEL_EVENTS"];
+};
+
+let categoryHelpersPromise: Promise<CategoryHelpers> | null = null;
+let trackingHelpersPromise: Promise<TrackingHelpers> | null = null;
+
+const loadCategoryHelpers = async (): Promise<CategoryHelpers> => {
+    if (!categoryHelpersPromise) {
+        categoryHelpersPromise = Promise.all([
+            import("@/lib/api"),
+            import("@/lib/apiResponse"),
+        ])
+            .then(([apiModule, responseModule]) => {
+                const client = (apiModule.apiClient ?? apiModule.default) as
+                    | ApiModule["apiClient"]
+                    | undefined;
+
+                if (!client) {
+                    throw new Error(
+                        "Clientul API nu a putut fi încărcat pentru formularul hero.",
+                    );
+                }
+
+                return {
+                    apiClient: client,
+                    extractList: responseModule.extractList,
+                };
+            })
+            .catch((error) => {
+                categoryHelpersPromise = null;
+                throw error;
+            });
+    }
+
+    return categoryHelpersPromise;
+};
+
+const loadTrackingHelpers = async (): Promise<TrackingHelpers> => {
+    if (!trackingHelpersPromise) {
+        trackingHelpersPromise = Promise.all([
+            import("@/lib/mixpanelClient"),
+            import("@/lib/tiktokPixel"),
+            import("@/lib/metaPixel"),
+        ])
+            .then(([mixpanelModule, tikTokModule, metaModule]) => ({
+                trackMixpanelEvent: mixpanelModule.trackMixpanelEvent,
+                trackTikTokEvent: tikTokModule.trackTikTokEvent,
+                TIKTOK_EVENTS: tikTokModule.TIKTOK_EVENTS,
+                trackMetaPixelEvent: metaModule.trackMetaPixelEvent,
+                META_PIXEL_EVENTS: metaModule.META_PIXEL_EVENTS,
+            }))
+            .catch((error) => {
+                trackingHelpersPromise = null;
+                throw error;
+            });
+    }
+
+    return trackingHelpersPromise;
+};
 
 export type LocationOption = {
     value?: string;
@@ -162,7 +233,23 @@ const HeroBookingForm = ({
         let cancelled = false;
 
         const getCategories = async () => {
-            const res = await apiClient.getCarCategories({ language: locale });
+            const helpers = await loadCategoryHelpers().catch((error) => {
+                if (process.env.NODE_ENV !== "production") {
+                    console.error(
+                        "Nu am putut încărca modulele necesare pentru categoriile formularului hero",
+                        error,
+                    );
+                }
+                return null;
+            });
+
+            if (!helpers) {
+                return;
+            }
+
+            const { apiClient: client, extractList } = helpers;
+
+            const res = await client.getCarCategories({ language: locale });
             const list = extractList<Record<string, unknown>>(
                 res as ApiListResult<Record<string, unknown>>,
             );
@@ -254,20 +341,14 @@ const HeroBookingForm = ({
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        trackMixpanelEvent("hero_form_submit", {
-            start_date: formData.start_date,
-            end_date: formData.end_date,
-            location: formData.location,
-            car_type: formData.car_type,
-        });
-
-        trackTikTokEvent(TIKTOK_EVENTS.SUBMIT_FORM, {
-            contents: [
-                {
-                    content_id: "hero_booking_form",
-                    content_name: "booking", // eslint-disable-line camelcase -- cerință pixel TikTok
-                },
-            ],
+        const trackingPromise = loadTrackingHelpers().catch((error) => {
+            if (process.env.NODE_ENV !== "production") {
+                console.error(
+                    "Nu am putut încărca modulele de tracking pentru formularul hero",
+                    error,
+                );
+            }
+            return null;
         });
 
         const params = new URLSearchParams({
@@ -287,14 +368,42 @@ const HeroBookingForm = ({
             .filter((value) => typeof value === "string" && value.trim().length > 0)
             .join(" | ");
 
-        trackMetaPixelEvent(META_PIXEL_EVENTS.SEARCH, {
-            search_source: "hero_form",
-            start_date: formData.start_date || undefined,
-            end_date: formData.end_date || undefined,
-            location: formData.location || undefined,
-            car_type: formData.car_type || undefined,
-            search_string: searchString.length > 0 ? searchString : undefined,
-        });
+        const trackingHelpers = await trackingPromise;
+
+        if (trackingHelpers) {
+            const {
+                trackMixpanelEvent,
+                trackTikTokEvent,
+                TIKTOK_EVENTS,
+                trackMetaPixelEvent,
+                META_PIXEL_EVENTS,
+            } = trackingHelpers;
+
+            trackMixpanelEvent("hero_form_submit", {
+                start_date: formData.start_date,
+                end_date: formData.end_date,
+                location: formData.location,
+                car_type: formData.car_type,
+            });
+
+            trackTikTokEvent(TIKTOK_EVENTS.SUBMIT_FORM, {
+                contents: [
+                    {
+                        content_id: "hero_booking_form",
+                        content_name: "booking", // eslint-disable-line camelcase -- cerință pixel TikTok
+                    },
+                ],
+            });
+
+            trackMetaPixelEvent(META_PIXEL_EVENTS.SEARCH, {
+                search_source: "hero_form",
+                start_date: formData.start_date || undefined,
+                end_date: formData.end_date || undefined,
+                location: formData.location || undefined,
+                car_type: formData.car_type || undefined,
+                search_string: searchString.length > 0 ? searchString : undefined,
+            });
+        }
 
         router.push(`/cars?${params.toString()}`);
     };

@@ -10,19 +10,29 @@ import {
     type ReactNode,
 } from "react";
 import dynamic from "next/dynamic";
-import BenefitsSection from "@/components/BenefitsSection";
-import ContactSection from "@/components/ContactSection";
-import FleetSection from "@/components/FleetSection";
 import HeroSection from "@/components/HeroSection";
-import OffersSection from "@/components/OffersSection";
-import ProcessSection from "@/components/ProcessSection";
-import apiClient from "@/lib/api";
-import { extractArray, isPeriodActive, mapPeriod } from "@/lib/wheelNormalization";
 import { useBooking } from "@/context/useBooking";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
-import { trackMixpanelEvent } from "@/lib/mixpanelClient";
-import { trackTikTokEvent, TIKTOK_CONTENT_TYPE, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
-import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
+
+const FleetSection = dynamic(() => import("@/components/FleetSection"), {
+    loading: () => null,
+});
+
+const BenefitsSection = dynamic(() => import("@/components/BenefitsSection"), {
+    loading: () => null,
+});
+
+const OffersSection = dynamic(() => import("@/components/OffersSection"), {
+    loading: () => null,
+});
+
+const ProcessSection = dynamic(() => import("@/components/ProcessSection"), {
+    loading: () => null,
+});
+
+const ContactSection = dynamic(() => import("@/components/ContactSection"), {
+    loading: () => null,
+});
 
 const ElfsightWidget = dynamic(() => import("@/components/ElfsightWidget"), {
     ssr: false,
@@ -32,6 +42,106 @@ const LazyWheelOfFortune = dynamic(() => import("@/components/WheelOfFortune"), 
     loading: () => null,
     ssr: false,
 });
+
+type ApiModule = typeof import("@/lib/api");
+type WheelNormalizationModule = typeof import("@/lib/wheelNormalization");
+type MixpanelModule = typeof import("@/lib/mixpanelClient");
+type TikTokModule = typeof import("@/lib/tiktokPixel");
+type MetaPixelModule = typeof import("@/lib/metaPixel");
+
+type WheelHelpers = {
+    apiClient: ApiModule["apiClient"];
+    extractArray: WheelNormalizationModule["extractArray"];
+    mapPeriod: WheelNormalizationModule["mapPeriod"];
+    isPeriodActive: WheelNormalizationModule["isPeriodActive"];
+};
+
+type TrackingModules = {
+    trackMixpanelEvent: MixpanelModule["trackMixpanelEvent"];
+    trackTikTokEvent: TikTokModule["trackTikTokEvent"];
+    TIKTOK_CONTENT_TYPE: TikTokModule["TIKTOK_CONTENT_TYPE"];
+    TIKTOK_EVENTS: TikTokModule["TIKTOK_EVENTS"];
+    trackMetaPixelEvent: MetaPixelModule["trackMetaPixelEvent"];
+    META_PIXEL_EVENTS: MetaPixelModule["META_PIXEL_EVENTS"];
+};
+
+let wheelHelpersPromise: Promise<WheelHelpers> | null = null;
+let trackingModulesPromise: Promise<TrackingModules> | null = null;
+
+const loadWheelHelpers = async (): Promise<WheelHelpers> => {
+    if (!wheelHelpersPromise) {
+        wheelHelpersPromise = Promise.all([
+            import("@/lib/api"),
+            import("@/lib/wheelNormalization"),
+        ])
+            .then(([apiModule, wheelModule]) => {
+                const client = (apiModule.apiClient ?? apiModule.default) as
+                    | ApiModule["apiClient"]
+                    | undefined;
+
+                if (!client) {
+                    throw new Error(
+                        "Clientul API nu este disponibil pentru roata norocului.",
+                    );
+                }
+
+                return {
+                    apiClient: client,
+                    extractArray: wheelModule.extractArray,
+                    mapPeriod: wheelModule.mapPeriod,
+                    isPeriodActive: wheelModule.isPeriodActive,
+                };
+            })
+            .catch((error) => {
+                wheelHelpersPromise = null;
+                throw error;
+            });
+    }
+
+    return wheelHelpersPromise;
+};
+
+const loadTrackingModules = async (): Promise<TrackingModules> => {
+    if (!trackingModulesPromise) {
+        trackingModulesPromise = Promise.all([
+            import("@/lib/mixpanelClient"),
+            import("@/lib/tiktokPixel"),
+            import("@/lib/metaPixel"),
+        ])
+            .then(([mixpanelModule, tikTokModule, metaModule]) => ({
+                trackMixpanelEvent: mixpanelModule.trackMixpanelEvent,
+                trackTikTokEvent: tikTokModule.trackTikTokEvent,
+                TIKTOK_CONTENT_TYPE: tikTokModule.TIKTOK_CONTENT_TYPE,
+                TIKTOK_EVENTS: tikTokModule.TIKTOK_EVENTS,
+                trackMetaPixelEvent: metaModule.trackMetaPixelEvent,
+                META_PIXEL_EVENTS: metaModule.META_PIXEL_EVENTS,
+            }))
+            .catch((error) => {
+                trackingModulesPromise = null;
+                throw error;
+            });
+    }
+
+    return trackingModulesPromise;
+};
+
+const isWheelPeriodActive = (
+    period?: Pick<WheelOfFortunePeriod, "active" | "is_active"> | null,
+): boolean => {
+    if (!period) {
+        return false;
+    }
+
+    if (typeof period.active === "boolean") {
+        return period.active;
+    }
+
+    if (typeof period.is_active === "boolean") {
+        return period.is_active;
+    }
+
+    return false;
+};
 
 type LazyVisibleSectionProps = {
     children: ReactNode;
@@ -197,13 +307,25 @@ const HomePageClient = () => {
         }
 
         const controller = new AbortController();
+        let isMounted = true;
 
         const fetchActivePeriod = async () => {
             setIsLoadingPeriod(true);
             setPeriodError(null);
 
             try {
-                const activePeriodResponse = await apiClient.getWheelOfFortunePeriods({
+                const {
+                    apiClient: client,
+                    extractArray,
+                    mapPeriod,
+                    isPeriodActive: isRemotePeriodActive,
+                } = await loadWheelHelpers();
+
+                if (!isMounted || controller.signal.aborted) {
+                    return;
+                }
+
+                const activePeriodResponse = await client.getWheelOfFortunePeriods({
                     active: 1,
                     is_active: 1,
                     limit: 1,
@@ -213,20 +335,22 @@ const HomePageClient = () => {
                     .map(mapPeriod)
                     .filter((item): item is WheelOfFortunePeriod => item !== null);
 
-                let resolvedPeriod = activeCandidates.find((item) => isPeriodActive(item)) ?? null;
+                let resolvedPeriod =
+                    activeCandidates.find((item) => isRemotePeriodActive(item)) ?? null;
 
                 if (!resolvedPeriod) {
-                    const fallbackResponse = await apiClient.getWheelOfFortunePeriods({
+                    const fallbackResponse = await client.getWheelOfFortunePeriods({
                         per_page: 20,
                         signal: controller.signal,
                     });
                     const fallbackList = extractArray(fallbackResponse)
                         .map(mapPeriod)
                         .filter((item): item is WheelOfFortunePeriod => item !== null);
-                    resolvedPeriod = fallbackList.find((item) => isPeriodActive(item)) ?? null;
+                    resolvedPeriod =
+                        fallbackList.find((item) => isRemotePeriodActive(item)) ?? null;
                 }
 
-                if (!controller.signal.aborted) {
+                if (!controller.signal.aborted && isMounted) {
                     setActivePeriod(resolvedPeriod);
                 }
             } catch (error) {
@@ -239,20 +363,25 @@ const HomePageClient = () => {
                     error,
                 );
 
-                if (!controller.signal.aborted) {
+                if (!controller.signal.aborted && isMounted) {
                     setActivePeriod(null);
                     setPeriodError(error);
                 }
             } finally {
-                if (!controller.signal.aborted) {
+                if (!controller.signal.aborted && isMounted) {
                     setIsLoadingPeriod(false);
                 }
             }
         };
 
-        fetchActivePeriod();
+        fetchActivePeriod().catch((error) => {
+            if (process.env.NODE_ENV !== "production") {
+                console.error("Nu am putut iniția fetch-ul perioadelor active", error);
+            }
+        });
 
         return () => {
+            isMounted = false;
             controller.abort();
         };
     }, [
@@ -282,7 +411,7 @@ const HomePageClient = () => {
             return false;
         }
 
-        if (!activePeriod || !isPeriodActive(activePeriod)) {
+        if (!activePeriod || !isWheelPeriodActive(activePeriod)) {
             return false;
         }
 
@@ -317,35 +446,57 @@ const HomePageClient = () => {
 
         const cancelIdle = scheduleIdle(
             () => {
-                trackMixpanelEvent("landing_view", {
-                    has_booking_range: Boolean(hasBookingRange),
-                    booking_range_key: bookingRangeKey ?? null,
-                    wheel_popup_shown: Boolean(showWheelPopup),
-                    wheel_period_id: activePeriod?.id ?? null,
-                    wheel_active_month_match: Boolean(isBookingWithinActiveMonths),
-                });
+                void loadTrackingModules()
+                    .then(
+                        ({
+                            trackMixpanelEvent,
+                            trackTikTokEvent,
+                            TIKTOK_CONTENT_TYPE,
+                            TIKTOK_EVENTS,
+                            trackMetaPixelEvent,
+                            META_PIXEL_EVENTS,
+                        }) => {
+                            trackMixpanelEvent("landing_view", {
+                                has_booking_range: Boolean(hasBookingRange),
+                                booking_range_key: bookingRangeKey ?? null,
+                                wheel_popup_shown: Boolean(showWheelPopup),
+                                wheel_period_id: activePeriod?.id ?? null,
+                                wheel_active_month_match: Boolean(
+                                    isBookingWithinActiveMonths,
+                                ),
+                            });
 
-                trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
-                    content_id: "landing_home",
-                    content_name: "Landing Page",
-                    content_type: TIKTOK_CONTENT_TYPE,
-                    has_booking_range: Boolean(hasBookingRange),
-                    booking_range_key: bookingRangeKey || undefined,
-                    wheel_popup_shown: Boolean(showWheelPopup),
-                    wheel_period_id: activePeriod?.id ?? undefined,
-                });
+                            trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
+                                content_id: "landing_home",
+                                content_name: "Landing Page",
+                                content_type: TIKTOK_CONTENT_TYPE,
+                                has_booking_range: Boolean(hasBookingRange),
+                                booking_range_key: bookingRangeKey || undefined,
+                                wheel_popup_shown: Boolean(showWheelPopup),
+                                wheel_period_id: activePeriod?.id ?? undefined,
+                            });
 
-                trackMetaPixelEvent(META_PIXEL_EVENTS.VIEW_CONTENT, {
-                    content_name: "Landing Page",
-                    content_category: "home",
-                    content_type: "landing_page",
-                    has_booking_range: Boolean(hasBookingRange),
-                    booking_range_key: bookingRangeKey || undefined,
-                    wheel_popup_shown: Boolean(showWheelPopup),
-                    wheel_period_id: activePeriod?.id ?? undefined,
-                });
+                            trackMetaPixelEvent(META_PIXEL_EVENTS.VIEW_CONTENT, {
+                                content_name: "Landing Page",
+                                content_category: "home",
+                                content_type: "landing_page",
+                                has_booking_range: Boolean(hasBookingRange),
+                                booking_range_key: bookingRangeKey || undefined,
+                                wheel_popup_shown: Boolean(showWheelPopup),
+                                wheel_period_id: activePeriod?.id ?? undefined,
+                            });
 
-                landingTrackedRef.current = true;
+                            landingTrackedRef.current = true;
+                        },
+                    )
+                    .catch((error) => {
+                        if (process.env.NODE_ENV !== "production") {
+                            console.error(
+                                "Nu am putut încărca modulele de tracking pentru landing",
+                                error,
+                            );
+                        }
+                    });
             },
             { timeout: 2000 },
         );
