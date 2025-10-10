@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ type CategoryOption = {
 type NormalizedFaqRecord = {
     id: number;
     question: string;
+    answer: string;
     status: FaqStatus;
     categoryId: number;
     categoryName: string;
@@ -167,6 +168,13 @@ const AdminFaqPage = () => {
     const [formError, setFormError] = useState<string | null>(null);
     const [formSuccess, setFormSuccess] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [editingFaqId, setEditingFaqId] = useState<number | null>(null);
+
+    const editingFaqIdRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        editingFaqIdRef.current = editingFaqId;
+    }, [editingFaqId]);
 
     const dateFormatter = useMemo(
         () =>
@@ -280,6 +288,8 @@ const AdminFaqPage = () => {
                                       }
 
                                       const faqStatus = isFaqStatus(faq.status) ? faq.status : "pending";
+                                      const answerValue =
+                                          typeof faq.answer === "string" ? faq.answer.trim() : "";
                                       const createdAt =
                                           typeof faq.created_at === "string" ? faq.created_at : null;
                                       const updatedAt =
@@ -290,6 +300,7 @@ const AdminFaqPage = () => {
                                       return {
                                           id: Number(faqId),
                                           question,
+                                          answer: answerValue,
                                           status: faqStatus,
                                           categoryId: Number(idValue),
                                           categoryName: name,
@@ -362,6 +373,36 @@ const AdminFaqPage = () => {
                     });
 
                 setFaqRecords(flattenedFaqs);
+
+                setFormState((previous) => {
+                    if (editingFaqIdRef.current === null) {
+                        return previous;
+                    }
+
+                    const activeFaq = flattenedFaqs.find(
+                        (faq) => faq.id === editingFaqIdRef.current,
+                    );
+
+                    if (!activeFaq) {
+                        return previous;
+                    }
+
+                    return {
+                        ...previous,
+                        question: activeFaq.question,
+                        answer: activeFaq.answer,
+                        categoryId: activeFaq.categoryId.toString(),
+                        status: activeFaq.status,
+                    } satisfies FaqFormState;
+                });
+
+                if (
+                    editingFaqIdRef.current !== null &&
+                    !flattenedFaqs.some((faq) => faq.id === editingFaqIdRef.current)
+                ) {
+                    editingFaqIdRef.current = null;
+                    setEditingFaqId(null);
+                }
 
                 setFormState((previous) => {
                     const desiredCategoryId = preferredCategoryId ?? previous.categoryId;
@@ -649,14 +690,29 @@ const AdminFaqPage = () => {
         };
 
         try {
-            await apiClient.createFaq(payload);
+            const wasEditing = editingFaqId !== null;
+
+            if (wasEditing) {
+                await apiClient.updateFaq(editingFaqId, payload);
+                setFormSuccess("FAQ-ul a fost actualizat cu succes.");
+            } else {
+                await apiClient.createFaq(payload);
+                setFormSuccess("FAQ-ul a fost adăugat cu succes.");
+            }
+
             await loadCategories(categoryId.toString());
-            setFormSuccess("FAQ-ul a fost adăugat cu succes.");
+
             setFormState((previous) => ({
                 ...previous,
                 question: "",
                 answer: "",
+                status: wasEditing ? DEFAULT_STATUS : previous.status,
             }));
+
+            if (wasEditing) {
+                editingFaqIdRef.current = null;
+                setEditingFaqId(null);
+            }
         } catch (error) {
             console.error("Nu am putut salva FAQ-ul", error);
             setFormError("Nu am putut salva întrebarea. Verifică datele și încearcă din nou.");
@@ -666,6 +722,34 @@ const AdminFaqPage = () => {
     };
 
     const isSubmitDisabled = saving || categoryOptions.length === 0;
+    const isEditingFaq = editingFaqId !== null;
+
+    const handleEditFaq = (faq: NormalizedFaqRecord) => {
+        setEditingFaqId(faq.id);
+        editingFaqIdRef.current = faq.id;
+        setFormState((previous) => ({
+            ...previous,
+            question: faq.question,
+            answer: faq.answer,
+            categoryId: faq.categoryId.toString(),
+            status: faq.status,
+        }));
+        setFormError(null);
+        setFormSuccess(null);
+    };
+
+    const handleCancelFaqEdit = () => {
+        editingFaqIdRef.current = null;
+        setEditingFaqId(null);
+        setFormState((previous) => ({
+            ...previous,
+            question: "",
+            answer: "",
+            status: DEFAULT_STATUS,
+        }));
+        setFormError(null);
+        setFormSuccess(null);
+    };
 
     return (
         <div className="space-y-8 p-6">
@@ -895,6 +979,11 @@ const AdminFaqPage = () => {
                             Adaugă întrebări și răspunsuri noi pentru baza de cunoștințe publică. Statusul „Publicat” le face
                             vizibile imediat pentru clienți.
                         </p>
+                        {isEditingFaq && (
+                            <p className="mt-2 text-sm font-medium text-berkeley">
+                                Editezi întrebarea selectată. Actualizează câmpurile și salvează pentru a publica modificările.
+                            </p>
+                        )}
                     </div>
 
                     <form className="space-y-6" onSubmit={handleSubmit}>
@@ -972,24 +1061,35 @@ const AdminFaqPage = () => {
                         <div className="flex flex-wrap gap-3">
                             <Button type="submit" className="inline-flex items-center gap-2" disabled={isSubmitDisabled}>
                                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                                Salvează FAQ
+                                {isEditingFaq ? "Actualizează FAQ" : "Salvează FAQ"}
                             </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => {
-                                    setFormState((previous) => ({
-                                        ...previous,
-                                        question: "",
-                                        answer: "",
-                                    }));
-                                    setFormError(null);
-                                    setFormSuccess(null);
-                                }}
-                                disabled={saving}
-                            >
-                                Golește câmpurile
-                            </Button>
+                            {isEditingFaq ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleCancelFaqEdit}
+                                    disabled={saving}
+                                >
+                                    Renunță la editare
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setFormState((previous) => ({
+                                            ...previous,
+                                            question: "",
+                                            answer: "",
+                                        }));
+                                        setFormError(null);
+                                        setFormSuccess(null);
+                                    }}
+                                    disabled={saving}
+                                >
+                                    Golește câmpurile
+                                </Button>
+                            )}
                         </div>
                     </form>
                 </section>
@@ -1032,6 +1132,9 @@ const AdminFaqPage = () => {
                                     <th className="px-4 py-3 text-left font-semibold text-gray-700">
                                         Ultima actualizare
                                     </th>
+                                    <th className="px-4 py-3 text-right font-semibold text-gray-700">
+                                        Acțiuni
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
@@ -1046,6 +1149,21 @@ const AdminFaqPage = () => {
                                         </td>
                                         <td className="px-4 py-3 text-gray-600">
                                             {formatTimestamp(faq.updatedAt ?? faq.createdAt)}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex justify-end">
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    className="gap-2 bg-transparent text-berkeley hover:bg-gray-100"
+                                                    onClick={() => handleEditFaq(faq)}
+                                                    disabled={saving}
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                    Editează
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

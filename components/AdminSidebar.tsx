@@ -460,16 +460,6 @@ const menuItems: readonly AdminSidebarItem[] = [
               requiredPermissions: buildPermissionList("services", ["service", "extras"]),
           },
           {
-              name: "FAQ",
-              href: "/admin/faqs",
-              icon: HelpCircle,
-              requiredPermissions: buildPermissionList("faqs", [
-                  "faq",
-                  "faqs",
-                  "knowledge-base",
-              ]),
-          },
-          {
               name: "Oferte",
               href: "/admin/offers",
               icon: BadgePercent,
@@ -610,6 +600,16 @@ const menuItems: readonly AdminSidebarItem[] = [
     href: "/admin/mail-branding",
     icon: Mail,
     requiredPermissions: buildPermissionList("mail-branding", ["mailbranding", "mail"]),
+  },
+  {
+    name: "FAQ",
+    href: "/admin/faqs",
+    icon: HelpCircle,
+    requiredPermissions: buildPermissionList("faqs", [
+      "faq",
+      "faqs",
+      "knowledge-base",
+    ]),
   },
   {
     name: "Traduceri site",
