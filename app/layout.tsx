@@ -19,7 +19,7 @@ import TikTokPixelScript from "../components/TikTokPixelScript";
 import TikTokPixelInitializer from "../components/TikTokPixelInitializer";
 import MetaPixelScript from "../components/MetaPixelScript";
 import MetaPixelInitializer from "../components/MetaPixelInitializer";
-import GoogleAnalyticsScript from "../components/GoogleAnalyticsScript";
+import { GoogleAnalytics } from '@next/third-parties/google'
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 
 const poppins = Poppins({
@@ -92,7 +92,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <GlobalStyles />
         <TikTokPixelScript />
         <MetaPixelScript />
-        <GoogleAnalyticsScript />
+        <GoogleAnalytics gaId="G-R1B5YS77GK" />
         <link
           rel="preload"
           as="image"
