@@ -3,12 +3,57 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import "./admin.css";
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/AdminSidebar";
 import { FORBIDDEN_EVENT } from "@/lib/api";
 
 const PERMISSION_MESSAGE = "Nu ai permisiunea necesară să accesezi această pagină.";
+
+const adminStyles = /* css */ `
+.rich-text-editor {
+    border-radius: 0.5rem;
+    border: 1px solid rgb(209 213 219 / 1);
+    background-color: rgb(255 255 255 / 1);
+    box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+}
+
+.rich-text-editor .ck.ck-editor {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.rich-text-editor .ck.ck-toolbar {
+    border: none !important;
+    border-bottom: 1px solid rgb(209 213 219 / 1) !important;
+    background-color: rgb(249 250 251 / 1);
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.rich-text-editor .ck.ck-editor__main > .ck-editor__editable {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.75rem 1rem;
+    font-family: var(--font-dm-sans, var(--font-sans));
+    color: rgb(55 65 81 / 1);
+}
+
+.rich-text-editor .ck.ck-editor__editable:not(.ck-editor__nested-editable).ck-focused {
+    border: none !important;
+    box-shadow: 0 0 0 2px rgb(20 184 166 / 0.35) !important;
+}
+
+.rich-text-editor--faq-answer .ck.ck-editor__editable:not(.ck-editor__nested-editable) {
+    min-height: 160px;
+}
+
+.rich-text-editor--description .ck.ck-editor__editable:not(.ck-editor__nested-editable) {
+    min-height: 120px;
+}
+
+.rich-text-editor--content .ck.ck-editor__editable:not(.ck-editor__nested-editable) {
+    min-height: 160px;
+}
+`;
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
     const { user, loading } = useAuth();
@@ -49,7 +94,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }, [pathname]);
 
     if (!user && pathname !== "/admin/login") {
-        return loading ? <div /> : <div />;
+        const fallback = loading ? <div /> : <div />;
+
+        return (
+            <>
+                <style jsx global>{adminStyles}</style>
+                {fallback}
+            </>
+        );
     }
 
     const renderContent = permissionError ? (
@@ -63,14 +115,19 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         children
     );
 
-    if (pathname === "/admin/login") {
-        return <div className="pt-16 lg:pt-20">{renderContent}</div>;
-    }
+    const page = pathname === "/admin/login"
+        ? <div className="pt-16 lg:pt-20">{renderContent}</div>
+        : (
+            <div className="md:flex min-h-screen pt-16 lg:pt-20">
+                <AdminSidebar />
+                <main className="flex-1 min-w-0">{renderContent}</main>
+            </div>
+        );
 
     return (
-        <div className="md:flex min-h-screen pt-16 lg:pt-20">
-            <AdminSidebar />
-            <main className="flex-1 min-w-0">{renderContent}</main>
-        </div>
+        <>
+            <style jsx global>{adminStyles}</style>
+            {page}
+        </>
     );
 }
