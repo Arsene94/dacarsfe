@@ -7,20 +7,37 @@ if (!isProduction) {
   void import("./globals.css");
 }
 
-let inlineTailwindCss: string | null = null;
+const shouldInlineTailwind = isProduction && !isEdgeRuntime;
 
-if (isProduction && !isEdgeRuntime) {
+async function loadInlineTailwindCss(): Promise<string | null> {
   try {
-    const [{ readFile }, { join }] = await Promise.all([
-      import("node:fs/promises"),
-      import("node:path"),
+    const loadModule = new Function(
+      "specifier",
+      "return import(specifier);",
+    ) as (specifier: string) => Promise<unknown>;
+
+    const fsPromisesSpecifier = `${"node"}:${["fs", "promises"].join("/")}`;
+    const pathSpecifier = `${"node"}:${"path"}`;
+
+    const [fsModule, pathModule] = await Promise.all([
+      loadModule(fsPromisesSpecifier),
+      loadModule(pathSpecifier),
     ]);
+
+    const { readFile } = fsModule as typeof import("node:fs/promises");
+    const { join } = pathModule as typeof import("node:path");
+
     const tailwindBundlePath = join(process.cwd(), "public", "tailwind.css");
-    inlineTailwindCss = await readFile(tailwindBundlePath, "utf8");
+    return await readFile(tailwindBundlePath, "utf8");
   } catch (error) {
     console.error("Nu s-a putut citi fișierul CSS optimizat:", error);
+    return null;
   }
 }
+
+const inlineTailwindCssPromise = shouldInlineTailwind
+  ? loadInlineTailwindCss()
+  : Promise.resolve<string | null>(null);
 
 const noscriptStyles = '<link rel="stylesheet" href="/tailwind.css" />';
 const CRITICAL_STYLE_ID = "critical-tailwind";
@@ -88,10 +105,12 @@ const enableAsyncTailwindScript = `
   })();
 `.trim();
 
-export function GlobalStyles(): JSX.Element | null {
+export async function GlobalStyles(): Promise<JSX.Element | null> {
   if (!isProduction) {
     return null;
   }
+
+  const inlineTailwindCss = await inlineTailwindCssPromise;
 
   if (!inlineTailwindCss) {
     return (
