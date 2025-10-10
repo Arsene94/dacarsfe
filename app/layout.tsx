@@ -74,8 +74,8 @@ const localeBootstrapConfig = {
   supportedLocales,
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
-  const initialLocale = resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const initialLocale = await resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
   const bootstrapPayload = JSON.stringify({
     ...localeBootstrapConfig,
     initialLocale,

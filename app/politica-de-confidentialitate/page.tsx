@@ -78,8 +78,8 @@ const PRIVACY_BY_LOCALE: Record<Locale, string> = AVAILABLE_LOCALES.reduce((acc,
 
 const FALLBACK_LOCALE: Locale = getFallbackLocale();
 
-export const generateMetadata = (): Metadata => {
-    const locale = resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
+export const generateMetadata = async (): Promise<Metadata> => {
+    const locale = await resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
     const copy = PRIVACY_COPY[locale] ?? PRIVACY_COPY[FALLBACK_LOCALE];
 
     return buildMetadata({
@@ -91,8 +91,8 @@ export const generateMetadata = (): Metadata => {
     });
 };
 
-const PrivacyPolicyPage = () => {
-    const locale = resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
+const PrivacyPolicyPage = async () => {
+    const locale = await resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
     const copy = PRIVACY_COPY[locale] ?? PRIVACY_COPY[FALLBACK_LOCALE];
 
     return (
