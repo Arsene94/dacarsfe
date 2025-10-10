@@ -23,7 +23,7 @@ import {
   Menu,
   X,
   ConciergeBell,
-  CircleHelp,
+  HelpCircle,
   Mail,
   ScrollText,
   Receipt,
@@ -462,7 +462,7 @@ const menuItems: readonly AdminSidebarItem[] = [
           {
               name: "FAQ",
               href: "/admin/faqs",
-              icon: CircleHelp,
+              icon: HelpCircle,
               requiredPermissions: buildPermissionList("faqs", [
                   "faq",
                   "faqs",
