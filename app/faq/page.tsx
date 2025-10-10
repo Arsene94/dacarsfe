@@ -433,11 +433,12 @@ const toNormalizedFaq = (faq: Faq): NormalizedFaq | null => {
         return null;
     }
 
+    const rawId = (faq as { id?: unknown }).id;
     const idCandidate =
-        typeof faq.id === "number" && Number.isFinite(faq.id)
-            ? faq.id.toString()
-            : typeof faq.id === "string"
-                ? faq.id.trim()
+        typeof rawId === "number" && Number.isFinite(rawId)
+            ? rawId.toString()
+            : typeof rawId === "string"
+                ? rawId.trim()
                 : "";
 
     const id = idCandidate.length > 0 ? idCandidate : question;
