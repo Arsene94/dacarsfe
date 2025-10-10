@@ -1154,9 +1154,9 @@ const AdminFaqPage = () => {
                                             <div className="flex justify-end">
                                                 <Button
                                                     type="button"
-                                                    variant="secondary"
+                                                    variant="default"
                                                     size="sm"
-                                                    className="gap-2 bg-transparent text-berkeley hover:bg-gray-100"
+                                                    className="gap-2"
                                                     onClick={() => handleEditFaq(faq)}
                                                     disabled={saving}
                                                 >
