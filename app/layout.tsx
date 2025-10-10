@@ -12,12 +12,14 @@ import { DM_Sans, Poppins } from "next/font/google";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { GlobalStyles } from "./global-styles";
-import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY, DEFAULT_LOCALE } from "@/lib/i18n/config";
+import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY } from "@/lib/i18n/config";
+import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale";
 import MixpanelInitializer from "../components/MixpanelInitializer";
 import TikTokPixelScript from "../components/TikTokPixelScript";
 import TikTokPixelInitializer from "../components/TikTokPixelInitializer";
 import MetaPixelScript from "../components/MetaPixelScript";
 import MetaPixelInitializer from "../components/MetaPixelInitializer";
+import GoogleAnalyticsScript from "../components/GoogleAnalyticsScript";
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 
 const poppins = Poppins({
@@ -60,7 +62,7 @@ export const metadata: Metadata = {
   },
 };
 
-const FALLBACK_LOCALE = DEFAULT_LOCALE;
+const FALLBACK_LOCALE = getFallbackLocale();
 const cookieKeyPattern = LOCALE_STORAGE_KEY.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
 
 const supportedLocales = Array.from(AVAILABLE_LOCALES);
@@ -72,13 +74,17 @@ const localeBootstrapConfig = {
   supportedLocales,
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
-  const bootstrapPayload = JSON.stringify(localeBootstrapConfig);
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const initialLocale = await resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
+  const bootstrapPayload = JSON.stringify({
+    ...localeBootstrapConfig,
+    initialLocale,
+  });
 
   return (
     <html
-      lang={FALLBACK_LOCALE}
-      data-locale={FALLBACK_LOCALE}
+      lang={initialLocale}
+      data-locale={initialLocale}
       className={`${poppins.variable} ${dmSans.variable}`}
       suppressHydrationWarning
     >
@@ -86,6 +92,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <GlobalStyles />
         <TikTokPixelScript />
         <MetaPixelScript />
+        <GoogleAnalyticsScript />
         <link
           rel="preload"
           as="image"
@@ -161,7 +168,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 var cookieMatch = document.cookie.match(new RegExp('(?:^|; )' + config.cookiePattern + '=([^;]+)'));
                 var cookieLocale = cookieMatch ? decodeURIComponent(cookieMatch[1]) : '';
                 var navigatorLocale = normalize(window.navigator.language || window.navigator.userLanguage || '');
-                var preferred = normalize(stored) || normalize(cookieLocale) || navigatorLocale || config.fallbackLocale;
+                var initial = normalize(config.initialLocale);
+                var preferred = normalize(stored) || normalize(cookieLocale) || navigatorLocale || initial || config.fallbackLocale;
                 if (preferred) {
                   document.documentElement.lang = preferred;
                   document.documentElement.setAttribute('data-locale', preferred);
@@ -184,11 +192,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             })();
           `}
         </Script>
-        <LocaleProvider>
+        <LocaleProvider initialLocale={initialLocale}>
           <AuthProvider>
             <BookingProvider>
               <Header />
-              <main>
+              <main className="mt-12">
                 <PageTransition>{children}</PageTransition>
               </main>
               <Footer />

@@ -102,12 +102,12 @@ const Header = () => {
     : menuItems;
 
   return (
-    <header className={`fixed top-0 w-full z-50 transition-all duration-300 overflow-hidden ${
+    <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${
       isScrolled ? 'bg-white shadow-lg' : 'bg-white/95 backdrop-blur-sm'
     }`}>
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center h-16 lg:h-20">
-            <Link href="/" className="flex items-center space-x-2 group" aria-label="DaCars — închirieri auto rapide și oneste">
+            <Link href="/" className="max-h-[80px] overflow-hidden flex items-center space-x-2 group" aria-label="DaCars — închirieri auto rapide și oneste">
                     {/* Eager + fetchpriority=high ajută LCP pe homepage */}
                     <Image
                         src="/images/logo-308x154.webp"

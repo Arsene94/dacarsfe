@@ -13,45 +13,117 @@ export type StaticDocPage = {
 
 export const STATIC_DOCS_PAGES: StaticDocPage[] = [
     {
-        slug: "introducere-platforma",
-        title: "Introducere în platforma DaCars",
-        description: "Prezentare generală a fluxului de rezervare și a modului în care adminul gestionează cererile.",
-        lastUpdated: "2024-12-19",
+        slug: "incepe-cu-dacars",
+        title: "Începe cu DaCars",
+        description: "Ghid rapid pentru crearea contului și configurarea primei rezervări ca client DaCars.",
+        lastUpdated: "2025-01-07",
         sections: [
             {
-                heading: "Fluxul de rezervare",
+                heading: "Creează-ți contul gratuit",
                 body: [
-                    "Clienții pot căuta disponibilitatea mașinilor folosind filtrarea după perioadă, categorie și oraș.",
-                    "Rezervările sunt sincronizate în timp real cu backend-ul prin canalele websockets gestionate de Laravel.",
+                    "Accesează www.dacars.ro și apasă pe butonul \"Înregistrare\" pentru a-ți crea un cont folosind adresa de e-mail sau autentificarea cu Google.",
+                    "Confirmă-ți adresa prin linkul primit pe e-mail pentru a activa toate funcțiile dedicate clienților DaCars.",
                 ],
             },
             {
-                heading: "Roluri și permisiuni",
+                heading: "Setează profilul de șofer",
                 body: [
-                    "Platforma are roluri pentru client, agent și administrator. Fiecare rol are secțiuni dedicate în consola admin.",
-                    "Permisiunile se actualizează din panoul de administrare > Setări > Control acces.",
+                    "Completează datele personale, numărul permisului și metoda preferată de plată din secțiunea Contul meu > Profil.",
+                    "Poți salva mai multe adrese de facturare și poți invita șoferi suplimentari pentru rezervările corporate.",
+                ],
+            },
+            {
+                heading: "Descoperă panoul de client",
+                body: [
+                    "Din Dashboard vizualizezi rezervările active, istoricul călătoriilor și documentele descărcabile (contracte, facturi).",
+                    "Activează notificările push din aplicația mobilă pentru a primi alerte despre statusul rezervării și promoții personalizate.",
                 ],
             },
         ],
     },
     {
-        slug: "rapoarte-si-analiza",
-        title: "Rapoarte și analiză",
-        description: "Monitorizarea performanței flotei și raportarea către departamentul financiar.",
-        lastUpdated: "2024-12-10",
+        slug: "rezervare-pas-cu-pas",
+        title: "Rezervare pas cu pas",
+        description: "Instrucțiuni detaliate pentru a găsi, personaliza și confirma o rezervare online.",
+        lastUpdated: "2025-01-07",
         sections: [
             {
-                heading: "Dashboard zilnic",
+                heading: "Caută mașina potrivită",
                 body: [
-                    "Tabloul de bord afișează gradul de ocupare, venituri pe zi și rezervări active.",
-                    "Indicatorii sunt exportabili în format CSV și pot fi integrați cu Google Data Studio prin webhook.",
+                    "Folosește filtrarea după oraș, perioadă și tipul vehiculului. Sistemul îți arată în timp real disponibilitatea și kilometrajul inclus.",
+                    "Adaugă codurile promoționale în pasul de căutare pentru a vedea tarifele actualizate instant.",
                 ],
             },
             {
-                heading: "Export contabil",
+                heading: "Selectează extraopțiunile",
                 body: [
-                    "Exportul contabil generează un fișier XML compatibil cu sistemele ERP locale.",
-                    "Pentru corecții manuale, folosiți secțiunea Istoric facturi și adăugați o notă internă.",
+                    "Alege asigurări suplimentare, scaune pentru copii sau Wi-Fi mobil direct din configuratorul rezervării.",
+                    "Poți salva preferințele ca preset pentru următoarele rezervări, astfel încât formularul să se completeze automat.",
+                ],
+            },
+            {
+                heading: "Finalizează plata în siguranță",
+                body: [
+                    "Plătește cu cardul Visa/Mastercard sau prin Apple Pay/Google Pay. Toate tranzacțiile sunt securizate prin 3-D Secure.",
+                    "Primești contractul și voucherul de ridicare pe e-mail și în aplicație, iar rezervarea apare imediat în secțiunea \"Călătoriile mele\".",
+                ],
+            },
+        ],
+    },
+    {
+        slug: "ridicare-si-returnare",
+        title: "Ridicare și returnare",
+        description: "Checklist complet pentru preluarea și predarea mașinii fără stres.",
+        lastUpdated: "2025-01-07",
+        sections: [
+            {
+                heading: "Înainte de ridicare",
+                body: [
+                    "Verifică în aplicație documentele necesare (act de identitate, permis, card folosit la plată) și nivelul garanției preautorizate.",
+                    "Confirmă ora exactă de ridicare cu minimum 2 ore înainte pentru a permite echipei să pregătească vehiculul dorit.",
+                ],
+            },
+            {
+                heading: "În punctul de ridicare",
+                body: [
+                    "Deschide voucherul digital și folosește codul QR pentru identificare rapidă la biroul DaCars sau la kiosk-ul self check-in.",
+                    "Efectuează turul video de predare împreună cu agentul sau prin aplicație, iar eventualele observații se salvează automat în contract.",
+                ],
+            },
+            {
+                heading: "Returnarea mașinii",
+                body: [
+                    "Adu vehiculul la ora stabilită, cu nivelul de combustibil menționat în contract. Poți selecta opțiunea \"Returnare rapidă\" pentru verificare fără contact.",
+                    "După inspecția finală primești raportul pe e-mail, iar garanția se eliberează automat în 24-48 de ore, în funcție de banca emitentă.",
+                ],
+            },
+        ],
+    },
+    {
+        slug: "siguranta-si-asistenta",
+        title: "Siguranță și asistență",
+        description: "Tot ce trebuie să știi despre asigurări, incidente și suportul DaCars pe durata călătoriei.",
+        lastUpdated: "2025-01-07",
+        sections: [
+            {
+                heading: "Asigurări incluse și opționale",
+                body: [
+                    "Fiecare rezervare include RCA și asigurare de bază cu franșiză. Poți adăuga Extra Cover pentru reducerea garanției și asigurare pentru anvelope și parbriz.",
+                    "Vizualizează nivelul de acoperire direct din Contul meu > Asigurări pentru a compara opțiunile disponibile pe rezervarea curentă.",
+                ],
+            },
+            {
+                heading: "Ce faci în caz de incident",
+                body: [
+                    "Contactează imediat Call Center-ul DaCars la +40 723 817 551 sau folosește butonul SOS din aplicație pentru asistență 24/7.",
+                    "Completează constatarea amiabilă din aplicație și încarcă fotografii ale vehiculului; dosarul ajunge automat la echipa de suport.",
+                ],
+            },
+            {
+                heading: "Resurse utile pe parcurs",
+                body: [
+                    "Monitorizează kilometrii parcurși și programările de service recomandate din tab-ul \"Status mașină\".",
+                    "Accesează ghidurile video și lista stațiilor partenere pentru alimentare și încărcare direct din secțiunea Ajutor.",
                 ],
             },
         ],
@@ -139,6 +211,21 @@ export const STATIC_PAGES = [
         path: "/faq",
         changeFrequency: "weekly" as const,
         priority: 0.7,
+    },
+    {
+        path: "/termeni-si-conditii",
+        changeFrequency: "yearly" as const,
+        priority: 0.4,
+    },
+    {
+        path: "/politica-de-confidentialitate",
+        changeFrequency: "yearly" as const,
+        priority: 0.4,
+    },
+    {
+        path: "/politica-cookie",
+        changeFrequency: "yearly" as const,
+        priority: 0.4,
     },
     {
         path: "/docs",

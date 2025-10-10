@@ -254,7 +254,9 @@ describe('FleetSection', () => {
 
     expect(screen.getAllByText('Dacia Logan').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Renault Clio').length).toBeGreaterThan(0);
-    expect(apiClientMock.getHomePageCars).toHaveBeenCalledWith({ limit: 4, language: 'ro' });
+    expect(apiClientMock.getHomePageCars).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 4, language: 'ro', status: 'available' }),
+    );
 
     const carouselRegion = screen.getByRole('region', { name: /Carousel/i });
     const resolveTrack = () => carouselRegion.querySelector('div.flex') as HTMLElement | null;

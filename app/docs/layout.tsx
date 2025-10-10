@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import DocsSidebar from "@/app/docs/_components/DocsSidebar";
 import { STATIC_DOCS_PAGES } from "@/lib/content/staticEntries";
 
-const latestRevision = STATIC_DOCS_PAGES.reduce((latest, doc) =>
-    doc.lastUpdated > latest ? doc.lastUpdated : latest,
-    STATIC_DOCS_PAGES[0]?.lastUpdated ?? "2024-12-19",
+const latestRevision = STATIC_DOCS_PAGES.reduce(
+    (latest, doc) => (doc.lastUpdated > latest ? doc.lastUpdated : latest),
+    STATIC_DOCS_PAGES[0]?.lastUpdated ?? "2025-01-07",
 );
 
 const DocsLayout = ({ children }: { children: ReactNode }) => {
@@ -13,9 +13,9 @@ const DocsLayout = ({ children }: { children: ReactNode }) => {
             <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12 lg:flex-row">
                 <aside className="lg:w-72">
                     <div className="sticky top-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                        <h2 className="text-lg font-semibold text-gray-900">Documentație DaCars</h2>
+                        <h2 className="text-lg font-semibold text-gray-900">Documentație clienți DaCars</h2>
                         <p className="mt-2 text-sm text-gray-600">
-                            Ghiduri rapide pentru configurare, tarife și raportare. Actualizat lunar.
+                            Sfaturi și pași esențiali pentru rezervări, ridicare și utilizarea serviciilor DaCars.
                         </p>
                         <div className="mt-4">
                             <DocsSidebar />
