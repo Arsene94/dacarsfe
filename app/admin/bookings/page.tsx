@@ -1104,11 +1104,11 @@ const ReservationsPage = () => {
         cell: (r) => (
           <div>
             <div className="font-dm-sans font-semibold text-berkeley text-xs">
-              {r.id}
+              {r.bookingNumber}
             </div>
             <div className="text-gray-500 font-dm-sans text-xs">
               {r.createdAt &&
-                new Date(r.createdAt).toLocaleDateString("ro-RO")}
+                new Date(r.createdAt).toLocaleString("ro-RO")}{" "}{}
             </div>
           </div>
         ),
@@ -1170,7 +1170,7 @@ const ReservationsPage = () => {
           cellClassName: "hidden sm:table-cell",
           cell: (r) => (
               <span
-                  className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getPlanColor(
+                  className={`px-[5rem] py-1 rounded-full text-xs font-dm-sans ${getPlanColor(
                       r.plan,
                   )}`}
               >
@@ -1186,7 +1186,7 @@ const ReservationsPage = () => {
         cellClassName: "hidden sm:table-cell",
         cell: (r) => (
           <span
-            className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
+            className={`px-[5rem] py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
               r.status,
             )}`}
           >
