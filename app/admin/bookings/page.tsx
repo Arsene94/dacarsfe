@@ -1166,11 +1166,11 @@ const ReservationsPage = () => {
           id: "plan",
           header: "Tip Plan",
           accessor: (r) => r.plan,
-          headerClassName: "hidden sm:table-cell",
+          headerClassName: "hidden sm:table-cell flex flex-row",
           cellClassName: "hidden sm:table-cell",
           cell: (r) => (
               <span
-                  className={`px-[5rem] py-1 rounded-full text-xs font-dm-sans ${getPlanColor(
+                  className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getPlanColor(
                       r.plan,
                   )}`}
               >
@@ -1182,11 +1182,11 @@ const ReservationsPage = () => {
         id: "status",
         header: "Status",
         accessor: (r) => r.status,
-        headerClassName: "hidden sm:table-cell",
+        headerClassName: "hidden sm:table-cell flex flex-row",
         cellClassName: "hidden sm:table-cell",
         cell: (r) => (
           <span
-            className={`px-[5rem] py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
+            className={`px-3 py-1 rounded-full text-xs font-dm-sans ${getStatusColor(
               r.status,
             )}`}
           >
