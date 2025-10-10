@@ -1,12 +1,15 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import StructuredData from "@/components/StructuredData";
+import BlogPostCard from "@/components/blog/BlogPostCard";
+import { apiClient } from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveRequestLocale } from "@/lib/i18n/server";
-import { STATIC_BLOG_POSTS } from "@/lib/content/staticEntries";
+import { applyBlogPostTranslation } from "@/lib/blog/translations";
 import { buildMetadata } from "@/lib/seo/meta";
 import { blog, breadcrumb, itemList } from "@/lib/seo/jsonld";
+import type { BlogPost } from "@/types/blog";
 
 type BlogSeoCopy = {
     pageTitle: string;
@@ -15,10 +18,15 @@ type BlogSeoCopy = {
     metaDescription: string;
     breadcrumbHome: string;
     breadcrumbBlog: string;
+    readMoreLabel: string;
+    emptyStateTitle: string;
+    emptyStateDescription: string;
 };
 
 const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
 const HREFLANG_LOCALES = ["ro", "en", "it", "es", "fr", "de"] as const;
+
+export const revalidate = 300;
 
 const BLOG_SEO_COPY: Record<Locale, BlogSeoCopy> = {
     ro: {
@@ -30,6 +38,10 @@ const BLOG_SEO_COPY: Record<Locale, BlogSeoCopy> = {
             "Citește cele mai noi recomandări de mobilitate, bune practici de închiriere și știri din echipa DaCars.",
         breadcrumbHome: "Acasă",
         breadcrumbBlog: "Blog",
+        readMoreLabel: "Citește articolul",
+        emptyStateTitle: "Momentan nu avem articole publicate",
+        emptyStateDescription:
+            "Revino în curând pentru a descoperi noi ghiduri și noutăți despre serviciile de mobilitate DaCars.",
     },
     en: {
         pageTitle: "DaCars Blog",
@@ -40,6 +52,10 @@ const BLOG_SEO_COPY: Record<Locale, BlogSeoCopy> = {
             "Read the latest mobility tips, rental best practices, and news updates curated by the DaCars team.",
         breadcrumbHome: "Home",
         breadcrumbBlog: "Blog",
+        readMoreLabel: "Read the article",
+        emptyStateTitle: "No posts are available yet",
+        emptyStateDescription:
+            "Check back soon for new stories, guides, and updates from the DaCars mobility team.",
     },
     it: {
         pageTitle: "Blog DaCars",
@@ -50,6 +66,10 @@ const BLOG_SEO_COPY: Record<Locale, BlogSeoCopy> = {
             "Leggi i consigli più recenti sulla mobilità, le migliori pratiche di noleggio e le novità dal team DaCars.",
         breadcrumbHome: "Pagina iniziale",
         breadcrumbBlog: "Blog",
+        readMoreLabel: "Leggi l'articolo",
+        emptyStateTitle: "Non ci sono articoli disponibili",
+        emptyStateDescription:
+            "Torna presto per scoprire nuove guide e aggiornamenti sul mondo della mobilità DaCars.",
     },
     es: {
         pageTitle: "Blog de DaCars",
@@ -60,6 +80,10 @@ const BLOG_SEO_COPY: Record<Locale, BlogSeoCopy> = {
             "Lee los últimos consejos de movilidad, buenas prácticas de alquiler y noticias del equipo DaCars.",
         breadcrumbHome: "Inicio",
         breadcrumbBlog: "Blog",
+        readMoreLabel: "Leer el artículo",
+        emptyStateTitle: "Todavía no hay artículos disponibles",
+        emptyStateDescription:
+            "Vuelve pronto para descubrir nuevas guías y novedades sobre la movilidad de DaCars.",
     },
     fr: {
         pageTitle: "Blog DaCars",
@@ -70,6 +94,10 @@ const BLOG_SEO_COPY: Record<Locale, BlogSeoCopy> = {
             "Découvrez les derniers conseils mobilité, bonnes pratiques de location et nouvelles de l'équipe DaCars.",
         breadcrumbHome: "Accueil",
         breadcrumbBlog: "Blog",
+        readMoreLabel: "Lire l'article",
+        emptyStateTitle: "Aucun article n'est disponible pour le moment",
+        emptyStateDescription:
+            "Revenez bientôt pour découvrir de nouveaux guides et actualités sur la mobilité DaCars.",
     },
     de: {
         pageTitle: "DaCars Blog",
@@ -80,6 +108,10 @@ const BLOG_SEO_COPY: Record<Locale, BlogSeoCopy> = {
             "Lies die neuesten Mobilitätstipps, Vermietungs-Best-Practices und Neuigkeiten vom DaCars-Team.",
         breadcrumbHome: "Startseite",
         breadcrumbBlog: "Blog",
+        readMoreLabel: "Artikel lesen",
+        emptyStateTitle: "Derzeit sind keine Artikel verfügbar",
+        emptyStateDescription:
+            "Schau bald wieder vorbei, um neue Guides und Neuigkeiten rund um die Mobilität von DaCars zu entdecken.",
     },
 };
 
@@ -103,17 +135,47 @@ export async function generateMetadata(): Promise<Metadata> {
     });
 }
 
-const postsItemList = itemList(
-    STATIC_BLOG_POSTS.map((post) => ({
-        name: post.title,
-        url: `${SITE_URL}/blog/${post.slug}`,
-        description: post.excerpt,
-        schemaType: "Article",
-    })),
-);
+const loadBlogPosts = async (locale: Locale): Promise<BlogPost[]> => {
+    const baseParams = {
+        status: 'published',
+        sort: '-published_at,-id',
+        limit: 12,
+    } as const;
+
+    try {
+        const response = await apiClient.getBlogPosts({ ...baseParams, language: locale });
+        const posts = extractList<BlogPost>(response).map((post) => applyBlogPostTranslation(post, locale));
+        if (posts.length > 0) {
+            return posts;
+        }
+    } catch (error) {
+        console.error('Nu am putut încărca articolele traduse', error);
+    }
+
+    if (locale === FALLBACK_LOCALE) {
+        return [];
+    }
+
+    try {
+        const fallbackResponse = await apiClient.getBlogPosts(baseParams);
+        return extractList<BlogPost>(fallbackResponse).map((post) => applyBlogPostTranslation(post, locale));
+    } catch (error) {
+        console.error('Nu am putut încărca articolele din API', error);
+        return [];
+    }
+};
 
 const BlogIndexPage = async () => {
-    const { copy } = await resolveBlogSeo();
+    const { locale, copy } = await resolveBlogSeo();
+    const posts = await loadBlogPosts(locale);
+    const postsItemList = itemList(
+        posts.map((post) => ({
+            name: post.title,
+            url: `${SITE_URL}/blog/${post.slug}`,
+            description: post.excerpt ?? copy.metaDescription,
+            schemaType: "Article",
+        })),
+    );
     const structuredData = [
         blog({ description: copy.metaDescription }),
         postsItemList,
@@ -132,25 +194,21 @@ const BlogIndexPage = async () => {
             </header>
 
             <section className="grid gap-8 md:grid-cols-2">
-                {STATIC_BLOG_POSTS.map((post) => (
-                    <article key={post.slug} className="flex h-full flex-col justify-between rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="space-y-3">
-                            <p className="text-xs uppercase tracking-wide text-gray-500">Publicat la {post.publishedAt}</p>
-                            <h2 className="text-2xl font-semibold text-gray-900">
-                                <Link href={`/blog/${post.slug}`} className="hover:text-berkeley">
-                                    {post.title}
-                                </Link>
-                            </h2>
-                            <p className="text-sm text-gray-600">{post.excerpt}</p>
-                        </div>
-                        <div className="mt-6 flex items-center justify-between text-sm text-gray-600">
-                            <span>de {post.author}</span>
-                            <Link href={`/blog/${post.slug}`} className="font-medium text-berkeley hover:underline">
-                                Citește articolul
-                            </Link>
-                        </div>
-                    </article>
-                ))}
+                {posts.length > 0 ? (
+                    posts.map((post) => (
+                        <BlogPostCard
+                            key={post.id}
+                            post={post}
+                            locale={locale}
+                            ctaLabel={copy.readMoreLabel}
+                        />
+                    ))
+                ) : (
+                    <div className="col-span-full rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center shadow-sm">
+                        <h2 className="text-xl font-semibold text-gray-900">{copy.emptyStateTitle}</h2>
+                        <p className="mt-2 text-sm text-gray-600">{copy.emptyStateDescription}</p>
+                    </div>
+                )}
             </section>
         </main>
     );
