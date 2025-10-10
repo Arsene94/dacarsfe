@@ -150,6 +150,12 @@ const nextConfig = {
                 'lib/polyfills/modern-runtime.ts'
             ),
         };
+
+        config.module.rules.push({
+            test: /\.html$/i,
+            resourceQuery: /raw/,
+            type: 'asset/source',
+        });
         return config;
     },
 
