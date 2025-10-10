@@ -8,11 +8,16 @@ All endpoints live under the `/api` prefix. Read-only requests (`GET`) are publi
 | GET | `/api/blog-categories` | Paginated list of categories with optional filters. | None (public) |
 | GET | `/api/blog-categories?limit=10` | Return the first N records without pagination metadata. | None (public) |
 | GET | `/api/blog-categories/{id}` | Retrieve a single category by id. | None (public) |
+| GET | `/api/blog-categories/{id}/translations` | List stored translations for a category. | `blog_categories.view_translations` |
+| PUT | `/api/blog-categories/{id}/translations/{lang}` | Create or update a translation payload. | `blog_categories.update_translations` |
+| DELETE | `/api/blog-categories/{id}/translations/{lang}` | Remove a translation for the given language. | `blog_categories.delete_translations` |
 | POST | `/api/blog-categories` | Create a new category (slug is generated automatically). | `blog_categories.create` |
 | PUT | `/api/blog-categories/{id}` | Update an existing category. | `blog_categories.update` |
 | DELETE | `/api/blog-categories/{id}` | Soft-delete is not used; the record is removed permanently. | `blog_categories.delete` |
 
 > **Slugging** – `BlogCategoryObserver` regenerates the `slug` whenever the `name` changes. You do not need to send a slug from the client.
+
+> **Translations** – When a category is saved the system automatically queues OpenAI powered translations into every configured target language. Manual overrides are still possible via the translation endpoints above.
 
 ## GET `/api/blog-categories`
 

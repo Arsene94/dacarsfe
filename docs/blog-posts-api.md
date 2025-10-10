@@ -8,11 +8,18 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
 | GET | `/api/blog-posts` | Paginated list of posts including category, tags and author metadata. | None (public) |
 | GET | `/api/blog-posts?limit=5` | First N posts ordered by `id DESC`. | None (public) |
 | GET | `/api/blog-posts/{id}` | Retrieve a post with its relationships. | None (public) |
+| GET | `/api/blog-posts/{id}/translations` | List the translated payloads for a blog post. | `blog_posts.view_translations` |
+| PUT | `/api/blog-posts/{id}/translations/{lang}` | Create or update a translation for the language code. | `blog_posts.update_translations` |
+| DELETE | `/api/blog-posts/{id}/translations/{lang}` | Remove the stored translation for the language code. | `blog_posts.delete_translations` |
+| POST | `/api/blog-posts/translate/batch` | Queue automatic translations for all blog posts and categories. | `blog_posts.translate` |
+| GET | `/api/blog-posts/translate/batch/{job}` | Poll the status of a queued translation batch. | `blog_posts.translate` |
 | POST | `/api/blog-posts` | Create a new post and attach tags. | `blog_posts.create` |
 | PUT | `/api/blog-posts/{id}` | Update post fields and tag associations. | `blog_posts.update` |
 | DELETE | `/api/blog-posts/{id}` | Permanently delete a post (pivot rows cascade). | `blog_posts.delete` |
 
-> **Relationship loading** – `BlogPostController` sets `$with = ['category','tags','author']`, so responses already include nested data without needing `?include=`. The `fields` query parameter still works for sparse fieldsets.
+> **Relationship loading** – `BlogPostController` sets `$with = ['category','tags','author','translations']`, so responses already include nested data without needing `?include=`. The `fields` query parameter still works for sparse fieldsets.
+
+> **Automatic translations** – Whenever a blog post is saved the OpenAI powered auto-translator writes missing translations for all configured target languages. Use the translation endpoints to override copy manually or trigger a batch re-translation of historic posts.
 
 ## Validation schema
 | Field | Required | Type | Notes |
@@ -21,10 +28,10 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
 | `author_id` | yes on store | integer | Must exist in `users.id`. Nullable in DB but controller currently requires it. |
 | `title` | yes on store | string | Max 200 characters. Drives slug generation. |
 | `excerpt` | optional | string | Short summary displayed in listings. |
+| `image` | optional | file / string | Send the request as `multipart/form-data` (e.g. `FormData` in Next.js) to upload a new file, or provide an absolute URL/path string to reuse an existing image. Supplying `null` removes the current image on update. |
 | `content` | yes on store | string | Rich HTML/Markdown body. |
 | `status` | optional | string | Defaults to `draft`. Allowed values: `draft`, `published`. |
 | `published_at` | optional | date-time | ISO 8601 timestamp. |
-| `image` | optional | file or string | Acceptă fie un câmp `multipart/form-data` numit `image` (o singură imagine), fie un path existent. Trimite `null` pentru a elimina imaginea curentă. |
 | `tag_ids` | optional | array<int> | Each id must exist in `blog_tags.id`. Omitting keeps current tags. |
 
 ## Filtering & sorting
@@ -42,10 +49,10 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
       "title": "Ghid complet pentru predarea mașinii în Otopeni",
       "slug": "ghid-complet-pentru-predarea-masinii-in-otopeni",
       "excerpt": "Tot ce trebuie să știi când predai mașina în aeroportul Henri Coandă.",
+      "image": "https://cdn.dacars.ro/blog/predare-otopeni.jpg",
       "content": "<p>Pentru o predare fără emoții...</p>",
       "status": "published",
       "published_at": "2025-01-12T07:00:00Z",
-      "image": "blog/posts/24/hero.webp",
       "category": {
         "id": 7,
         "name": "Travel Guides",
@@ -98,10 +105,10 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
     "title": "Ghid complet pentru predarea mașinii în Otopeni",
     "slug": "ghid-complet-pentru-predarea-masinii-in-otopeni",
     "excerpt": "Tot ce trebuie să știi când predai mașina în aeroportul Henri Coandă.",
+    "image": "https://cdn.dacars.ro/blog/predare-otopeni.jpg",
     "content": "<p>Pentru o predare fără emoții...</p>",
     "status": "published",
     "published_at": "2025-01-12T07:00:00Z",
-    "image": "blog/posts/24/hero.webp",
     "category": {
       "id": 7,
       "name": "Travel Guides",
@@ -134,8 +141,6 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
 
 ## POST `/api/blog-posts`
 
-> Pentru a încărca imaginea principală trimite un request `multipart/form-data` și atașează fișierul în câmpul `image`. Alternativ poți trimite un path existent în corpul JSON. Folosește `image: null` pe update pentru a elimina imaginea curentă.
-
 ### Example request body
 ```json
 {
@@ -143,12 +148,15 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
   "author_id": 3,
   "title": "Ghid complet pentru predarea mașinii în Otopeni",
   "excerpt": "Tot ce trebuie să știi când predai mașina în aeroportul Henri Coandă.",
+  "image": "https://cdn.dacars.ro/blog/predare-otopeni.jpg",
   "content": "<p>Pentru o predare fără emoții...</p>",
   "status": "published",
   "published_at": "2025-01-12T07:00:00Z",
   "tag_ids": [11, 10]
 }
 ```
+
+> **Image uploads** — Use `multipart/form-data` to attach the image alongside the rest of the fields. The API persists the file on the public disk (max 5&nbsp;MB) and responses include the public URL. Passing an existing URL/path keeps that asset, while sending `null` removes the stored image during updates.
 
 ### Example 201 response
 ```json
@@ -158,10 +166,10 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
     "title": "Ghid complet pentru predarea mașinii în Otopeni",
     "slug": "ghid-complet-pentru-predarea-masinii-in-otopeni",
     "excerpt": "Tot ce trebuie să știi când predai mașina în aeroportul Henri Coandă.",
+    "image": "https://cdn.dacars.ro/blog/predare-otopeni.jpg",
     "content": "<p>Pentru o predare fără emoții...</p>",
     "status": "published",
     "published_at": "2025-01-12T07:00:00Z",
-    "image": "blog/posts/24/hero.webp",
     "category": {
       "id": 7,
       "name": "Travel Guides",
@@ -185,15 +193,12 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
 
 ## PUT `/api/blog-posts/{id}`
 
-> Acceptă fie corp JSON, fie `multipart/form-data` (pentru a încărca o imagine nouă prin câmpul `image`). Trimite `image: null` când vrei să elimini fotografia existentă.
-
 ### Example request body
 ```json
 {
   "title": "Checklist predare mașină în Otopeni",
   "status": "draft",
-  "tag_ids": [11],
-  "image": null
+  "tag_ids": [11]
 }
 ```
 
@@ -205,9 +210,9 @@ The blog post endpoints expose full CRUD plus tag synchronisation and eager-load
     "title": "Checklist predare mașină în Otopeni",
     "slug": "checklist-predare-masina-in-otopeni",
     "excerpt": "Tot ce trebuie să știi când predai mașina în aeroportul Henri Coandă.",
+    "image": "https://cdn.dacars.ro/blog/predare-otopeni.jpg",
     "content": "<p>Pentru o predare fără emoții...</p>",
     "status": "draft",
-    "image": null,
     "published_at": "2025-01-12T07:00:00Z",
     "category": {
       "id": 7,
