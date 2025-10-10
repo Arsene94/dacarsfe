@@ -460,11 +460,12 @@ const toNormalizedCategory = (category: FaqCategory): NormalizedFaqCategory | nu
         return null;
     }
 
+    const rawId = (category as { id?: unknown }).id;
     const idCandidate =
-        typeof category.id === "number" && Number.isFinite(category.id)
-            ? category.id.toString()
-            : typeof (category as { id?: string }).id === "string"
-                ? ((category as { id?: string }).id ?? "").trim()
+        typeof rawId === "number" && Number.isFinite(rawId)
+            ? rawId.toString()
+            : typeof rawId === "string"
+                ? rawId.trim()
                 : "";
 
     const description =
