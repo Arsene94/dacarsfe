@@ -92,9 +92,7 @@ const AdminFaqPage = () => {
                     const idCandidate =
                         typeof category.id === "number" && Number.isFinite(category.id)
                             ? category.id.toString()
-                            : typeof (category as { id?: string }).id === "string"
-                                ? ((category as { id?: string }).id ?? "").trim()
-                                : "";
+                            : "";
 
                     const name = typeof category.name === "string" ? category.name.trim() : "";
 
