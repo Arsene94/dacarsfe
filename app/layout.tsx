@@ -75,7 +75,7 @@ const localeBootstrapConfig = {
   supportedLocales,
 };
 
-const heroImageQuality = 60;
+const heroImageQuality = 55;
 const heroImageWidths = [360, 414, 480, 640, 750, 828, 1080, 1200, 1920];
 const heroOptimizedSource = encodeURIComponent(heroBackground.src);
 const heroPreloadSrc = `/_next/image?url=${heroOptimizedSource}&w=${Math.max(...heroImageWidths)}&q=${heroImageQuality}`;
@@ -112,23 +112,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           fetchPriority="high"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="dns-prefetch" href="//vercel.app" />
-        <link rel="dns-prefetch" href="//fe.dacars.ro" />
-        <link rel="dns-prefetch" href="//backend.dacars.ro" />
-        <link rel="dns-prefetch" href="//www.dacars.ro" />
-        <link
-          rel="preconnect"
-          href="https://fe.dacars.ro"
-          crossOrigin="anonymous"
-        />
         <link
           rel="preconnect"
           href="https://backend.dacars.ro"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preconnect"
-          href="https://www.dacars.ro"
           crossOrigin="anonymous"
         />
         <meta name="format-detection" content="telephone=no" />

@@ -245,9 +245,10 @@ const FleetSection = () => {
                     alt={car.name}
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
-                    loading={index < 2 ? "eager" : "lazy"}
-                    priority={index < 2}
-                    sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 767px) calc(100vw - 3rem), (max-width: 1023px) calc((100vw - 5rem) / 2), 296px"
+                    loading={index === 0 ? "eager" : "lazy"}
+                    priority={index === 0}
+                    quality={55}
+                    sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc((100vw - 4rem) / 2), (max-width: 1279px) calc((100vw - 6rem) / 3), 360px"
                 />
                 <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
                     {car.categories.name}
