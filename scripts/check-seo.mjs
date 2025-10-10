@@ -45,7 +45,7 @@ async function run() {
             await fetchWithAssert(`${baseUrl}${endpoint}`);
         }
 
-        const pages = ["/faq", "/blog/sfaturi-inchiriere-iarna", "/docs/introducere-platforma"];
+        const pages = ["/faq", "/blog/sfaturi-inchiriere-iarna", "/docs/incepe-cu-dacars"];
         for (const page of pages) {
             const response = await fetchWithAssert(`${baseUrl}${page}`);
             const html = await response.text();
