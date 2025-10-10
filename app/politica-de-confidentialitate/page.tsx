@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { Metadata } from "next";
 
 import TermsContent from "@/app/termeni-si-conditii/TermsContent";
+import TermsContentStyles from "@/app/termeni-si-conditii/TermsContentStyles";
 import { buildMetadata } from "@/lib/seo/meta";
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale";
@@ -102,6 +103,7 @@ const PrivacyPolicyPage = () => {
                     {copy.heading}
                 </h1>
                 <section className="mt-10 rounded-3xl bg-white p-6 sm:p-10 shadow-xl ring-1 ring-berkeley/5">
+                    <TermsContentStyles />
                     <TermsContent
                         initialLocale={locale}
                         htmlByLocale={PRIVACY_BY_LOCALE}
