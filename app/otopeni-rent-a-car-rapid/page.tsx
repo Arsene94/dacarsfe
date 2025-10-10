@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import FAQBlock, { type FAQItem } from "@/components/FAQBlock";
+import FactCard from "@/components/FactCard";
 import StructuredData from "@/components/StructuredData";
 import { Button } from "@/components/ui/button";
 import { ApiClient } from "@/lib/api";
@@ -18,6 +20,8 @@ import {
     type JsonLd,
 } from "@/lib/seo/jsonld";
 import type { Offer } from "@/types/offer";
+import type { LucideIcon } from "lucide-react";
+import { Clock, FileText, Gift, HelpCircle, MapPin } from "lucide-react";
 
 const CTA_PRIMARY_HREF = "https://dacars.ro/otopeni-rent-a-car-rapid";
 const CTA_PHONE_NUMBER = "+40 741 234 567";
@@ -343,6 +347,54 @@ const FAQ_ENTRIES: FaqEntryJson[] = [
     },
 ];
 
+type FactCardContent = {
+    title: string;
+    description: string;
+    icon: LucideIcon;
+    items?: string[];
+    footnote?: string;
+};
+
+const FACT_CARD_CONTENT: FactCardContent[] = [
+    {
+        title: "Predare sub 5 minute",
+        icon: Clock,
+        description:
+            "Consultantul DaCars monitorizează aterizarea și ajunge cu contractul completat la cafeneaua „Take Off”. Confirmi codul rezervării, semnezi digital pe tabletă, iar garanția se preautorizează în mai puțin de un minut. Cheia și voucherul sunt pregătite într-un pouch sigilat, iar mașina e parcată la 50 de metri cu climatizarea deja setată. Turul foto 360° se face pe loc, iar navigația este sincronizată cu destinația ta imediat. În maximum cinci minute ești pe culoarul spre ieșire, fără cozi, fără ghișee și fără formulare scrise de mână. În SMS primești și link direct către contractul digital complet, gata de descărcare.",
+    },
+    {
+        title: "Adresa și acces Otopeni",
+        icon: MapPin,
+        description:
+            "Ne găsești la Calea Bucureștilor 305, Otopeni, vizavi de terminalul Sosiri. Punctul de întâlnire este cafeneaua „Take Off”, lângă ieșirea spre parcarea P1 rent-a-car. Consultantul îți trimite cu o oră înainte un SMS cu fotografia lui, traseul pietonal de 90 de secunde și numărul locului rezervat. Dacă vii cu autoturism personal, intră în P1 prin bariera albastră și menționează codul DaCars pentru 15 minute gratuite. Shuttle-ul aeroportului oprește la două minute distanță, iar toate indicațiile sunt actualizate și pe Google Maps. Pentru retur folosești aceeași rută semnalizată și codul de parcare inclus în rezervare.",
+    },
+    {
+        title: "Ce acte ai nevoie",
+        icon: FileText,
+        description:
+            "Pregătește documentele înainte de îmbarcare pentru ca validarea să dureze sub un minut. Încarcă-le în contul DaCars înainte de decolare și adu-le la îndemână:",
+        items: [
+            "Act de identitate sau pașaport valabil minimum șase luni, scanat clar față-verso.",
+            "Permis categoria B emis de cel puțin 12 luni, acceptăm și varianta digitală DRPCIV.",
+            "Card bancar pe numele titularului pentru preautorizarea garanției, Visa, MasterCard sau Revolut personal.",
+            "Voucherul DaCars cu codul de rezervare și ora estimată, salvat în e-mail sau în aplicație.",
+        ],
+        footnote:
+            "Documentele sunt scanate digital și șterse automat după confirmare, deci nu ai nevoie de copii tipărite. Pentru rezervări corporate atașează delegația scanată ca să emitem factura rapid.",
+    },
+    {
+        title: "Ofertă nuntă –10%",
+        icon: Gift,
+        description:
+            "Rezervarea pentru mirii care prezintă invitația de nuntă primește reducere imediată de 10% la predare. Promoția este valabilă pentru toate clasele auto, indiferent de durata închirierii, atâta timp cât rezervarea este pe numele unuia dintre miri. Trebuie doar să încarci invitația în platformă sau să o arăți consultantului la sosire, iar discountul se aplică pe loc. Reducerea se cumulează cu Protecția Totală și cu kilometrii nelimitați, iar garanția se recalculează instant în contractul digital. Oferta este disponibilă zilnic în Otopeni, fără costuri ascunse. Perioada promoției este afișată în cont și se confirmă prin SMS după semnătură.",
+    },
+];
+
+const FAQ_BLOCK_ITEMS: FAQItem[] = FAQ_ENTRIES.map((entry) => ({
+    question: entry.question,
+    answer: entry.answer,
+}));
+
 type OtopeniSeoCopy = {
     metaTitle: string;
     metaDescription: string;
@@ -419,6 +471,41 @@ const OtopeniRapidPage = async () => {
                     <p className="text-lg leading-relaxed text-gray-700">{INTRO_PARAGRAPH}</p>
                 </header>
 
+                <section aria-labelledby="facts-first" className="space-y-6">
+                    <div className="space-y-2">
+                        <h2 id="facts-first" className="text-2xl font-semibold text-gray-900">
+                            Date clare de citat rapid
+                        </h2>
+                        <p className="text-base text-gray-600">
+                            Cardurile sintetizează cele mai căutate răspunsuri despre predare, acces, documente și promoții,
+                            astfel încât agenții și LLM-urile să extragă informații exacte fără a scana tot articolul.
+                        </p>
+                    </div>
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {FACT_CARD_CONTENT.map((card) => (
+                            <FactCard
+                                key={card.title}
+                                title={card.title}
+                                description={card.description}
+                                icon={card.icon}
+                            >
+                                {card.items ? (
+                                    <>
+                                        <ul className="list-disc space-y-2 pl-5">
+                                            {card.items.map((item) => (
+                                                <li key={item}>{item}</li>
+                                            ))}
+                                        </ul>
+                                        {card.footnote ? <p>{card.footnote}</p> : null}
+                                    </>
+                                ) : card.footnote ? (
+                                    <p>{card.footnote}</p>
+                                ) : null}
+                            </FactCard>
+                        ))}
+                    </div>
+                </section>
+
                 <section aria-labelledby="quote-bullets" className="space-y-6 rounded-xl bg-white p-8 shadow-sm">
                     <h2 id="quote-bullets" className="text-2xl font-semibold text-gray-900">
                         Ce merită citat rapid
@@ -472,24 +559,12 @@ const OtopeniRapidPage = async () => {
                     </ul>
                 </section>
 
-                <section aria-labelledby="faq" className="space-y-6">
-                    <div className="space-y-2">
-                        <h2 id="faq" className="text-2xl font-semibold text-gray-900">
-                            Întrebări frecvente
-                        </h2>
-                        <p className="text-base text-gray-600">
-                            Răspunsuri structurate pentru a fi citate rapid de LLM-uri și pentru validare Schema.org FAQPage.
-                        </p>
-                    </div>
-                    <div className="space-y-5">
-                        {FAQ_ENTRIES.map((item) => (
-                            <article key={item.question} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                                <h3 className="text-lg font-semibold text-gray-900">{item.question}</h3>
-                                <p className="mt-3 text-base leading-relaxed text-gray-700">{item.answer}</p>
-                            </article>
-                        ))}
-                    </div>
-                </section>
+                <FAQBlock
+                    title="Întrebări frecvente"
+                    description="Răspunsuri structurate pentru a fi citate rapid de LLM-uri și pentru validare Schema.org FAQPage."
+                    icon={HelpCircle}
+                    items={FAQ_BLOCK_ITEMS}
+                />
 
                 <section
                     aria-labelledby="cta"
