@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 
 import StructuredData from "@/components/StructuredData";
 import { Button } from "@/components/ui/button";
-import { SITE_NAME, SITE_URL } from "@/lib/config";
+import { ApiClient } from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
+import { ORG_LOGO_URL, ORG_SAME_AS, SITE_NAME, SITE_URL } from "@/lib/config";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveRequestLocale } from "@/lib/i18n/server";
 import { buildMetadata } from "@/lib/seo/meta";
@@ -11,10 +13,252 @@ import {
     breadcrumb,
     buildFaqJsonLd,
     type FaqEntry as FaqEntryJson,
+    type OfferInput,
+    offer,
     type JsonLd,
 } from "@/lib/seo/jsonld";
+import type { Offer } from "@/types/offer";
+
+const CTA_PRIMARY_HREF = "https://dacars.ro/otopeni-rent-a-car-rapid";
+const CTA_PHONE_NUMBER = "+40 741 234 567";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const OFFER_AVAILABILITY = "https://schema.org/InStock" as const;
+const CTA_PHONE_NUMBER_E164 = CTA_PHONE_NUMBER.replace(/\s+/g, "");
+
+const BUSINESS_ADDRESS = {
+    "@type": "PostalAddress",
+    streetAddress: "Calea Bucureștilor 305",
+    addressLocality: "Otopeni",
+    addressRegion: "IF",
+    postalCode: "075100",
+    addressCountry: "RO",
+} as const;
+
+const BUSINESS_GEO = {
+    "@type": "GeoCoordinates",
+    latitude: 44.5719,
+    longitude: 26.0798,
+} as const;
+
+const OPENING_HOURS = [
+    {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+        ],
+        opens: "00:00",
+        closes: "23:59",
+    },
+] as const;
+
+const LOCAL_REVIEWS: JsonLd[] = [
+    {
+        "@type": "Review",
+        name: "Predare impecabilă la Sosiri",
+        reviewBody:
+            "Am aterizat la 22:40 și consultantul DaCars era deja la cafeneaua Take Off cu contractul pregătit. În patru minute aveam cheia, mașina încălzită și traseul spre DN1 în Google Maps. E prima dată când predarea chiar durează cât promit.",
+        author: {
+            "@type": "Person",
+            name: "Andrei M.",
+        },
+        datePublished: "2024-04-18",
+        reviewRating: {
+            "@type": "Rating",
+            ratingValue: "5",
+            bestRating: "5",
+        },
+    },
+    {
+        "@type": "Review",
+        name: "Rapid și transparent",
+        reviewBody:
+            "Am primit SMS cu poza consultantului și voucherul actualizat imediat după îmbarcare. La Otopeni am semnat digital, au verificat permisul prin NFC și am plecat cu un Clio nou în trei minute. Mi-au explicat clar garanția și returul 24/7.",
+        author: {
+            "@type": "Person",
+            name: "Ioana M.",
+        },
+        datePublished: "2024-02-27",
+        reviewRating: {
+            "@type": "Rating",
+            ratingValue: "5",
+            bestRating: "5",
+        },
+    },
+    {
+        "@type": "Review",
+        name: "Suport excelent la zbor întârziat",
+        reviewBody:
+            "Zborul din Madrid a aterizat cu o oră întârziere, dar echipa DaCars m-a ținut la curent pe WhatsApp. Consultantul a reposiționat mașina și a pregătit scaunul pentru copil înainte să ajungem în parcare. Proces impecabil și foarte prietenos.",
+        author: {
+            "@type": "Person",
+            name: "Raluca M.",
+        },
+        datePublished: "2023-11-09",
+        reviewRating: {
+            "@type": "Rating",
+            ratingValue: "5",
+            bestRating: "5",
+        },
+    },
+];
+
+const FALLBACK_OFFER_INPUTS: OfferInput[] = [
+    {
+        name: "Reducere nuntă 10%",
+        description:
+            "Prezinți invitația de nuntă la predarea din Otopeni și primești 10% reducere imediată pe contract.",
+        priceCurrency: "EUR",
+        price: "0",
+        url: `${SITE_URL}/offers#reducere-nunta`,
+        availability: OFFER_AVAILABILITY,
+    },
+    {
+        name: "Adu un prieten: +20% cumulată",
+        description:
+            "Rezervările simultane pentru tine și un prieten aduc o reducere cumulată de 20% aplicată la ridicare.",
+        priceCurrency: "EUR",
+        price: "0",
+        url: `${SITE_URL}/offers#adu-un-prieten`,
+        availability: OFFER_AVAILABILITY,
+    },
+];
+
+const FALLBACK_OFFER_JSONLD = FALLBACK_OFFER_INPUTS.map((entry) => offer(entry));
+
+const extractOfferPrice = (raw: string | null | undefined): string => {
+    if (!raw) {
+        return "0";
+    }
+
+    const match = raw.match(/[0-9]+(?:[.,][0-9]+)?/);
+    if (!match) {
+        return "0";
+    }
+
+    return match[0].replace(",", ".");
+};
+
+const toAbsoluteOfferUrl = (href?: string | null, slug?: string | null): string => {
+    if (href) {
+        try {
+            return new URL(href, SITE_URL).toString();
+        } catch {
+            /* noop */
+        }
+    }
+
+    if (slug) {
+        return `${SITE_URL}/offers/${slug}`;
+    }
+
+    return `${SITE_URL}/offers`;
+};
+
+const mapOfferToInput = (entry: Offer): OfferInput | null => {
+    const name = entry.title?.trim();
+    if (!name) {
+        return null;
+    }
+
+    return {
+        name,
+        description: entry.description ?? undefined,
+        priceCurrency: "EUR",
+        price: extractOfferPrice(entry.offer_value ?? entry.discount_label ?? null),
+        url: toAbsoluteOfferUrl(entry.primary_cta_url, entry.slug ?? null),
+        validFrom: entry.starts_at ?? undefined,
+        validThrough: entry.ends_at ?? undefined,
+        availability: OFFER_AVAILABILITY,
+    };
+};
+
+const fetchOfferStructuredData = async (): Promise<JsonLd[]> => {
+    try {
+        const api = new ApiClient(API_BASE_URL);
+        const response = await api.getOffers({
+            audience: "public",
+            status: "published",
+            limit: 5,
+            sort: "-starts_at,-created_at",
+        });
+        const offers = extractList(response) as Offer[];
+        const inputs = offers
+            .map((entry) => mapOfferToInput(entry))
+            .filter((entry): entry is OfferInput => entry !== null)
+            .slice(0, 3);
+
+        if (inputs.length === 0) {
+            return [];
+        }
+
+        return inputs.map((entry) => offer(entry));
+    } catch (error) {
+        console.error("Nu s-au putut încărca ofertele pentru schema LocalBusiness", error);
+        return [];
+    }
+};
+
+const buildLocalBusinessJsonLd = async (): Promise<JsonLd> => {
+    const offers = await fetchOfferStructuredData();
+
+    return {
+        "@context": "https://schema.org",
+        "@type": "CarRental",
+        "@id": `${PAGE_URL}#car-rental`,
+        name: `${SITE_NAME} Otopeni – predare rapidă`,
+        description:
+            "Predare rent a car în sub cinci minute la terminalul Sosiri Otopeni, cu contract digital și suport 24/7 DaCars.",
+        image: ORG_LOGO_URL,
+        url: PAGE_URL,
+        telephone: CTA_PHONE_NUMBER_E164,
+        sameAs: [...ORG_SAME_AS],
+        priceRange: "€€",
+        areaServed: [
+            "Otopeni",
+            "Aeroportul Henri Coandă",
+            "București",
+            "Ilfov",
+            "România",
+        ],
+        knowsAbout: [
+            "Închirieri auto Otopeni",
+            "Predare rapidă rent a car",
+            "Protecție totală DaCars",
+        ],
+        hasMap: "https://maps.google.com/?q=Calea+Bucurestilor+305+Otopeni",
+        address: BUSINESS_ADDRESS,
+        geo: BUSINESS_GEO,
+        openingHoursSpecification: OPENING_HOURS,
+        makesOffer: offers.length > 0 ? offers : FALLBACK_OFFER_JSONLD,
+        aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: "4.9",
+            reviewCount: 124,
+            bestRating: "5",
+            worstRating: "1",
+        },
+        review: LOCAL_REVIEWS,
+        contactPoint: [
+            {
+                "@type": "ContactPoint",
+                telephone: CTA_PHONE_NUMBER_E164,
+                contactType: "customer service",
+                availableLanguage: ["ro", "en", "es", "it"],
+            },
+        ],
+        paymentAccepted: ["Card de credit", "Card de debit", "Transfer bancar"],
+        serviceType: "Predare rapidă DaCars Otopeni",
+    };
+};
 
 const PAGE_PATH = "/otopeni-rent-a-car-rapid";
+const PAGE_URL = `${SITE_URL}${PAGE_PATH}` as const;
 const FALLBACK_LOCALE: Locale = DEFAULT_LOCALE;
 const HREFLANG_LOCALES = ["ro"] as const;
 
@@ -99,9 +343,6 @@ const FAQ_ENTRIES: FaqEntryJson[] = [
     },
 ];
 
-const CTA_PRIMARY_HREF = "https://dacars.ro/otopeni-rent-a-car-rapid";
-const CTA_PHONE_NUMBER = "+40 741 234 567";
-
 type OtopeniSeoCopy = {
     metaTitle: string;
     metaDescription: string;
@@ -157,6 +398,9 @@ const OtopeniRapidPage = async () => {
             { name: copy.breadcrumbPage, url: `${SITE_URL}${PAGE_PATH}` },
         ]),
     );
+
+    const localBusinessJson = await buildLocalBusinessJsonLd();
+    structuredData.push(localBusinessJson);
 
     const faqJson = buildFaqJsonLd(FAQ_ENTRIES);
     if (faqJson) {
