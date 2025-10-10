@@ -388,6 +388,32 @@ const OffersPage = async () => {
         </div>
       </section>
 
+      <section className="mx-auto -mt-10 flex max-w-5xl flex-col gap-4 rounded-3xl border border-white/60 bg-white px-6 py-6 text-center shadow-lg">
+        <p className="text-sm text-gray-700">
+          Caută rapid informațiile esențiale despre promoții și continuă spre celelalte pagini pilot DaCars.
+        </p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Link
+            href="/faq"
+            className="inline-flex items-center rounded-full border border-berkeley px-4 py-2 text-sm font-semibold text-berkeley transition hover:bg-berkeley hover:text-white"
+          >
+            Întrebări frecvente despre reduceri
+          </Link>
+          <Link
+            href="/cars"
+            className="inline-flex items-center rounded-full border border-jade px-4 py-2 text-sm font-semibold text-jade transition hover:bg-jade hover:text-white"
+          >
+            Verifică disponibilitatea flotei
+          </Link>
+          <Link
+            href="/contact"
+            className="inline-flex items-center rounded-full bg-berkeley px-4 py-2 text-sm font-semibold text-white transition hover:bg-berkeley/90"
+          >
+            Cere o ofertă personalizată
+          </Link>
+        </div>
+      </section>
+
       <main className="mx-auto max-w-6xl space-y-10 px-6 py-12">
         {offers.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-berkeley/30 bg-white p-10 text-center shadow-sm">

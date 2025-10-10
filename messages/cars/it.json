@@ -37,6 +37,12 @@
     },
     "description": "Sfoglia tutti i veicoli disponibili e scegli quello giusto per il tuo viaggio."
   },
+  "interlink": {
+    "title": "Vai verso le pagine principali",
+    "offers": "Scopri le offerte attive",
+    "faq": "Leggi le FAQ",
+    "contact": "Parla con un consulente"
+  },
   "search": {
     "placeholder": "Cerca un'auto...",
     "ariaLabel": "Cerca un'auto",

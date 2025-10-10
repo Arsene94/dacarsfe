@@ -37,6 +37,12 @@
     },
     "description": "Sieh dir alle verfügbaren Fahrzeuge an und wähle das passende für deine Reise aus."
   },
+  "interlink": {
+    "title": "Weiter zu den wichtigsten Seiten",
+    "offers": "Aktuelle Angebote ansehen",
+    "faq": "FAQ lesen",
+    "contact": "Mit einem Berater sprechen"
+  },
   "search": {
     "placeholder": "Nach einem Auto suchen...",
     "ariaLabel": "Nach einem Auto suchen",

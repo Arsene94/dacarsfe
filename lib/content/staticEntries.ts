@@ -193,6 +193,11 @@ export const STATIC_PAGES = [
         priority: 1,
     },
     {
+        path: "/offers",
+        changeFrequency: "daily" as const,
+        priority: 0.9,
+    },
+    {
         path: "/despre",
         changeFrequency: "monthly" as const,
         priority: 0.8,
