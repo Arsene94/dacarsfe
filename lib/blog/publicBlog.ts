@@ -8,6 +8,20 @@ import { getUserDisplayName } from "@/lib/users";
 import type { BlogPost } from "@/types/blog";
 import { applyBlogPostTranslation } from "@/lib/blog/translations";
 
+export type BlogIndexLink = {
+    href: string;
+    label: string;
+    description: string;
+};
+
+export type BlogIndexInterlink = {
+    title: string;
+    description: string;
+    ariaLabel: string;
+    linkCta: string;
+    links: BlogIndexLink[];
+};
+
 export type BlogIndexCopy = {
     pageTitle: string;
     pageDescription: string;
@@ -18,6 +32,7 @@ export type BlogIndexCopy = {
     readMoreLabel: string;
     emptyStateTitle: string;
     emptyStateDescription: string;
+    interlink: BlogIndexInterlink;
 };
 
 export type BlogPostCopy = {
@@ -48,6 +63,35 @@ export const BLOG_INDEX_COPY: Record<Locale, BlogIndexCopy> = {
         emptyStateTitle: "Momentan nu avem articole publicate",
         emptyStateDescription:
             "Revino în curând pentru a descoperi noi ghiduri și noutăți despre serviciile de mobilitate DaCars.",
+        interlink: {
+            title: "Explorează în continuare paginile noastre cheie",
+            description:
+                "Distribuie autoritatea articolelor către secțiunile comerciale esențiale și finalizează rezervarea informat.",
+            ariaLabel: "Legături interne către paginile principale DaCars",
+            linkCta: "Deschide pagina",
+            links: [
+                {
+                    href: "/cars",
+                    label: "Flota de închirieri DaCars",
+                    description: "Vezi disponibilitatea în timp real și filtrează mașinile potrivite călătoriei tale.",
+                },
+                {
+                    href: "/offers",
+                    label: "Promoții și reduceri active",
+                    description: "Aplică oferte sezoniere sau coduri câștigate și obține cel mai bun tarif.",
+                },
+                {
+                    href: "/faq",
+                    label: "Întrebări frecvente",
+                    description: "Clarifică rapid politicile de depozit, plata și procedura de predare DaCars.",
+                },
+                {
+                    href: "/contact",
+                    label: "Contactează echipa 24/7",
+                    description: "Vorbește cu un consultant pentru oferte personalizate sau suport rapid.",
+                },
+            ],
+        },
     },
     en: {
         pageTitle: "DaCars Blog",
@@ -62,6 +106,35 @@ export const BLOG_INDEX_COPY: Record<Locale, BlogIndexCopy> = {
         emptyStateTitle: "No posts are available yet",
         emptyStateDescription:
             "Check back soon for new stories, guides, and updates from the DaCars mobility team.",
+        interlink: {
+            title: "Continue with our most useful pages",
+            description:
+                "Send the authority of each article to high-value commercial sections and keep your rental journey connected.",
+            ariaLabel: "Internal links to DaCars' primary pages",
+            linkCta: "Open page",
+            links: [
+                {
+                    href: "/cars",
+                    label: "Browse the full fleet",
+                    description: "Check real-time availability and filter cars that match your travel needs.",
+                },
+                {
+                    href: "/offers",
+                    label: "View current offers",
+                    description: "Activate seasonal discounts or loyalty perks curated by the DaCars team.",
+                },
+                {
+                    href: "/faq",
+                    label: "Visit the help centre",
+                    description: "Understand deposits, insurance, and pickup conditions before booking.",
+                },
+                {
+                    href: "/contact",
+                    label: "Talk to a specialist",
+                    description: "Reach our consultants 24/7 for tailored assistance and booking support.",
+                },
+            ],
+        },
     },
     it: {
         pageTitle: "Blog DaCars",
@@ -76,6 +149,35 @@ export const BLOG_INDEX_COPY: Record<Locale, BlogIndexCopy> = {
         emptyStateTitle: "Non ci sono articoli disponibili",
         emptyStateDescription:
             "Torna presto per scoprire nuove guide e aggiornamenti sul mondo della mobilità DaCars.",
+        interlink: {
+            title: "Continua verso le pagine essenziali",
+            description:
+                "Trasferisci l'autorevolezza degli articoli verso le sezioni commerciali chiave e completa la prenotazione senza interruzioni.",
+            ariaLabel: "Collegamenti interni alle principali pagine DaCars",
+            linkCta: "Apri la pagina",
+            links: [
+                {
+                    href: "/cars",
+                    label: "Scopri tutta la flotta",
+                    description: "Verifica disponibilità in tempo reale e filtra i veicoli più adatti al tuo viaggio.",
+                },
+                {
+                    href: "/offers",
+                    label: "Vedi le offerte attive",
+                    description: "Attiva sconti stagionali o vantaggi fedeltà curati dal team DaCars.",
+                },
+                {
+                    href: "/faq",
+                    label: "Consulta le FAQ",
+                    description: "Chiarisci deposito, assicurazione e modalità di ritiro prima di confermare.",
+                },
+                {
+                    href: "/contact",
+                    label: "Parla con un consulente",
+                    description: "Contatta il team DaCars 24/7 per assistenza personalizzata e preventivi rapidi.",
+                },
+            ],
+        },
     },
     es: {
         pageTitle: "Blog de DaCars",
@@ -90,6 +192,35 @@ export const BLOG_INDEX_COPY: Record<Locale, BlogIndexCopy> = {
         emptyStateTitle: "Todavía no hay artículos disponibles",
         emptyStateDescription:
             "Vuelve pronto para descubrir nuevas guías y novedades sobre la movilidad de DaCars.",
+        interlink: {
+            title: "Continúa hacia nuestras páginas clave",
+            description:
+                "Dirige la autoridad de cada artículo a las secciones comerciales más importantes y mantiene tu reserva bien conectada.",
+            ariaLabel: "Enlaces internos a las páginas principales de DaCars",
+            linkCta: "Abrir página",
+            links: [
+                {
+                    href: "/cars",
+                    label: "Revisa toda la flota",
+                    description: "Consulta disponibilidad en tiempo real y filtra los coches ideales para tu viaje.",
+                },
+                {
+                    href: "/offers",
+                    label: "Explora las ofertas activas",
+                    description: "Activa descuentos de temporada o beneficios de fidelidad creados para los clientes DaCars.",
+                },
+                {
+                    href: "/faq",
+                    label: "Visita las preguntas frecuentes",
+                    description: "Aclara depósitos, coberturas y proceso de entrega antes de reservar.",
+                },
+                {
+                    href: "/contact",
+                    label: "Habla con un asesor",
+                    description: "Contacta con nuestro equipo 24/7 para recibir asistencia personalizada y presupuestos rápidos.",
+                },
+            ],
+        },
     },
     fr: {
         pageTitle: "Blog DaCars",
@@ -104,6 +235,35 @@ export const BLOG_INDEX_COPY: Record<Locale, BlogIndexCopy> = {
         emptyStateTitle: "Aucun article n'est disponible pour le moment",
         emptyStateDescription:
             "Revenez bientôt pour découvrir de nouveaux guides et actualités sur la mobilité DaCars.",
+        interlink: {
+            title: "Poursuivez vers nos pages stratégiques",
+            description:
+                "Diffusez l'autorité éditoriale vers les sections commerciales clés et restez maître de votre parcours de location.",
+            ariaLabel: "Liens internes vers les principales pages DaCars",
+            linkCta: "Ouvrir la page",
+            links: [
+                {
+                    href: "/cars",
+                    label: "Découvrir la flotte complète",
+                    description: "Consultez la disponibilité en temps réel et filtrez les véhicules adaptés à votre trajet.",
+                },
+                {
+                    href: "/offers",
+                    label: "Voir les offres en cours",
+                    description: "Activez remises saisonnières et avantages fidélité sélectionnés par l'équipe DaCars.",
+                },
+                {
+                    href: "/faq",
+                    label: "Consulter la FAQ",
+                    description: "Clarifiez dépôt, assurance et processus de remise avant de confirmer votre réservation.",
+                },
+                {
+                    href: "/contact",
+                    label: "Joindre un conseiller",
+                    description: "Contactez notre équipe 24/7 pour obtenir un accompagnement personnalisé et des offres rapides.",
+                },
+            ],
+        },
     },
     de: {
         pageTitle: "DaCars Blog",
@@ -118,6 +278,35 @@ export const BLOG_INDEX_COPY: Record<Locale, BlogIndexCopy> = {
         emptyStateTitle: "Derzeit sind keine Artikel verfügbar",
         emptyStateDescription:
             "Schau bald wieder vorbei, um neue Guides und Neuigkeiten rund um die Mobilität von DaCars zu entdecken.",
+        interlink: {
+            title: "Gehe weiter zu unseren wichtigsten Seiten",
+            description:
+                "Leite die Autorität des Artikels auf zentrale Geschäftsbereiche und behalte deinen Buchungsprozess im Blick.",
+            ariaLabel: "Interne Links zu den Hauptseiten von DaCars",
+            linkCta: "Seite öffnen",
+            links: [
+                {
+                    href: "/cars",
+                    label: "Gesamte Flotte ansehen",
+                    description: "Prüfe die Verfügbarkeit in Echtzeit und filtere Fahrzeuge passend zu deiner Reise.",
+                },
+                {
+                    href: "/offers",
+                    label: "Aktuelle Angebote entdecken",
+                    description: "Aktiviere saisonale Rabatte oder Treuevorteile, die das DaCars-Team vorbereitet hat.",
+                },
+                {
+                    href: "/faq",
+                    label: "FAQ besuchen",
+                    description: "Kläre Kautionen, Versicherungen und Übergabeablauf, bevor du buchst.",
+                },
+                {
+                    href: "/contact",
+                    label: "Mit dem Team sprechen",
+                    description: "Kontaktiere unsere Berater rund um die Uhr für individuelle Unterstützung und Angebote.",
+                },
+            ],
+        },
     },
 };
 

@@ -26,6 +26,13 @@ const OffersSection = dynamic(() => import("@/components/OffersSection"), {
     loading: () => null,
 });
 
+const InterlinkingSection = dynamic(
+    () => import("@/components/home/HomeInterlinkingSection"),
+    {
+        loading: () => null,
+    },
+);
+
 const ProcessSection = dynamic(() => import("@/components/ProcessSection"), {
     loading: () => null,
 });
@@ -601,6 +608,9 @@ const HomePageClient = () => {
             </LazyVisibleSection>
             <LazyVisibleSection intrinsicSize="860px">
                 <BenefitsSection />
+            </LazyVisibleSection>
+            <LazyVisibleSection intrinsicSize="720px">
+                <InterlinkingSection />
             </LazyVisibleSection>
             <LazyVisibleSection intrinsicSize="820px">
                 <OffersSection />

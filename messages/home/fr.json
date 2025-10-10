@@ -87,6 +87,42 @@
       { "value": "0", "label": "Frais cachés" }
     ]
   },
+  "interlinking": {
+    "title": {
+      "main": "Poursuivez votre parcours",
+      "highlight": "vers les pages clés DaCars"
+    },
+    "description": "Répartissez l'autorité interne vers nos sections les plus pertinentes et avancez sereinement dans votre réservation.",
+    "ariaLabel": "Liens internes vers les principales pages DaCars",
+    "linkPrefix": "Découvrir",
+    "linkCta": "Voir les détails",
+    "links": [
+      {
+        "href": "/cars",
+        "label": "Flotte complète",
+        "description": "Comparez les modèles disponibles et filtrez selon vos dates de voyage en quelques secondes.",
+        "tone": "primary"
+      },
+      {
+        "href": "/offers",
+        "label": "Offres actives",
+        "description": "Activez des réductions saisonnières et des avantages fidélité pensés pour les clients DaCars.",
+        "tone": "accent"
+      },
+      {
+        "href": "/faq",
+        "label": "Questions fréquentes",
+        "description": "Clarifiez les dépôts, le déroulé de la remise et les options de paiement avant de confirmer.",
+        "tone": "outline"
+      },
+      {
+        "href": "/blog",
+        "label": "Guides et actualités",
+        "description": "Découvrez des conseils mobilité et des nouveautés publiés directement par l'équipe DaCars.",
+        "tone": "secondary"
+      }
+    ]
+  },
   "offers": {
     "title": {
       "main": "Offres",

@@ -87,6 +87,42 @@
       { "value": "0", "label": "Costi nascosti" }
     ]
   },
+  "interlinking": {
+    "title": {
+      "main": "Continua a esplorare",
+      "highlight": "le pagine essenziali DaCars"
+    },
+    "description": "Distribuisci autorevolezza interna verso le sezioni più rilevanti e completa il tuo viaggio di prenotazione senza perdere informazioni chiave.",
+    "ariaLabel": "Collegamenti interni verso le principali pagine DaCars",
+    "linkPrefix": "Scopri",
+    "linkCta": "Vedi dettagli",
+    "links": [
+      {
+        "href": "/cars",
+        "label": "Flotta completa",
+        "description": "Confronta i modelli disponibili e filtra rapidamente per date e categoria.",
+        "tone": "primary"
+      },
+      {
+        "href": "/offers",
+        "label": "Offerte attive",
+        "description": "Attiva sconti stagionali e vantaggi fedeltà curati dal team DaCars.",
+        "tone": "accent"
+      },
+      {
+        "href": "/faq",
+        "label": "Domande frequenti",
+        "description": "Chiarisci regole di deposito, modalità di ritiro e opzioni di pagamento prima di confermare.",
+        "tone": "outline"
+      },
+      {
+        "href": "/blog",
+        "label": "Guide e aggiornamenti",
+        "description": "Leggi consigli sulla mobilità e novità pubblicate direttamente dal team DaCars.",
+        "tone": "secondary"
+      }
+    ]
+  },
   "offers": {
     "title": {
       "main": "Offerte",

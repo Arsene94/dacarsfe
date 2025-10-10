@@ -87,6 +87,42 @@
       { "value": "0", "label": "Taxe ascunse" }
     ]
   },
+  "interlinking": {
+    "title": {
+      "main": "Conectează-te rapid la",
+      "highlight": "paginile utile"
+    },
+    "description": "Distribuie autoritatea SEO către secțiunile esențiale DaCars și finalizează rezervarea având toate informațiile importante la îndemână.",
+    "ariaLabel": "Legături interne către paginile principale DaCars",
+    "linkPrefix": "Descoperă",
+    "linkCta": "Vezi detalii",
+    "links": [
+      {
+        "href": "/cars",
+        "label": "Flota completă",
+        "description": "Compară modele disponibile și filtrează după perioada dorită.",
+        "tone": "primary"
+      },
+      {
+        "href": "/offers",
+        "label": "Promoții active",
+        "description": "Aplică reduceri sezoniere și coduri dedicate comunității DaCars.",
+        "tone": "accent"
+      },
+      {
+        "href": "/faq",
+        "label": "Întrebări frecvente",
+        "description": "Clarifică politicile de garanție, plată și preluare înainte de rezervare.",
+        "tone": "outline"
+      },
+      {
+        "href": "/blog",
+        "label": "Resurse și ghiduri",
+        "description": "Învață cum să optimizezi fiecare călătorie cu recomandările echipei DaCars.",
+        "tone": "secondary"
+      }
+    ]
+  },
   "offers": {
     "title": {
       "main": "Oferte",
