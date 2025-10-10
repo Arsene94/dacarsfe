@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { Languages, Loader2, Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import TranslationModal from "@/components/admin/TranslationModal";
 import CKEditor from "@/lib/vendors/ckeditor/react";
 import ClassicEditor from "@/lib/vendors/ckeditor/classic-editor";
 import apiClient from "@/lib/api";
@@ -15,8 +16,10 @@ import { extractItem, extractList } from "@/lib/apiResponse";
 import type {
     FaqCategory,
     FaqCategoryPayload,
+    FaqCategoryTranslationPayload,
     FaqPayload,
     FaqStatus,
+    FaqTranslationPayload,
 } from "@/types/faq";
 import type { ClassicEditorInstance } from "@/lib/vendors/ckeditor/loader";
 
@@ -169,6 +172,10 @@ const AdminFaqPage = () => {
     const [formSuccess, setFormSuccess] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [editingFaqId, setEditingFaqId] = useState<number | null>(null);
+    const [categoryTranslationTarget, setCategoryTranslationTarget] = useState<NormalizedCategory | null>(null);
+    const [isCategoryTranslationOpen, setIsCategoryTranslationOpen] = useState(false);
+    const [faqTranslationTarget, setFaqTranslationTarget] = useState<NormalizedFaqRecord | null>(null);
+    const [isFaqTranslationOpen, setIsFaqTranslationOpen] = useState(false);
 
     const editingFaqIdRef = useRef<number | null>(null);
 
@@ -206,6 +213,45 @@ const AdminFaqPage = () => {
                     : category.label,
         }));
     }, [categoryOptions]);
+
+    const categoryTranslationFields = useMemo(
+        () => [
+            {
+                name: "name",
+                label: "Nume categorie",
+                type: "text" as const,
+                placeholder: "Titlul categoriei tradus",
+            },
+            {
+                name: "description",
+                label: "Descriere",
+                type: "textarea" as const,
+                rows: 4,
+                placeholder: "Descrierea categoriei în limba selectată",
+            },
+        ],
+        [],
+    );
+
+    const faqTranslationFields = useMemo(
+        () => [
+            {
+                name: "question",
+                label: "Întrebare",
+                type: "text" as const,
+                placeholder: "Formularea întrebării traduse",
+            },
+            {
+                name: "answer",
+                label: "Răspuns",
+                type: "textarea" as const,
+                rows: 6,
+                placeholder: "Răspunsul tradus (poți folosi HTML simplu)",
+                description: "Poți folosi HTML simplu pentru listări sau evidențiere.",
+            },
+        ],
+        [],
+    );
 
     const isEditingCategory = categoryFormState.id !== null;
 
@@ -465,6 +511,138 @@ const AdminFaqPage = () => {
     useEffect(() => {
         void loadCategories();
     }, [loadCategories]);
+
+    const openCategoryTranslations = useCallback((category: NormalizedCategory) => {
+        setCategoryTranslationTarget(category);
+        setIsCategoryTranslationOpen(true);
+    }, []);
+
+    const closeCategoryTranslations = useCallback(() => {
+        setIsCategoryTranslationOpen(false);
+        setCategoryTranslationTarget(null);
+    }, []);
+
+    const loadCategoryTranslationsData = useCallback(async () => {
+        if (!categoryTranslationTarget) {
+            return {};
+        }
+
+        const entries = await apiClient.getFaqCategoryTranslations(categoryTranslationTarget.id);
+        return entries.reduce<Record<string, Partial<Record<string, string | null | undefined>>>>(
+            (acc, entry) => {
+                if (!entry) {
+                    return acc;
+                }
+
+                const lang = typeof entry.lang === "string" ? entry.lang.trim() : "";
+                if (!lang) {
+                    return acc;
+                }
+
+                acc[lang] = {
+                    name: entry.name ?? null,
+                    description: entry.description ?? null,
+                };
+                return acc;
+            },
+            {},
+        );
+    }, [categoryTranslationTarget]);
+
+    const handleSaveCategoryTranslation = useCallback(
+        async (lang: string, values: Record<string, string>) => {
+            if (!categoryTranslationTarget) {
+                throw new Error("Nu există o categorie selectată pentru traducere.");
+            }
+
+            const nameValue = typeof values.name === "string" ? values.name.trim() : "";
+            const descriptionValue =
+                typeof values.description === "string" ? values.description.trim() : "";
+
+            const payload: FaqCategoryTranslationPayload = {
+                name: nameValue.length > 0 ? nameValue : null,
+                description: descriptionValue.length > 0 ? descriptionValue : null,
+            };
+
+            await apiClient.upsertFaqCategoryTranslation(categoryTranslationTarget.id, lang, payload);
+        },
+        [categoryTranslationTarget],
+    );
+
+    const handleDeleteCategoryTranslation = useCallback(
+        async (lang: string) => {
+            if (!categoryTranslationTarget) {
+                throw new Error("Nu există o categorie selectată pentru traducere.");
+            }
+
+            await apiClient.deleteFaqCategoryTranslation(categoryTranslationTarget.id, lang);
+        },
+        [categoryTranslationTarget],
+    );
+
+    const openFaqTranslations = useCallback((faq: NormalizedFaqRecord) => {
+        setFaqTranslationTarget(faq);
+        setIsFaqTranslationOpen(true);
+    }, []);
+
+    const closeFaqTranslations = useCallback(() => {
+        setIsFaqTranslationOpen(false);
+        setFaqTranslationTarget(null);
+    }, []);
+
+    const loadFaqTranslationsData = useCallback(async () => {
+        if (!faqTranslationTarget) {
+            return {};
+        }
+
+        const entries = await apiClient.getFaqTranslations(faqTranslationTarget.id);
+        return entries.reduce<Record<string, Partial<Record<string, string | null | undefined>>>>(
+            (acc, entry) => {
+                const lang = typeof entry.lang === "string" ? entry.lang.trim() : "";
+                if (!lang) {
+                    return acc;
+                }
+
+                acc[lang] = {
+                    question: entry.question ?? null,
+                    answer: entry.answer ?? null,
+                };
+                return acc;
+            },
+            {},
+        );
+    }, [faqTranslationTarget]);
+
+    const handleSaveFaqTranslation = useCallback(
+        async (lang: string, values: Record<string, string>) => {
+            if (!faqTranslationTarget) {
+                throw new Error("Nu există un FAQ selectat pentru traducere.");
+            }
+
+            const questionValue = typeof values.question === "string" ? values.question.trim() : "";
+            const answerRaw = typeof values.answer === "string" ? values.answer : "";
+            const answerTrimmed = answerRaw.trim();
+
+            const payload: FaqTranslationPayload = {
+                question: questionValue.length > 0 ? questionValue : null,
+                answer: answerTrimmed.length > 0 ? answerRaw : null,
+            };
+
+            await apiClient.upsertFaqTranslation(faqTranslationTarget.id, lang, payload);
+        },
+        [faqTranslationTarget],
+    );
+
+    const handleDeleteFaqTranslation = useCallback(
+        async (lang: string) => {
+            if (!faqTranslationTarget) {
+                throw new Error("Nu există un FAQ selectat pentru traducere.");
+            }
+
+            await apiClient.deleteFaqTranslation(faqTranslationTarget.id, lang);
+        },
+        [faqTranslationTarget],
+    );
 
     const updateFormField = useCallback(<Key extends keyof FaqFormState>(key: Key, value: FaqFormState[Key]) => {
         setFormState((previous) => ({
@@ -752,7 +930,8 @@ const AdminFaqPage = () => {
     };
 
     return (
-        <div className="space-y-8 p-6">
+        <>
+            <div className="space-y-8 p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-semibold text-gray-900">Administrare FAQ</h1>
@@ -841,6 +1020,17 @@ const AdminFaqPage = () => {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-wrap justify-end gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="gap-2"
+                                                        onClick={() => openCategoryTranslations(category)}
+                                                        disabled={categorySaving}
+                                                    >
+                                                        <Languages className="h-4 w-4" />
+                                                        Traduceri
+                                                    </Button>
                                                     <Button
                                                         type="button"
                                                         variant="outline"
@@ -1151,7 +1341,18 @@ const AdminFaqPage = () => {
                                             {formatTimestamp(faq.updatedAt ?? faq.createdAt)}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <div className="flex justify-end">
+                                            <div className="flex justify-end gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="gap-2"
+                                                    onClick={() => openFaqTranslations(faq)}
+                                                    disabled={saving}
+                                                >
+                                                    <Languages className="h-4 w-4" />
+                                                    Traduceri
+                                                </Button>
                                                 <Button
                                                     type="button"
                                                     variant="secondary"
@@ -1172,7 +1373,42 @@ const AdminFaqPage = () => {
                     )}
                 </div>
             </section>
-        </div>
+            </div>
+
+            <TranslationModal
+                open={Boolean(isCategoryTranslationOpen && categoryTranslationTarget)}
+                onClose={closeCategoryTranslations}
+                entityLabel={
+                    categoryTranslationTarget
+                        ? `categoria „${categoryTranslationTarget.name}”`
+                        : "categoria FAQ"
+                }
+                baseValues={{
+                    name: categoryTranslationTarget?.name ?? "",
+                    description: categoryTranslationTarget?.description ?? "",
+                }}
+                fields={categoryTranslationFields}
+                loadTranslations={loadCategoryTranslationsData}
+                onSave={handleSaveCategoryTranslation}
+                onDelete={handleDeleteCategoryTranslation}
+            />
+
+            <TranslationModal
+                open={Boolean(isFaqTranslationOpen && faqTranslationTarget)}
+                onClose={closeFaqTranslations}
+                entityLabel={
+                    faqTranslationTarget ? `FAQ-ul „${faqTranslationTarget.question}”` : "FAQ"
+                }
+                baseValues={{
+                    question: faqTranslationTarget?.question ?? "",
+                    answer: faqTranslationTarget?.answer ?? "",
+                }}
+                fields={faqTranslationFields}
+                loadTranslations={loadFaqTranslationsData}
+                onSave={handleSaveFaqTranslation}
+                onDelete={handleDeleteFaqTranslation}
+            />
+        </>
     );
 };
 

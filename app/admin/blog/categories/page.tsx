@@ -1,17 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Edit, Languages, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/table";
 import { Popup } from "@/components/ui/popup";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import TranslationModal from "@/components/admin/TranslationModal";
 import apiClient from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { formatDateTime } from "@/lib/datetime";
 import type { Column } from "@/types/ui";
-import type { BlogCategory, BlogCategoryPayload } from "@/types/blog";
+import type {
+  BlogCategory,
+  BlogCategoryPayload,
+  BlogCategoryTranslationPayload,
+} from "@/types/blog";
 
 const EMPTY_FORM: CategoryFormState = {
   name: "",
@@ -43,6 +48,8 @@ const BlogCategoriesPage = () => {
   const [formState, setFormState] = useState<CategoryFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [translationTarget, setTranslationTarget] = useState<BlogCategory | null>(null);
+  const [isTranslationModalOpen, setIsTranslationModalOpen] = useState(false);
 
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
@@ -87,6 +94,92 @@ const BlogCategoriesPage = () => {
     setFormState({ ...EMPTY_FORM });
     setFormError(null);
   };
+
+  const openTranslationsModal = useCallback((category: BlogCategory) => {
+    setTranslationTarget(category);
+    setIsTranslationModalOpen(true);
+  }, []);
+
+  const closeTranslationsModal = useCallback(() => {
+    setIsTranslationModalOpen(false);
+    setTranslationTarget(null);
+  }, []);
+
+  const loadCategoryTranslations = useCallback(async () => {
+    if (!translationTarget) {
+      return {};
+    }
+
+    const entries = await apiClient.getBlogCategoryTranslations(translationTarget.id);
+    return entries.reduce<Record<string, Partial<Record<string, string | null | undefined>>>>(
+      (acc, entry) => {
+        if (!entry) {
+          return acc;
+        }
+
+        const lang = typeof entry.lang === "string" ? entry.lang.trim() : "";
+        if (!lang) {
+          return acc;
+        }
+
+        acc[lang] = {
+          name: entry.name ?? null,
+          description: entry.description ?? null,
+        };
+        return acc;
+      },
+      {},
+    );
+  }, [translationTarget]);
+
+  const handleSaveCategoryTranslation = useCallback(
+    async (lang: string, values: Record<string, string>) => {
+      if (!translationTarget) {
+        throw new Error("Nu există o categorie selectată pentru traducere.");
+      }
+
+      const nameValue = typeof values.name === "string" ? values.name.trim() : "";
+      const descriptionValue = typeof values.description === "string" ? values.description.trim() : "";
+
+      const payload: BlogCategoryTranslationPayload = {
+        name: nameValue.length > 0 ? nameValue : null,
+        description: descriptionValue.length > 0 ? descriptionValue : null,
+      };
+
+      await apiClient.upsertBlogCategoryTranslation(translationTarget.id, lang, payload);
+    },
+    [translationTarget],
+  );
+
+  const handleDeleteCategoryTranslation = useCallback(
+    async (lang: string) => {
+      if (!translationTarget) {
+        throw new Error("Nu există o categorie selectată pentru traducere.");
+      }
+
+      await apiClient.deleteBlogCategoryTranslation(translationTarget.id, lang);
+    },
+    [translationTarget],
+  );
+
+  const translationFields = useMemo(
+    () => [
+      {
+        name: "name",
+        label: "Nume",
+        type: "text" as const,
+        placeholder: "Ex: Travel Guides",
+      },
+      {
+        name: "description",
+        label: "Descriere",
+        type: "textarea" as const,
+        rows: 4,
+        placeholder: "Descrierea categoriei în limba selectată",
+      },
+    ],
+    [],
+  );
 
   const handleDelete = async (category: BlogCategory) => {
     const confirmed = window.confirm(`Ștergi categoria „${category.name}”?`);
@@ -199,6 +292,16 @@ const BlogCategoriesPage = () => {
           >
             <Trash2 className="h-4 w-4" />
           </button>
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              openTranslationsModal(row);
+            }}
+            className="text-berkeley hover:text-jade"
+            aria-label={`Gestionează traducerile pentru categoria ${row.name}`}
+          >
+            <Languages className="h-4 w-4" />
+          </button>
         </div>
       ),
     },
@@ -299,6 +402,19 @@ const BlogCategoriesPage = () => {
           </div>
         </form>
       </Popup>
+      <TranslationModal
+        open={Boolean(isTranslationModalOpen && translationTarget)}
+        onClose={closeTranslationsModal}
+        entityLabel={translationTarget ? `categoria „${translationTarget.name}”` : "categoria de blog"}
+        baseValues={{
+          name: translationTarget?.name ?? "",
+          description: translationTarget?.description ?? "",
+        }}
+        fields={translationFields}
+        loadTranslations={loadCategoryTranslations}
+        onSave={handleSaveCategoryTranslation}
+        onDelete={handleDeleteCategoryTranslation}
+      />
     </div>
   );
 };

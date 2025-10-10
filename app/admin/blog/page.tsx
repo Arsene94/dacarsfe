@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Edit, Plus, Trash2, UploadCloud, X } from "lucide-react";
+import { Edit, Languages, Plus, Trash2, UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/table";
 import { Popup } from "@/components/ui/popup";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
+import TranslationModal from "@/components/admin/TranslationModal";
 import apiClient from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { formatDateTime, toIsoStringFromInput, toLocalDatetimeInputValue } from "@/lib/datetime";
@@ -21,6 +22,7 @@ import type {
   BlogPost,
   BlogPostListParams,
   BlogPostPayload,
+  BlogPostTranslationPayload,
   BlogPostStatus,
   BlogTag,
 } from "@/types/blog";
@@ -105,6 +107,8 @@ const BlogPostsPage = () => {
   const [searchValue, setSearchValue] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [imageState, setImageState] = useState<BlogPostImageState>(() => createEmptyImageState());
+  const [translationPost, setTranslationPost] = useState<BlogPost | null>(null);
+  const [isTranslationModalOpen, setIsTranslationModalOpen] = useState(false);
 
   const resetImageState = useCallback(() => {
     setImageState((prev) => {
@@ -158,6 +162,84 @@ const BlogPostsPage = () => {
       };
     });
   }, []);
+
+  const openTranslationsModal = useCallback((post: BlogPost) => {
+    setTranslationPost(post);
+    setIsTranslationModalOpen(true);
+  }, []);
+
+  const closeTranslationsModal = useCallback(() => {
+    setIsTranslationModalOpen(false);
+    setTranslationPost(null);
+  }, []);
+
+  const loadPostTranslations = useCallback(async () => {
+    if (!translationPost) {
+      return {};
+    }
+
+    const entries = await apiClient.getBlogPostTranslations(translationPost.id);
+    return entries.reduce<Record<string, Partial<Record<string, string | null | undefined>>>>(
+      (acc, entry) => {
+        if (!entry) {
+          return acc;
+        }
+
+        const lang = typeof entry.lang === "string" ? entry.lang.trim() : "";
+        if (!lang) {
+          return acc;
+        }
+
+        acc[lang] = {
+          title: entry.title ?? null,
+          excerpt: entry.excerpt ?? null,
+          content: entry.content ?? null,
+          meta_title: entry.meta_title ?? null,
+          meta_description: entry.meta_description ?? null,
+        };
+        return acc;
+      },
+      {},
+    );
+  }, [translationPost]);
+
+  const handleSavePostTranslation = useCallback(
+    async (lang: string, values: Record<string, string>) => {
+      if (!translationPost) {
+        throw new Error("Nu există un articol selectat pentru traducere.");
+      }
+
+      const titleValue = typeof values.title === "string" ? values.title.trim() : "";
+      const excerptValue = typeof values.excerpt === "string" ? values.excerpt.trim() : "";
+      const contentRaw = typeof values.content === "string" ? values.content : "";
+      const contentTrimmed = contentRaw.trim();
+      const metaTitleValue = typeof values.meta_title === "string" ? values.meta_title.trim() : "";
+      const metaDescriptionValue =
+        typeof values.meta_description === "string" ? values.meta_description.trim() : "";
+
+      const payload: BlogPostTranslationPayload = {
+        title: titleValue.length > 0 ? titleValue : null,
+        excerpt: excerptValue.length > 0 ? excerptValue : null,
+        content: contentTrimmed.length > 0 ? contentRaw : null,
+        meta_title: metaTitleValue.length > 0 ? metaTitleValue : null,
+        meta_description: metaDescriptionValue.length > 0 ? metaDescriptionValue : null,
+      };
+
+      await apiClient.upsertBlogPostTranslation(translationPost.id, lang, payload);
+    },
+    [translationPost],
+  );
+
+  const handleDeletePostTranslation = useCallback(
+    async (lang: string) => {
+      if (!translationPost) {
+        throw new Error("Nu există un articol selectat pentru traducere.");
+      }
+
+      await apiClient.deleteBlogPostTranslation(translationPost.id, lang);
+    },
+    [translationPost],
+  );
 
   const resolveAuthorName = useCallback(
     (post: BlogPost): string => {
@@ -547,6 +629,16 @@ const BlogPostsPage = () => {
             <button
               onClick={(event) => {
                 event.stopPropagation();
+                openTranslationsModal(row);
+              }}
+              className="text-berkeley hover:text-jade"
+              aria-label={`Gestionează traducerile pentru articolul ${row.title}`}
+            >
+              <Languages className="h-4 w-4" />
+            </button>
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
                 openEditModal(row);
               }}
               className="text-jade hover:text-jadeLight"
@@ -568,7 +660,7 @@ const BlogPostsPage = () => {
         ),
       },
     ],
-    [handleDelete, openEditModal, resolveAuthorName],
+    [handleDelete, openEditModal, openTranslationsModal, resolveAuthorName],
   );
 
   const handleSearchSubmit = (event: React.FormEvent) => {
@@ -581,6 +673,46 @@ const BlogPostsPage = () => {
     setSearchValue("");
     setAppliedSearch("");
   };
+
+  const translationFields = useMemo(
+    () => [
+      {
+        name: "title",
+        label: "Titlu",
+        type: "text" as const,
+        placeholder: "Titlul articolului în limba selectată",
+      },
+      {
+        name: "excerpt",
+        label: "Descriere scurtă",
+        type: "textarea" as const,
+        rows: 4,
+        placeholder: "Rezumatul articolului",
+      },
+      {
+        name: "content",
+        label: "Conținut",
+        type: "textarea" as const,
+        rows: 8,
+        placeholder: "Conținutul tradus (poți insera HTML)",
+        description: "Poți lipi conținutul formatat din editorul tău preferat. HTML este acceptat.",
+      },
+      {
+        name: "meta_title",
+        label: "Meta title",
+        type: "text" as const,
+        placeholder: "Titlu SEO",
+      },
+      {
+        name: "meta_description",
+        label: "Meta description",
+        type: "textarea" as const,
+        rows: 4,
+        placeholder: "Descriere SEO",
+      },
+    ],
+    [],
+  );
 
   const previewSource =
     imageState.previewUrl ??
@@ -957,6 +1089,23 @@ const BlogPostsPage = () => {
           </div>
         </form>
       </Popup>
+
+      <TranslationModal
+        open={Boolean(isTranslationModalOpen && translationPost)}
+        onClose={closeTranslationsModal}
+        entityLabel={translationPost ? `articolul „${translationPost.title}”` : "articol de blog"}
+        baseValues={{
+          title: translationPost?.title ?? "",
+          excerpt: translationPost?.excerpt ?? "",
+          content: translationPost?.content ?? "",
+          meta_title: translationPost?.meta_title ?? "",
+          meta_description: translationPost?.meta_description ?? "",
+        }}
+        fields={translationFields}
+        loadTranslations={loadPostTranslations}
+        onSave={handleSavePostTranslation}
+        onDelete={handleDeletePostTranslation}
+      />
 
     </div>
   );

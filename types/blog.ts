@@ -11,8 +11,21 @@ export interface BlogCategory {
   is_default?: boolean | number | null;
   created_at?: string | null;
   updated_at?: string | null;
+  translations?: BlogCategoryTranslation[];
   [key: string]: unknown;
 }
+
+export interface BlogCategoryTranslation {
+  lang?: string;
+  name?: string;
+  description?: string | null;
+}
+
+export type BlogCategoryTranslationPayload = Partial<{
+  name: string | null;
+  description: string | null;
+}> &
+  Record<string, unknown>;
 
 export type BlogCategoryPayload = Partial<{
   name: string;
@@ -99,8 +112,27 @@ export interface BlogPost {
   updated_at?: string | null;
   meta_title?: string | null;
   meta_description?: string | null;
+  translations?: BlogPostTranslation[];
   [key: string]: unknown;
 }
+
+export interface BlogPostTranslation {
+  lang?: string;
+  title?: string;
+  excerpt?: string | null;
+  content?: string | null;
+  meta_title?: string | null;
+  meta_description?: string | null;
+}
+
+export type BlogPostTranslationPayload = Partial<{
+  title: string | null;
+  excerpt: string | null;
+  content: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
+}> &
+  Record<string, unknown>;
 
 export type BlogPostPayload = Partial<{
   category_id: number;

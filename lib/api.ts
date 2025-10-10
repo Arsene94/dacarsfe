@@ -62,9 +62,13 @@ import type {
     BlogCategory,
     BlogCategoryListParams,
     BlogCategoryPayload,
+    BlogCategoryTranslation,
+    BlogCategoryTranslationPayload,
     BlogPost,
     BlogPostListParams,
     BlogPostPayload,
+    BlogPostTranslation,
+    BlogPostTranslationPayload,
     BlogTag,
     BlogTagListParams,
     BlogTagPayload,
@@ -1356,12 +1360,11 @@ export class ApiClient {
         });
     }
 
-    async getFaqCategoryTranslations(
-        id: number | string,
-    ): Promise<ApiListResult<FaqCategoryTranslation>> {
-        return this.request<ApiListResult<FaqCategoryTranslation>>(
-            `/faq-categories/${id}/translations`,
-        );
+    async getFaqCategoryTranslations(id: number | string): Promise<FaqCategoryTranslation[]> {
+        const response = await this.request<
+            FaqCategoryTranslation[] | ApiListResult<FaqCategoryTranslation>
+        >(`/faq-categories/${id}/translations`);
+        return Array.isArray(response) ? response : extractList<FaqCategoryTranslation>(response);
     }
 
     async upsertFaqCategoryTranslation(
@@ -1486,8 +1489,11 @@ export class ApiClient {
         });
     }
 
-    async getFaqTranslations(id: number | string): Promise<ApiListResult<FaqTranslation>> {
-        return this.request<ApiListResult<FaqTranslation>>(`/faqs/${id}/translations`);
+    async getFaqTranslations(id: number | string): Promise<FaqTranslation[]> {
+        const response = await this.request<FaqTranslation[] | ApiListResult<FaqTranslation>>(
+            `/faqs/${id}/translations`,
+        );
+        return Array.isArray(response) ? response : extractList<FaqTranslation>(response);
     }
 
     async upsertFaqTranslation(
@@ -2212,6 +2218,56 @@ export class ApiClient {
         });
     }
 
+    async getBlogCategoryTranslations(
+        id: number | string,
+    ): Promise<BlogCategoryTranslation[]> {
+        const response = await this.request<
+            BlogCategoryTranslation[] | ApiListResult<BlogCategoryTranslation>
+        >(`/blog-categories/${id}/translations`);
+        return Array.isArray(response)
+            ? response
+            : extractList<BlogCategoryTranslation>(response);
+    }
+
+    async upsertBlogCategoryTranslation(
+        id: number | string,
+        lang: string,
+        payload: BlogCategoryTranslationPayload,
+    ): Promise<ApiItemResult<BlogCategoryTranslation>> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a salva traducerea categoriei.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<BlogCategoryTranslation>>(
+            `/blog-categories/${id}/translations/${encodedLang}`,
+            {
+                method: 'PUT',
+                body: JSON.stringify(body),
+            },
+        );
+    }
+
+    async deleteBlogCategoryTranslation(
+        id: number | string,
+        lang: string,
+    ): Promise<ApiDeleteResponse> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a șterge traducerea categoriei.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        return this.request<ApiDeleteResponse>(
+            `/blog-categories/${id}/translations/${encodedLang}`,
+            {
+                method: 'DELETE',
+            },
+        );
+    }
+
     async getBlogTags(
         params: BlogTagListParams = {},
     ): Promise<ApiListResult<BlogTag>> {
@@ -2378,6 +2434,51 @@ export class ApiClient {
 
     async deleteBlogPost(id: number | string): Promise<ApiDeleteResponse> {
         return this.request<ApiDeleteResponse>(`/blog-posts/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getBlogPostTranslations(id: number | string): Promise<BlogPostTranslation[]> {
+        const response = await this.request<
+            BlogPostTranslation[] | ApiListResult<BlogPostTranslation>
+        >(`/blog-posts/${id}/translations`);
+        return Array.isArray(response)
+            ? response
+            : extractList<BlogPostTranslation>(response);
+    }
+
+    async upsertBlogPostTranslation(
+        id: number | string,
+        lang: string,
+        payload: BlogPostTranslationPayload,
+    ): Promise<ApiItemResult<BlogPostTranslation>> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a salva traducerea articolului.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<BlogPostTranslation>>(
+            `/blog-posts/${id}/translations/${encodedLang}`,
+            {
+                method: 'PUT',
+                body: JSON.stringify(body),
+            },
+        );
+    }
+
+    async deleteBlogPostTranslation(
+        id: number | string,
+        lang: string,
+    ): Promise<ApiDeleteResponse> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a șterge traducerea articolului.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        return this.request<ApiDeleteResponse>(`/blog-posts/${id}/translations/${encodedLang}`, {
             method: 'DELETE',
         });
     }
