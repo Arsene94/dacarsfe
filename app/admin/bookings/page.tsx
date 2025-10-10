@@ -346,9 +346,19 @@ const mergeBookingResourceIntoForm = (
 
 const formatTimeLabel = (iso?: string | null): string | undefined => {
   if (!iso) return undefined;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return undefined;
-  return date.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
+  const trimmed = iso.trim();
+  if (!trimmed) return undefined;
+
+  const normalized = trimmed.replace(" ", "T").replace(/\.\d+/, "");
+  const directMatch = normalized.match(/T(\d{2}):(\d{2})(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?$/);
+  if (directMatch) {
+    const [, hours, minutes] = directMatch;
+    return `${hours}:${minutes}`;
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  return parsed.toISOString().slice(11, 16);
 };
 
 const pickNonEmptyString = (value: unknown): string | undefined => {
@@ -601,16 +611,12 @@ const toLocalDateTimeInput = (value?: string | null): string | null => {
   if (!trimmed) return null;
 
   const normalized = trimmed.replace(" ", "T").replace(/\.\d+/, "");
-  const hasTimezone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(normalized);
-
-  if (!hasTimezone) {
-    const match = normalized.match(
-      /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/,
-    );
-    if (match) {
-      const [, datePart, hours = "00", minutes = "00"] = match;
-      return `${datePart}T${hours}:${minutes}`;
-    }
+  const match = normalized.match(
+    /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::\d{2})?)?(?:Z|[+-]\d{2}:?\d{2})?$/,
+  );
+  if (match) {
+    const [, datePart, hours = "00", minutes = "00"] = match;
+    return `${datePart}T${hours}:${minutes}`;
   }
 
   const parsed = new Date(normalized);
@@ -618,9 +624,12 @@ const toLocalDateTimeInput = (value?: string | null): string | null => {
     return null;
   }
 
-  const tzOffset = parsed.getTimezoneOffset();
-  const local = new Date(parsed.getTime() - tzOffset * 60000);
-  return local.toISOString().slice(0, 16);
+  const hours = parsed.getUTCHours().toString().padStart(2, "0");
+  const minutes = parsed.getUTCMinutes().toString().padStart(2, "0");
+  const datePart = `${parsed.getUTCFullYear()}-${(parsed.getUTCMonth() + 1)
+    .toString()
+    .padStart(2, "0")}-${parsed.getUTCDate().toString().padStart(2, "0")}`;
+  return `${datePart}T${hours}:${minutes}`;
 };
 
 const normalizeBoolean = (value: unknown, defaultValue = false) => {
