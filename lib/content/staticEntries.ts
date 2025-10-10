@@ -213,11 +213,6 @@ export const STATIC_PAGES = [
         priority: 0.7,
     },
     {
-        path: "/otopeni-rent-a-car-rapid",
-        changeFrequency: "weekly" as const,
-        priority: 0.8,
-    },
-    {
         path: "/termeni-si-conditii",
         changeFrequency: "yearly" as const,
         priority: 0.4,
