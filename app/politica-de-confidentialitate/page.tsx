@@ -1,9 +1,14 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { Metadata } from "next";
 
 import TermsContent from "@/app/termeni-si-conditii/TermsContent";
 import TermsContentStyles from "@/app/termeni-si-conditii/TermsContentStyles";
+import privacyDe from "@/docs/privacy/policy-de.html?raw";
+import privacyEn from "@/docs/privacy/policy-en.html?raw";
+import privacyEs from "@/docs/privacy/policy-es.html?raw";
+import privacyFr from "@/docs/privacy/policy-fr.html?raw";
+import privacyIt from "@/docs/privacy/policy-it.html?raw";
+import privacyRo from "@/docs/privacy/policy-ro.html?raw";
+import { createLegalHtmlByLocale } from "@/lib/content/legal";
 import { buildMetadata } from "@/lib/seo/meta";
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale";
@@ -53,29 +58,18 @@ const PRIVACY_COPY: Record<Locale, PrivacyCopy> = {
     },
 };
 
-const PRIVACY_DIRECTORY = join(process.cwd(), "docs/privacy");
+const PRIVACY_HTML = {
+    de: privacyDe,
+    en: privacyEn,
+    es: privacyEs,
+    fr: privacyFr,
+    it: privacyIt,
+    ro: privacyRo,
+} as const satisfies Partial<Record<Locale, string>>;
 
-const loadPrivacyHtml = (locale: Locale): string => {
-    try {
-        return readFileSync(join(PRIVACY_DIRECTORY, `policy-${locale}.html`), "utf8");
-    } catch (error) {
-        console.warn(`Nu am putut încărca politica de confidențialitate pentru limba ${locale}`, error);
-        return "";
-    }
-};
-
-const DEFAULT_PRIVACY_HTML = loadPrivacyHtml(DEFAULT_LOCALE);
-
-const PRIVACY_BY_LOCALE: Record<Locale, string> = AVAILABLE_LOCALES.reduce((acc, locale) => {
-    if (locale === DEFAULT_LOCALE) {
-        acc[locale] = DEFAULT_PRIVACY_HTML;
-        return acc;
-    }
-
-    const content = loadPrivacyHtml(locale);
-    acc[locale] = content || DEFAULT_PRIVACY_HTML;
-    return acc;
-}, {} as Record<Locale, string>);
+const PRIVACY_BY_LOCALE: Record<Locale, string> = createLegalHtmlByLocale(PRIVACY_HTML, {
+    defaultLocale: DEFAULT_LOCALE,
+});
 
 const FALLBACK_LOCALE: Locale = getFallbackLocale();
 

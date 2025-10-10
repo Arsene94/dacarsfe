@@ -1,9 +1,14 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { Metadata } from "next";
 
 import TermsContent from "@/app/termeni-si-conditii/TermsContent";
 import TermsContentStyles from "@/app/termeni-si-conditii/TermsContentStyles";
+import cookiesDe from "@/docs/cookies/policy-de.html?raw";
+import cookiesEn from "@/docs/cookies/policy-en.html?raw";
+import cookiesEs from "@/docs/cookies/policy-es.html?raw";
+import cookiesFr from "@/docs/cookies/policy-fr.html?raw";
+import cookiesIt from "@/docs/cookies/policy-it.html?raw";
+import cookiesRo from "@/docs/cookies/policy-ro.html?raw";
+import { createLegalHtmlByLocale } from "@/lib/content/legal";
 import { buildMetadata } from "@/lib/seo/meta";
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale";
@@ -47,29 +52,18 @@ const COOKIE_COPY: Record<Locale, { heading: string; metaTitle: string; metaDesc
     },
 };
 
-const COOKIES_DIRECTORY = join(process.cwd(), "docs/cookies");
+const COOKIE_HTML = {
+    de: cookiesDe,
+    en: cookiesEn,
+    es: cookiesEs,
+    fr: cookiesFr,
+    it: cookiesIt,
+    ro: cookiesRo,
+} as const satisfies Partial<Record<Locale, string>>;
 
-const loadCookieHtml = (locale: Locale): string => {
-    try {
-        return readFileSync(join(COOKIES_DIRECTORY, `policy-${locale}.html`), "utf8");
-    } catch (error) {
-        console.warn(`Nu am putut încărca politica de cookies pentru limba ${locale}`, error);
-        return "";
-    }
-};
-
-const DEFAULT_COOKIE_HTML = loadCookieHtml(DEFAULT_LOCALE);
-
-const COOKIES_BY_LOCALE: Record<Locale, string> = AVAILABLE_LOCALES.reduce((acc, locale) => {
-    if (locale === DEFAULT_LOCALE) {
-        acc[locale] = DEFAULT_COOKIE_HTML;
-        return acc;
-    }
-
-    const content = loadCookieHtml(locale);
-    acc[locale] = content || DEFAULT_COOKIE_HTML;
-    return acc;
-}, {} as Record<Locale, string>);
+const COOKIES_BY_LOCALE: Record<Locale, string> = createLegalHtmlByLocale(COOKIE_HTML, {
+    defaultLocale: DEFAULT_LOCALE,
+});
 
 const FALLBACK_LOCALE: Locale = getFallbackLocale();
 

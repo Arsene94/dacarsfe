@@ -1,9 +1,14 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { Metadata } from "next";
 
 import TermsContent from "./TermsContent";
 import TermsContentStyles from "./TermsContentStyles";
+import termsDe from "@/docs/terms/terms-de.html?raw";
+import termsEn from "@/docs/terms/terms-en.html?raw";
+import termsEs from "@/docs/terms/terms-es.html?raw";
+import termsFr from "@/docs/terms/terms-fr.html?raw";
+import termsIt from "@/docs/terms/terms-it.html?raw";
+import termsRo from "@/docs/terms/terms-ro.html?raw";
+import { createLegalHtmlByLocale } from "@/lib/content/legal";
 import { buildMetadata } from "@/lib/seo/meta";
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale";
@@ -53,29 +58,18 @@ const TERMS_COPY: Record<Locale, TermsCopy> = {
     },
 };
 
-const TERMS_DIRECTORY = join(process.cwd(), "docs/terms");
+const TERMS_HTML = {
+    de: termsDe,
+    en: termsEn,
+    es: termsEs,
+    fr: termsFr,
+    it: termsIt,
+    ro: termsRo,
+} as const satisfies Partial<Record<Locale, string>>;
 
-const loadTermsHtml = (locale: Locale): string => {
-    try {
-        return readFileSync(join(TERMS_DIRECTORY, `terms-${locale}.html`), "utf8");
-    } catch (error) {
-        console.warn(`Nu am putut încărca termenii pentru limba ${locale}`, error);
-        return "";
-    }
-};
-
-const DEFAULT_TERMS_HTML = loadTermsHtml(DEFAULT_LOCALE);
-
-const TERMS_BY_LOCALE: Record<Locale, string> = AVAILABLE_LOCALES.reduce((acc, locale) => {
-    if (locale === DEFAULT_LOCALE) {
-        acc[locale] = DEFAULT_TERMS_HTML;
-        return acc;
-    }
-
-    const content = loadTermsHtml(locale);
-    acc[locale] = content || DEFAULT_TERMS_HTML;
-    return acc;
-}, {} as Record<Locale, string>);
+const TERMS_BY_LOCALE: Record<Locale, string> = createLegalHtmlByLocale(TERMS_HTML, {
+    defaultLocale: DEFAULT_LOCALE,
+});
 
 const FALLBACK_LOCALE: Locale = getFallbackLocale();
 
