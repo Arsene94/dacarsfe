@@ -39,12 +39,23 @@ type CategoryOption = {
     order: number;
 };
 
+type NormalizedFaqRecord = {
+    id: number;
+    question: string;
+    status: FaqStatus;
+    categoryId: number;
+    categoryName: string;
+    createdAt: string | null;
+    updatedAt: string | null;
+};
+
 type NormalizedCategory = {
     id: number;
     name: string;
     description: string;
     status: FaqStatus;
     order: number | null;
+    faqs: NormalizedFaqRecord[];
     faqCount: number;
     createdAt: string | null;
     updatedAt: string | null;
@@ -136,6 +147,7 @@ const extractPlainText = (value: string): string =>
 
 const AdminFaqPage = () => {
     const [categoryRecords, setCategoryRecords] = useState<NormalizedCategory[]>([]);
+    const [faqRecords, setFaqRecords] = useState<NormalizedFaqRecord[]>([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
     const [categoryError, setCategoryError] = useState<string | null>(null);
     const [categoryManagementError, setCategoryManagementError] = useState<string | null>(null);
@@ -155,6 +167,15 @@ const AdminFaqPage = () => {
     const [formError, setFormError] = useState<string | null>(null);
     const [formSuccess, setFormSuccess] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+
+    const dateFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat("ro-RO", {
+                dateStyle: "medium",
+                timeStyle: "short",
+            }),
+        [],
+    );
 
     const categoryOptions = useMemo(() => {
         return categoryRecords.map((category) => ({
@@ -235,7 +256,51 @@ const AdminFaqPage = () => {
                                 ? category.description.trim()
                                 : "";
                         const orderValue = normalizeOrder(category.order);
-                        const faqCount = Array.isArray(category.faqs) ? category.faqs.length : 0;
+                        const normalizedFaqs = Array.isArray(category.faqs)
+                            ? category.faqs
+                                  .map((faq): NormalizedFaqRecord | null => {
+                                      if (!faq) {
+                                          return null;
+                                      }
+
+                                      const faqId =
+                                          typeof faq.id === "number" && Number.isFinite(faq.id)
+                                              ? faq.id
+                                              : Number(faq.id);
+
+                                      if (!Number.isFinite(faqId)) {
+                                          return null;
+                                      }
+
+                                      const question =
+                                          typeof faq.question === "string" ? faq.question.trim() : "";
+
+                                      if (question.length === 0) {
+                                          return null;
+                                      }
+
+                                      const faqStatus = isFaqStatus(faq.status) ? faq.status : "pending";
+                                      const createdAt =
+                                          typeof faq.created_at === "string" ? faq.created_at : null;
+                                      const updatedAt =
+                                          typeof faq.updated_at === "string"
+                                              ? faq.updated_at
+                                              : createdAt;
+
+                                      return {
+                                          id: Number(faqId),
+                                          question,
+                                          status: faqStatus,
+                                          categoryId: Number(idValue),
+                                          categoryName: name,
+                                          createdAt,
+                                          updatedAt,
+                                      } satisfies NormalizedFaqRecord;
+                                  })
+                                  .filter((item): item is NormalizedFaqRecord => item !== null)
+                                  .sort((a, b) => a.question.localeCompare(b.question, "ro"))
+                            : [];
+                        const faqCount = normalizedFaqs.length;
                         const createdAt =
                             typeof category.created_at === "string" ? category.created_at : null;
                         const updatedAt =
@@ -247,6 +312,7 @@ const AdminFaqPage = () => {
                             description,
                             status,
                             order: orderValue,
+                            faqs: normalizedFaqs,
                             faqCount,
                             createdAt,
                             updatedAt,
@@ -270,6 +336,32 @@ const AdminFaqPage = () => {
                     });
 
                 setCategoryRecords(mapped);
+
+                const flattenedFaqs = mapped
+                    .flatMap((category) => category.faqs)
+                    .sort((a, b) => {
+                        if (a.updatedAt && b.updatedAt) {
+                            const aTime = Date.parse(a.updatedAt);
+                            const bTime = Date.parse(b.updatedAt);
+
+                            if (!Number.isNaN(aTime) && !Number.isNaN(bTime) && aTime !== bTime) {
+                                return bTime - aTime;
+                            }
+                        }
+
+                        if (a.createdAt && b.createdAt) {
+                            const aTime = Date.parse(a.createdAt);
+                            const bTime = Date.parse(b.createdAt);
+
+                            if (!Number.isNaN(aTime) && !Number.isNaN(bTime) && aTime !== bTime) {
+                                return bTime - aTime;
+                            }
+                        }
+
+                        return a.question.localeCompare(b.question, "ro");
+                    });
+
+                setFaqRecords(flattenedFaqs);
 
                 setFormState((previous) => {
                     const desiredCategoryId = preferredCategoryId ?? previous.categoryId;
@@ -316,6 +408,7 @@ const AdminFaqPage = () => {
             } catch (error) {
                 console.error("Nu am putut încărca categoriile FAQ", error);
                 setCategoryRecords([]);
+                setFaqRecords([]);
                 const message = "Nu am putut încărca categoriile. Încearcă din nou.";
                 setCategoryError(message);
                 setCategoryManagementError(message);
@@ -347,6 +440,27 @@ const AdminFaqPage = () => {
             updateFormField("answer", typeof data === "string" ? data : String(data));
         },
         [updateFormField],
+    );
+
+    const formatTimestamp = useCallback(
+        (value: string | null) => {
+            if (!value) {
+                return "–";
+            }
+
+            const parsed = Date.parse(value);
+            if (Number.isNaN(parsed)) {
+                return value;
+            }
+
+            try {
+                return dateFormatter.format(new Date(parsed));
+            } catch (error) {
+                console.error("Nu am putut formata data FAQ", error);
+                return value;
+            }
+        },
+        [dateFormatter],
     );
 
     const handleEditCategory = (category: NormalizedCategory) => {
@@ -536,6 +650,7 @@ const AdminFaqPage = () => {
 
         try {
             await apiClient.createFaq(payload);
+            await loadCategories(categoryId.toString());
             setFormSuccess("FAQ-ul a fost adăugat cu succes.");
             setFormState((previous) => ({
                 ...previous,
@@ -879,6 +994,66 @@ const AdminFaqPage = () => {
                     </form>
                 </section>
             </div>
+
+            <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 className="text-xl font-semibold text-gray-900">Întrebări existente</h2>
+                        <p className="text-sm text-gray-600">
+                            Revizuiește toate întrebările adăugate și statusul lor de publicare. Lista se
+                            actualizează automat după modificări.
+                        </p>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                        Total întrebări: {faqRecords.length}
+                    </span>
+                </div>
+
+                <div className="overflow-hidden rounded-lg border border-gray-200">
+                    {loadingCategories ? (
+                        <div className="p-4 text-sm text-gray-500">Se încarcă întrebările...</div>
+                    ) : faqRecords.length === 0 ? (
+                        <div className="p-4 text-sm text-gray-500">
+                            Nu există încă întrebări salvate. Adaugă un FAQ folosind formularul din dreapta.
+                        </div>
+                    ) : (
+                        <table className="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                                        Întrebare
+                                    </th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                                        Categorie
+                                    </th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                                        Status
+                                    </th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                                        Ultima actualizare
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {faqRecords.map((faq) => (
+                                    <tr key={faq.id} className="hover:bg-gray-50">
+                                        <td className="px-4 py-3 font-medium text-gray-900 break-words">
+                                            {faq.question}
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-600">{faq.categoryName}</td>
+                                        <td className="px-4 py-3 text-gray-600">
+                                            {statusLabels[faq.status]}
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-600">
+                                            {formatTimestamp(faq.updatedAt ?? faq.createdAt)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            </section>
         </div>
     );
 };

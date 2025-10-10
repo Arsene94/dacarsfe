@@ -10,6 +10,15 @@ import type { Faq, FaqCategory } from "@/types/faq";
 
 type FaqEntry = { question: string; answer: string };
 
+const extractPlainText = (value: string): string =>
+    value
+        .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, " ")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/&nbsp;|&#160;/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
 type FaqSeoCopy = {
     pageTitle: string;
     pageDescription: string;
@@ -564,7 +573,12 @@ const FaqPage = async () => {
                   })),
               )
             : copy.items;
-    const faqJsonLd = buildFaqJsonLd(faqItems);
+    const faqJsonLd = buildFaqJsonLd(
+        faqItems.map((item) => ({
+            question: item.question,
+            answer: extractPlainText(item.answer) || item.answer,
+        })),
+    );
 
     return (
         <main className="mx-auto max-w-4xl px-6 py-16">
@@ -600,7 +614,10 @@ const FaqPage = async () => {
                                         </span>
                                     </summary>
                                     <div className="mt-3 text-base text-gray-700">
-                                        <p>{item.answer}</p>
+                                        <div
+                                            className="faq-answer-content"
+                                            dangerouslySetInnerHTML={{ __html: item.answer }}
+                                        />
                                     </div>
                                 </details>
                             ))}
