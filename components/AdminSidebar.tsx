@@ -23,6 +23,7 @@ import {
   Menu,
   X,
   ConciergeBell,
+  HelpCircle,
   Mail,
   ScrollText,
   Receipt,
@@ -599,6 +600,16 @@ const menuItems: readonly AdminSidebarItem[] = [
     href: "/admin/mail-branding",
     icon: Mail,
     requiredPermissions: buildPermissionList("mail-branding", ["mailbranding", "mail"]),
+  },
+  {
+    name: "FAQ",
+    href: "/admin/faqs",
+    icon: HelpCircle,
+    requiredPermissions: buildPermissionList("faqs", [
+      "faq",
+      "faqs",
+      "knowledge-base",
+    ]),
   },
   {
     name: "Traduceri site",

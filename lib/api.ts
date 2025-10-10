@@ -78,6 +78,18 @@ import type {
 } from "@/types/coupon";
 import type { Expense, ExpenseListParams, ExpensePayload } from "@/types/expense";
 import type {
+    Faq,
+    FaqCategory,
+    FaqCategoryListParams,
+    FaqCategoryPayload,
+    FaqCategoryTranslation,
+    FaqCategoryTranslationPayload,
+    FaqListParams,
+    FaqPayload,
+    FaqTranslation,
+    FaqTranslationPayload,
+} from "@/types/faq";
+import type {
     MailBrandingResponse,
     MailBrandingUpdatePayload,
     MailTemplateAttachmentsResponse,
@@ -173,7 +185,7 @@ type RolePayload = {
     permissions?: string[];
 } & Record<string, unknown>;
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export const FORBIDDEN_EVENT = "dacars:api:forbidden";
 const FORBIDDEN_MESSAGE = "Forbidden";
@@ -1255,6 +1267,255 @@ export class ApiClient {
     async deleteServiceTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
         const language = encodeURIComponent(lang.trim());
         return this.request<ApiDeleteResponse>(`/services/${id}/translations/${language}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getFaqCategories(
+        params: (FaqCategoryListParams & { language?: string }) = {},
+    ): Promise<ApiListResult<FaqCategory>> {
+        const { language, include, ...filters } = params;
+        const searchParams = new URLSearchParams();
+
+        if (typeof filters.page === 'number' && Number.isFinite(filters.page)) {
+            searchParams.append('page', filters.page.toString());
+        }
+
+        const perPageCandidate =
+            typeof filters.perPage === 'number' && Number.isFinite(filters.perPage)
+                ? filters.perPage
+                : typeof filters.per_page === 'number' && Number.isFinite(filters.per_page)
+                    ? filters.per_page
+                    : undefined;
+
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+
+        if (typeof filters.limit === 'number' && Number.isFinite(filters.limit)) {
+            searchParams.append('limit', filters.limit.toString());
+        }
+
+        if (typeof filters.status === 'string' && filters.status.trim().length > 0) {
+            searchParams.append('status', filters.status.trim());
+        }
+
+        if (typeof filters.order === 'string' && filters.order.trim().length > 0) {
+            searchParams.append('order', filters.order.trim());
+        }
+
+        if (typeof filters.name_like === 'string' && filters.name_like.trim().length > 0) {
+            searchParams.append('name_like', filters.name_like.trim());
+        }
+
+        const includeParam = resolveIncludeParam(include);
+        if (includeParam) {
+            searchParams.append('include', includeParam);
+        }
+
+        const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/faq-categories`, this.resolveLanguage(language));
+        return this.request<ApiListResult<FaqCategory>>(
+            query.length > 0 ? `${basePath}?${query}` : basePath,
+        );
+    }
+
+    async getFaqCategory(
+        id: number | string,
+        params: { include?: string | readonly string[]; language?: string } = {},
+    ): Promise<ApiItemResult<FaqCategory>> {
+        const { include, language } = params;
+        const includeParam = resolveIncludeParam(include);
+        const suffix = includeParam ? `?include=${includeParam}` : '';
+        const basePath = appendOptionalLanguage(`/faq-categories/${id}`, this.resolveLanguage(language));
+        return this.request<ApiItemResult<FaqCategory>>(`${basePath}${suffix}`);
+    }
+
+    async createFaqCategory(payload: FaqCategoryPayload): Promise<ApiItemResult<FaqCategory>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<FaqCategory>>(`/faq-categories`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateFaqCategory(
+        id: number | string,
+        payload: FaqCategoryPayload,
+    ): Promise<ApiItemResult<FaqCategory>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<FaqCategory>>(`/faq-categories/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteFaqCategory(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/faq-categories/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getFaqCategoryTranslations(
+        id: number | string,
+    ): Promise<ApiListResult<FaqCategoryTranslation>> {
+        return this.request<ApiListResult<FaqCategoryTranslation>>(
+            `/faq-categories/${id}/translations`,
+        );
+    }
+
+    async upsertFaqCategoryTranslation(
+        id: number | string,
+        lang: string,
+        payload: FaqCategoryTranslationPayload,
+    ): Promise<ApiItemResult<FaqCategoryTranslation>> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a salva traducerea categoriei.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<FaqCategoryTranslation>>(
+            `/faq-categories/${id}/translations/${encodedLang}`,
+            {
+                method: 'PUT',
+                body: JSON.stringify(body),
+            },
+        );
+    }
+
+    async deleteFaqCategoryTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a șterge traducerea categoriei.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        return this.request<ApiDeleteResponse>(`/faq-categories/${id}/translations/${encodedLang}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getFaqs(
+        params: (FaqListParams & { language?: string }) = {},
+    ): Promise<ApiListResult<Faq>> {
+        const { language, include, ...filters } = params;
+        const searchParams = new URLSearchParams();
+
+        if (typeof filters.page === 'number' && Number.isFinite(filters.page)) {
+            searchParams.append('page', filters.page.toString());
+        }
+
+        const perPageCandidate =
+            typeof filters.perPage === 'number' && Number.isFinite(filters.perPage)
+                ? filters.perPage
+                : typeof filters.per_page === 'number' && Number.isFinite(filters.per_page)
+                    ? filters.per_page
+                    : undefined;
+
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+
+        if (typeof filters.limit === 'number' && Number.isFinite(filters.limit)) {
+            searchParams.append('limit', filters.limit.toString());
+        }
+
+        if (typeof filters.status === 'string' && filters.status.trim().length > 0) {
+            searchParams.append('status', filters.status.trim());
+        }
+
+        if (typeof filters.category_id !== 'undefined' && filters.category_id !== null) {
+            const categoryId =
+                typeof filters.category_id === 'number' && Number.isFinite(filters.category_id)
+                    ? filters.category_id
+                    : Number(filters.category_id);
+
+            if (Number.isFinite(categoryId)) {
+                searchParams.append('category_id', categoryId.toString());
+            }
+        }
+
+        if (typeof filters.question_like === 'string' && filters.question_like.trim().length > 0) {
+            searchParams.append('question_like', filters.question_like.trim());
+        }
+
+        const includeParam = resolveIncludeParam(include);
+        if (includeParam) {
+            searchParams.append('include', includeParam);
+        }
+
+        const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/faqs`, this.resolveLanguage(language));
+        return this.request<ApiListResult<Faq>>(
+            query.length > 0 ? `${basePath}?${query}` : basePath,
+        );
+    }
+
+    async getFaq(
+        id: number | string,
+        params: { include?: string | readonly string[]; language?: string } = {},
+    ): Promise<ApiItemResult<Faq>> {
+        const { include, language } = params;
+        const includeParam = resolveIncludeParam(include);
+        const suffix = includeParam ? `?include=${includeParam}` : '';
+        const basePath = appendOptionalLanguage(`/faqs/${id}`, this.resolveLanguage(language));
+        return this.request<ApiItemResult<Faq>>(`${basePath}${suffix}`);
+    }
+
+    async createFaq(payload: FaqPayload): Promise<ApiItemResult<Faq>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<Faq>>(`/faqs`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateFaq(id: number | string, payload: FaqPayload): Promise<ApiItemResult<Faq>> {
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<Faq>>(`/faqs/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteFaq(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/faqs/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getFaqTranslations(id: number | string): Promise<ApiListResult<FaqTranslation>> {
+        return this.request<ApiListResult<FaqTranslation>>(`/faqs/${id}/translations`);
+    }
+
+    async upsertFaqTranslation(
+        id: number | string,
+        lang: string,
+        payload: FaqTranslationPayload,
+    ): Promise<ApiItemResult<FaqTranslation>> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a salva traducerea FAQ.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        const body = sanitizePayload(payload);
+        return this.request<ApiItemResult<FaqTranslation>>(`/faqs/${id}/translations/${encodedLang}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteFaqTranslation(id: number | string, lang: string): Promise<ApiDeleteResponse> {
+        const normalizedLang = typeof lang === 'string' ? lang.trim() : '';
+        if (!normalizedLang) {
+            throw new Error('Codul de limbă este necesar pentru a șterge traducerea FAQ.');
+        }
+
+        const encodedLang = encodeURIComponent(normalizedLang);
+        return this.request<ApiDeleteResponse>(`/faqs/${id}/translations/${encodedLang}`, {
             method: 'DELETE',
         });
     }
@@ -3077,5 +3338,6 @@ export class ApiClient {
 
 }
 
+export const createApiClient = (baseURL: string = API_BASE_URL): ApiClient => new ApiClient(baseURL);
 export const apiClient = new ApiClient(API_BASE_URL);
 export default apiClient;
