@@ -3,6 +3,8 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import HeroSectionClient from '@/components/HeroSectionClient';
+import { buildHeroSectionProps } from '@/components/HeroSection';
 import HomePageClient from '@/components/home/HomePageClient';
 import CarsPageClient from '@/components/cars/CarsPageClient';
 import ReservationPage from '@/app/checkout/page';
@@ -125,6 +127,8 @@ const {
 } = wheelStorageMocks;
 
 vi.mock('@/lib/wheelStorage', () => wheelStorageMocks.module);
+
+const heroProps = buildHeroSectionProps('ro');
 
 const renderWithProviders = (
   ui: React.ReactElement,
@@ -283,9 +287,15 @@ describe('Fluxul complet al clienților DaCars', () => {
     };
 
     const user = userEvent.setup();
-    const { setBookingSpy } = renderWithProviders(<HomePageClient />, {
-      booking: initialBooking,
-    });
+    const { setBookingSpy } = renderWithProviders(
+      <>
+        <HeroSectionClient {...heroProps} />
+        <HomePageClient />
+      </>,
+      {
+        booking: initialBooking,
+      },
+    );
 
     await waitFor(() => expect(apiClientMock.setLanguage).toHaveBeenCalledWith('ro'));
     await waitFor(() => expect(apiClientMock.getHomePageCars).toHaveBeenCalled());

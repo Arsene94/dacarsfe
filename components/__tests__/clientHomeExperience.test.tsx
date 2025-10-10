@@ -3,7 +3,8 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import HeroSection from '@/components/HeroSection';
+import HeroSectionClient from '@/components/HeroSectionClient';
+import { buildHeroSectionProps } from '@/components/HeroSection';
 import FleetSection from '@/components/FleetSection';
 import ContactSection from '@/components/ContactSection';
 import HomePageClient from '@/components/home/HomePageClient';
@@ -92,6 +93,8 @@ const baseCar: ApiCar = {
   avg_review: 4.7,
   content: 'Autovehicul pentru testare',
 };
+
+const heroProps = buildHeroSectionProps('ro');
 
 type RenderOptions = {
   booking?: Partial<BookingData>;
@@ -197,7 +200,7 @@ afterEach(() => {
 describe('HeroSection', () => {
   it('afișează câmpurile formularului și lansează căutarea cu valorile selectate', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<HeroSection />);
+    renderWithProviders(<HeroSectionClient {...heroProps} />);
 
     await waitForCarCategories();
 
@@ -225,7 +228,7 @@ describe('HeroSection', () => {
   it('sincronizează intervalul selectat în BookingContext', async () => {
     const user = userEvent.setup();
     const setBooking = vi.fn();
-    renderWithProviders(<HeroSection />, { setBooking });
+    renderWithProviders(<HeroSectionClient {...heroProps} />, { setBooking });
 
     await waitForCarCategories();
 

@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ReservationPage from '@/app/checkout/page';
-import HeroSection from '@/components/HeroSection';
+import HeroSectionClient from '@/components/HeroSectionClient';
+import { buildHeroSectionProps } from '@/components/HeroSection';
 import CarsPageClient from '@/components/cars/CarsPageClient';
 import { BookingContext, defaultBooking } from '@/context/booking-store';
 import { LocaleProvider } from '@/context/LocaleContext';
@@ -74,6 +75,7 @@ vi.mock('@/lib/wheelStorage', () => {
 
 const apiClientMock = (globalThis as { __apiClientMock: ApiClientMock }).__apiClientMock;
 const wheelStorageMock = (globalThis as { __wheelStorageMock: WheelStorageMock }).__wheelStorageMock;
+const heroProps = buildHeroSectionProps('ro');
 
 const mockApiCar: ApiCar = {
   id: 101,
@@ -201,7 +203,7 @@ describe('Fluxul de închiriere pentru clienți', () => {
   it('permite completarea formularului principal și navigarea spre lista de mașini', async () => {
     const user = userEvent.setup();
     const setBooking = vi.fn();
-    renderWithProviders(<HeroSection />, { setBooking });
+    renderWithProviders(<HeroSectionClient {...heroProps} />, { setBooking });
 
     await waitFor(() => expect(apiClientMock.getCarCategories).toHaveBeenCalled());
 

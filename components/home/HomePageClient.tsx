@@ -13,7 +13,6 @@ import dynamic from "next/dynamic";
 import BenefitsSection from "@/components/BenefitsSection";
 import ContactSection from "@/components/ContactSection";
 import FleetSection from "@/components/FleetSection";
-import HeroSection from "@/components/HeroSection";
 import OffersSection from "@/components/OffersSection";
 import ProcessSection from "@/components/ProcessSection";
 import apiClient from "@/lib/api";
@@ -443,8 +442,7 @@ const HomePageClient = () => {
     };
 
     return (
-        <div className="pt-16 lg:pt-20">
-            <HeroSection />
+        <div>
             <LazyVisibleSection intrinsicSize="960px">
                 <FleetSection />
             </LazyVisibleSection>

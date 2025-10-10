@@ -1,5 +1,5 @@
 import { cookies, headers } from "next/headers";
-import { cache } from "react";
+import * as React from "react";
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { isLocale } from "@/lib/i18n/utils";
 
@@ -93,7 +93,24 @@ const resolveRequestLocaleUncached = async (): Promise<Locale> => {
     return AVAILABLE_LOCALES[0];
 };
 
-export const resolveRequestLocale = cache(resolveRequestLocaleUncached);
+const createCache = <TArgs extends unknown[], TResult>(
+    fn: (...args: TArgs) => Promise<TResult>,
+) => {
+    if (typeof React.cache === "function") {
+        return React.cache(fn);
+    }
+
+    let cachedPromise: Promise<TResult> | null = null;
+
+    return (...args: TArgs) => {
+        if (!cachedPromise) {
+            cachedPromise = fn(...args);
+        }
+        return cachedPromise;
+    };
+};
+
+export const resolveRequestLocale = createCache(resolveRequestLocaleUncached);
 
 export const isSupportedLocale = (value: string): value is Locale => {
     return normalizeLocaleCandidate(value) != null;

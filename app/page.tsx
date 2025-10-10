@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import HeroSection from "@/components/HeroSection";
 import HomePageClient from "@/components/home/HomePageClient";
 import StructuredData from "@/components/StructuredData";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
@@ -81,7 +82,10 @@ const HomePage = () => {
     return (
         <>
             <StructuredData data={structuredData} id="home-structured-data" />
-            <HomePageClient />
+            <main className="pt-16 lg:pt-20">
+                <HeroSection />
+                <HomePageClient />
+            </main>
         </>
     );
 };

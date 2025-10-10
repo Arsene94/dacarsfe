@@ -1,143 +1,213 @@
-"use client";
+import HeroSectionClient, {
+    type HeroSectionClientProps,
+    type HeroSectionFeature,
+} from "./HeroSectionClient";
+import { resolveRequestLocale } from "@/lib/i18n/server";
+import { getPageMessages } from "@/lib/i18n/translations";
+import type { Locale } from "@/lib/i18n/config";
+import type { LocationOption } from "./HeroBookingForm";
 
-import Image from "next/image";
-import dynamic from "next/dynamic";
-import { Clock, Shield, Star } from "lucide-react";
-import { useTranslations } from "@/lib/i18n/useTranslations";
-import type { HeroBookingFormProps, LocationOption } from "./HeroBookingForm";
+type HeroMessages = {
+    badge?: unknown;
+    title?: unknown;
+    subtitle?: unknown;
+    features?: unknown;
+    form?: unknown;
+};
 
-import heroBackground from "@/public/images/bg-hero-1920x1080.webp";
+type HeroSubtitle = {
+    lead?: unknown;
+    highlight?: unknown;
+};
 
-const HeroBookingFormSkeleton = () => (
-    <div
-        role="status"
-        aria-live="polite"
-        className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5"
-    >
-        {[...Array(5)].map((_, index) => (
-            <div key={`hero-form-skeleton-${index}`} className="space-y-2">
-                <div className="h-4 w-28 rounded bg-white/30" />
-                <div className="h-12 rounded-md bg-white/20" />
-            </div>
-        ))}
-    </div>
-);
+type HeroFormMessages = {
+    labels?: unknown;
+    placeholders?: unknown;
+    options?: unknown;
+    submit?: unknown;
+    aria?: unknown;
+};
 
-const HeroBookingForm = dynamic<HeroBookingFormProps>(
-    () => import("./HeroBookingForm"),
-    {
-        loading: () => <HeroBookingFormSkeleton />,
-    },
-);
+type HeroFormOptions = {
+    locations?: unknown;
+};
 
-const HeroSection = () => {
-    const { messages, t, locale } = useTranslations("home");
-    const heroMessages = (messages.hero ?? {}) as Record<string, unknown>;
-    const heroForm = (heroMessages.form ?? {}) as Record<string, unknown>;
-    const heroFormLabels = (heroForm.labels ?? {}) as Record<string, string>;
-    const heroFormPlaceholders = (heroForm.placeholders ?? {}) as Record<string, string>;
-    const heroOptions = (heroForm.options ?? {}) as Record<string, unknown>;
-    const heroLocations = Array.isArray(heroOptions.locations)
-        ? (heroOptions.locations as LocationOption[])
-        : [];
-    const resolvedLocations = heroLocations.length > 0
-        ? heroLocations
-        : [{ value: "otopeni", label: "Aeroport Otopeni" }];
-    const heroFeatures = Array.isArray(heroMessages.features)
-        ? (heroMessages.features as Array<{ title?: string; description?: string }>)
-        : [];
-    const heroAria =
-        heroForm.aria && typeof heroForm.aria === "object"
-            ? (heroForm.aria as Record<string, string>)
-            : undefined;
-    const heroSubmitLabel =
-        typeof heroForm.submit === "string" ? heroForm.submit : "Caută mașini";
+const DEFAULT_BADGE = "Te ținem aproape de casă";
+const DEFAULT_TITLE = "Închiriere auto București - Otopeni";
+const DEFAULT_SUBTITLE_LEAD = "Predare în aeroport în sub 5 minute.";
+const DEFAULT_SUBTITLE_HIGHLIGHT = "Fără taxe ascunse.";
+const DEFAULT_SUBMIT_LABEL = "Caută mașini";
 
-    return (
-        <section className="relative bg-berkeley text-white overflow-hidden">
-            {/* Background Image */}
-            <div className="absolute inset-0">
-                <div className="relative h-full w-full">
-                    <Image
-                        src={heroBackground}
-                        alt="Fundal aeroport"
-                        fill
-                        priority
-                        loading="eager"
-                        fetchPriority="high"
-                        placeholder="blur"
-                        sizes="(max-width: 639px) 100vw, (max-width: 1279px) 100vw, 100vw"
-                        quality={55}
-                        className="object-cover"
-                    />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-r from-berkeley/90 to-berkeley/70 z-10"></div>
-            </div>
+const DEFAULT_FEATURES: HeroSectionFeature[] = [
+    { title: "Sub 5 min", description: "Predare rapidă" },
+    { title: "Fără taxe", description: "Preț transparent" },
+    { title: "24/7", description: "Disponibil non-stop" },
+];
 
-            {/* Content */}
-            <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:pt-32">
-                <div className="grid lg:grid-cols-1 gap-12 items-center">
-                    <div className="animate-slide-in-left">
-                        <div className="inline-flex items-center px-4 py-2 bg-jade/40 rounded-full mb-6">
-                            <Star className="h-4 w-4 text-white mr-2" />
-                            <span className="text-white font-dm-sans font-medium">
-                                {t("hero.badge", { fallback: "Te ținem aproape de casă" })}
-                            </span>
-                        </div>
+const DEFAULT_FORM_LABELS: Record<string, string> = {
+    pickup: "Data ridicare",
+    return: "Data returnare",
+    location: "Locația",
+    carType: "Tip mașină",
+};
 
-                        <h1 className="text-4xl lg:text-6xl font-poppins font-bold leading-tight mb-6">
-                            {t("hero.title", { fallback: "Închiriere auto București - Otopeni" })}{" "}
-                        </h1>
+const DEFAULT_FORM_PLACEHOLDERS: Record<string, string> = {
+    location: "Alege locația",
+    carType: "Toate tipurile",
+};
 
-                        <p className="text-xl lg:text-2xl font-dm-sans text-gray-200 mb-8 leading-relaxed">
-                            {t("hero.subtitle.lead", {
-                                fallback: "Predare în aeroport în sub 5 minute.",
-                            })}
-                            <br />
-                            <span className="text-jadeLight font-semibold">
-                                {t("hero.subtitle.highlight", { fallback: "Fără taxe ascunse." })}
-                            </span>
-                        </p>
+const DEFAULT_FORM_ARIA: Record<string, string> = {
+    submit: DEFAULT_SUBMIT_LABEL,
+    location: "Alege locația de ridicare",
+};
 
-                        <div className="hidden sm:grid sm:grid-cols-3 gap-6">
-                            {heroFeatures.map((feature, index) => (
-                                <div key={`${feature.title}-${index}`} className="flex items-center space-x-3">
-                                    <div className="bg-jade/20 p-2 rounded-lg">
-                                        {index === 0 ? (
-                                            <Clock className="h-5 w-5 text-jade" aria-hidden="true" />
-                                        ) : index === 1 ? (
-                                            <Shield className="h-5 w-5 text-jade" aria-hidden="true" />
-                                        ) : (
-                                            <Star className="h-5 w-5 text-jade" aria-hidden="true" />
-                                        )}
-                                    </div>
-                                    <div>
-                                        <p className="font-dm-sans font-semibold">{feature.title}</p>
-                                        <p className="text-sm text-gray-300">{feature.description}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+const DEFAULT_LOCATIONS: LocationOption[] = [
+    { value: "otopeni", label: "Aeroport Otopeni" },
+];
 
-                <div className="mt-5">
-                    <HeroBookingForm
-                        labels={heroFormLabels}
-                        placeholders={heroFormPlaceholders}
-                        ariaLabels={heroAria}
-                        submitLabel={heroSubmitLabel}
-                        locale={locale}
-                        locations={resolvedLocations}
-                    />
-                </div>
-            </div>
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === "object" && value != null && !Array.isArray(value);
+};
 
-            {/* Decorative elements */}
-            <div className="absolute top-20 right-10 w-20 h-20 bg-jade/10 rounded-full blur-xl"></div>
-            <div className="absolute bottom-20 left-10 w-32 h-32 bg-jade/5 rounded-full blur-2xl"></div>
-        </section>
-    );
+const pickString = (value: unknown, fallback: string): string => {
+    return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+};
+
+const toStringRecord = (
+    value: unknown,
+    fallback: Record<string, string>,
+): Record<string, string> => {
+    if (!isRecord(value)) {
+        return fallback;
+    }
+
+    const entries = Object.entries(value).filter(([, entryValue]) => typeof entryValue === "string");
+
+    if (entries.length === 0) {
+        return fallback;
+    }
+
+    return entries.reduce<Record<string, string>>((acc, [key, entryValue]) => {
+        acc[key] = entryValue as string;
+        return acc;
+    }, {});
+};
+
+const toOptionalStringRecord = (value: unknown): Record<string, string> | undefined => {
+    if (!isRecord(value)) {
+        return undefined;
+    }
+
+    const entries = Object.entries(value).filter(([, entryValue]) => typeof entryValue === "string");
+
+    if (entries.length === 0) {
+        return undefined;
+    }
+
+    return entries.reduce<Record<string, string>>((acc, [key, entryValue]) => {
+        acc[key] = entryValue as string;
+        return acc;
+    }, {});
+};
+
+const toFeatures = (
+    value: unknown,
+    fallback: HeroSectionFeature[],
+): HeroSectionFeature[] => {
+    if (!Array.isArray(value)) {
+        return fallback;
+    }
+
+    const features = value
+        .map((entry) => {
+            if (!isRecord(entry)) {
+                return null;
+            }
+
+            const title = typeof entry.title === "string" ? entry.title : null;
+            const description = typeof entry.description === "string" ? entry.description : null;
+
+            if (!title || !description) {
+                return null;
+            }
+
+            return { title, description } satisfies HeroSectionFeature;
+        })
+        .filter((entry): entry is HeroSectionFeature => entry != null);
+
+    return features.length > 0 ? features : fallback;
+};
+
+const toLocations = (
+    value: unknown,
+    fallback: LocationOption[],
+): LocationOption[] => {
+    if (!Array.isArray(value)) {
+        return fallback;
+    }
+
+    const locations = value
+        .map((entry) => {
+            if (!isRecord(entry)) {
+                return null;
+            }
+
+            const optionValue = entry.value;
+            const optionLabel = entry.label;
+
+            if (typeof optionValue !== "string" || typeof optionLabel !== "string") {
+                return null;
+            }
+
+            return { value: optionValue, label: optionLabel } satisfies LocationOption;
+        })
+        .filter((entry): entry is LocationOption => entry != null);
+
+    return locations.length > 0 ? locations : fallback;
+};
+
+export const buildHeroSectionProps = (
+    locale: Locale,
+): HeroSectionClientProps => {
+    const messages = getPageMessages<Record<string, unknown>>("home", locale);
+    const heroMessages = isRecord((messages.hero ?? {}) as unknown)
+        ? ((messages.hero ?? {}) as HeroMessages)
+        : {};
+
+    const subtitle = isRecord(heroMessages.subtitle)
+        ? (heroMessages.subtitle as HeroSubtitle)
+        : {};
+
+    const formMessages = isRecord(heroMessages.form)
+        ? (heroMessages.form as HeroFormMessages)
+        : {};
+
+    const formOptions = isRecord(formMessages.options)
+        ? (formMessages.options as HeroFormOptions)
+        : {};
+
+    const ariaLabels = toOptionalStringRecord(formMessages.aria) ?? DEFAULT_FORM_ARIA;
+
+    return {
+        locale,
+        badge: pickString(heroMessages.badge, DEFAULT_BADGE),
+        title: pickString(heroMessages.title, DEFAULT_TITLE),
+        subtitleLead: pickString(subtitle.lead, DEFAULT_SUBTITLE_LEAD),
+        subtitleHighlight: pickString(subtitle.highlight, DEFAULT_SUBTITLE_HIGHLIGHT),
+        features: toFeatures(heroMessages.features, DEFAULT_FEATURES),
+        formLabels: toStringRecord(formMessages.labels, DEFAULT_FORM_LABELS),
+        formPlaceholders: toStringRecord(formMessages.placeholders, DEFAULT_FORM_PLACEHOLDERS),
+        ariaLabels,
+        submitLabel: pickString(formMessages.submit, DEFAULT_SUBMIT_LABEL),
+        locations: toLocations(formOptions.locations, DEFAULT_LOCATIONS),
+    } satisfies HeroSectionClientProps;
+};
+
+const HeroSection = async () => {
+    const locale = await resolveRequestLocale();
+    const heroProps = buildHeroSectionProps(locale);
+
+    return <HeroSectionClient {...heroProps} />;
 };
 
 export default HeroSection;
