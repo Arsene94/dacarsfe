@@ -1,7 +1,6 @@
 "use client";
 
-// Import Mixpanel SDK
-import mixpanel from "mixpanel-browser";
+import type mixpanel from "mixpanel-browser";
 import type { Config as MixpanelConfig } from "mixpanel-browser";
 
 const MIXPANEL_TOKEN = "a53fd216120538a8317818b44e4e50a3";
@@ -22,7 +21,11 @@ type MixpanelTraits = Record<string, unknown>;
 
 type MixpanelProperties = Record<string, unknown>;
 
+type MixpanelInstance = typeof mixpanel;
+
 let isInitialized = false;
+let mixpanelInstance: MixpanelInstance | null = null;
+let mixpanelLoader: Promise<MixpanelInstance> | null = null;
 
 const canUseMixpanel = () => typeof window !== "undefined";
 
@@ -65,31 +68,68 @@ const sanitizeObject = <T extends Record<string, unknown>>(payload?: T) => {
     return sanitized;
 };
 
-const ensureMixpanel = () => {
-    if (!canUseMixpanel()) {
-        return false;
+const loadMixpanel = async (): Promise<MixpanelInstance | null> => {
+    if (mixpanelInstance) {
+        return mixpanelInstance;
     }
 
-    if (!isInitialized) {
-        mixpanel.init(MIXPANEL_TOKEN, MIXPANEL_CONFIG);
+    if (!mixpanelLoader) {
+        mixpanelLoader = import("mixpanel-browser")
+            .then((module) => {
+                const resolved = (module.default ?? module) as unknown as MixpanelInstance;
+                mixpanelInstance = resolved;
+                return resolved;
+            })
+            .catch((error) => {
+                mixpanelLoader = null;
+                mixpanelInstance = null;
+                if (process.env.NODE_ENV !== "production") {
+                    console.error("Nu am putut încărca librăria Mixpanel", error);
+                }
+                throw error;
+            });
+    }
+
+    try {
+        return await mixpanelLoader;
+    } catch {
+        return null;
+    }
+};
+
+const withMixpanel = async (
+    callback: (instance: MixpanelInstance) => void,
+    options: { initialize?: boolean } = {},
+): Promise<void> => {
+    if (!canUseMixpanel()) {
+        return;
+    }
+
+    const instance = await loadMixpanel();
+    if (!instance) {
+        return;
+    }
+
+    const shouldInitialize = options.initialize !== false;
+
+    if (shouldInitialize && !isInitialized) {
+        instance.init(MIXPANEL_TOKEN, MIXPANEL_CONFIG);
         isInitialized = true;
     }
 
-    return true;
+    callback(instance);
 };
 
 export const initMixpanel = () => {
-    ensureMixpanel();
+    void withMixpanel(() => {
+        // Inițializarea este gestionată în withMixpanel.
+    });
 };
 
 export const trackMixpanelEvent = (
     eventName: MixpanelEventName | string,
     properties?: MixpanelProperties,
 ) => {
-    if (!ensureMixpanel()) {
-        return;
-    }
-
     const trimmedEventName = typeof eventName === "string" ? eventName.trim() : "";
 
     if (!trimmedEventName) {
@@ -98,12 +138,14 @@ export const trackMixpanelEvent = (
 
     const sanitized = sanitizeObject(properties);
 
-    if (sanitized && Object.keys(sanitized).length > 0) {
-        mixpanel.track(trimmedEventName, sanitized);
-        return;
-    }
+    void withMixpanel((instance) => {
+        if (sanitized && Object.keys(sanitized).length > 0) {
+            instance.track(trimmedEventName, sanitized);
+            return;
+        }
 
-    mixpanel.track(trimmedEventName);
+        instance.track(trimmedEventName);
+    });
 };
 
 export const trackPageView = (url?: string | null) => {
@@ -112,27 +154,25 @@ export const trackPageView = (url?: string | null) => {
 };
 
 export const identifyMixpanelUser = (id: string, traits?: MixpanelTraits) => {
-    if (!ensureMixpanel()) {
-        return;
-    }
-
     const trimmedId = id.trim();
 
     if (!trimmedId) {
         return;
     }
 
-    mixpanel.identify(trimmedId);
-    mixpanel.register({
-        mixpanel_user_id: trimmedId,
-        is_authenticated: true,
-    });
-
     const sanitizedTraits = sanitizeObject(traits);
 
-    if (sanitizedTraits && typeof mixpanel.people?.set === "function") {
-        mixpanel.people.set(sanitizedTraits);
-    }
+    void withMixpanel((instance) => {
+        instance.identify(trimmedId);
+        instance.register({
+            mixpanel_user_id: trimmedId,
+            is_authenticated: true,
+        });
+
+        if (sanitizedTraits && typeof instance.people?.set === "function") {
+            instance.people.set(sanitizedTraits);
+        }
+    });
 };
 
 const generateAnonymousId = () => {
@@ -144,34 +184,33 @@ const generateAnonymousId = () => {
 };
 
 export const identifyAnonymousMixpanelVisitor = async () => {
-    if (!ensureMixpanel()) {
-        return;
-    }
+    await withMixpanel((instance) => {
+        const existingDistinctId =
+            typeof instance.get_distinct_id === "function"
+                ? instance.get_distinct_id()
+                : null;
 
-    const existingDistinctId =
-        typeof mixpanel.get_distinct_id === "function"
-            ? mixpanel.get_distinct_id()
-            : null;
+        if (existingDistinctId && existingDistinctId.startsWith("anon:")) {
+            return;
+        }
 
-    if (existingDistinctId && existingDistinctId.startsWith("anon:")) {
-        return;
-    }
+        const anonymousId = generateAnonymousId();
 
-    const anonymousId = generateAnonymousId();
-
-    mixpanel.identify(anonymousId);
-    mixpanel.register({
-        mixpanel_user_id: anonymousId,
-        is_authenticated: false,
-        anonymous_identity_source: "generated",
+        instance.identify(anonymousId);
+        instance.register({
+            mixpanel_user_id: anonymousId,
+            is_authenticated: false,
+            anonymous_identity_source: "generated",
+        });
     });
 };
 
 export const resetMixpanelIdentity = () => {
-    if (!canUseMixpanel()) {
-        return;
-    }
-
-    mixpanel.reset();
-    isInitialized = false;
+    void withMixpanel(
+        (instance) => {
+            instance.reset();
+            isInitialized = false;
+        },
+        { initialize: false },
+    );
 };
