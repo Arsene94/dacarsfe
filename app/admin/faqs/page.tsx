@@ -1156,7 +1156,7 @@ const AdminFaqPage = () => {
                                                     type="button"
                                                     variant="secondary"
                                                     size="sm"
-                                                    className="gap-2 bg-transparent text-berkeley hover:bg-gray-100"
+                                                    className="gap-2"
                                                     onClick={() => handleEditFaq(faq)}
                                                     disabled={saving}
                                                 >
