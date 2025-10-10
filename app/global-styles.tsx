@@ -1,19 +1,22 @@
-import fs from "node:fs";
-import path from "node:path";
 import type { JSX } from "react";
 
 const isProduction = process.env.NODE_ENV === "production";
+const isEdgeRuntime = process.env.NEXT_RUNTIME === "edge";
 
 if (!isProduction) {
   void import("./globals.css");
 }
 
-const tailwindBundlePath = path.join(process.cwd(), "public", "tailwind.css");
 let inlineTailwindCss: string | null = null;
 
-if (isProduction) {
+if (isProduction && !isEdgeRuntime) {
   try {
-    inlineTailwindCss = fs.readFileSync(tailwindBundlePath, "utf8");
+    const [{ readFile }, { join }] = await Promise.all([
+      import("node:fs/promises"),
+      import("node:path"),
+    ]);
+    const tailwindBundlePath = join(process.cwd(), "public", "tailwind.css");
+    inlineTailwindCss = await readFile(tailwindBundlePath, "utf8");
   } catch (error) {
     console.error("Nu s-a putut citi fișierul CSS optimizat:", error);
   }
