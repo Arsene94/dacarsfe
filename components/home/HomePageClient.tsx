@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import dynamic from "next/dynamic";
 import BenefitsSection from "@/components/BenefitsSection";
 import ContactSection from "@/components/ContactSection";
@@ -24,6 +32,29 @@ const LazyWheelOfFortune = dynamic(() => import("@/components/WheelOfFortune"), 
     loading: () => null,
     ssr: false,
 });
+
+type LazyVisibleSectionProps = {
+    children: ReactNode;
+    className?: string;
+    intrinsicSize?: CSSProperties["containIntrinsicSize"];
+};
+
+const LazyVisibleSection = ({
+    children,
+    className,
+    intrinsicSize = "720px",
+}: LazyVisibleSectionProps) => {
+    const style: CSSProperties = {
+        contentVisibility: "auto",
+        containIntrinsicSize: intrinsicSize,
+    };
+
+    return (
+        <div className={className} style={style}>
+            {children}
+        </div>
+    );
+};
 
 const parseYearMonth = (value: string): { year: number; month: number } | null => {
     if (typeof value !== "string") {
@@ -414,13 +445,23 @@ const HomePageClient = () => {
     return (
         <div className="pt-16 lg:pt-20">
             <HeroSection />
-            <FleetSection />
-            <BenefitsSection />
-            <OffersSection />
+            <LazyVisibleSection intrinsicSize="960px">
+                <FleetSection />
+            </LazyVisibleSection>
+            <LazyVisibleSection intrinsicSize="860px">
+                <BenefitsSection />
+            </LazyVisibleSection>
+            <LazyVisibleSection intrinsicSize="820px">
+                <OffersSection />
+            </LazyVisibleSection>
             {shouldRenderElfsight ? <ElfsightWidget /> : null}
             {/*<TestimonialsSection />*/}
-            <ProcessSection />
-            <ContactSection />
+            <LazyVisibleSection intrinsicSize="900px">
+                <ProcessSection />
+            </LazyVisibleSection>
+            <LazyVisibleSection intrinsicSize="880px">
+                <ContactSection />
+            </LazyVisibleSection>
 
             {showWheelPopup && !periodError && (
                 <LazyWheelOfFortune
