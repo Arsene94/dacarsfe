@@ -63,6 +63,8 @@ const HeroSection = () => {
                         alt="Fundal aeroport"
                         fill
                         priority
+                        loading="eager"
+                        fetchPriority="high"
                         placeholder="blur"
                         sizes="(max-width: 639px) 100vw, (max-width: 1279px) 100vw, 100vw"
                         quality={60}
