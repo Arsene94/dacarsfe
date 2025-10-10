@@ -115,6 +115,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <link rel="dns-prefetch" href="//vercel.app" />
         <link rel="dns-prefetch" href="//fe.dacars.ro" />
         <link rel="dns-prefetch" href="//backend.dacars.ro" />
+        <link rel="dns-prefetch" href="//www.dacars.ro" />
         <link
           rel="preconnect"
           href="https://fe.dacars.ro"
@@ -123,6 +124,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <link
           rel="preconnect"
           href="https://backend.dacars.ro"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://www.dacars.ro"
           crossOrigin="anonymous"
         />
         <meta name="format-detection" content="telephone=no" />
