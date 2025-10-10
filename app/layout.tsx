@@ -196,7 +196,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <AuthProvider>
             <BookingProvider>
               <Header />
-              <main>
+              <main className="mt-12">
                 <PageTransition>{children}</PageTransition>
               </main>
               <Footer />
