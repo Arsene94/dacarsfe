@@ -10,7 +10,12 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import apiClient from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
-import type { FaqCategory, FaqPayload, FaqStatus } from "@/types/faq";
+import type {
+    FaqCategory,
+    FaqCategoryPayload,
+    FaqPayload,
+    FaqStatus,
+} from "@/types/faq";
 
 const statusLabels: Record<FaqStatus, string> = {
     published: "Publicat",
