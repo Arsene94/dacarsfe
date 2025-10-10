@@ -6,8 +6,7 @@ import { Clock, Shield, Star } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { HeroBookingFormProps, LocationOption } from "./HeroBookingForm";
 
-import heroMobile2x from "@/public/images/bg-hero-mobile-480x879.webp";
-import heroDesktop from "@/public/images/bg-hero-1920x1080.webp";
+import heroBackground from "@/public/images/bg-hero-1920x1080.webp";
 
 const HeroBookingFormSkeleton = () => (
     <div
@@ -58,26 +57,14 @@ const HeroSection = () => {
         <section className="relative bg-berkeley text-white overflow-hidden">
             {/* Background Image */}
             <div className="absolute inset-0">
-                <div className="relative h-full w-full sm:hidden">
+                <div className="relative h-full w-full">
                     <Image
-                        src={heroMobile2x}
+                        src={heroBackground}
                         alt="Fundal aeroport"
                         fill
                         priority
                         placeholder="blur"
-                        sizes="(max-width: 639px) 100vw, 0vw"
-                        quality={60}
-                        className="object-cover"
-                    />
-                </div>
-                <div className="relative hidden h-full w-full sm:block">
-                    <Image
-                        src={heroDesktop}
-                        alt="Fundal aeroport"
-                        fill
-                        priority
-                        placeholder="blur"
-                        sizes="(min-width: 640px) 100vw, 0vw"
+                        sizes="(max-width: 639px) 100vw, (max-width: 1279px) 100vw, 100vw"
                         quality={60}
                         className="object-cover"
                     />
