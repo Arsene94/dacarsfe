@@ -2127,6 +2127,12 @@ export class ApiClient {
         );
     }
 
+    async deleteBooking(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/bookings/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
     async quotePrice(payload: QuotePricePayload): Promise<QuotePriceResponse> {
         return this.request<QuotePriceResponse>(`/bookings/quote`, {
             method: 'POST',

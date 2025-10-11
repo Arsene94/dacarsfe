@@ -776,6 +776,7 @@ const ReservationsPage = () => {
   );
   const editingReservationIdRef = useRef<string | null>(null);
   const fallbackBookingRef = useRef<AdminBookingFormValues | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const formatEuro = (value: number | string | null | undefined) => {
     if (typeof value === "string") {
@@ -1024,6 +1025,50 @@ const ReservationsPage = () => {
     [reservations],
   );
 
+  const handleDeleteReservation = useCallback(
+    async (reservation: AdminReservation) => {
+      if (deletingId) {
+        return;
+      }
+
+      const trimmedId = reservation.id.trim();
+      if (!trimmedId) {
+        console.error("ID rezervare invalid pentru ștergere.");
+        return;
+      }
+
+      const confirmationTarget = reservation.bookingNumber ?? trimmedId;
+      const confirmed = window.confirm(
+        `Ești sigur că vrei să ștergi rezervarea ${confirmationTarget}?`,
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      const requestId = /^(?:\d+)$/.test(trimmedId) ? Number(trimmedId) : trimmedId;
+      setDeletingId(trimmedId);
+
+      try {
+        await apiClient.deleteBooking(requestId);
+
+        const selectedId =
+          selectedReservation?.id ? selectedReservation.id.trim() : null;
+        if (selectedId === trimmedId) {
+          setSelectedReservation(null);
+          setShowModal(false);
+        }
+
+        await fetchBookings();
+      } catch (error) {
+        console.error("Nu am putut șterge rezervarea", error);
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [deletingId, fetchBookings, selectedReservation],
+  );
+
   const clearAllFilters = useCallback(() => {
     setSearchTerm("");
     setStatusFilter("all");
@@ -1225,33 +1270,40 @@ const ReservationsPage = () => {
         id: "actions",
         header: "Acțiuni",
         accessor: (r) => r.id,
-        cell: (r) => (
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => handleViewReservation(r)}
-              className="p-2 text-gray-600 hover:text-jade hover:bg-jade/10 rounded-lg transition-colors"
-              aria-label="Vezi detalii"
-            >
-              <Eye className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => handleEditReservation(r.id)}
-              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              aria-label="Editează"
-            >
-              <Edit className="h-4 w-4" />
-            </button>
-            <button
-              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              aria-label="Șterge"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        ),
+        cell: (r) => {
+          const normalizedId = r.id.trim();
+          const isDeleting = deletingId === normalizedId;
+
+          return (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleViewReservation(r)}
+                className="p-2 text-gray-600 hover:text-jade hover:bg-jade/10 rounded-lg transition-colors"
+                aria-label="Vezi detalii"
+              >
+                <Eye className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleEditReservation(r.id)}
+                className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                aria-label="Editează"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleDeleteReservation(r)}
+                className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Șterge"
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          );
+        },
       },
     ],
-    [handleViewReservation, handleEditReservation],
+    [handleViewReservation, handleEditReservation, handleDeleteReservation, deletingId],
   );
 
   const renderReservationDetails = (r: AdminReservation) => {

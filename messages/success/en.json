@@ -56,6 +56,11 @@
     },
     "pricing": {
       "title": "Total cost",
+      "perDayLabel": "Daily rate:",
+      "dayCount": {
+        "one": "{{count}} day",
+        "other": "{{count}} days"
+      },
       "subtotalLabel": "Subtotal:",
       "servicesLabel": "Services:",
       "wheelPrizeLabel": "Wheel of Fortune prize:",

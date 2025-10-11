@@ -56,6 +56,11 @@
     },
     "pricing": {
       "title": "Costul total",
+      "perDayLabel": "Preț pe zi:",
+      "dayCount": {
+        "one": "{{count}} zi",
+        "other": "{{count}} zile"
+      },
       "subtotalLabel": "Subtotal:",
       "servicesLabel": "Servicii:",
       "wheelPrizeLabel": "Premiu Roata Norocului:",
