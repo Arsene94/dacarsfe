@@ -30,6 +30,9 @@ const LOCALE_TO_INTL: Record<Locale, string> = {
 
 const DEFAULT_CURRENCY = "RON";
 
+const SESSION_STORAGE_LEAD_KEY_PREFIX = "dacars:success:lead:";
+const SESSION_STORAGE_LEAD_FALLBACK_KEY = "dacars:success:lead:fallback";
+
 const parseMaybeNumber = (value: unknown): number | null => {
     if (typeof value === "number") {
         return Number.isFinite(value) ? value : null;
@@ -43,11 +46,47 @@ const parseMaybeNumber = (value: unknown): number | null => {
     return null;
 };
 
+const resolveReservationTrackingIdentifier = (
+    reservation: ReservationPayload | null,
+): string | null => {
+    if (!reservation) {
+        return null;
+    }
+
+    const directReservationId =
+        typeof reservation.reservationId === "string" ? reservation.reservationId.trim() : "";
+    if (directReservationId.length > 0) {
+        return directReservationId;
+    }
+
+    const bookingNumber = (reservation as { booking_number?: unknown }).booking_number;
+    if (typeof bookingNumber === "string") {
+        const normalized = bookingNumber.trim();
+        if (normalized.length > 0) {
+            return normalized;
+        }
+    }
+
+    const fallbackId = (reservation as { id?: unknown }).id;
+    if (typeof fallbackId === "string" || typeof fallbackId === "number") {
+        const normalized = String(fallbackId).trim();
+        if (normalized.length > 0) {
+            return normalized;
+        }
+    }
+
+    return null;
+};
+
 const SuccessPage = () => {
     const [reservationData, setReservationData] = useState<ReservationPayload | null>(null);
     const { locale, messages, t } = useTranslations<SuccessMessages>("success");
     const intlLocale = LOCALE_TO_INTL[locale] ?? LOCALE_TO_INTL.ro;
     const hasTrackedConversionRef = useRef(false);
+    const reservationTrackingIdentifier = useMemo(
+        () => resolveReservationTrackingIdentifier(reservationData),
+        [reservationData],
+    );
 
     const priceFormatter = useMemo(
         () =>
@@ -128,6 +167,23 @@ const SuccessPage = () => {
         if (hasTrackedConversionRef.current) {
             return;
         }
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        const sessionStorageKey = reservationTrackingIdentifier
+            ? `${SESSION_STORAGE_LEAD_KEY_PREFIX}${reservationTrackingIdentifier}`
+            : SESSION_STORAGE_LEAD_FALLBACK_KEY;
+
+        try {
+            const hasTrackedAlready = window.sessionStorage.getItem(sessionStorageKey) === "1";
+            if (hasTrackedAlready) {
+                hasTrackedConversionRef.current = true;
+                return;
+            }
+        } catch (error) {
+            console.warn("Nu s-a putut citi statusul evenimentului Lead", error);
+        }
 
         const totalAmountRaw = reservationData.total;
         const totalAmount =
@@ -206,7 +262,13 @@ const SuccessPage = () => {
         });
 
         hasTrackedConversionRef.current = true;
-    }, [reservationData]);
+
+        try {
+            window.sessionStorage.setItem(sessionStorageKey, "1");
+        } catch (error) {
+            console.warn("Nu s-a putut salva statusul evenimentului Lead", error);
+        }
+    }, [reservationData, reservationTrackingIdentifier]);
 
     const wheelPrize = reservationData?.wheel_prize ?? null;
     const wheelPrizeDiscountRaw = reservationData?.wheel_prize_discount ??
@@ -297,29 +359,7 @@ const SuccessPage = () => {
         ? ((selectedCar as { name: string }).name)
         : "";
 
-    const reservationReference = (() => {
-        if (!reservationData) {
-            return "—";
-        }
-        const direct = typeof reservationData.reservationId === "string"
-            ? reservationData.reservationId.trim()
-            : "";
-        if (direct.length > 0) {
-            return direct;
-        }
-        const bookingNumber = (reservationData as { booking_number?: unknown }).booking_number;
-        if (typeof bookingNumber === "string" && bookingNumber.trim().length > 0) {
-            return bookingNumber.trim();
-        }
-        const fallbackId = (reservationData as { id?: unknown }).id;
-        if (typeof fallbackId === "number" || typeof fallbackId === "string") {
-            const normalized = String(fallbackId).trim();
-            if (normalized.length > 0) {
-                return normalized;
-            }
-        }
-        return "—";
-    })();
+    const reservationReference = reservationTrackingIdentifier ?? "—";
 
     const locationOptions =
         (messages.summary?.location?.options as SuccessMessages["summary"]["location"]["options"]) ?? {};
