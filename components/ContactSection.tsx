@@ -104,10 +104,6 @@ const ContactSection = () => {
                                             contact_method: "phone",
                                             value: phoneNumber,
                                         });
-                                        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
-                                            contact_method: "phone",
-                                            value: phoneNumber,
-                                        });
                                     }}
                                 >
                                     {phoneNumber}
@@ -134,10 +130,6 @@ const ContactSection = () => {
                                             contact_method: "whatsapp",
                                             value: phoneNumber,
                                         });
-                                        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
-                                            contact_method: "whatsapp",
-                                            value: phoneNumber,
-                                        });
                                     }}
                                 >
                                     {phoneNumber}
@@ -161,10 +153,6 @@ const ContactSection = () => {
                                     aria-label={contact.items?.email?.aria ?? `Trimite email la ${emailAddress}`}
                                     onClick={() => {
                                         trackTikTokEvent(TIKTOK_EVENTS.CONTACT, {
-                                            contact_method: "email",
-                                            value: emailAddress,
-                                        });
-                                        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
                                             contact_method: "email",
                                             value: emailAddress,
                                         });

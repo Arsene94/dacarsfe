@@ -1680,29 +1680,6 @@ const ReservationPage = () => {
             applied_offer_ids: appliedOffersPayload.map((offer) => offer.id),
         });
 
-        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
-            form_name: "checkout_reservation",
-            value: totalAfterAdjustments,
-            currency: DEFAULT_CURRENCY,
-            content_ids: [String(selectedCar.id)],
-            content_name: selectedCar.name,
-            content_type: "car",
-            contents: [
-                {
-                    id: String(selectedCar.id),
-                    quantity: 1,
-                    item_price: totalAfterAdjustments,
-                    title: selectedCar.name,
-                },
-            ],
-            lead_stage: "form_submit",
-            with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
-            start_date: booking.startDate || undefined,
-            end_date: booking.endDate || undefined,
-            service_ids: serviceIds,
-            applied_offer_ids: appliedOffersPayload.map((offer) => offer.id),
-        });
-
         try {
             const res = await apiClient.createBooking(payload);
             const bookingRecord = extractItem(res);
