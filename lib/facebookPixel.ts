@@ -54,7 +54,7 @@ const loadPixel = async (): Promise<ReactFacebookPixel | null> => {
     return loadPixelPromise;
 };
 
-const reinitializePixel = async (): Promise<ReactFacebookPixel | null> => {
+const ensurePixelReady = async (): Promise<ReactFacebookPixel | null> => {
     if (!canUsePixel()) {
         return null;
     }
@@ -64,21 +64,30 @@ const reinitializePixel = async (): Promise<ReactFacebookPixel | null> => {
         return null;
     }
 
-    pixel.init(PIXEL_ID!, advancedMatching, pixelOptions);
-    initialized = true;
+    if (!initialized) {
+        pixel.init(PIXEL_ID!, advancedMatching, pixelOptions);
+        initialized = true;
+    }
+
     return pixel;
 };
 
-const ensurePixelReady = async (): Promise<ReactFacebookPixel | null> => {
-    if (!initialized) {
-        return reinitializePixel();
+type FacebookQueueFunction = ((...args: unknown[]) => void) | undefined;
+
+const resolveFacebookQueue = (
+    pixel: ReactFacebookPixel | null,
+): FacebookQueueFunction => {
+    const fbqFromPixel = (pixel as unknown as { fbq?: FacebookQueueFunction } | null)?.fbq;
+    if (typeof fbqFromPixel === "function") {
+        return fbqFromPixel;
     }
 
-    if (!canUsePixel()) {
-        return null;
+    if (typeof window === "undefined") {
+        return undefined;
     }
 
-    return loadPixel();
+    const fbqFromWindow = (window as typeof window & { fbq?: FacebookQueueFunction }).fbq;
+    return typeof fbqFromWindow === "function" ? fbqFromWindow : undefined;
 };
 
 const normalizeEmail = (value: unknown): string | undefined => {
@@ -206,7 +215,7 @@ export type FacebookPixelAdvancedMatchingUpdate = {
 };
 
 export const initFacebookPixel = () => {
-    void reinitializePixel();
+    void ensurePixelReady();
 };
 
 export const isFacebookPixelConfigured = () => canUsePixel();
@@ -282,7 +291,16 @@ export const updateFacebookPixelAdvancedMatching = (
 
     advancedMatching = draft;
 
-    if (initialized) {
-        void reinitializePixel();
+    if (!initialized) {
+        return;
     }
+
+    void ensurePixelReady().then((pixel) => {
+        const fbq = resolveFacebookQueue(pixel);
+        if (!fbq) {
+            return;
+        }
+
+        fbq("set", "userData", { ...advancedMatching });
+    });
 };
