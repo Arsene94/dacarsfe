@@ -89,7 +89,10 @@ const nextConfig = {
         localPatterns: [
             {
                 pathname: '/api/images/webp',
-                search: 'url=*',
+                search: '?url=*',
+            },
+            {
+                pathname: '/api/images/webp/**',
             },
             {
                 pathname: '/images/**',
