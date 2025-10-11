@@ -87,6 +87,42 @@
       { "value": "0", "label": "Versteckte Gebühren" }
     ]
   },
+  "interlinking": {
+    "title": {
+      "main": "Entdecke weiter",
+      "highlight": "die wichtigsten DaCars-Seiten"
+    },
+    "description": "Verteile interne Autorität auf unsere relevantesten Bereiche und bleibe im Buchungsprozess optimal vernetzt.",
+    "ariaLabel": "Interne Links zu den zentralen DaCars-Seiten",
+    "linkPrefix": "Entdecken",
+    "linkCta": "Details ansehen",
+    "links": [
+      {
+        "href": "/cars",
+        "label": "Komplette Flotte",
+        "description": "Vergleiche verfügbare Modelle und filtere deine Auswahl in wenigen Sekunden nach Reisedaten.",
+        "tone": "primary"
+      },
+      {
+        "href": "/offers",
+        "label": "Aktuelle Angebote",
+        "description": "Aktiviere saisonale Rabatte und Treuevorteile, die speziell für DaCars-Fahrer erstellt wurden.",
+        "tone": "accent"
+      },
+      {
+        "href": "/faq",
+        "label": "Häufige Fragen",
+        "description": "Klär Kaution, Übergabeablauf und Zahlungsoptionen, bevor du bestätigst.",
+        "tone": "outline"
+      },
+      {
+        "href": "/blog",
+        "label": "Guides & Updates",
+        "description": "Lies Mobilitätstipps und Produktneuigkeiten direkt vom DaCars-Team.",
+        "tone": "secondary"
+      }
+    ]
+  },
   "offers": {
     "title": {
       "main": "Spezielle",

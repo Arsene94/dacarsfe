@@ -3,7 +3,11 @@
 import React from "react";
 import { Car, Phone, Mail, MapPin, Clock } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import InterlinkingSection from "@/components/interlinking/InterlinkingSection";
+import { getSiteInterlinkingCopy } from "@/lib/interlinking/publicInterlinking";
+import type { Locale } from "@/lib/i18n/config";
 
 type FooterLink = { label?: string; href?: string; aria?: string };
 
@@ -16,15 +20,23 @@ type FooterMessages = {
 };
 
 const Footer = () => {
-    const { messages } = useTranslations("layout");
+    const { messages, locale } = useTranslations("layout");
     const footer = (messages.footer ?? {}) as FooterMessages;
+    const pathname = usePathname();
+    const normalizedPath = pathname?.split("?")[0] ?? "/";
+    const interlinkingCopy = getSiteInterlinkingCopy(locale as Locale, {
+        excludeHrefs: [normalizedPath],
+    });
+    const showInterlinking = !pathname?.startsWith("/admin");
 
     const quickLinks = footer.quickLinks?.links?.filter((item) => item?.label) ?? [];
     const bottomLinks = footer.bottom?.links?.filter((item) => item?.label) ?? [];
 
     return (
-        <footer className="bg-berkeley text-white">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <>
+            {showInterlinking && <InterlinkingSection copy={interlinkingCopy} />}
+            <footer className="bg-berkeley text-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {/* Logo și descriere */}
                     <div className="space-y-4">
@@ -113,8 +125,9 @@ const Footer = () => {
                         ))}
                     </div>
                 </div>
-            </div>
-        </footer>
+                </div>
+            </footer>
+        </>
     );
 };
 

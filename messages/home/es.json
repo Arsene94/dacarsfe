@@ -87,6 +87,42 @@
       { "value": "0", "label": "Cargos ocultos" }
     ]
   },
+  "interlinking": {
+    "title": {
+      "main": "Sigue explorando",
+      "highlight": "las páginas esenciales de DaCars"
+    },
+    "description": "Distribuye la autoridad interna hacia nuestras secciones más relevantes y mantén tu proceso de reserva bien conectado.",
+    "ariaLabel": "Enlaces internos hacia las páginas principales de DaCars",
+    "linkPrefix": "Descubre",
+    "linkCta": "Ver detalles",
+    "links": [
+      {
+        "href": "/cars",
+        "label": "Flota completa",
+        "description": "Compara modelos disponibles y filtra por fechas de viaje al instante.",
+        "tone": "primary"
+      },
+      {
+        "href": "/offers",
+        "label": "Ofertas activas",
+        "description": "Activa ahorros de temporada y beneficios de fidelidad creados para los conductores DaCars.",
+        "tone": "accent"
+      },
+      {
+        "href": "/faq",
+        "label": "Preguntas frecuentes",
+        "description": "Aclara depósitos, flujos de entrega y opciones de pago antes de confirmar.",
+        "tone": "outline"
+      },
+      {
+        "href": "/blog",
+        "label": "Guías y novedades",
+        "description": "Lee consejos de movilidad y noticias publicadas directamente por el equipo DaCars.",
+        "tone": "secondary"
+      }
+    ]
+  },
   "offers": {
     "title": {
       "main": "Ofertas",

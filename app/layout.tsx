@@ -21,7 +21,6 @@ import MetaPixelScript from "../components/MetaPixelScript";
 import MetaPixelInitializer from "../components/MetaPixelInitializer";
 import { GoogleAnalytics } from '@next/third-parties/google'
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
-import heroBackground from "@/public/images/bg-hero-1920x1080.webp";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -75,14 +74,6 @@ const localeBootstrapConfig = {
   supportedLocales,
 };
 
-const heroImageQuality = 55;
-const heroImageWidths = [360, 414, 480, 640, 750, 828, 1080, 1200, 1920];
-const heroOptimizedSource = encodeURIComponent(heroBackground.src);
-const heroPreloadSrc = `/_next/image?url=${heroOptimizedSource}&w=${Math.max(...heroImageWidths)}&q=${heroImageQuality}`;
-const heroPreloadSrcSet = heroImageWidths
-  .map((width) => `/_next/image?url=${heroOptimizedSource}&w=${width}&q=${heroImageQuality} ${width}w`)
-  .join(", ");
-
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const initialLocale = await resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
   const bootstrapPayload = JSON.stringify({
@@ -102,15 +93,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <TikTokPixelScript />
         <MetaPixelScript />
         <GoogleAnalytics gaId="G-R1B5YS77GK" />
-        <link
-          rel="preload"
-          as="image"
-          href={heroPreloadSrc}
-          imageSrcSet={heroPreloadSrcSet}
-          imageSizes="100vw"
-          type="image/webp"
-          fetchPriority="high"
-        />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link
           rel="preconnect"

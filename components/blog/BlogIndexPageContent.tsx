@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import JsonLd from "@/components/seo/JsonLd";
 import BlogPostCard from "@/components/blog/BlogPostCard";
+import InterlinkingSection, {
+    type InterlinkingCopy,
+    type InterlinkingLink,
+} from "@/components/interlinking/InterlinkingSection";
 import { useLocale } from "@/context/LocaleContext";
 import {
     buildBlogIndexStructuredData,
@@ -97,6 +101,32 @@ const BlogIndexPageContent = ({
 
     const showEmptyState = !isLoading && posts.length === 0;
 
+    const interlinkCopy: InterlinkingCopy | null = useMemo(() => {
+        const interlink = copy.interlink;
+        if (!interlink) {
+            return null;
+        }
+
+        const links = Array.isArray(interlink.links)
+            ? interlink.links
+                  .map((item) => ({
+                      ...item,
+                      href: item.href?.trim() ?? "",
+                      label: item.label?.trim() ?? "",
+                  }))
+                  .filter((item): item is InterlinkingLink => item.href.length > 0 && item.label.length > 0)
+            : [];
+
+        if (links.length === 0) {
+            return null;
+        }
+
+        return {
+            ...interlink,
+            links,
+        } satisfies InterlinkingCopy;
+    }, [copy.interlink]);
+
     return (
         <main className="mx-auto max-w-5xl space-y-10 px-6 py-12">
             <JsonLd data={structuredData} id="blog-index-structured-data" />
@@ -104,6 +134,8 @@ const BlogIndexPageContent = ({
                 <h1 className="text-3xl font-semibold sm:text-4xl">{copy.pageTitle}</h1>
                 <p className="mt-3 max-w-3xl text-base text-white/80">{copy.pageDescription}</p>
             </header>
+
+            {interlinkCopy && <InterlinkingSection copy={interlinkCopy} className="py-12" />}
 
             <section className="grid gap-8 md:grid-cols-2" aria-busy={isLoading}>
                 {showEmptyState ? (

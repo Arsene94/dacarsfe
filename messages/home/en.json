@@ -87,6 +87,42 @@
       { "value": "0", "label": "Hidden fees" }
     ]
   },
+  "interlinking": {
+    "title": {
+      "main": "Keep exploring",
+      "highlight": "essential DaCars pages"
+    },
+    "description": "Distribute internal authority towards our most relevant sections and stay on track with your booking journey.",
+    "ariaLabel": "Internal links to DaCars key pages",
+    "linkPrefix": "Discover",
+    "linkCta": "View details",
+    "links": [
+      {
+        "href": "/cars",
+        "label": "Complete fleet",
+        "description": "Compare available models and filter by travel dates in seconds.",
+        "tone": "primary"
+      },
+      {
+        "href": "/offers",
+        "label": "Live offers",
+        "description": "Unlock seasonal savings and loyalty benefits curated for DaCars drivers.",
+        "tone": "accent"
+      },
+      {
+        "href": "/faq",
+        "label": "Help centre",
+        "description": "Clarify deposit rules, pickup flow, and payment options before you confirm.",
+        "tone": "outline"
+      },
+      {
+        "href": "/blog",
+        "label": "Guides & updates",
+        "description": "Read mobility tips and product news published directly by the DaCars team.",
+        "tone": "secondary"
+      }
+    ]
+  },
   "offers": {
     "title": {
       "main": "Special",
