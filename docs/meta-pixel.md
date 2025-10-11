@@ -142,7 +142,7 @@ Payload-ul acceptă același model ca în API-ul standard (valori numerice, list
 În aplicație evenimentul este declanșat în:
 
 - `components/ContactSection.tsx` – click pe telefon, WhatsApp, email;
-- `app/checkout/page.tsx` – vizualizare checkout cu date complete și trimiterea formularului;
+- `app/form/page.tsx` – vizualizare checkout cu date complete și trimiterea formularului;
 - `app/success/page.tsx` – confirmarea rezervării.
 
 ## 6. Checklist de verificare

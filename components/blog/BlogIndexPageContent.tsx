@@ -144,8 +144,14 @@ const BlogIndexPageContent = ({
                         <p className="mt-2 text-sm text-gray-600">{copy.emptyStateDescription}</p>
                     </div>
                 ) : (
-                    posts.map((post) => (
-                        <BlogPostCard key={post.id} post={post} locale={locale} ctaLabel={copy.readMoreLabel} />
+                    posts.map((post, index) => (
+                        <BlogPostCard
+                            key={post.id}
+                            post={post}
+                            locale={locale}
+                            ctaLabel={copy.readMoreLabel}
+                            priority={index === 0}
+                        />
                     ))
                 )}
             </section>

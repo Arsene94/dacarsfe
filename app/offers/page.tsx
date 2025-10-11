@@ -319,13 +319,13 @@ const extractOfferPrice = (raw: string | null | undefined): string => {
 
 const toAbsoluteOfferUrl = (href?: string): string => {
   if (!href) {
-    return `${SITE_URL}/checkout`;
+    return `${SITE_URL}/form`;
   }
 
   try {
     return new URL(href, SITE_URL).toString();
   } catch {
-    return `${SITE_URL}/checkout`;
+    return `${SITE_URL}/form`;
   }
 };
 
@@ -423,7 +423,7 @@ const OffersPage = async () => {
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button asChild>
-                <Link href="/checkout">Rezervă o mașină</Link>
+                <Link href="/form">Rezervă o mașină</Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href="/contact">Contactează-ne</Link>
@@ -436,7 +436,7 @@ const OffersPage = async () => {
               const Icon = iconMap[offer.icon] ?? Sparkles;
               const periodLabel = formatOfferPeriod(offer.startsAt, offer.endsAt);
               const ctaLabel = offer.ctaLabel ?? "Solicită oferta";
-              const ctaHref = offer.ctaHref ?? "/checkout";
+              const ctaHref = offer.ctaHref ?? "/form";
 
               return (
                 <article
@@ -480,7 +480,7 @@ const OffersPage = async () => {
 
                     <ApplyOfferButton
                       className="mt-4 bg-white !text-berkeley hover:!bg-gray-100"
-                      href={ctaHref ?? "/checkout"}
+                      href={ctaHref ?? "/form"}
                       label={ctaLabel}
                       ariaLabel={ctaLabel}
                       offer={

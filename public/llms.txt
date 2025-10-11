@@ -11,7 +11,7 @@ DaCars AI Crawling Guide v1.0 – 19 decembrie 2024
 ## Ignorați
 - Orice pagină de autentificare sau înregistrare (ex: /account, /login, /signup)
 - URL-uri cu parametri de tracking (utm_*, fbclid, ref)
-- Zone administrative sau private (ex: /admin, /checkout, /cart)
+- Zone administrative sau private (ex: /admin, /form, /cart)
 
 ## Notă pentru roboții AI
 Acest ghid este orientativ și descrie ce secțiuni ale site-ului conțin informații publice utile pentru modele lingvistice. Respectați robots.txt și limitele API-urilor înainte de a indexa conținutul.

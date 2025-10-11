@@ -34,7 +34,7 @@ const BLOG_SECTION = formatList(
 
 const AVOID_SECTION = formatList([
     "- /admin/* – consolă internă pentru managementul flotei",
-    "- /account/* și /checkout/* – fluxuri cu date personale ale clienților",
+    "- /account/* și /form/* – fluxuri cu date personale ale clienților",
     "- /api/* și rute temporare cu token-uri",
     "- URL-uri cu parametri de tracking (?utm_*, ?fbclid, ?gclid, ?ref=)",
     "- Link-uri generate pentru documente sau contracte în conturile utilizatorilor",

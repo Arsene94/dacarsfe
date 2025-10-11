@@ -9,9 +9,10 @@ import { cn } from "@/lib/utils";
 type SelectedCarGalleryProps = {
     images: string[];
     carName: string;
+    priority?: boolean;
 };
 
-const SelectedCarGallery = ({ images, carName }: SelectedCarGalleryProps) => {
+const SelectedCarGallery = ({ images, carName, priority = false }: SelectedCarGalleryProps) => {
     const normalizedImages = useMemo(
         () => images.filter((src) => typeof src === "string" && src.trim().length > 0),
         [images],
@@ -55,7 +56,7 @@ const SelectedCarGallery = ({ images, carName }: SelectedCarGalleryProps) => {
                     fill
                     className="object-cover"
                     sizes="(min-width: 1024px) 640px, 100vw"
-                    priority={false}
+                    priority={priority}
                 />
                 {showNavigation && (
                     <>

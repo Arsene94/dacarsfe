@@ -10,7 +10,7 @@
     ],
     "cta": {
       "label": "Réservez maintenant",
-      "href": "/checkout"
+      "href": "/form"
     },
     "mobileMenu": {
       "open": "Ouvrir le menu",
