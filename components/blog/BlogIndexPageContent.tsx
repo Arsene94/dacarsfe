@@ -1,10 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import JsonLd from "@/components/seo/JsonLd";
 import BlogPostCard from "@/components/blog/BlogPostCard";
+import InterlinkingSection, {
+    type InterlinkingCopy,
+    type InterlinkingLink,
+} from "@/components/interlinking/InterlinkingSection";
 import { useLocale } from "@/context/LocaleContext";
 import {
     buildBlogIndexStructuredData,
@@ -99,10 +101,31 @@ const BlogIndexPageContent = ({
 
     const showEmptyState = !isLoading && posts.length === 0;
 
-    const interlink = copy.interlink;
-    const interlinkLinks = Array.isArray(interlink?.links)
-        ? interlink.links.filter((item) => item.href && item.label)
-        : [];
+    const interlinkCopy: InterlinkingCopy | null = useMemo(() => {
+        const interlink = copy.interlink;
+        if (!interlink) {
+            return null;
+        }
+
+        const links = Array.isArray(interlink.links)
+            ? interlink.links
+                  .map((item) => ({
+                      ...item,
+                      href: item.href?.trim() ?? "",
+                      label: item.label?.trim() ?? "",
+                  }))
+                  .filter((item): item is InterlinkingLink => item.href.length > 0 && item.label.length > 0)
+            : [];
+
+        if (links.length === 0) {
+            return null;
+        }
+
+        return {
+            ...interlink,
+            links,
+        } satisfies InterlinkingCopy;
+    }, [copy.interlink]);
 
     return (
         <main className="mx-auto max-w-5xl space-y-10 px-6 py-12">
@@ -112,37 +135,7 @@ const BlogIndexPageContent = ({
                 <p className="mt-3 max-w-3xl text-base text-white/80">{copy.pageDescription}</p>
             </header>
 
-            {interlinkLinks.length > 0 && (
-                <section className="rounded-3xl border border-berkeley/10 bg-white/70 p-8 shadow-sm">
-                    <div className="text-center sm:text-left">
-                        <h2 className="text-2xl font-semibold text-berkeley">{interlink.title}</h2>
-                        <p className="mt-3 text-sm text-gray-600">{interlink.description}</p>
-                    </div>
-                    <nav
-                        aria-label={interlink.ariaLabel}
-                        className="mt-6"
-                    >
-                        <div className="grid gap-4 md:grid-cols-2">
-                            {interlinkLinks.map((item) => (
-                                <Link
-                                    key={`${item.href}-${item.label}`}
-                                    href={item.href}
-                                    className="group flex h-full flex-col justify-between rounded-2xl border border-gray-200 bg-white/90 p-5 text-left transition-all duration-300 hover:-translate-y-1 hover:border-berkeley/40 hover:shadow-lg"
-                                >
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-berkeley">{item.label}</h3>
-                                        <p className="mt-2 text-sm text-gray-600">{item.description}</p>
-                                    </div>
-                                    <span className="mt-5 inline-flex items-center text-sm font-semibold text-berkeley">
-                                        {interlink.linkCta}
-                                        <ArrowUpRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-                                    </span>
-                                </Link>
-                            ))}
-                        </div>
-                    </nav>
-                </section>
-            )}
+            {interlinkCopy && <InterlinkingSection copy={interlinkCopy} className="py-12" />}
 
             <section className="grid gap-8 md:grid-cols-2" aria-busy={isLoading}>
                 {showEmptyState ? (
