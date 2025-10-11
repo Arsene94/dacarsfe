@@ -2218,7 +2218,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
             if (isNewBooking) {
                 await apiClient.createBooking(payload);
             } else {
-                await apiClient.updateBooking(bookingInfo.id, payload);
+                const bookingId = bookingInfo.id;
+
+                if (bookingId == null) {
+                    console.error(
+                        "Identificatorul rezervării lipsește; nu putem actualiza rezervarea.",
+                    );
+                    return;
+                }
+
+                await apiClient.updateBooking(bookingId, payload);
             }
             onClose();
             onUpdated?.();

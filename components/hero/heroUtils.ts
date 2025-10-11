@@ -63,20 +63,28 @@ export const normalizeFeatures = (value: unknown): HeroFeature[] => {
         return [];
     }
 
-    return value
-        .map((entry) => {
-            if (!entry || typeof entry !== "object") {
-                return null;
-            }
+    return value.reduce<HeroFeature[]>((acc, entry) => {
+        if (!entry || typeof entry !== "object") {
+            return acc;
+        }
 
-            const maybeFeature = entry as UnknownRecord;
-            const title = maybeFeature.title;
-            const description = maybeFeature.description;
+        const maybeFeature = entry as UnknownRecord;
+        const title = maybeFeature.title;
+        const description = maybeFeature.description;
 
-            return {
-                title: typeof title === "string" ? title : undefined,
-                description: typeof description === "string" ? description : undefined,
-            } satisfies HeroFeature;
-        })
-        .filter((entry): entry is HeroFeature => Boolean(entry?.title || entry?.description));
+        const resolvedTitle = typeof title === "string" ? title : undefined;
+        const resolvedDescription =
+            typeof description === "string" ? description : undefined;
+
+        if (!resolvedTitle && !resolvedDescription) {
+            return acc;
+        }
+
+        acc.push({
+            title: resolvedTitle,
+            description: resolvedDescription,
+        });
+
+        return acc;
+    }, []);
 };
