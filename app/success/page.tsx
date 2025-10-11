@@ -19,6 +19,38 @@ import successMessagesRo from "@/messages/success/ro.json";
 
 type SuccessMessages = typeof successMessagesRo;
 
+type MetaLeadDetails = {
+    email?: string;
+    phone?: string;
+    fullName?: string;
+    firstName?: string;
+    lastName?: string;
+    gender?: string;
+    dateOfBirth?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+    externalId?: string;
+};
+
+type MetaLeadUserData = Partial<
+    Record<
+        | "em"
+        | "ph"
+        | "fn"
+        | "ln"
+        | "ge"
+        | "db"
+        | "ct"
+        | "st"
+        | "zp"
+        | "country"
+        | "external_id",
+        string
+    >
+>;
+
 const LOCALE_TO_INTL: Record<Locale, string> = {
     ro: "ro-RO",
     en: "en-US",
@@ -78,6 +110,353 @@ const resolveReservationTrackingIdentifier = (
     return null;
 };
 
+const toNullableTrimmedString = (value: unknown): string | null => {
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+
+    if (typeof value === "number" || typeof value === "boolean") {
+        const normalized = String(value).trim();
+        return normalized.length > 0 ? normalized : null;
+    }
+
+    return null;
+};
+
+const splitFullName = (
+    fullName: string | null,
+): { firstName?: string; lastName?: string } => {
+    if (!fullName) {
+        return {};
+    }
+
+    const normalized = fullName.trim();
+    if (!normalized) {
+        return {};
+    }
+
+    const parts = normalized.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+        return {};
+    }
+
+    const [first, ...rest] = parts;
+    const last = rest.length > 0 ? rest[rest.length - 1] : undefined;
+
+    return {
+        firstName: first,
+        lastName: last,
+    };
+};
+
+const getReservationStringField = (
+    record: (ReservationPayload & Record<string, unknown>) | null,
+    keys: readonly string[],
+): string | null => {
+    if (!record) {
+        return null;
+    }
+
+    for (const key of keys) {
+        if (key in record) {
+            const value = toNullableTrimmedString((record as Record<string, unknown>)[key]);
+            if (value) {
+                return value;
+            }
+        }
+    }
+
+    return null;
+};
+
+const normalizeEmailValue = (value: string | null): string | null => {
+    if (!value) {
+        return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    return normalized.length > 0 ? normalized : null;
+};
+
+const normalizeNameValue = (value: string | null): string | null => {
+    if (!value) {
+        return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    return normalized.length > 0 ? normalized : null;
+};
+
+const normalizeInternationalPhone = (value: string | null): string | null => {
+    if (!value) {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const digits = trimmed.replace(/[^0-9+]/g, "");
+    if (!digits) {
+        return null;
+    }
+
+    if (digits.startsWith("+")) {
+        return digits;
+    }
+
+    if (digits.startsWith("00") && digits.length > 2) {
+        return `+${digits.slice(2)}`;
+    }
+
+    return digits.length > 0 ? `+${digits}` : null;
+};
+
+const normalizeGenderValue = (value: string | null): string | null => {
+    if (!value) {
+        return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+        return null;
+    }
+
+    if (["m", "male", "masculin", "bărbat", "barbat"].includes(normalized)) {
+        return "m";
+    }
+
+    if (["f", "female", "feminin", "femeie", "doamna", "doamnă"].includes(normalized)) {
+        return "f";
+    }
+
+    return null;
+};
+
+const normalizeDateOfBirthValue = (value: string | null): string | null => {
+    if (!value) {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const ymdMatch = trimmed.match(/^(\d{4})[./-]?(\d{1,2})[./-]?(\d{1,2})$/);
+    if (ymdMatch) {
+        const [, year, month, day] = ymdMatch;
+        return `${year.padStart(4, "0")}${month.padStart(2, "0")}${day.padStart(2, "0")}`;
+    }
+
+    const dmyMatch = trimmed.match(/^(\d{1,2})[./-]?(\d{1,2})[./-]?(\d{4})$/);
+    if (dmyMatch) {
+        const [, day, month, year] = dmyMatch;
+        return `${year.padStart(4, "0")}${month.padStart(2, "0")}${day.padStart(2, "0")}`;
+    }
+
+    const digits = trimmed.replace(/\D/g, "");
+    if (digits.length === 8) {
+        return digits;
+    }
+
+    return null;
+};
+
+const normalizeCityOrStateValue = (value: string | null): string | null => {
+    if (!value) {
+        return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    return normalized.length > 0 ? normalized.replace(/\s+/g, " ") : null;
+};
+
+const normalizePostalCodeValue = (value: string | null): string | null => {
+    if (!value) {
+        return null;
+    }
+
+    const normalized = value.trim().replace(/\s+/g, "");
+    return normalized.length > 0 ? normalized.toLowerCase() : null;
+};
+
+const normalizeCountryValue = (value: string | null): string | null => {
+    if (!value) {
+        return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    return normalized.length > 0 ? normalized.replace(/\s+/g, " ") : null;
+};
+
+const normalizeExternalIdValue = (value: string | null): string | null => {
+    if (!value) {
+        return null;
+    }
+
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
+};
+
+const buildMetaLeadDetails = (
+    reservation: ReservationPayload | null,
+    reservationTrackingIdentifier: string | null,
+): MetaLeadDetails | null => {
+    if (!reservation) {
+        return null;
+    }
+
+    const record = reservation as ReservationPayload & Record<string, unknown>;
+    const details: MetaLeadDetails = {};
+
+    const email = toNullableTrimmedString(record.customer_email);
+    if (email) {
+        details.email = email;
+    }
+
+    const phone = toNullableTrimmedString(record.customer_phone);
+    if (phone) {
+        details.phone = phone;
+    }
+
+    const fullName = toNullableTrimmedString(record.customer_name);
+    if (fullName) {
+        details.fullName = fullName;
+        const { firstName, lastName } = splitFullName(fullName);
+        if (firstName) {
+            details.firstName = firstName;
+        }
+        if (lastName) {
+            details.lastName = lastName;
+        }
+    }
+
+    const gender = getReservationStringField(record, ["customer_gender", "gender"]);
+    if (gender) {
+        details.gender = gender;
+    }
+
+    const dateOfBirth = getReservationStringField(record, [
+        "customer_birthdate",
+        "birthdate",
+        "date_of_birth",
+        "dob",
+    ]);
+    if (dateOfBirth) {
+        details.dateOfBirth = dateOfBirth;
+    }
+
+    const city = getReservationStringField(record, ["customer_city", "city", "customer_location_city"]);
+    if (city) {
+        details.city = city;
+    }
+
+    const state = getReservationStringField(record, ["customer_state", "state", "region", "county"]);
+    if (state) {
+        details.state = state;
+    }
+
+    const postalCode = getReservationStringField(record, [
+        "customer_postal_code",
+        "postal_code",
+        "postalCode",
+        "zip",
+        "zip_code",
+        "customer_zip",
+    ]);
+    if (postalCode) {
+        details.postalCode = postalCode;
+    }
+
+    const country = getReservationStringField(record, ["customer_country", "country"]);
+    if (country) {
+        details.country = country;
+    }
+
+    if (reservationTrackingIdentifier) {
+        details.externalId = reservationTrackingIdentifier;
+    } else {
+        const fallbackExternalId = getReservationStringField(record, [
+            "external_id",
+            "lead_id",
+            "customer_id",
+        ]);
+        if (fallbackExternalId) {
+            details.externalId = fallbackExternalId;
+        }
+    }
+
+    return details;
+};
+
+const buildMetaLeadUserData = (details: MetaLeadDetails | null): MetaLeadUserData => {
+    if (!details) {
+        return {};
+    }
+
+    const userData: MetaLeadUserData = {};
+
+    const email = normalizeEmailValue(details.email ?? null);
+    if (email) {
+        userData.em = email;
+    }
+
+    const phone = normalizeInternationalPhone(details.phone ?? null);
+    if (phone) {
+        userData.ph = phone;
+    }
+
+    const firstName = normalizeNameValue(details.firstName ?? null);
+    if (firstName) {
+        userData.fn = firstName;
+    }
+
+    const lastName = normalizeNameValue(details.lastName ?? null);
+    if (lastName) {
+        userData.ln = lastName;
+    }
+
+    const gender = normalizeGenderValue(details.gender ?? null);
+    if (gender) {
+        userData.ge = gender;
+    }
+
+    const dateOfBirth = normalizeDateOfBirthValue(details.dateOfBirth ?? null);
+    if (dateOfBirth) {
+        userData.db = dateOfBirth;
+    }
+
+    const city = normalizeCityOrStateValue(details.city ?? null);
+    if (city) {
+        userData.ct = city;
+    }
+
+    const state = normalizeCityOrStateValue(details.state ?? null);
+    if (state) {
+        userData.st = state;
+    }
+
+    const postalCode = normalizePostalCodeValue(details.postalCode ?? null);
+    if (postalCode) {
+        userData.zp = postalCode;
+    }
+
+    const country = normalizeCountryValue(details.country ?? null);
+    if (country) {
+        userData.country = country;
+    }
+
+    const externalId = normalizeExternalIdValue(details.externalId ?? null);
+    if (externalId) {
+        userData.external_id = externalId;
+    }
+
+    return userData;
+};
+
 const SuccessPage = () => {
     const [reservationData, setReservationData] = useState<ReservationPayload | null>(null);
     const { locale, messages, t } = useTranslations<SuccessMessages>("success");
@@ -86,6 +465,14 @@ const SuccessPage = () => {
     const reservationTrackingIdentifier = useMemo(
         () => resolveReservationTrackingIdentifier(reservationData),
         [reservationData],
+    );
+    const metaLeadDetails = useMemo(
+        () => buildMetaLeadDetails(reservationData, reservationTrackingIdentifier),
+        [reservationData, reservationTrackingIdentifier],
+    );
+    const metaLeadUserData = useMemo(
+        () => buildMetaLeadUserData(metaLeadDetails),
+        [metaLeadDetails],
     );
 
     const priceFormatter = useMemo(
@@ -149,16 +536,25 @@ const SuccessPage = () => {
     }, []);
 
     useEffect(() => {
-        if (!reservationData) {
+        if (!metaLeadDetails) {
             return;
         }
 
         updateFacebookPixelAdvancedMatching({
-            email: reservationData.customer_email,
-            phone: reservationData.customer_phone,
-            fullName: reservationData.customer_name,
+            email: metaLeadDetails.email ?? null,
+            phone: metaLeadDetails.phone ?? null,
+            fullName: metaLeadDetails.fullName ?? null,
+            firstName: metaLeadDetails.firstName ?? null,
+            lastName: metaLeadDetails.lastName ?? null,
+            gender: metaLeadDetails.gender ?? null,
+            dateOfBirth: metaLeadDetails.dateOfBirth ?? null,
+            city: metaLeadDetails.city ?? null,
+            state: metaLeadDetails.state ?? null,
+            postalCode: metaLeadDetails.postalCode ?? null,
+            country: metaLeadDetails.country ?? null,
+            externalId: metaLeadDetails.externalId ?? null,
         });
-    }, [reservationData]);
+    }, [metaLeadDetails]);
 
     useEffect(() => {
         if (!reservationData) {
@@ -234,7 +630,7 @@ const SuccessPage = () => {
         const carIdString =
             carId !== undefined && carId !== null ? String(carId) : undefined;
 
-        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
+        const facebookLeadEventData: Record<string, unknown> = {
             value: totalAmount ?? undefined,
             currency: DEFAULT_CURRENCY,
             content_ids: carIdString ? [carIdString] : undefined,
@@ -259,7 +655,14 @@ const SuccessPage = () => {
                     ? reservationData.with_deposit
                     : undefined,
             service_ids: normalizedServices,
-        });
+        };
+
+        const hasMetaUserData = Object.keys(metaLeadUserData).length > 0;
+        if (hasMetaUserData) {
+            facebookLeadEventData.user_data = metaLeadUserData;
+        }
+
+        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, facebookLeadEventData);
 
 
 
@@ -270,7 +673,7 @@ const SuccessPage = () => {
         } catch (error) {
             console.warn("Nu s-a putut salva statusul evenimentului Lead", error);
         }
-    }, [reservationData, reservationTrackingIdentifier]);
+    }, [metaLeadUserData, reservationData, reservationTrackingIdentifier]);
 
     const wheelPrize = reservationData?.wheel_prize ?? null;
     const wheelPrizeDiscountRaw = reservationData?.wheel_prize_discount ??
