@@ -17,7 +17,6 @@ import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale
 import MixpanelInitializer from "../components/MixpanelInitializer";
 import TikTokPixelScript from "../components/TikTokPixelScript";
 import TikTokPixelInitializer from "../components/TikTokPixelInitializer";
-import MetaPixelScript from "../components/MetaPixelScript";
 import MetaPixelInitializer from "../components/MetaPixelInitializer";
 import { GoogleAnalytics } from '@next/third-parties/google'
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
@@ -91,7 +90,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <head>
         <GlobalStyles />
         <TikTokPixelScript />
-        <MetaPixelScript />
         <GoogleAnalytics gaId="G-R1B5YS77GK" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link

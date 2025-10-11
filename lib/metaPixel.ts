@@ -1,66 +1,48 @@
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
-type MetaPixelMethod = (...args: Array<unknown>) => void;
-
-type MetaPixelFunction = MetaPixelMethod & {
-    push: MetaPixelMethod;
-    queue: Array<unknown>;
-    callMethod?: MetaPixelMethod;
-    loaded?: boolean;
-    version?: string;
-};
-
-declare global {
-    interface Window {
-        fbq?: MetaPixelFunction;
-        _fbq?: MetaPixelFunction;
-        __dacarsMetaPixelHandled?: boolean;
-    }
-}
-
 const isBrowser = typeof window !== "undefined";
 
 const hasPixelId = (): boolean => Boolean(META_PIXEL_ID && META_PIXEL_ID.trim().length > 0);
 
-const ensureQueue = (): MetaPixelFunction | null => {
-    if (!isBrowser) {
-        return null;
-    }
-
-    if (!hasPixelId()) {
-        return null;
-    }
-
-    const existing = window.fbq;
-    if (existing && typeof existing === "function") {
-        if (!window._fbq) {
-            window._fbq = existing;
-        }
-        return existing;
-    }
-
-    const queue = function (...args: Array<unknown>) {
-        if (queue.callMethod) {
-            queue.callMethod(...args);
-        } else {
-            queue.queue.push(args);
-        }
-    } as MetaPixelFunction;
-
-    queue.push = function (...args: Array<unknown>) {
-        queue(...args);
-    };
-    queue.queue = [];
-    queue.loaded = false;
-    queue.version = "2.0";
-
-    window.fbq = queue;
-    window._fbq = queue;
-
-    return queue;
+type ReactFacebookPixel = {
+    init: (
+        pixelId: string,
+        advancedMatching?: Record<string, unknown>,
+        options?: {
+            autoConfig?: boolean;
+            debug?: boolean;
+        },
+    ) => void;
+    pageView: () => void;
+    track: (eventName: string, data?: Record<string, unknown>) => void;
 };
 
-const resolveQueue = (): MetaPixelFunction | null => {
+let pixelModulePromise: Promise<ReactFacebookPixel> | null = null;
+let initPromise: Promise<ReactFacebookPixel> | null = null;
+let hasSentInitialPageView = false;
+
+const loadPixelModule = (): Promise<ReactFacebookPixel> => {
+    if (!pixelModulePromise) {
+        pixelModulePromise = import("react-facebook-pixel").then((module) => {
+            const resolved = (module as { default?: ReactFacebookPixel }).default ?? (module as unknown as ReactFacebookPixel);
+            return resolved;
+        });
+    }
+
+    return pixelModulePromise;
+};
+
+const logDevWarning = (message: string, error?: unknown) => {
+    if (process.env.NODE_ENV !== "production") {
+        if (error) {
+            console.warn(message, error);
+        } else {
+            console.warn(message);
+        }
+    }
+};
+
+const ensureInitializedPixel = (): Promise<ReactFacebookPixel> | null => {
     if (!isBrowser) {
         return null;
     }
@@ -69,16 +51,29 @@ const resolveQueue = (): MetaPixelFunction | null => {
         return null;
     }
 
-    const queue = ensureQueue();
-    if (!queue) {
-        return null;
+    if (!initPromise) {
+        initPromise = loadPixelModule()
+            .then((pixel) => {
+                pixel.init(META_PIXEL_ID as string, undefined, {
+                    autoConfig: true,
+                    debug: process.env.NODE_ENV !== "production",
+                });
+
+                if (!hasSentInitialPageView) {
+                    pixel.pageView();
+                    hasSentInitialPageView = true;
+                }
+
+                return pixel;
+            })
+            .catch((error) => {
+                logDevWarning("Nu s-a putut inițializa Meta Pixel", error);
+                initPromise = null;
+                throw error;
+            });
     }
 
-    if (typeof queue !== "function") {
-        return null;
-    }
-
-    return queue;
+    return initPromise;
 };
 
 const sanitizeValue = (value: unknown): unknown => {
@@ -99,22 +94,22 @@ const sanitizeValue = (value: unknown): unknown => {
     }
 
     if (typeof value === "object") {
-        const entries = Object.entries(value as Record<string, unknown>)
-            .reduce<Array<readonly [string, unknown]>>((acc, [key, entryValue]) => {
-                const sanitizedEntry = sanitizeValue(entryValue);
-                if (sanitizedEntry === undefined) {
-                    return acc;
-                }
-
-                acc.push([key, sanitizedEntry] as const);
+        const entries = Object.entries(value as Record<string, unknown>);
+        const sanitizedEntries = entries.reduce<Array<readonly [string, unknown]>>((acc, [key, entryValue]) => {
+            const sanitizedEntry = sanitizeValue(entryValue);
+            if (sanitizedEntry === undefined) {
                 return acc;
-            }, []);
+            }
 
-        if (entries.length === 0) {
+            acc.push([key, sanitizedEntry] as const);
+            return acc;
+        }, []);
+
+        if (sanitizedEntries.length === 0) {
             return undefined;
         }
 
-        return Object.fromEntries(entries);
+        return Object.fromEntries(sanitizedEntries);
     }
 
     return value;
@@ -141,53 +136,58 @@ export const META_PIXEL_EVENTS = {
 export type MetaPixelEventName = (typeof META_PIXEL_EVENTS)[keyof typeof META_PIXEL_EVENTS];
 
 export const initMetaPixel = () => {
-    ensureQueue();
-};
-
-export const trackMetaPixelPageView = () => {
-    const queue = resolveQueue();
-    if (!queue) {
+    const promise = ensureInitializedPixel();
+    if (!promise) {
         return;
     }
 
-    try {
-        queue("track", META_PIXEL_EVENTS.PAGE_VIEW);
-    } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-            console.warn("Nu s-a putut trimite PageView către Meta Pixel", error);
-        }
+    promise.catch(() => {
+        // avertismentele sunt gestionate în ensureInitializedPixel
+    });
+};
+
+export const trackMetaPixelPageView = () => {
+    const promise = ensureInitializedPixel();
+    if (!promise) {
+        return;
     }
+
+    promise
+        .then((pixel) => {
+            pixel.pageView();
+        })
+        .catch((error) => {
+            logDevWarning("Nu s-a putut trimite PageView către Meta Pixel", error);
+        });
 };
 
 export const trackMetaPixelEvent = (
     eventName: MetaPixelEventName,
     payload?: Record<string, unknown>,
 ) => {
-    const queue = resolveQueue();
-    if (!queue) {
+    if (typeof eventName !== "string" || eventName.trim().length === 0) {
+        logDevWarning("Eveniment Meta Pixel ignorat – nume invalid", eventName);
         return;
     }
 
-    if (typeof eventName !== "string" || eventName.trim().length === 0) {
-        if (process.env.NODE_ENV !== "production") {
-            console.warn("Eveniment Meta Pixel ignorat – nume invalid", eventName);
-        }
+    const promise = ensureInitializedPixel();
+    if (!promise) {
         return;
     }
 
     const sanitizedPayload = sanitizePayload(payload);
 
-    try {
-        if (sanitizedPayload) {
-            queue("track", eventName, sanitizedPayload);
-        } else {
-            queue("track", eventName);
-        }
-    } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-            console.warn(`Nu s-a putut trimite evenimentul Meta Pixel ${eventName}`, error);
-        }
-    }
+    promise
+        .then((pixel) => {
+            if (sanitizedPayload) {
+                pixel.track(eventName, sanitizedPayload);
+            } else {
+                pixel.track(eventName);
+            }
+        })
+        .catch((error) => {
+            logDevWarning(`Nu s-a putut trimite evenimentul Meta Pixel ${eventName}`, error);
+        });
 };
 
 export const isMetaPixelConfigured = () => hasPixelId();
