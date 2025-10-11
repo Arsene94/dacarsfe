@@ -25,7 +25,11 @@ const MetaPixelInitializer = () => {
             return;
         }
 
-        const normalizedPathname = typeof pathname === "string" ? pathname : "";
+        if (typeof pathname !== "string" || pathname.length === 0) {
+            return;
+        }
+
+        const normalizedPathname = pathname;
         const normalizedSearchParamsKey = typeof searchParamsKey === "string" ? searchParamsKey : "";
         const previousLocation = previousLocationRef.current;
         const isSameLocation =
