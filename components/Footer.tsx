@@ -102,7 +102,8 @@ const Footer = () => {
                             <p>{footer.schedule?.days ?? "Luni - Duminică"}</p>
                             <p className="text-white font-semibold">{footer.schedule?.hours ?? "24/7"}</p>
                             <p className="text-sm mt-4">
-                                {footer.schedule?.note ?? "Program non-stop la sediul DaCars din Calea Bucureștilor 305"}
+                                {footer.schedule?.note ??
+                                    "Predare și ridicare non-stop în aeroportul Otopeni și la sediul DaCars din Calea Bucureștilor 305"}
                             </p>
                         </div>
                     </div>
