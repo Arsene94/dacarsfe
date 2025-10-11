@@ -17,8 +17,77 @@ type ReactFacebookPixel = {
     track: (eventName: string, data?: Record<string, unknown>) => void;
 };
 
+type FbqState = {
+    pixelsByID?: Record<string, unknown>;
+    loadedPixels?: unknown;
+};
+
+type FbqFunction = ((...args: unknown[]) => void) & {
+    getState?: () => FbqState | undefined;
+};
+
+declare global {
+    interface Window {
+        fbq?: FbqFunction;
+        _fbq?: FbqFunction;
+        __META_PIXEL_ACTIVE_IDS__?: string[];
+    }
+}
+
 let pixelModulePromise: Promise<ReactFacebookPixel> | null = null;
 let initPromise: Promise<ReactFacebookPixel> | null = null;
+
+const markPixelInitialized = (pixelId: string) => {
+    if (!isBrowser) {
+        return;
+    }
+
+    if (!Array.isArray(window.__META_PIXEL_ACTIVE_IDS__)) {
+        window.__META_PIXEL_ACTIVE_IDS__ = [];
+    }
+
+    if (!window.__META_PIXEL_ACTIVE_IDS__!.includes(pixelId)) {
+        window.__META_PIXEL_ACTIVE_IDS__!.push(pixelId);
+    }
+};
+
+const isPixelAlreadyInitialized = (pixelId: string): boolean => {
+    if (!isBrowser) {
+        return false;
+    }
+
+    const activeIds = window.__META_PIXEL_ACTIVE_IDS__;
+    if (Array.isArray(activeIds) && activeIds.includes(pixelId)) {
+        return true;
+    }
+
+    const fbq = window.fbq;
+    if (fbq && typeof fbq === "function" && typeof fbq.getState === "function") {
+        try {
+            const state = fbq.getState();
+            if (state && typeof state === "object") {
+                const { pixelsByID, loadedPixels } = state as {
+                    pixelsByID?: Record<string, unknown>;
+                    loadedPixels?: unknown;
+                };
+
+                if (Array.isArray(loadedPixels) && loadedPixels.includes(pixelId)) {
+                    markPixelInitialized(pixelId);
+                    return true;
+                }
+
+                if (pixelsByID && typeof pixelsByID === "object" && pixelId in pixelsByID) {
+                    markPixelInitialized(pixelId);
+                    return true;
+                }
+            }
+        } catch {
+            // ignorăm erorile de introspecție; dacă starea nu poate fi citită revenim la logica noastră
+        }
+    }
+
+    return false;
+};
 
 const loadPixelModule = (): Promise<ReactFacebookPixel> => {
     if (!pixelModulePromise) {
@@ -53,10 +122,15 @@ const ensureInitializedPixel = (): Promise<ReactFacebookPixel> | null => {
     if (!initPromise) {
         initPromise = loadPixelModule()
             .then((pixel) => {
-                pixel.init(META_PIXEL_ID as string, undefined, {
-                    autoConfig: true,
-                    debug: process.env.NODE_ENV !== "production",
-                });
+                const pixelId = META_PIXEL_ID as string;
+
+                if (!isPixelAlreadyInitialized(pixelId)) {
+                    pixel.init(pixelId, undefined, {
+                        autoConfig: true,
+                        debug: process.env.NODE_ENV !== "production",
+                    });
+                    markPixelInitialized(pixelId);
+                }
 
                 return pixel;
             })

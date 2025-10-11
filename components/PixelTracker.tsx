@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { initMetaPixel, trackMetaPixelPageView, isMetaPixelConfigured } from "@/lib/metaPixel";
 
-const MetaPixelInitializer = () => {
+const PixelTracker = () => {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const previousLocationRef = useRef<{ pathname: string; searchParamsKey: string } | null>(null);
@@ -52,5 +52,5 @@ const MetaPixelInitializer = () => {
     return null;
 };
 
-export default MetaPixelInitializer;
+export default PixelTracker;
 

@@ -1,25 +1,162 @@
-# Configurare și evenimente Meta Pixel (Facebook)
+# Ghid rapid: Meta Pixel (Facebook) în Next.js
 
-Integrarea Meta Pixel rulează global prin `MetaPixelInitializer`, încărcat în `app/layout.tsx`. Inițializarea și trimiterea evenimentelor sunt gestionate cu pachetul [`react-facebook-pixel`](https://www.npmjs.com/package/react-facebook-pixel), care adaugă automat scriptul oficial Facebook. Pentru activare este necesară variabila de mediu publică `NEXT_PUBLIC_META_PIXEL_ID`. Dacă variabila lipsește, apelurile `trackMetaPixelEvent`/`trackMetaPixelPageView` sunt ignorate în siguranță.
+Tracking-ul interacțiunilor este esențial pentru a înțelege performanța site-ului. Meta Pixel ajută la monitorizarea traficului, optimizarea campaniilor și remarketing. În proiect folosim pachetul [`react-facebook-pixel`](https://www.npmjs.com/package/react-facebook-pixel), care încarcă automat scriptul oficial Facebook și ne lasă să trimitem doar evenimentele de care avem nevoie: `PageView` și `Lead`.
 
-## Evenimente urmărite
+> **ID-ul Pixelului** este citit din `NEXT_PUBLIC_META_PIXEL_ID`. Dacă variabila nu este setată, helper-ele returnează în siguranță fără să trimită evenimente.
 
-| Eveniment Meta | Trigger în aplicație | Fișier sursă | Proprietăți trimise |
-| -------------- | -------------------- | ------------ | -------------------- |
-| `PageView` | La prima încărcare (după `ReactPixel.init`) și la fiecare schimbare de rută în App Router | `components/MetaPixelInitializer.tsx`, `lib/metaPixel.ts` | – |
-| `Lead` | Contacte directe (telefon, WhatsApp, email), vizualizarea checkout-ului cu date complete și confirmarea rezervării | `components/ContactSection.tsx`, `app/checkout/page.tsx`, `app/success/page.tsx` | `contact_method`, `lead_stage`, `value`, `currency`, `content_ids`, `content_name`, `content_type`, `contents`, `with_deposit`, `start_date`, `end_date`, `service_ids`, `applied_offer_ids`, `reservation_id`. |
+## 1. Instalează dependența
 
-Toate payload-urile sunt igienizate în `lib/metaPixel.ts` pentru a elimina valori `undefined`, liste goale sau date invalide înainte de trimiterea către Facebook. `MetaPixelInitializer` deduplică și schimbările de rută consecutive către aceeași destinație (inclusiv navigările realizate prin `next/link`) și așteaptă ca router-ul Next.js să furnizeze un `pathname` valid, astfel încât `PageView` se trimite o singură dată per vizită.
+```bash
+npm install react-facebook-pixel
+```
 
-## Pași de validare
+Dependența trebuie adăugată în `package.json`, iar dacă rulezi `npm install` pe CI/în containere, asigură-te că variabila de mediu publică este disponibilă înainte de build.
+
+## 2. Helper centralizat (`lib/metaPixel.ts`)
+
+`lib/metaPixel.ts` expune funcțiile necesare pentru inițializare și tracking:
+
+```ts
+export const META_PIXEL_EVENTS = {
+    PAGE_VIEW: "PageView",
+    LEAD: "Lead",
+} as const;
+
+export const initMetaPixel: () => void;
+export const trackMetaPixelPageView: () => void;
+export const trackMetaPixelEvent: (
+    eventName: MetaPixelEventName,
+    payload?: Record<string, unknown>,
+) => void;
+```
+
+Helper-ul face câteva lucruri suplimentare:
+
+- încarcă lazy modulul `react-facebook-pixel`, astfel încât codul să nu ajungă în bundle-ul server;
+- rulează `ReactPixel.init` o singură dată chiar dacă componenta se montează de mai multe ori sau dacă Facebook injectează deja pixelul (evităm avertismentul „The Facebook pixel activated 2 times”);
+- igienizează payload-urile (`sanitizePayload`) pentru a elimina `undefined`, array-uri goale sau date invalide înainte de a apela `fbq`.
+
+## 3. Creează componenta `components/PixelTracker.tsx`
+
+```tsx
+"use client";
+
+import { useEffect, useMemo, useRef } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { initMetaPixel, trackMetaPixelPageView, isMetaPixelConfigured } from "@/lib/metaPixel";
+
+const PixelTracker = () => {
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const previousLocationRef = useRef<{ pathname: string; searchParamsKey: string } | null>(null);
+
+    const searchParamsKey = useMemo(() => {
+        if (!searchParams) {
+            return "";
+        }
+        return searchParams.toString();
+    }, [searchParams]);
+
+    useEffect(() => {
+        initMetaPixel();
+    }, []);
+
+    useEffect(() => {
+        if (!isMetaPixelConfigured()) {
+            return;
+        }
+
+        if (typeof pathname !== "string" || pathname.length === 0) {
+            return;
+        }
+
+        const normalizedPathname = pathname;
+        const normalizedSearchParamsKey = typeof searchParamsKey === "string" ? searchParamsKey : "";
+        const previousLocation = previousLocationRef.current;
+        const isSameLocation =
+            previousLocation !== null &&
+            previousLocation.pathname === normalizedPathname &&
+            previousLocation.searchParamsKey === normalizedSearchParamsKey;
+
+        if (isSameLocation) {
+            return;
+        }
+
+        previousLocationRef.current = {
+            pathname: normalizedPathname,
+            searchParamsKey: normalizedSearchParamsKey,
+        };
+
+        trackMetaPixelPageView();
+    }, [pathname, searchParamsKey]);
+
+    return null;
+};
+
+export default PixelTracker;
+```
+
+Componenta este marcată `"use client"` pentru a putea folosi hook-urile de routing și rulează două efecte:
+
+1. `initMetaPixel()` – încarcă modulul Facebook și îl configurează o singură dată.
+2. `trackMetaPixelPageView()` – trimite `PageView` doar când schimbăm efectiv ruta (inclusiv navigări făcute cu `next/link`).
+
+## 4. Adaugă tracker-ul în `app/layout.tsx`
+
+```tsx
+import PixelTracker from "../components/PixelTracker";
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // ... restul layout-ului
+  return (
+    <html lang="en">
+      <head>
+        {/* alte meta-uri */}
+      </head>
+      <body>
+        {/* alte inițializatoare (Mixpanel, TikTok etc.) */}
+        <PixelTracker />
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+Componenta poate fi plasată într-un `Suspense` existent (exact ca în implementarea curentă) pentru a evita blocarea altor inițializatori. `react-facebook-pixel` adaugă singur scriptul oficial și nu este nevoie de alt `<script>` manual. Dacă ai nevoie de fallback pentru utilizatorii fără JavaScript, poți adăuga imaginea `noscript` recomandată de Facebook în `<head>`.
+
+## 5. Trimiterea evenimentului `Lead`
+
+`Lead` este singurul eveniment suplimentar permis pe lângă `PageView`. Pentru a-l trimite, folosește helper-ul `trackMetaPixelEvent`:
+
+```ts
+import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
+
+trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
+    contact_method: "whatsapp",
+    lead_stage: "contact",
+    value: 120,
+    currency: "EUR",
+});
+```
+
+Payload-ul este curățat automat, astfel încât valorile `undefined` sau array-urile goale sunt eliminate înainte de apelul `fbq`. În aplicație evenimentul `Lead` este folosit pentru:
+
+- click-uri pe contact (telefon, WhatsApp, email) din landing (`components/ContactSection.tsx`);
+- inițierea checkout-ului cu date complete (`app/checkout/page.tsx`);
+- confirmarea rezervării (`app/success/page.tsx`).
+
+## 6. Evenimente active și validare
+
+| Eveniment Meta | Trigger | Fișiere sursă | Proprietăți trimise |
+| -------------- | ------- | ------------- | ------------------- |
+| `PageView` | La prima încărcare și la fiecare schimbare reală de rută | `components/PixelTracker.tsx`, `lib/metaPixel.ts` | – |
+| `Lead` | Contact direct, vizualizare checkout cu date complete, confirmare rezervare | `components/ContactSection.tsx`, `app/checkout/page.tsx`, `app/success/page.tsx` | `contact_method`, `lead_stage`, `value`, `currency`, `content_ids`, `content_name`, `content_type`, `contents`, `with_deposit`, `start_date`, `end_date`, `service_ids`, `applied_offer_ids`, `reservation_id` |
+
+### Checklist de verificare
 
 1. Adaugă `NEXT_PUBLIC_META_PIXEL_ID` în `.env.local`.
-2. Rulează aplicația (`npm run dev`) și verifică în browser, cu Meta Pixel Helper, că evenimentele de mai sus apar cu status „Received”.
-3. Pentru scenariile checkout/succes, folosește fluxul complet din pagina „Flotă” pentru a popula `BookingContext` (selectează mașină, perioadă, finalizează formularul). Evenimentele `Lead` se trimit doar după completarea integrală a procesului.
+2. Rulează aplicația (`npm run dev`) și confirmă în Meta Pixel Helper că `PageView` și `Lead` sunt recepționate.
+3. Verifică consola că nu apare avertismentul „The Facebook pixel activated 2 times” – dacă apare, cel mai probabil pixelul este injectat de o altă sursă și trebuie eliminată dublura.
 
-## Extensii recomandate
-
-- **Advanced Matching** – dacă backend-ul acceptă hashing pentru email/telefon, se poate extinde `initMetaPixel` pentru a apela `ReactPixel.init(ID, { em: hashEmail, ph: hashPhone })` folosind datele introduse în checkout.
-- **Politica de tracking** – Meta Pixel trimite doar `PageView` și `Lead`, conform cerințelor echipei de marketing. Pentru alte conversii folosește Mixpanel/TikTok sau cere aprobare înainte de a extinde lista de evenimente Meta.
-- **Debugging** – în dezvoltare poți activa `fbq('trackCustom', 'DebugEvent', {...})` din componente locale pentru a valida payload-uri noi fără a afecta rapoartele de producție.
-
+Cu această configurație rămân active doar `PageView` și `Lead`, respectând cerințele de marketing și oferind o implementare conformă cu documentația oficială Facebook.
