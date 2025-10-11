@@ -129,7 +129,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 }
 ```
 
-Componenta poate fi plasată într-un `Suspense` existent (exact ca în implementarea curentă) pentru a evita blocarea altor inițializatori. `react-facebook-pixel` adaugă singur scriptul oficial și nu este nevoie de alt `<script>` manual. Dacă ai nevoie de fallback pentru utilizatorii fără JavaScript, poți adăuga imaginea `noscript` recomandată de Facebook în `<head>`.
+Componenta poate fi plasată într-un `Suspense` existent (exact ca în implementarea curentă) pentru a evita blocarea altor inițializatori. Scriptul oficial este încărcat prin `components/MetaPixelScript.tsx`, însă acesta nu mai trimite automat `PageView`; evenimentul este emis exclusiv din `PixelTracker` pentru a preveni duplicatele observate anterior. Dacă ai nevoie de fallback pentru utilizatorii fără JavaScript, `MetaPixelScript` include și imaginea `noscript` recomandată de Facebook.
 
 ## 5. Trimiterea evenimentului `Lead`
 

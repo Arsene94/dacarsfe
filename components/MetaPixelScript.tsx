@@ -75,7 +75,6 @@ const MetaPixelScript = () => {
       fbq('init', '${pixelId}');
       fbq('set', 'autoConfig', false, '${pixelId}');
       fbq('consent', 'grant');
-      fbq('track', 'PageView');
       window.__dacarsMetaPixelHandled = true;
     }
 
