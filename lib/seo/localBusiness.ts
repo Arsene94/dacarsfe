@@ -44,6 +44,27 @@ const OPENING_HOURS_SPECIFICATION = [{
     closes: "23:59",
 }];
 
+const FALLBACK_OFFERS: JsonLd[] = [
+    {
+        "@type": "Offer",
+        name: "Reducere nuntă 10%",
+        description:
+            "Prezinți invitația de nuntă la preluarea mașinii și primești 10% reducere din valoarea totală a rezervării.",
+        priceCurrency: "EUR",
+        availability: "https://schema.org/InStock",
+        url: ensureAbsoluteUrl("/offers/reducere-nunta", SITE_URL),
+    },
+    {
+        "@type": "Offer",
+        name: "Adu un prieten: reducere cumulată 20%",
+        description:
+            "Închiriază simultan cu un prieten și primiți împreună o reducere cumulată de 20% aplicată automat la checkout.",
+        priceCurrency: "EUR",
+        availability: "https://schema.org/InStock",
+        url: ensureAbsoluteUrl("/offers/adu-un-prieten", SITE_URL),
+    },
+];
+
 const formatOffer = (offer: OfferSummary): JsonLd => {
     const url = offer.primary_cta_url
         ? ensureAbsoluteUrl(offer.primary_cta_url, SITE_URL)
@@ -127,8 +148,8 @@ export const buildLocalBusinessStructuredData = (
         },
         geo: {
             "@type": "GeoCoordinates",
-            latitude: 44.5588135,
-            longitude: 26.0692763,
+            latitude: 44.558968,
+            longitude: 26.072314,
         },
         areaServed: [
             "București",
@@ -144,8 +165,10 @@ export const buildLocalBusinessStructuredData = (
         review: reviews.slice(0, 3).map(formatReview),
     };
 
-    if (mappedOffers.length > 0) {
-        data.makesOffer = mappedOffers;
+    const offersToExpose = [...FALLBACK_OFFERS, ...mappedOffers];
+
+    if (offersToExpose.length > 0) {
+        data.makesOffer = offersToExpose.slice(0, 5);
     }
 
     if (aggregateRating) {
