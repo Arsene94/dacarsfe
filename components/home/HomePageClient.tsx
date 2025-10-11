@@ -53,7 +53,6 @@ type ApiModule = typeof import("@/lib/api");
 type WheelNormalizationModule = typeof import("@/lib/wheelNormalization");
 type MixpanelModule = typeof import("@/lib/mixpanelClient");
 type TikTokModule = typeof import("@/lib/tiktokPixel");
-type MetaPixelModule = typeof import("@/lib/metaPixel");
 
 type WheelHelpers = {
     apiClient: ApiModule["apiClient"];
@@ -67,8 +66,6 @@ type TrackingModules = {
     trackTikTokEvent: TikTokModule["trackTikTokEvent"];
     TIKTOK_CONTENT_TYPE: TikTokModule["TIKTOK_CONTENT_TYPE"];
     TIKTOK_EVENTS: TikTokModule["TIKTOK_EVENTS"];
-    trackMetaPixelEvent: MetaPixelModule["trackMetaPixelEvent"];
-    META_PIXEL_EVENTS: MetaPixelModule["META_PIXEL_EVENTS"];
 };
 
 let wheelHelpersPromise: Promise<WheelHelpers> | null = null;
@@ -112,15 +109,12 @@ const loadTrackingModules = async (): Promise<TrackingModules> => {
         trackingModulesPromise = Promise.all([
             import("@/lib/mixpanelClient"),
             import("@/lib/tiktokPixel"),
-            import("@/lib/metaPixel"),
         ])
-            .then(([mixpanelModule, tikTokModule, metaModule]) => ({
+            .then(([mixpanelModule, tikTokModule]) => ({
                 trackMixpanelEvent: mixpanelModule.trackMixpanelEvent,
                 trackTikTokEvent: tikTokModule.trackTikTokEvent,
                 TIKTOK_CONTENT_TYPE: tikTokModule.TIKTOK_CONTENT_TYPE,
                 TIKTOK_EVENTS: tikTokModule.TIKTOK_EVENTS,
-                trackMetaPixelEvent: metaModule.trackMetaPixelEvent,
-                META_PIXEL_EVENTS: metaModule.META_PIXEL_EVENTS,
             }))
             .catch((error) => {
                 trackingModulesPromise = null;
@@ -459,8 +453,6 @@ const HomePageClient = () => {
                             trackTikTokEvent,
                             TIKTOK_CONTENT_TYPE,
                             TIKTOK_EVENTS,
-                            trackMetaPixelEvent,
-                            META_PIXEL_EVENTS,
                         }) => {
                             trackMixpanelEvent("landing_view", {
                                 has_booking_range: Boolean(hasBookingRange),
@@ -476,16 +468,6 @@ const HomePageClient = () => {
                                 content_id: "landing_home",
                                 content_name: "Landing Page",
                                 content_type: TIKTOK_CONTENT_TYPE,
-                                has_booking_range: Boolean(hasBookingRange),
-                                booking_range_key: bookingRangeKey || undefined,
-                                wheel_popup_shown: Boolean(showWheelPopup),
-                                wheel_period_id: activePeriod?.id ?? undefined,
-                            });
-
-                            trackMetaPixelEvent(META_PIXEL_EVENTS.VIEW_CONTENT, {
-                                content_name: "Landing Page",
-                                content_category: "home",
-                                content_type: "landing_page",
                                 has_booking_range: Boolean(hasBookingRange),
                                 booking_range_key: bookingRangeKey || undefined,
                                 wheel_popup_shown: Boolean(showWheelPopup),
