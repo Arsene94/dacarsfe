@@ -43,6 +43,7 @@ const InterlinkingSection = ({ copy, className }: InterlinkingSectionProps) => {
                         {links.map((link) => {
                             const tone = link.tone ?? "primary";
                             const toneClasses = toneClassMap[tone] ?? toneClassMap.primary;
+                            const shouldInvertContent = tone === "primary" || tone === "accent";
 
                             return (
                                 <Link
@@ -58,7 +59,7 @@ const InterlinkingSection = ({ copy, className }: InterlinkingSectionProps) => {
                                         <p
                                             className={cn(
                                                 "text-sm font-dm-sans uppercase tracking-wider text-berkeley/70",
-                                                (tone === "primary" || tone === "accent") && "hover:text-white",
+                                                shouldInvertContent && "group-hover:text-white",
                                             )}
                                         >
                                             {copy.linkPrefix}
@@ -68,7 +69,7 @@ const InterlinkingSection = ({ copy, className }: InterlinkingSectionProps) => {
                                             <p
                                                 className={cn(
                                                     "mt-3 text-sm font-dm-sans text-gray-600",
-                                                    (tone === "primary" || tone === "accent") && "hover:text-white",
+                                                    shouldInvertContent && "group-hover:text-white",
                                                 )}
                                             >
                                                 {link.description}
