@@ -1075,9 +1075,8 @@ const ReservationPage = () => {
             applied_offer_ids: appliedOfferIds,
         });
 
-        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
+        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.VIEW_CONTENT, {
             ...estimatedMetaPayload,
-            lead_stage: "checkout_view",
         });
 
         checkoutLoadedTrackedRef.current = true;

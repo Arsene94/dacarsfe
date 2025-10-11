@@ -195,6 +195,8 @@ const applyFullName = (
 
 export const FACEBOOK_PIXEL_EVENTS = {
     PAGE_VIEW: "PageView",
+    VIEW_CONTENT: "ViewContent",
+    SEARCH: "Search",
     LEAD: "Lead",
 } as const;
 
