@@ -11,6 +11,8 @@ type AdvancedMatchingPayload = {
     ph?: string;
     fn?: string;
     ln?: string;
+    ge?: string;
+    db?: string;
     ct?: string;
     st?: string;
     zp?: string;
@@ -117,6 +119,65 @@ const normalizeName = (value: unknown): string | undefined => {
     return normalized.length > 0 ? normalized : undefined;
 };
 
+const normalizeGender = (value: unknown): string | undefined => {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+        return undefined;
+    }
+
+    if (["m", "male", "masculin", "bărbat", "barbat"].includes(normalized)) {
+        return "m";
+    }
+
+    if (["f", "female", "feminin", "femeie", "doamna", "doamnă"].includes(normalized)) {
+        return "f";
+    }
+
+    return undefined;
+};
+
+const normalizeDateOfBirth = (value: unknown): string | undefined => {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return undefined;
+    }
+
+    const normalized = trimmed.replace(/[^0-9]/g, "");
+    if (normalized.length === 8) {
+        const [year, month, day] = [
+            normalized.slice(0, 4),
+            normalized.slice(4, 6),
+            normalized.slice(6, 8),
+        ];
+        if (Number.isFinite(Number(year)) && Number.isFinite(Number(month)) && Number.isFinite(Number(day))) {
+            return `${year}${month}${day}`;
+        }
+    }
+
+    if (normalized.length === 6) {
+        const [day, month, yearSuffix] = [
+            normalized.slice(0, 2),
+            normalized.slice(2, 4),
+            normalized.slice(4, 6),
+        ];
+        const inferredYear = Number(yearSuffix);
+        if (Number.isFinite(Number(day)) && Number.isFinite(Number(month)) && Number.isFinite(inferredYear)) {
+            const century = inferredYear > 30 ? "19" : "20";
+            return `${century}${yearSuffix}${month}${day}`;
+        }
+    }
+
+    return undefined;
+};
+
 const normalizeLocation = (value: unknown): string | undefined => {
     const normalized = normalizeName(value);
     return normalized?.replace(/\s+/g, "");
@@ -209,6 +270,8 @@ export type FacebookPixelAdvancedMatchingUpdate = {
     firstName?: string | null;
     lastName?: string | null;
     fullName?: string | null;
+    gender?: string | null;
+    dateOfBirth?: string | null;
     city?: string | null;
     state?: string | null;
     postalCode?: string | null;
@@ -261,6 +324,18 @@ export const updateFacebookPixelAdvancedMatching = (
 
     if ("fullName" in update) {
         changed = applyFullName(update.fullName, draft) || changed;
+    }
+
+    if ("gender" in update) {
+        changed = assignAdvancedMatchingValue("ge", normalizeGender(update.gender ?? undefined), draft) || changed;
+    }
+
+    if ("dateOfBirth" in update) {
+        changed = assignAdvancedMatchingValue(
+            "db",
+            normalizeDateOfBirth(update.dateOfBirth ?? undefined),
+            draft,
+        ) || changed;
     }
 
     if ("city" in update) {
