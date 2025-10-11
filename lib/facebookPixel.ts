@@ -1,5 +1,3 @@
-import ReactPixel from "react-facebook-pixel";
-
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim();
 const isBrowser = typeof window !== "undefined";
 
@@ -20,27 +18,67 @@ type AdvancedMatchingPayload = {
     external_id?: string;
 };
 
+type ReactFacebookPixel = typeof import("react-facebook-pixel").default;
+
+let loadedPixel: ReactFacebookPixel | null = null;
+let loadPixelPromise: Promise<ReactFacebookPixel | null> | null = null;
 let initialized = false;
 let advancedMatching: AdvancedMatchingPayload = {};
 
 const canUsePixel = () => Boolean(isBrowser && PIXEL_ID);
 
-const initPixel = () => {
-    if (!canUsePixel()) {
-        return false;
+const loadPixel = async (): Promise<ReactFacebookPixel | null> => {
+    if (!isBrowser) {
+        return null;
     }
 
-    ReactPixel.init(PIXEL_ID!, advancedMatching, pixelOptions);
-    initialized = true;
-    return true;
+    if (loadedPixel) {
+        return loadedPixel;
+    }
+
+    if (!loadPixelPromise) {
+        loadPixelPromise = import("react-facebook-pixel")
+            .then((module) => {
+                loadedPixel = module.default;
+                return loadedPixel;
+            })
+            .catch((error) => {
+                if (process.env.NODE_ENV !== "production") {
+                    console.error("Nu s-a putut încărca react-facebook-pixel", error);
+                }
+                loadPixelPromise = null;
+                return null;
+            });
+    }
+
+    return loadPixelPromise;
 };
 
-const ensurePixelReady = () => {
-    if (!initialized) {
-        return initPixel();
+const reinitializePixel = async (): Promise<ReactFacebookPixel | null> => {
+    if (!canUsePixel()) {
+        return null;
     }
 
-    return canUsePixel();
+    const pixel = await loadPixel();
+    if (!pixel) {
+        return null;
+    }
+
+    pixel.init(PIXEL_ID!, advancedMatching, pixelOptions);
+    initialized = true;
+    return pixel;
+};
+
+const ensurePixelReady = async (): Promise<ReactFacebookPixel | null> => {
+    if (!initialized) {
+        return reinitializePixel();
+    }
+
+    if (!canUsePixel()) {
+        return null;
+    }
+
+    return loadPixel();
 };
 
 const normalizeEmail = (value: unknown): string | undefined => {
@@ -168,28 +206,24 @@ export type FacebookPixelAdvancedMatchingUpdate = {
 };
 
 export const initFacebookPixel = () => {
-    initPixel();
+    void reinitializePixel();
 };
 
 export const isFacebookPixelConfigured = () => canUsePixel();
 
 export const trackFacebookPixelPageView = () => {
-    if (!ensurePixelReady()) {
-        return;
-    }
-
-    ReactPixel.pageView();
+    void ensurePixelReady().then((pixel) => {
+        pixel?.pageView();
+    });
 };
 
 export const trackFacebookPixelEvent = (
     eventName: FacebookPixelEventName,
     data?: Record<string, unknown>,
 ) => {
-    if (!ensurePixelReady()) {
-        return;
-    }
-
-    ReactPixel.track(eventName, data);
+    void ensurePixelReady().then((pixel) => {
+        pixel?.track(eventName, data);
+    });
 };
 
 export const updateFacebookPixelAdvancedMatching = (
@@ -249,6 +283,6 @@ export const updateFacebookPixelAdvancedMatching = (
     advancedMatching = draft;
 
     if (initialized) {
-        initPixel();
+        void reinitializePixel();
     }
 };

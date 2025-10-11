@@ -36,6 +36,7 @@ Helper-ul folosește obiectul `ReactPixel` din bibliotecă și oferă câteva be
 
 - păstrează o singură instanță a pixelului pentru întregul browser și reapelează `ReactPixel.init()` doar când se schimbă payload-ul de advanced matching;
 - pornește pixelul doar după ce există un `NEXT_PUBLIC_META_PIXEL_ID` valid, fără a injecta scripturi custom în layout;
+- încarcă biblioteca `react-facebook-pixel` doar în browser (lazy) pentru a evita erorile de tip `window is not defined` în SSR;
 - normalizează câmpurile trimise prin `updateFacebookPixelAdvancedMatching` (email, telefon, nume, adresă) conform cerințelor Meta, apoi reaplică datele ca al treilea parametru în `fbq('init', PIXEL_ID, { ... })`;
 - expune o enumerare strictă (`FACEBOOK_PIXEL_EVENTS`) pentru evenimentele pe care le urmărim în prezent (`PageView`, `Lead`).
 
