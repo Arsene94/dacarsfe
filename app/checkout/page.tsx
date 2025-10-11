@@ -9,7 +9,11 @@ import {useBooking} from "@/context/useBooking";
 import { apiClient } from "@/lib/api";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
-import { trackMetaPixelEvent, META_PIXEL_EVENTS, updateMetaPixelAdvancedMatching } from "@/lib/metaPixel";
+import {
+    trackFacebookPixelEvent,
+    FACEBOOK_PIXEL_EVENTS,
+    updateFacebookPixelAdvancedMatching,
+} from "@/lib/facebookPixel";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
@@ -447,7 +451,7 @@ const ReservationPage = () => {
         coupon_code: storedDiscount?.code || "",
     });
     useEffect(() => {
-        updateMetaPixelAdvancedMatching({
+        updateFacebookPixelAdvancedMatching({
             email: formData.customer_email,
             phone: formData.customer_phone,
             fullName: formData.customer_name,
@@ -1071,7 +1075,7 @@ const ReservationPage = () => {
             applied_offer_ids: appliedOfferIds,
         });
 
-        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
+        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
             ...estimatedMetaPayload,
             lead_stage: "checkout_view",
         });
@@ -1677,7 +1681,7 @@ const ReservationPage = () => {
             applied_offer_ids: appliedOffersPayload.map((offer) => offer.id),
         });
 
-        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
+        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
             form_name: "checkout_reservation",
             value: totalAfterAdjustments,
             currency: DEFAULT_CURRENCY,

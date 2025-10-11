@@ -1,55 +1,57 @@
-# Ghid rapid: Meta Pixel (Facebook) în Next.js
+# Ghid rapid: Facebook Pixel cu `react-use-facebook-pixel`
 
-Tracking-ul interacțiunilor este esențial pentru a înțelege performanța site-ului. Meta Pixel ajută la monitorizarea traficului, optimizarea campaniilor și remarketing. În proiect folosim pachetul [`react-facebook-pixel`](https://www.npmjs.com/package/react-facebook-pixel), care încarcă automat scriptul oficial Facebook și ne lasă să trimitem doar evenimentele de care avem nevoie: `PageView` și `Lead`.
+Tracking-ul interacțiunilor rămâne esențial pentru a măsura campaniile și pentru a corecta eventualele probleme de atribuire. În proiect folosim biblioteca [`react-use-facebook-pixel`](https://www.npmjs.com/package/react-use-facebook-pixel), un wrapper ușor care încarcă SDK-ul oficial Meta, expune metode tipate pentru evenimente și oferă suport nativ pentru advanced matching.
 
-> **ID-ul Pixelului** este citit din `NEXT_PUBLIC_META_PIXEL_ID`. Dacă variabila nu este setată, helper-ele returnează în siguranță fără să trimită evenimente.
+> **ID-ul Pixelului** este citit din `NEXT_PUBLIC_META_PIXEL_ID`. Dacă variabila lipsește, helper-ele returnează în siguranță fără a trimite nimic către Facebook.
 
-## 1. Instalează dependența
+## 1. Instalare
 
 ```bash
-npm install react-facebook-pixel
+npm install react-use-facebook-pixel
 ```
 
-Dependența trebuie adăugată în `package.json`, iar dacă rulezi `npm install` pe CI/în containere, asigură-te că variabila de mediu publică este disponibilă înainte de build.
+Dependența se află în `package.json`, iar `npm install` trebuie rulat după orice modificare pentru a actualiza `package-lock.json`.
 
-## 2. Helper centralizat (`lib/metaPixel.ts`)
+## 2. Helper centralizat (`lib/facebookPixel.ts`)
 
-`lib/metaPixel.ts` expune funcțiile necesare pentru inițializare și tracking:
+Fișierul `lib/facebookPixel.ts` instanțiază o singură dată pixelul și exportă funcțiile folosite în aplicație:
 
 ```ts
-export const META_PIXEL_EVENTS = {
-    PAGE_VIEW: "PageView",
-    LEAD: "Lead",
+export const FACEBOOK_PIXEL_EVENTS = {
+    PAGE_VIEW: TrackableEventNameEnum.PageView,
+    LEAD: TrackableEventNameEnum.Lead,
 } as const;
 
-export const initMetaPixel: () => void;
-export const trackMetaPixelPageView: (
-    context?: {
-        pathname?: string | null;
-        historyKey?: string | null;
-    },
+export const initFacebookPixel: () => void;
+export const trackFacebookPixelPageView: () => void;
+export const trackFacebookPixelEvent: <K extends TrackableEventName>(
+    eventName: K,
+    data?: EventData[K],
+    additional?: AdditionalEventData,
 ) => void;
-export const trackMetaPixelEvent: (
-    eventName: MetaPixelEventName,
-    payload?: Record<string, unknown>,
-) => void;
+export const updateFacebookPixelAdvancedMatching: (update: FacebookPixelAdvancedMatchingUpdate) => void;
+export const isFacebookPixelConfigured: () => boolean;
 ```
 
-Helper-ul face câteva lucruri suplimentare:
+Helper-ul folosește clasa `FacebookPixel` din bibliotecă și oferă câteva beneficii:
 
-- încarcă lazy modulul `react-facebook-pixel`, astfel încât codul să nu ajungă în bundle-ul server;
-- rulează `ReactPixel.init` o singură dată chiar dacă componenta se montează de mai multe ori sau dacă Facebook injectează deja pixelul și dezactivează `autoConfig` pentru a preveni PageView-uri automate;
-- igienizează payload-urile (`sanitizePayload`) pentru a elimina `undefined`, array-uri goale sau date invalide înainte de a apela `fbq`;
-- memorează ultima combinație `pathname` + `history.state.key` raportată în `window.__META_PIXEL_LAST_PAGE_VIEW__` astfel încât același URL să nu trimită din nou `PageView` dacă efectele React se re-execută sau dacă layout-urile sunt remontate de Next.js.
+- păstrează o singură instanță a pixelului pentru întregul browser și rulează `pixel.init()` doar când se schimbă payload-ul de advanced matching;
+- dezactivează `autoConfig` și `pageViewOnInit` pentru a evita evenimente automate nedorite;
+- sanitizează și transformă câmpurile primite prin `updateFacebookPixelAdvancedMatching` (email, telefon, nume, adresă) conform cerințelor Meta, apoi reaplică datele ca al treilea parametru în `fbq('init', PIXEL_ID, { ... })`;
+- expune o enumerare strictă (`FACEBOOK_PIXEL_EVENTS`) pentru evenimentele pe care le urmărim în prezent (`PageView`, `Lead`).
 
-## 3. Creează componenta `components/PixelTracker.tsx`
+## 3. Tracking PageView (`components/PixelTracker.tsx`)
 
 ```tsx
 "use client";
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { initMetaPixel, trackMetaPixelPageView, isMetaPixelConfigured } from "@/lib/metaPixel";
+import {
+    initFacebookPixel,
+    trackFacebookPixelPageView,
+    isFacebookPixelConfigured,
+} from "@/lib/facebookPixel";
 
 const PixelTracker = () => {
     const pathname = usePathname();
@@ -57,11 +59,11 @@ const PixelTracker = () => {
     const previousHistoryKeyRef = useRef<string | null>(null);
 
     useEffect(() => {
-        initMetaPixel();
+        initFacebookPixel();
     }, []);
 
     useEffect(() => {
-        if (!isMetaPixelConfigured()) {
+        if (!isFacebookPixelConfigured()) {
             return;
         }
 
@@ -93,7 +95,7 @@ const PixelTracker = () => {
         previousPathnameRef.current = pathname;
         previousHistoryKeyRef.current = currentHistoryKey;
 
-        trackMetaPixelPageView({ pathname, historyKey: currentHistoryKey ?? undefined });
+        trackFacebookPixelPageView();
     }, [pathname]);
 
     return null;
@@ -102,43 +104,32 @@ const PixelTracker = () => {
 export default PixelTracker;
 ```
 
-Componenta este marcată `"use client"` pentru a putea folosi hook-urile de routing și rulează două efecte:
+Componenta rulează doar pe client, memorează ultima rută raportată și apelează `trackFacebookPixelPageView()` exclusiv când există o navigare reală – prevenind astfel duplicatele observate anterior.
 
-1. `initMetaPixel()` – încarcă modulul Facebook și îl configurează o singură dată.
-2. `trackMetaPixelPageView({ pathname, historyKey })` – trimite `PageView` doar când se schimbă `pathname`-ul Next.js (navigări reale între pagini) și memorează combinația de `pathname` + `history.state.key` pentru a ignora remontările sau navigările soft care păstrează aceeași pagină. Schimbările de query string făcute prin `router.replace`/`next/link` pe aceeași rută nu mai trimit încă un `PageView`, prevenind duplicatele întâlnite anterior pe `/cars`.
+Adaugă `PixelTracker` în `app/layout.tsx` (în același `Suspense` cu ceilalți trackeri) pentru ca toate rutele să emită `PageView` corect.
 
-## 4. Adaugă tracker-ul în `app/layout.tsx`
+## 4. Advanced matching (Manual advanced matching)
 
-```tsx
-import PixelTracker from "../components/PixelTracker";
-
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // ... restul layout-ului
-  return (
-    <html lang="en">
-      <head>
-        {/* alte meta-uri */}
-      </head>
-      <body>
-        {/* alte inițializatoare (Mixpanel, TikTok etc.) */}
-        <PixelTracker />
-        {children}
-      </body>
-    </html>
-  );
-}
-```
-
-Componenta poate fi plasată într-un `Suspense` existent (exact ca în implementarea curentă) pentru a evita blocarea altor inițializatori. Scriptul oficial este încărcat prin `components/MetaPixelScript.tsx`, însă acesta nu mai trimite automat `PageView`; evenimentul este emis exclusiv din `PixelTracker` pentru a preveni duplicatele observate anterior. Dacă ai nevoie de fallback pentru utilizatorii fără JavaScript, `MetaPixelScript` include și imaginea `noscript` recomandată de Facebook.
-
-## 5. Trimiterea evenimentului `Lead`
-
-`Lead` este singurul eveniment suplimentar permis pe lângă `PageView`. Pentru a-l trimite, folosește helper-ul `trackMetaPixelEvent`:
+Cerința Meta de remediere („Set up manual advanced matching”) este acoperită de funcția `updateFacebookPixelAdvancedMatching`. Ori de câte ori avem email, telefon sau numele clientului, apelăm helper-ul cu date curate:
 
 ```ts
-import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
+updateFacebookPixelAdvancedMatching({
+    email: formValues.customer_email,
+    phone: formValues.customer_phone,
+    fullName: formValues.customer_name,
+});
+```
 
-trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
+Funcția normalizează emailul (lowercase), convertește telefonul în cifre (`ph`) și împarte numele în `fn` + `ln` doar dacă valorile sunt valide. Payload-ul rezultat este transmis ca al treilea parametru al `fbq('init', PIXEL_ID, { ... })`, exact cum solicită ghidul Meta.
+
+## 5. Evenimentele `Lead`
+
+`Lead` este singurul eveniment suplimentar urmărit. Pentru a-l trimite din componente client folosește helper-ul generic:
+
+```ts
+import { trackFacebookPixelEvent, FACEBOOK_PIXEL_EVENTS } from "@/lib/facebookPixel";
+
+trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
     contact_method: "whatsapp",
     lead_stage: "contact",
     value: 120,
@@ -146,23 +137,18 @@ trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
 });
 ```
 
-Payload-ul este curățat automat, astfel încât valorile `undefined` sau array-urile goale sunt eliminate înainte de apelul `fbq`. În aplicație evenimentul `Lead` este folosit pentru:
+Payload-ul acceptă același model ca în API-ul standard (valori numerice, liste de produse etc.).
 
-- click-uri pe contact (telefon, WhatsApp, email) din landing (`components/ContactSection.tsx`);
-- inițierea checkout-ului cu date complete (`app/checkout/page.tsx`);
-- confirmarea rezervării (`app/success/page.tsx`).
+În aplicație evenimentul este declanșat în:
 
-## 6. Evenimente active și validare
+- `components/ContactSection.tsx` – click pe telefon, WhatsApp, email;
+- `app/checkout/page.tsx` – vizualizare checkout cu date complete și trimiterea formularului;
+- `app/success/page.tsx` – confirmarea rezervării.
 
-| Eveniment Meta | Trigger | Fișiere sursă | Proprietăți trimise |
-| -------------- | ------- | ------------- | ------------------- |
-| `PageView` | La prima încărcare și la fiecare schimbare reală de rută | `components/PixelTracker.tsx`, `lib/metaPixel.ts` | – |
-| `Lead` | Contact direct, vizualizare checkout cu date complete, confirmare rezervare | `components/ContactSection.tsx`, `app/checkout/page.tsx`, `app/success/page.tsx` | `contact_method`, `lead_stage`, `value`, `currency`, `content_ids`, `content_name`, `content_type`, `contents`, `with_deposit`, `start_date`, `end_date`, `service_ids`, `applied_offer_ids`, `reservation_id` |
-
-### Checklist de verificare
+## 6. Checklist de verificare
 
 1. Adaugă `NEXT_PUBLIC_META_PIXEL_ID` în `.env.local`.
-2. Rulează aplicația (`npm run dev`) și confirmă în Meta Pixel Helper că `PageView` și `Lead` sunt recepționate.
-3. Verifică consola că nu apare avertismentul „The Facebook pixel activated 2 times” – dacă apare, cel mai probabil pixelul este injectat de o altă sursă și trebuie eliminată dublura.
+2. Rulează `npm run dev` și verifică în Meta Pixel Helper că `PageView` și `Lead` apar o singură dată.
+3. Confirmă în Events Manager că advanced matching primește câmpurile `em`, `ph`, `fn`, `ln` (hash-uite automat de pixel).
 
-Cu această configurație rămân active doar `PageView` și `Lead`, respectând cerințele de marketing și oferind o implementare conformă cu documentația oficială Facebook.
+Prin folosirea `react-use-facebook-pixel` păstrăm integrarea minimală, fără script custom în layout, evităm duplicatele și respectăm cerința Meta de a furniza manual datele de identificare pentru evenimente.

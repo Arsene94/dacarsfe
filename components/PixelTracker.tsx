@@ -2,7 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { initMetaPixel, trackMetaPixelPageView, isMetaPixelConfigured } from "@/lib/metaPixel";
+import {
+    initFacebookPixel,
+    trackFacebookPixelPageView,
+    isFacebookPixelConfigured,
+} from "@/lib/facebookPixel";
 
 const PixelTracker = () => {
     const pathname = usePathname();
@@ -10,11 +14,11 @@ const PixelTracker = () => {
     const previousHistoryKeyRef = useRef<string | null>(null);
 
     useEffect(() => {
-        initMetaPixel();
+        initFacebookPixel();
     }, []);
 
     useEffect(() => {
-        if (!isMetaPixelConfigured()) {
+        if (!isFacebookPixelConfigured()) {
             return;
         }
 
@@ -46,7 +50,7 @@ const PixelTracker = () => {
         previousPathnameRef.current = pathname;
         previousHistoryKeyRef.current = currentHistoryKey;
 
-        trackMetaPixelPageView({ pathname, historyKey: currentHistoryKey ?? undefined });
+        trackFacebookPixelPageView();
     }, [pathname]);
 
     return null;
