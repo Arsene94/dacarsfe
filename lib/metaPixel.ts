@@ -52,6 +52,37 @@ let initPromise: Promise<ReactFacebookPixel> | null = null;
 
 let lastPageViewRecord: PageViewRecord | null = null;
 
+type MetaPixelAdvancedMatchingKey =
+    | "em"
+    | "ph"
+    | "fn"
+    | "ln"
+    | "ct"
+    | "st"
+    | "zp"
+    | "country"
+    | "external_id";
+
+type MetaPixelAdvancedMatchingUpdate = Partial<{
+    email: string | null | undefined;
+    phone: string | null | undefined;
+    fullName: string | null | undefined;
+    firstName: string | null | undefined;
+    lastName: string | null | undefined;
+    city: string | null | undefined;
+    state: string | null | undefined;
+    postalCode: string | null | undefined;
+    country: string | null | undefined;
+    externalId: string | number | null | undefined;
+}>;
+
+type MetaPixelAdvancedMatchingPayload = Partial<Record<MetaPixelAdvancedMatchingKey, string>>;
+
+const advancedMatchingStore: MetaPixelAdvancedMatchingPayload = {};
+
+let advancedMatchingDirty = true;
+let lastAdvancedMatchingSignature: string | null = null;
+
 const markPixelInitialized = (pixelId: string) => {
     if (!isBrowser) {
         return;
@@ -125,6 +156,199 @@ const logDevWarning = (message: string, error?: unknown) => {
     }
 };
 
+const sanitizeString = (value: unknown): string | null => {
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+
+    if (typeof value === "number") {
+        if (!Number.isFinite(value)) {
+            return null;
+        }
+        return String(value);
+    }
+
+    if (typeof value === "boolean") {
+        return value ? "true" : "false";
+    }
+
+    return null;
+};
+
+const sanitizeName = (value: unknown): string | null => {
+    const normalized = sanitizeString(value);
+    if (!normalized) {
+        return null;
+    }
+
+    const condensed = normalized.replace(/\s+/g, " ");
+    return condensed.length > 0 ? condensed : null;
+};
+
+const splitFullName = (
+    value: unknown,
+): { firstName: string | null; lastName: string | null } => {
+    const sanitized = sanitizeName(value);
+    if (!sanitized) {
+        return { firstName: null, lastName: null };
+    }
+
+    const parts = sanitized.split(" ").filter((entry) => entry.length > 0);
+    if (parts.length === 0) {
+        return { firstName: null, lastName: null };
+    }
+
+    if (parts.length === 1) {
+        return { firstName: parts[0], lastName: null };
+    }
+
+    return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+};
+
+const sanitizeEmail = (value: unknown): string | null => {
+    const normalized = sanitizeString(value);
+    if (!normalized) {
+        return null;
+    }
+
+    const email = normalized.toLowerCase();
+    if (!email.includes("@")) {
+        return null;
+    }
+
+    return email;
+};
+
+const sanitizePhone = (value: unknown): string | null => {
+    const normalized = sanitizeString(value);
+    if (!normalized) {
+        return null;
+    }
+
+    const digits = normalized.replace(/\D+/g, "");
+    if (digits.length < 6) {
+        return null;
+    }
+
+    return digits;
+};
+
+const sanitizePostalCode = (value: unknown): string | null => {
+    const normalized = sanitizeString(value);
+    if (!normalized) {
+        return null;
+    }
+
+    const condensed = normalized.replace(/\s+/g, "");
+    return condensed.length > 0 ? condensed : null;
+};
+
+const sanitizeCountry = (value: unknown): string | null => {
+    const normalized = sanitizeString(value);
+    if (!normalized) {
+        return null;
+    }
+
+    const country = normalized.replace(/\s+/g, "").toUpperCase();
+    if (country.length < 2 || country.length > 3) {
+        return null;
+    }
+
+    return country;
+};
+
+const sanitizeExternalId = (value: unknown): string | null => {
+    if (value === undefined || value === null) {
+        return null;
+    }
+
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+
+    if (typeof value === "number") {
+        if (!Number.isFinite(value)) {
+            return null;
+        }
+        return String(value);
+    }
+
+    if (typeof value === "boolean") {
+        return value ? "true" : "false";
+    }
+
+    return null;
+};
+
+const updateAdvancedMatchingEntry = (
+    key: MetaPixelAdvancedMatchingKey,
+    value: string | null,
+): boolean => {
+    const normalized = value && value.length > 0 ? value : undefined;
+    const currentValue = advancedMatchingStore[key];
+
+    if (normalized !== undefined) {
+        if (currentValue === normalized) {
+            return false;
+        }
+
+        advancedMatchingStore[key] = normalized;
+        return true;
+    }
+
+    if (currentValue !== undefined) {
+        delete advancedMatchingStore[key];
+        return true;
+    }
+
+    return false;
+};
+
+const buildAdvancedMatchingPayload = (): MetaPixelAdvancedMatchingPayload => {
+    const entries = Object.entries(advancedMatchingStore).filter(
+        (entry): entry is [MetaPixelAdvancedMatchingKey, string] =>
+            typeof entry[1] === "string" && entry[1].length > 0,
+    );
+
+    if (entries.length === 0) {
+        return {};
+    }
+
+    return Object.fromEntries(entries) as MetaPixelAdvancedMatchingPayload;
+};
+
+const serializeAdvancedMatchingPayload = (payload: MetaPixelAdvancedMatchingPayload): string => {
+    const entries = Object.entries(payload).sort(([left], [right]) => left.localeCompare(right));
+    if (entries.length === 0) {
+        return "{}";
+    }
+
+    return JSON.stringify(Object.fromEntries(entries));
+};
+
+const initializePixel = (pixel: ReactFacebookPixel) => {
+    const pixelId = META_PIXEL_ID as string;
+    const advancedMatchingPayload = buildAdvancedMatchingPayload();
+    const signature = serializeAdvancedMatchingPayload(advancedMatchingPayload);
+    const alreadyInitialized = isPixelAlreadyInitialized(pixelId);
+
+    if (!alreadyInitialized || lastAdvancedMatchingSignature !== signature) {
+        const hasAdvancedMatchingEntries = Object.keys(advancedMatchingPayload).length > 0;
+        pixel.init(pixelId, hasAdvancedMatchingEntries ? advancedMatchingPayload : undefined, {
+            autoConfig: false,
+            debug: process.env.NODE_ENV !== "production",
+        });
+        markPixelInitialized(pixelId);
+        lastAdvancedMatchingSignature = signature;
+    }
+
+    advancedMatchingDirty = false;
+
+    return pixel;
+};
+
 const ensureInitializedPixel = (): Promise<ReactFacebookPixel> | null => {
     if (!isBrowser) {
         return null;
@@ -136,27 +360,90 @@ const ensureInitializedPixel = (): Promise<ReactFacebookPixel> | null => {
 
     if (!initPromise) {
         initPromise = loadPixelModule()
-            .then((pixel) => {
-                const pixelId = META_PIXEL_ID as string;
-
-                if (!isPixelAlreadyInitialized(pixelId)) {
-                    pixel.init(pixelId, undefined, {
-                        autoConfig: false,
-                        debug: process.env.NODE_ENV !== "production",
-                    });
-                    markPixelInitialized(pixelId);
-                }
-
-                return pixel;
-            })
+            .then((pixel) => initializePixel(pixel))
             .catch((error) => {
                 logDevWarning("Nu s-a putut inițializa Meta Pixel", error);
                 initPromise = null;
                 throw error;
             });
+
+        return initPromise;
+    }
+
+    if (advancedMatchingDirty) {
+        initPromise
+            .then((pixel) => {
+                initializePixel(pixel);
+            })
+            .catch((error) => {
+                logDevWarning("Nu s-au putut actualiza datele de matching Meta Pixel", error);
+            });
     }
 
     return initPromise;
+};
+
+export const updateMetaPixelAdvancedMatching = (update: MetaPixelAdvancedMatchingUpdate) => {
+    if (!update || typeof update !== "object") {
+        return;
+    }
+
+    let hasChanged = false;
+
+    if ("fullName" in update) {
+        const { firstName, lastName } = splitFullName(update.fullName);
+        hasChanged = updateAdvancedMatchingEntry("fn", firstName) || hasChanged;
+        hasChanged = updateAdvancedMatchingEntry("ln", lastName) || hasChanged;
+    }
+
+    if ("firstName" in update) {
+        hasChanged = updateAdvancedMatchingEntry("fn", sanitizeName(update.firstName)) || hasChanged;
+    }
+
+    if ("lastName" in update) {
+        hasChanged = updateAdvancedMatchingEntry("ln", sanitizeName(update.lastName)) || hasChanged;
+    }
+
+    if ("email" in update) {
+        hasChanged = updateAdvancedMatchingEntry("em", sanitizeEmail(update.email)) || hasChanged;
+    }
+
+    if ("phone" in update) {
+        hasChanged = updateAdvancedMatchingEntry("ph", sanitizePhone(update.phone)) || hasChanged;
+    }
+
+    if ("city" in update) {
+        hasChanged = updateAdvancedMatchingEntry("ct", sanitizeName(update.city)) || hasChanged;
+    }
+
+    if ("state" in update) {
+        hasChanged = updateAdvancedMatchingEntry("st", sanitizeName(update.state)) || hasChanged;
+    }
+
+    if ("postalCode" in update) {
+        hasChanged = updateAdvancedMatchingEntry("zp", sanitizePostalCode(update.postalCode)) || hasChanged;
+    }
+
+    if ("country" in update) {
+        hasChanged = updateAdvancedMatchingEntry("country", sanitizeCountry(update.country)) || hasChanged;
+    }
+
+    if ("externalId" in update) {
+        hasChanged = updateAdvancedMatchingEntry("external_id", sanitizeExternalId(update.externalId)) || hasChanged;
+    }
+
+    if (!hasChanged) {
+        return;
+    }
+
+    advancedMatchingDirty = true;
+
+    const promise = ensureInitializedPixel();
+    if (promise) {
+        promise.catch(() => {
+            // avertismentele sunt jurnalizate în ensureInitializedPixel
+        });
+    }
 };
 
 const sanitizeValue = (value: unknown): unknown => {
