@@ -8,11 +8,7 @@ import type { ReservationPayload } from "@/types/reservation";
 import type { WheelPrize } from "@/types/wheel";
 import { formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
-import {
-    trackFacebookPixelEvent,
-    FACEBOOK_PIXEL_EVENTS,
-    updateFacebookPixelAdvancedMatching,
-} from "@/lib/facebookPixel";
+import { updateFacebookPixelAdvancedMatching } from "@/lib/facebookPixel";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { Locale } from "@/lib/i18n/config";
 import successMessagesRo from "@/messages/success/ro.json";
@@ -34,23 +30,6 @@ type MetaLeadDetails = {
     externalId?: string;
 };
 
-type MetaLeadUserData = Partial<
-    Record<
-        | "em"
-        | "ph"
-        | "fn"
-        | "ln"
-        | "ge"
-        | "db"
-        | "ct"
-        | "st"
-        | "zp"
-        | "country"
-        | "external_id",
-        string
-    >
->;
-
 const LOCALE_TO_INTL: Record<Locale, string> = {
     ro: "ro-RO",
     en: "en-US",
@@ -61,6 +40,9 @@ const LOCALE_TO_INTL: Record<Locale, string> = {
 };
 
 const DEFAULT_CURRENCY = "EUR";
+const META_LEAD_EVENT_NAME = "Lead";
+const META_LEAD_CRM_NAME = "DaCarsCRM";
+const ENABLE_TIKTOK_LEAD_EVENT = false;
 
 const SESSION_STORAGE_LEAD_KEY_PREFIX = "dacars:success:lead:";
 const SESSION_STORAGE_LEAD_FALLBACK_KEY = "dacars:success:lead:fallback";
@@ -170,137 +152,6 @@ const getReservationStringField = (
     return null;
 };
 
-const normalizeEmailValue = (value: string | null): string | null => {
-    if (!value) {
-        return null;
-    }
-
-    const normalized = value.trim().toLowerCase();
-    return normalized.length > 0 ? normalized : null;
-};
-
-const normalizeNameValue = (value: string | null): string | null => {
-    if (!value) {
-        return null;
-    }
-
-    const normalized = value.trim().toLowerCase();
-    return normalized.length > 0 ? normalized : null;
-};
-
-const normalizeInternationalPhone = (value: string | null): string | null => {
-    if (!value) {
-        return null;
-    }
-
-    const trimmed = value.trim();
-    if (!trimmed) {
-        return null;
-    }
-
-    const digits = trimmed.replace(/[^0-9+]/g, "");
-    if (!digits) {
-        return null;
-    }
-
-    if (digits.startsWith("+")) {
-        return digits;
-    }
-
-    if (digits.startsWith("00") && digits.length > 2) {
-        return `+${digits.slice(2)}`;
-    }
-
-    return digits.length > 0 ? `+${digits}` : null;
-};
-
-const normalizeGenderValue = (value: string | null): string | null => {
-    if (!value) {
-        return null;
-    }
-
-    const normalized = value.trim().toLowerCase();
-    if (!normalized) {
-        return null;
-    }
-
-    if (["m", "male", "masculin", "bărbat", "barbat"].includes(normalized)) {
-        return "m";
-    }
-
-    if (["f", "female", "feminin", "femeie", "doamna", "doamnă"].includes(normalized)) {
-        return "f";
-    }
-
-    return null;
-};
-
-const normalizeDateOfBirthValue = (value: string | null): string | null => {
-    if (!value) {
-        return null;
-    }
-
-    const trimmed = value.trim();
-    if (!trimmed) {
-        return null;
-    }
-
-    const ymdMatch = trimmed.match(/^(\d{4})[./-]?(\d{1,2})[./-]?(\d{1,2})$/);
-    if (ymdMatch) {
-        const [, year, month, day] = ymdMatch;
-        return `${year.padStart(4, "0")}${month.padStart(2, "0")}${day.padStart(2, "0")}`;
-    }
-
-    const dmyMatch = trimmed.match(/^(\d{1,2})[./-]?(\d{1,2})[./-]?(\d{4})$/);
-    if (dmyMatch) {
-        const [, day, month, year] = dmyMatch;
-        return `${year.padStart(4, "0")}${month.padStart(2, "0")}${day.padStart(2, "0")}`;
-    }
-
-    const digits = trimmed.replace(/\D/g, "");
-    if (digits.length === 8) {
-        return digits;
-    }
-
-    return null;
-};
-
-const normalizeCityOrStateValue = (value: string | null): string | null => {
-    if (!value) {
-        return null;
-    }
-
-    const normalized = value.trim().toLowerCase();
-    return normalized.length > 0 ? normalized.replace(/\s+/g, " ") : null;
-};
-
-const normalizePostalCodeValue = (value: string | null): string | null => {
-    if (!value) {
-        return null;
-    }
-
-    const normalized = value.trim().replace(/\s+/g, "");
-    return normalized.length > 0 ? normalized.toLowerCase() : null;
-};
-
-const normalizeCountryValue = (value: string | null): string | null => {
-    if (!value) {
-        return null;
-    }
-
-    const normalized = value.trim().toLowerCase();
-    return normalized.length > 0 ? normalized.replace(/\s+/g, " ") : null;
-};
-
-const normalizeExternalIdValue = (value: string | null): string | null => {
-    if (!value) {
-        return null;
-    }
-
-    const normalized = value.trim();
-    return normalized.length > 0 ? normalized : null;
-};
-
 const buildMetaLeadDetails = (
     reservation: ReservationPayload | null,
     reservationTrackingIdentifier: string | null,
@@ -392,76 +243,12 @@ const buildMetaLeadDetails = (
     return details;
 };
 
-const buildMetaLeadUserData = (details: MetaLeadDetails | null): MetaLeadUserData => {
-    if (!details) {
-        return {};
-    }
-
-    const userData: MetaLeadUserData = {};
-
-    const email = normalizeEmailValue(details.email ?? null);
-    if (email) {
-        userData.em = email;
-    }
-
-    const phone = normalizeInternationalPhone(details.phone ?? null);
-    if (phone) {
-        userData.ph = phone;
-    }
-
-    const firstName = normalizeNameValue(details.firstName ?? null);
-    if (firstName) {
-        userData.fn = firstName;
-    }
-
-    const lastName = normalizeNameValue(details.lastName ?? null);
-    if (lastName) {
-        userData.ln = lastName;
-    }
-
-    const gender = normalizeGenderValue(details.gender ?? null);
-    if (gender) {
-        userData.ge = gender;
-    }
-
-    const dateOfBirth = normalizeDateOfBirthValue(details.dateOfBirth ?? null);
-    if (dateOfBirth) {
-        userData.db = dateOfBirth;
-    }
-
-    const city = normalizeCityOrStateValue(details.city ?? null);
-    if (city) {
-        userData.ct = city;
-    }
-
-    const state = normalizeCityOrStateValue(details.state ?? null);
-    if (state) {
-        userData.st = state;
-    }
-
-    const postalCode = normalizePostalCodeValue(details.postalCode ?? null);
-    if (postalCode) {
-        userData.zp = postalCode;
-    }
-
-    const country = normalizeCountryValue(details.country ?? null);
-    if (country) {
-        userData.country = country;
-    }
-
-    const externalId = normalizeExternalIdValue(details.externalId ?? null);
-    if (externalId) {
-        userData.external_id = externalId;
-    }
-
-    return userData;
-};
-
 const SuccessPage = () => {
     const [reservationData, setReservationData] = useState<ReservationPayload | null>(null);
     const { locale, messages, t } = useTranslations<SuccessMessages>("success");
     const intlLocale = LOCALE_TO_INTL[locale] ?? LOCALE_TO_INTL.ro;
     const hasTrackedConversionRef = useRef(false);
+    const hasSentMetaLeadEventRef = useRef(false);
     const reservationTrackingIdentifier = useMemo(
         () => resolveReservationTrackingIdentifier(reservationData),
         [reservationData],
@@ -469,10 +256,6 @@ const SuccessPage = () => {
     const metaLeadDetails = useMemo(
         () => buildMetaLeadDetails(reservationData, reservationTrackingIdentifier),
         [reservationData, reservationTrackingIdentifier],
-    );
-    const metaLeadUserData = useMemo(
-        () => buildMetaLeadUserData(metaLeadDetails),
-        [metaLeadDetails],
     );
 
     const priceFormatter = useMemo(
@@ -567,6 +350,10 @@ const SuccessPage = () => {
             return;
         }
 
+        if (!ENABLE_TIKTOK_LEAD_EVENT) {
+            return;
+        }
+
         const sessionStorageKey = reservationTrackingIdentifier
             ? `${SESSION_STORAGE_LEAD_KEY_PREFIX}${reservationTrackingIdentifier}`
             : SESSION_STORAGE_LEAD_FALLBACK_KEY;
@@ -627,45 +414,6 @@ const SuccessPage = () => {
             service_ids: normalizedServices,
         });
 
-        const carIdString =
-            carId !== undefined && carId !== null ? String(carId) : undefined;
-
-        const facebookLeadEventData: Record<string, unknown> = {
-            value: totalAmount ?? undefined,
-            currency: DEFAULT_CURRENCY,
-            content_ids: carIdString ? [carIdString] : undefined,
-            content_name: carName,
-            content_type: "car",
-            contents: [
-                {
-                    id: carIdString,
-                    quantity: 1,
-                    item_price: totalAmount ?? undefined,
-                    title: carName,
-                },
-            ],
-            reservation_id:
-                typeof reservationData.reservationId === "string" && reservationData.reservationId.trim().length > 0
-                    ? reservationData.reservationId
-                    : undefined,
-            start_date: reservationData.rental_start_date || undefined,
-            end_date: reservationData.rental_end_date || undefined,
-            with_deposit:
-                typeof reservationData.with_deposit === "boolean"
-                    ? reservationData.with_deposit
-                    : undefined,
-            service_ids: normalizedServices,
-        };
-
-        const hasMetaUserData = Object.keys(metaLeadUserData).length > 0;
-        if (hasMetaUserData) {
-            facebookLeadEventData.user_data = metaLeadUserData;
-        }
-
-        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, facebookLeadEventData);
-
-
-
         hasTrackedConversionRef.current = true;
 
         try {
@@ -673,7 +421,51 @@ const SuccessPage = () => {
         } catch (error) {
             console.warn("Nu s-a putut salva statusul evenimentului Lead", error);
         }
-    }, [metaLeadUserData, reservationData, reservationTrackingIdentifier]);
+    }, [reservationData, reservationTrackingIdentifier]);
+
+    useEffect(() => {
+        if (!reservationData) {
+            return;
+        }
+        if (hasSentMetaLeadEventRef.current) {
+            return;
+        }
+
+        const normalizedEmail =
+            typeof reservationData.customer_email === "string"
+                ? reservationData.customer_email.trim()
+                : "";
+        const normalizedPhone =
+            typeof reservationData.customer_phone === "string"
+                ? reservationData.customer_phone.trim()
+                : "";
+        const leadId = reservationTrackingIdentifier;
+
+        if (!(normalizedEmail || normalizedPhone || leadId)) {
+            return;
+        }
+
+        const sendMetaLeadEvent = async () => {
+            try {
+                await fetch("/api/meta-leads", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email: normalizedEmail || undefined,
+                        phone: normalizedPhone || undefined,
+                        leadId: leadId ?? undefined,
+                        eventName: META_LEAD_EVENT_NAME,
+                        crmName: META_LEAD_CRM_NAME,
+                    }),
+                });
+            } catch (error) {
+                console.warn("Nu s-a putut trimite evenimentul Meta Lead", error);
+            }
+        };
+
+        void sendMetaLeadEvent();
+        hasSentMetaLeadEventRef.current = true;
+    }, [reservationData, reservationTrackingIdentifier]);
 
     const wheelPrize = reservationData?.wheel_prize ?? null;
     const wheelPrizeDiscountRaw = reservationData?.wheel_prize_discount ??
