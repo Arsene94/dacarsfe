@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import HeroSection from '@/components/HeroSectionClient';
 import HomePageClient from '@/components/home/HomePageClient';
 import CarsPageClient from '@/components/cars/CarsPageClient';
 import ReservationPage from '@/app/checkout/page';
@@ -283,9 +284,15 @@ describe('Fluxul complet al clienților DaCars', () => {
     };
 
     const user = userEvent.setup();
-    const { setBookingSpy } = renderWithProviders(<HomePageClient />, {
-      booking: initialBooking,
-    });
+    const { setBookingSpy } = renderWithProviders(
+      <>
+        <HeroSection />
+        <HomePageClient />
+      </>,
+      {
+        booking: initialBooking,
+      },
+    );
 
     await waitFor(() => expect(apiClientMock.setLanguage).toHaveBeenCalledWith('ro'));
     await waitFor(() => expect(apiClientMock.getHomePageCars).toHaveBeenCalled());

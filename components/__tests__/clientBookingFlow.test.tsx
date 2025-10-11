@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ReservationPage from '@/app/checkout/page';
-import HeroSection from '@/components/HeroSection';
+import HeroSection from '@/components/HeroSectionClient';
 import CarsPageClient from '@/components/cars/CarsPageClient';
 import { BookingContext, defaultBooking } from '@/context/booking-store';
 import { LocaleProvider } from '@/context/LocaleContext';
