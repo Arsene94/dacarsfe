@@ -2205,19 +2205,28 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const originalTotalLei = formatLeiAmount(originalTotalRounded);
     const discountedTotalLei = formatLeiAmount(totalDisplay);
 
-    const handleUpdateBooking = async () => {
-        if (!bookingInfo || bookingInfo.id == null) {
-            console.error("Booking information missing identifier; cannot update reservation.");
+    const isNewBooking = bookingInfo?.id == null;
+
+    const handleSubmitBooking = async () => {
+        if (!bookingInfo) {
+            console.error("Lipsesc informațiile rezervării; nu putem salva rezervarea.");
             return;
         }
         try {
             const serviceIds = resolveServiceSelection(bookingInfo);
             const payload = buildBookingUpdatePayload(bookingInfo, serviceIds);
-            await apiClient.updateBooking(bookingInfo.id, payload);
+            if (isNewBooking) {
+                await apiClient.createBooking(payload);
+            } else {
+                await apiClient.updateBooking(bookingInfo.id, payload);
+            }
             onClose();
             onUpdated?.();
         } catch (error) {
-            console.error("Failed to update booking:", error);
+            console.error(
+                isNewBooking ? "Failed to create booking:" : "Failed to update booking:",
+                error,
+            );
         }
     }
 
@@ -2228,7 +2237,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             className="max-w-5xl w-full max-h-[80vh] overflow-y-auto"
         >
             <h3 className="text-lg font-poppins font-semibold text-berkeley mb-4">
-                Editează rezervarea
+                {isNewBooking ? "Crează rezervare" : "Editează rezervarea"}
             </h3>
             <div className="flex flex-col lg:flex-row items-start gap-6">
                 <div className="w-full lg:w-2/3 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
@@ -2681,8 +2690,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             Publicare
                         </h4>
                         <div className="mt-2 space-x-2">
-                            <Button className="!px-4 py-4" onClick={handleUpdateBooking}>
-                                Salvează
+                            <Button className="!px-4 py-4" onClick={handleSubmitBooking}>
+                                {isNewBooking ? "Adaugă rezervare" : "Salvează"}
                             </Button>
                             <Button className="!px-4 py-4" variant="danger" onClick={onClose}>
                                 Anulează
