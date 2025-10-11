@@ -29,8 +29,6 @@ const LOCALE_TO_INTL: Record<Locale, string> = {
 };
 
 const DEFAULT_CURRENCY = "EUR";
-const META_LEAD_EVENT_NAME = "Lead";
-const META_LEAD_CRM_NAME = "DaCarsCRM";
 
 const SESSION_STORAGE_LEAD_KEY_PREFIX = "dacars:success:lead:";
 const SESSION_STORAGE_LEAD_FALLBACK_KEY = "dacars:success:lead:fallback";
@@ -263,37 +261,7 @@ const SuccessPage = () => {
             service_ids: normalizedServices,
         });
 
-        const normalizedEmail =
-            typeof reservationData.customer_email === "string"
-                ? reservationData.customer_email.trim()
-                : "";
-        const normalizedPhone =
-            typeof reservationData.customer_phone === "string"
-                ? reservationData.customer_phone.trim()
-                : "";
-        const leadId = reservationTrackingIdentifier;
 
-        if (normalizedEmail || normalizedPhone || leadId) {
-            const sendMetaLeadEvent = async () => {
-                try {
-                    await fetch("/api/meta-leads", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            email: normalizedEmail || undefined,
-                            phone: normalizedPhone || undefined,
-                            leadId: leadId ?? undefined,
-                            eventName: META_LEAD_EVENT_NAME,
-                            crmName: META_LEAD_CRM_NAME,
-                        }),
-                    });
-                } catch (error) {
-                    console.warn("Nu s-a putut trimite evenimentul Meta Lead", error);
-                }
-            };
-
-            void sendMetaLeadEvent();
-        }
 
         hasTrackedConversionRef.current = true;
 
