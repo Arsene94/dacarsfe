@@ -29,7 +29,7 @@ const InterlinkingSection = ({ copy, className }: InterlinkingSectionProps) => {
     }
 
     return (
-        <section className={cn("bg-white py-16", className)}>
+        <section className={cn("bg-white py-16 h-full min-h-[220px]", className)}>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="mx-auto mb-12 max-w-3xl text-center">
                     <h2 className="text-4xl font-poppins font-bold text-berkeley">

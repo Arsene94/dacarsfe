@@ -178,11 +178,16 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             </BookingProvider>
           </AuthProvider>
         </LocaleProvider>
-        <Script
-            id="cookiescript"
-            src="https://cdn.cookie-script.com/s/1dbe1a6c3b981120922353311f510e1d.js"
-            strategy="lazyOnload"
-        />
+    <Script id="cookiescript-loader" strategy="lazyOnload">
+        {`
+          setTimeout(() => {
+            const s = document.createElement("script");
+            s.src = "https://cdn.cookie-script.com/s/1dbe1a6c3b981120922353311f510e1d.js";
+            s.async = true;
+            document.body.appendChild(s);
+          }, 3000);
+        `}
+    </Script>
       </body>
     </html>
   );

@@ -11,7 +11,7 @@ export const HeroBackground = () => {
             fetchPriority="high"
             loading="eager"
             sizes="100vw"
-            quality={70}
+            quality={55}
             decoding="async"
             className="object-cover"
         />
