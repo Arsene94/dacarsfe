@@ -630,7 +630,7 @@ const createDefaultPreviewContext = (
     ],
     notes: "Vă rugăm să ne sunați când ajungeți în aeroport.",
     support: {
-      phone: site?.support_phone ?? "+40 722 123 456",
+      phone: site?.support_phone ?? "+40 723 817 551",
       email: site?.email ?? "contact@dacars.ro",
     },
     hero_icon_char: heroIconChar,
@@ -759,7 +759,7 @@ const EXACT_MOCK_VALUES: Record<string, unknown> = {
   currency: "EUR",
   notes: "Vă rugăm să ne sunați când ajungeți în aeroport.",
   support: {
-    phone: "+40 722 123 456",
+    phone: "+40 723 817 551",
     email: "contact@dacars.ro",
   },
 };
@@ -2685,7 +2685,7 @@ const MailBrandingPage = () => {
                     id="support-phone"
                     value={brandingForm?.site.support_phone ?? ""}
                     onChange={(event) => handleSiteFieldChange("support_phone", event.target.value)}
-                    placeholder="+40 722 123 456"
+                    placeholder="+40 723 817 551"
                   />
                 </div>
                 <div>

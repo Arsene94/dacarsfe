@@ -136,7 +136,7 @@ La trimiterea formularului frontend-ul include un câmp opțional `applied_offer
 {
   "customer_name": "Ion Popescu",
   "customer_email": "ion@example.com",
-  "customer_phone": "+40 722 123 456",
+  "customer_phone": "+40 723 817 551",
   "rental_start_date": "2025-08-10",
   "rental_end_date": "2025-08-15",
   "car_id": 42,

@@ -1217,14 +1217,14 @@ const AdminDashboard = () => {
                                                     <div
                                                         key={r.id + (isDeparture ? 'start' : 'end')}
                                                         className={`px-6 py-4 ${
-                                                            isDeparture ? 'hover:bg-green-50' : 'hover:bg-red-50'
+                                                            isDeparture ? 'bg-green-100 hover:bg-green-200' : 'bg-red-100 hover:bg-red-200'
                                                         } transition-colors duration-200`}
                                                     >
                                                         <div className="flex items-center space-x-4">
                                                             <div className="flex-shrink-0">
                                                                 <div
                                                                     className={`w-4 h-4 ${
-                                                                        isDeparture ? 'bg-green-500' : 'bg-red-500'
+                                                                        isDeparture ? 'bg-green-600' : 'bg-red-500'
                                                                     } rounded-full flex items-center justify-center`}
                                                                 >
                                                                     <div className="w-2 h-2 bg-white rounded-full"></div>

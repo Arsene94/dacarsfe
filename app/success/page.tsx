@@ -308,7 +308,7 @@ const SuccessPage = () => {
     const locationOptions =
         (messages.summary?.location?.options as SuccessMessages["summary"]["location"]["options"]) ?? {};
     const instructionsSteps = messages.instructions?.steps ?? [];
-    const contactPhone = messages.contact?.phone ?? "+40 722 123 456";
+    const contactPhone = messages.contact?.phone ?? "+40 723 817 551";
     const contactAriaLabel = t("contact.ariaLabel", { values: { phone: contactPhone } });
 
     if (!reservationData) {
