@@ -40,24 +40,22 @@ vi.mock('next/image', () => ({
   },
 }));
 
-vi.mock('react-use-facebook-pixel', () => {
-  const init = vi.fn();
-  const trackEvent = vi.fn();
-  const setExternalId = vi.fn();
-
-  const FacebookPixelMock = vi.fn(() => ({
-    init,
-    trackEvent,
-    setExternalId,
-    getExternalId: vi.fn(() => null),
-  }));
+vi.mock('react-facebook-pixel', () => {
+  const noop = vi.fn();
 
   return {
     __esModule: true,
-    FacebookPixel: FacebookPixelMock,
-    TrackableEventNameEnum: {
-      PageView: 'PageView',
-      Lead: 'Lead',
+    default: {
+      init: noop,
+      pageView: noop,
+      track: noop,
+      trackSingle: noop,
+      trackCustom: noop,
+      trackSingleCustom: noop,
+      loadPixel: noop,
+      revokeConsent: noop,
+      grantConsent: noop,
+      clear: noop,
     },
   };
 });

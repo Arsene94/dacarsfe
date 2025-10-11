@@ -1,49 +1,49 @@
-import { FacebookPixel, TrackableEventNameEnum, type TrackableEventName, type EventData, type AdditionalEventData, type InitProps } from "react-use-facebook-pixel";
+import ReactPixel from "react-facebook-pixel";
 
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim();
 const isBrowser = typeof window !== "undefined";
 
-let pixelInstance: FacebookPixel | null = null;
-let advancedMatching: InitProps = {};
-let lastAdvancedMatchingSignature: string | null = null;
-
-const createPixelInstance = (): FacebookPixel | null => {
-    if (!isBrowser) {
-        return null;
-    }
-
-    if (!PIXEL_ID) {
-        return null;
-    }
-
-    if (!pixelInstance) {
-        pixelInstance = new FacebookPixel({
-            pixelID: PIXEL_ID,
-            autoConfig: false,
-            debug: process.env.NODE_ENV !== "production",
-            pageViewOnInit: false,
-        });
-    }
-
-    return pixelInstance;
+const pixelOptions = {
+    autoConfig: true,
+    debug: process.env.NODE_ENV !== "production",
 };
 
-const applyAdvancedMatching = (): FacebookPixel | null => {
-    const pixel = createPixelInstance();
-    if (!pixel) {
-        return null;
-    }
-
-    const signature = JSON.stringify(advancedMatching);
-    if (signature !== lastAdvancedMatchingSignature) {
-        pixel.init(advancedMatching);
-        lastAdvancedMatchingSignature = signature;
-    }
-
-    return pixel;
+type AdvancedMatchingPayload = {
+    em?: string;
+    ph?: string;
+    fn?: string;
+    ln?: string;
+    ct?: string;
+    st?: string;
+    zp?: string;
+    country?: string;
+    external_id?: string;
 };
 
-const sanitizeEmail = (value: unknown): string | undefined => {
+let initialized = false;
+let advancedMatching: AdvancedMatchingPayload = {};
+
+const canUsePixel = () => Boolean(isBrowser && PIXEL_ID);
+
+const initPixel = () => {
+    if (!canUsePixel()) {
+        return false;
+    }
+
+    ReactPixel.init(PIXEL_ID!, advancedMatching, pixelOptions);
+    initialized = true;
+    return true;
+};
+
+const ensurePixelReady = () => {
+    if (!initialized) {
+        return initPixel();
+    }
+
+    return canUsePixel();
+};
+
+const normalizeEmail = (value: unknown): string | undefined => {
     if (typeof value !== "string") {
         return undefined;
     }
@@ -52,26 +52,16 @@ const sanitizeEmail = (value: unknown): string | undefined => {
     return normalized.length > 0 ? normalized : undefined;
 };
 
-const extractDigits = (value: unknown): string | undefined => {
-    if (typeof value === "string" || typeof value === "number") {
-        const digits = String(value).replace(/\D+/g, "");
-        return digits.length > 0 ? digits : undefined;
-    }
-
-    return undefined;
-};
-
-const sanitizePhone = (value: unknown): number | undefined => {
-    const digits = extractDigits(value);
-    if (!digits) {
+const normalizeDigits = (value: unknown): string | undefined => {
+    if (typeof value !== "string" && typeof value !== "number") {
         return undefined;
     }
 
-    const numericValue = Number(digits);
-    return Number.isFinite(numericValue) ? numericValue : undefined;
+    const digits = String(value).replace(/\D+/g, "");
+    return digits.length > 0 ? digits : undefined;
 };
 
-const sanitizeName = (value: unknown): string | undefined => {
+const normalizeName = (value: unknown): string | undefined => {
     if (typeof value !== "string") {
         return undefined;
     }
@@ -80,54 +70,12 @@ const sanitizeName = (value: unknown): string | undefined => {
     return normalized.length > 0 ? normalized : undefined;
 };
 
-const splitFullName = (
-    value: unknown,
-): { firstName?: string; lastName?: string } => {
-    const normalized = sanitizeName(value);
-    if (!normalized) {
-        return {};
-    }
-
-    const parts = normalized.split(/\s+/).filter(Boolean);
-    if (parts.length === 0) {
-        return {};
-    }
-
-    const [firstName, ...rest] = parts;
-    const lastName = rest.length > 0 ? rest[rest.length - 1] : undefined;
-    return { firstName, lastName };
+const normalizeLocation = (value: unknown): string | undefined => {
+    const normalized = normalizeName(value);
+    return normalized?.replace(/\s+/g, "");
 };
 
-const sanitizeCity = (value: unknown): string | undefined => {
-    const normalized = sanitizeName(value);
-    if (!normalized) {
-        return undefined;
-    }
-
-    return normalized.replace(/\s+/g, "");
-};
-
-const sanitizeState = (value: unknown): string | undefined => {
-    const normalized = sanitizeName(value);
-    if (!normalized) {
-        return undefined;
-    }
-
-    const condensed = normalized.replace(/\s+/g, "");
-    return condensed.length > 2 ? condensed.slice(0, 2) : condensed;
-};
-
-const sanitizeCountry = (value: unknown): string | undefined => {
-    const normalized = sanitizeName(value);
-    if (!normalized) {
-        return undefined;
-    }
-
-    const condensed = normalized.replace(/\s+/g, "");
-    return condensed.length > 2 ? condensed.slice(0, 2) : condensed;
-};
-
-const sanitizePostalCode = (value: unknown): string | undefined => {
+const normalizePostalCode = (value: unknown): string | undefined => {
     if (typeof value !== "string" && typeof value !== "number") {
         return undefined;
     }
@@ -136,32 +84,82 @@ const sanitizePostalCode = (value: unknown): string | undefined => {
     return normalized.length > 0 ? normalized.toLowerCase() : undefined;
 };
 
-const sanitizeExternalId = (value: unknown): string | undefined => {
+const normalizeExternalId = (value: unknown): string | undefined => {
     if (typeof value === "string") {
         const trimmed = value.trim();
         return trimmed.length > 0 ? trimmed : undefined;
     }
 
-    if (typeof value === "number") {
-        return Number.isFinite(value) ? String(value) : undefined;
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return String(value);
     }
 
     return undefined;
 };
 
+const assignAdvancedMatchingValue = (
+    key: keyof AdvancedMatchingPayload,
+    value: string | undefined,
+    draft: AdvancedMatchingPayload,
+): boolean => {
+    const current = draft[key];
+
+    if (!value) {
+        if (current) {
+            delete draft[key];
+            return true;
+        }
+
+        return false;
+    }
+
+    if (current === value) {
+        return false;
+    }
+
+    draft[key] = value;
+    return true;
+};
+
+const applyFullName = (
+    value: unknown,
+    draft: AdvancedMatchingPayload,
+): boolean => {
+    const normalized = normalizeName(value);
+    if (!normalized) {
+        let changed = false;
+        changed = assignAdvancedMatchingValue("fn", undefined, draft) || changed;
+        changed = assignAdvancedMatchingValue("ln", undefined, draft) || changed;
+        return changed;
+    }
+
+    const parts = normalized.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+        return false;
+    }
+
+    const [first, ...rest] = parts;
+    const last = rest.length > 0 ? rest[rest.length - 1] : undefined;
+    let changed = false;
+    changed = assignAdvancedMatchingValue("fn", first, draft) || changed;
+    changed = assignAdvancedMatchingValue("ln", last, draft) || changed;
+    return changed;
+};
+
 export const FACEBOOK_PIXEL_EVENTS = {
-    PAGE_VIEW: TrackableEventNameEnum.PageView,
-    LEAD: TrackableEventNameEnum.Lead,
+    PAGE_VIEW: "PageView",
+    LEAD: "Lead",
 } as const;
 
-export type FacebookPixelEventName = (typeof FACEBOOK_PIXEL_EVENTS)[keyof typeof FACEBOOK_PIXEL_EVENTS] | TrackableEventName;
+export type FacebookPixelEventName =
+    (typeof FACEBOOK_PIXEL_EVENTS)[keyof typeof FACEBOOK_PIXEL_EVENTS] | string;
 
 export type FacebookPixelAdvancedMatchingUpdate = {
     email?: string | null;
     phone?: string | null;
-    fullName?: string | null;
     firstName?: string | null;
     lastName?: string | null;
+    fullName?: string | null;
     city?: string | null;
     state?: string | null;
     postalCode?: string | null;
@@ -169,87 +167,88 @@ export type FacebookPixelAdvancedMatchingUpdate = {
     externalId?: string | number | null;
 };
 
-export const isFacebookPixelConfigured = () => Boolean(PIXEL_ID);
-
 export const initFacebookPixel = () => {
-    applyAdvancedMatching();
+    initPixel();
 };
 
-export const updateFacebookPixelAdvancedMatching = (update: FacebookPixelAdvancedMatchingUpdate) => {
-    if (!isBrowser) {
+export const isFacebookPixelConfigured = () => canUsePixel();
+
+export const trackFacebookPixelPageView = () => {
+    if (!ensurePixelReady()) {
         return;
     }
 
-    const next: InitProps = { ...advancedMatching };
-
-    const assign = <K extends keyof InitProps>(key: K, value: InitProps[K] | undefined) => {
-        if (value === undefined || value === null || value === "" || (typeof value === "number" && Number.isNaN(value))) {
-            delete next[key];
-            return;
-        }
-
-        next[key] = value;
-    };
-
-    if (Object.prototype.hasOwnProperty.call(update, "email")) {
-        assign("em", sanitizeEmail(update.email ?? undefined));
-    }
-
-    if (Object.prototype.hasOwnProperty.call(update, "phone")) {
-        assign("ph", sanitizePhone(update.phone ?? undefined));
-    }
-
-    if (Object.prototype.hasOwnProperty.call(update, "firstName")) {
-        assign("fn", sanitizeName(update.firstName ?? undefined));
-    }
-
-    if (Object.prototype.hasOwnProperty.call(update, "lastName")) {
-        assign("ln", sanitizeName(update.lastName ?? undefined));
-    }
-
-    if (Object.prototype.hasOwnProperty.call(update, "fullName")) {
-        const { firstName, lastName } = splitFullName(update.fullName);
-        if (firstName && !next.fn) {
-            assign("fn", firstName);
-        }
-        if (lastName && !next.ln) {
-            assign("ln", lastName);
-        }
-    }
-
-    if (Object.prototype.hasOwnProperty.call(update, "city")) {
-        assign("ct", sanitizeCity(update.city ?? undefined));
-    }
-
-    if (Object.prototype.hasOwnProperty.call(update, "state")) {
-        assign("st", sanitizeState(update.state ?? undefined));
-    }
-
-    if (Object.prototype.hasOwnProperty.call(update, "postalCode")) {
-        assign("zp", sanitizePostalCode(update.postalCode ?? undefined));
-    }
-
-    if (Object.prototype.hasOwnProperty.call(update, "country")) {
-        assign("country", sanitizeCountry(update.country ?? undefined));
-    }
-
-    if (Object.prototype.hasOwnProperty.call(update, "externalId")) {
-        assign("external_id", sanitizeExternalId(update.externalId ?? undefined));
-    }
-
-    advancedMatching = next;
-    applyAdvancedMatching();
+    ReactPixel.pageView();
 };
 
-export const trackFacebookPixelEvent = <K extends TrackableEventName>(
-    eventName: K,
-    data?: EventData[K],
-    additionalData?: AdditionalEventData,
+export const trackFacebookPixelEvent = (
+    eventName: FacebookPixelEventName,
+    data?: Record<string, unknown>,
 ) => {
-    const pixel = applyAdvancedMatching();
-    pixel?.trackEvent(eventName, data, additionalData);
+    if (!ensurePixelReady()) {
+        return;
+    }
+
+    ReactPixel.track(eventName, data);
 };
 
-export const trackFacebookPixelPageView = (data?: EventData[TrackableEventNameEnum.PageView]) => {
-    trackFacebookPixelEvent(TrackableEventNameEnum.PageView, data);
+export const updateFacebookPixelAdvancedMatching = (
+    update: FacebookPixelAdvancedMatchingUpdate,
+) => {
+    const draft: AdvancedMatchingPayload = { ...advancedMatching };
+    let changed = false;
+
+    if ("email" in update) {
+        changed = assignAdvancedMatchingValue("em", normalizeEmail(update.email ?? undefined), draft) || changed;
+    }
+
+    if ("phone" in update) {
+        changed = assignAdvancedMatchingValue("ph", normalizeDigits(update.phone ?? undefined), draft) || changed;
+    }
+
+    if ("firstName" in update) {
+        changed = assignAdvancedMatchingValue("fn", normalizeName(update.firstName ?? undefined), draft) || changed;
+    }
+
+    if ("lastName" in update) {
+        changed = assignAdvancedMatchingValue("ln", normalizeName(update.lastName ?? undefined), draft) || changed;
+    }
+
+    if ("fullName" in update) {
+        changed = applyFullName(update.fullName, draft) || changed;
+    }
+
+    if ("city" in update) {
+        changed = assignAdvancedMatchingValue("ct", normalizeLocation(update.city ?? undefined), draft) || changed;
+    }
+
+    if ("state" in update) {
+        changed = assignAdvancedMatchingValue("st", normalizeLocation(update.state ?? undefined), draft) || changed;
+    }
+
+    if ("postalCode" in update) {
+        changed = assignAdvancedMatchingValue("zp", normalizePostalCode(update.postalCode ?? undefined), draft) || changed;
+    }
+
+    if ("country" in update) {
+        changed = assignAdvancedMatchingValue("country", normalizeLocation(update.country ?? undefined), draft) || changed;
+    }
+
+    if ("externalId" in update) {
+        changed = assignAdvancedMatchingValue(
+            "external_id",
+            normalizeExternalId(update.externalId ?? undefined),
+            draft,
+        ) || changed;
+    }
+
+    if (!changed) {
+        return;
+    }
+
+    advancedMatching = draft;
+
+    if (initialized) {
+        initPixel();
+    }
 };
