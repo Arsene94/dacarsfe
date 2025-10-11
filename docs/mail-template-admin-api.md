@@ -257,7 +257,7 @@ Lists every editable Twig file together with stored metadata.
       "key": "booking.status_reserved",
       "path": "booking/status_reserved.twig",
       "name": "Booking / Status Reserved",
-      "title": "Rezervarea este confirmată",
+      "title": "Cererea de rezervarea este efectuată cu succes",
       "subject": "[DaCars] Rezervarea ta este confirmată",
       "updated_at": null
     },

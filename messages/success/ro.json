@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "title": "Rezervarea ta este confirmată",
+    "title": "Cererea de rezervare este efectuată cu succes",
     "description": "Vezi sumarul rezervării tale DaCars, detaliile de preluare și datele de contact ale echipei noastre.",
-    "openGraphTitle": "Rezervarea ta este confirmată | DaCars Rent a Car"
+    "openGraphTitle": "Cererea de rezervare este efectuată cu succes | DaCars Rent a Car"
   },
   "loading": "Se încarcă detaliile rezervării...",
   "fallbacks": {
@@ -10,8 +10,8 @@
   },
   "header": {
     "title": {
-      "prefix": "Rezervarea este",
-      "highlight": "confirmată!"
+      "prefix": "Cererea de ezervarea este",
+      "highlight": "efectuată cu succes!"
     },
     "thanks": "Mulțumim, {{name}}! Mașina ta te așteaptă la aeroport.",
     "tagline": "Ne vedem acasă!",
