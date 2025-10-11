@@ -104,7 +104,7 @@ const ContactSection = () => {
                                             contact_method: "phone",
                                             value: phoneNumber,
                                         });
-                                        trackMetaPixelEvent(META_PIXEL_EVENTS.CONTACT, {
+                                        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
                                             contact_method: "phone",
                                             value: phoneNumber,
                                         });
@@ -134,7 +134,7 @@ const ContactSection = () => {
                                             contact_method: "whatsapp",
                                             value: phoneNumber,
                                         });
-                                        trackMetaPixelEvent(META_PIXEL_EVENTS.CONTACT, {
+                                        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
                                             contact_method: "whatsapp",
                                             value: phoneNumber,
                                         });
@@ -164,7 +164,7 @@ const ContactSection = () => {
                                             contact_method: "email",
                                             value: emailAddress,
                                         });
-                                        trackMetaPixelEvent(META_PIXEL_EVENTS.CONTACT, {
+                                        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
                                             contact_method: "email",
                                             value: emailAddress,
                                         });

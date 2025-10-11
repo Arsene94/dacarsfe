@@ -9,7 +9,7 @@ import {useBooking} from "@/context/useBooking";
 import { apiClient } from "@/lib/api";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
-import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
+import { trackMetaPixelEvent, META_PIXEL_EVENTS, updateMetaPixelAdvancedMatching } from "@/lib/metaPixel";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
@@ -446,6 +446,13 @@ const ReservationPage = () => {
         car_id: null,
         coupon_code: storedDiscount?.code || "",
     });
+    useEffect(() => {
+        updateMetaPixelAdvancedMatching({
+            email: formData.customer_email,
+            phone: formData.customer_phone,
+            fullName: formData.customer_name,
+        });
+    }, [formData.customer_email, formData.customer_phone, formData.customer_name]);
     useEffect(() => {
         if (booking.startDate && booking.endDate && booking.selectedCar) {
             const [rental_start_date, rental_start_time] = booking.startDate.split("T");
@@ -1063,8 +1070,6 @@ const ReservationPage = () => {
             service_ids: serviceIds,
             applied_offer_ids: appliedOfferIds,
         });
-
-        trackMetaPixelEvent(META_PIXEL_EVENTS.INITIATE_CHECKOUT, estimatedMetaPayload);
 
         trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
             ...estimatedMetaPayload,

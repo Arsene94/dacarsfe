@@ -19,7 +19,6 @@ import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackTikTokEvent, TIKTOK_CONTENT_TYPE, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
-import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
 
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
@@ -452,16 +451,6 @@ const FleetPage = () => {
             total_results: totalCars,
         });
 
-        trackMetaPixelEvent(META_PIXEL_EVENTS.SEARCH, {
-            search_string: searchTerm || undefined,
-            content_category: "fleet_filters",
-            content_type: "car_fleet",
-            filter_key: key,
-            filter_value: value,
-            sort_by: sortBy,
-            page: 1,
-            total_results: totalCars,
-        });
     };
 
     const clearFilters = () => {
@@ -535,6 +524,23 @@ const FleetPage = () => {
             view_mode: viewMode,
         });
 
+        trackTikTokEvent(TIKTOK_EVENTS.ADD_TO_CART, {
+            content_type: TIKTOK_CONTENT_TYPE,
+            contents: [
+                {
+                    content_id: car.id,
+                    content_name: car.name,
+                    quantity: 1,
+                    price: totalAmount ?? undefined,
+                },
+            ],
+            value: totalAmount ?? undefined,
+            currency: "RON",
+            start_date: startDate || undefined,
+            end_date: endDate || undefined,
+            with_deposit: withDeposit,
+        });
+
         router.push(hasCompleteBookingRange ? "/checkout" : "/");
     };
 
@@ -565,20 +571,6 @@ const FleetPage = () => {
             };
         });
 
-        const metaContents = contents.map((item) => ({
-            id:
-                item.content_id !== undefined && item.content_id !== null
-                    ? String(item.content_id)
-                    : undefined,
-            quantity: item.quantity,
-            item_price: item.price,
-            title: item.content_name,
-        }));
-        const contentIds = contents
-            .map((item) => item.content_id)
-            .filter((id): id is number => id !== undefined && id !== null)
-            .map((id) => String(id));
-
         trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
             content_type: TIKTOK_CONTENT_TYPE,
             contents,
@@ -586,17 +578,6 @@ const FleetPage = () => {
             value: contents[0]?.price ?? undefined,
             total_results: totalCars,
             search_term: searchTerm || undefined,
-            sort_by: sortBy,
-        });
-
-        trackMetaPixelEvent(META_PIXEL_EVENTS.VIEW_CONTENT, {
-            content_type: "car_fleet",
-            content_ids: contentIds,
-            contents: metaContents,
-            currency: "RON",
-            value: contents[0]?.price ?? undefined,
-            total_results: totalCars,
-            search_string: searchTerm || undefined,
             sort_by: sortBy,
         });
 
