@@ -541,7 +541,7 @@ const FleetPage = () => {
             with_deposit: withDeposit,
         });
 
-        router.push(hasCompleteBookingRange ? "/checkout" : "/");
+        router.push(hasCompleteBookingRange ? "/form" : "/");
     };
 
     useEffect(() => {
@@ -930,7 +930,7 @@ const FleetPage = () => {
                             {t("cta.description")}
                         </p>
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
-                            <Link href="/checkout" aria-label={t("cta.primary")}>
+                            <Link href="/form" aria-label={t("cta.primary")}>
                                 <Button className="transform hover:scale-105 shadow-lg" aria-label={t("cta.primary")}>
                                     {t("cta.primary")}
                                 </Button>

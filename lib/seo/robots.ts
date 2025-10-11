@@ -9,7 +9,7 @@ export const ROBOTS_CONFIG: MetadataRoute.Robots = {
             disallow: [
                 "/admin/",
                 "/account/",
-                "/checkout/",
+                "/form/",
                 "/cart/",
                 "/politica-de-confidentialitate",
                 "/politica-cookie",

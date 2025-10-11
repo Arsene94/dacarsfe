@@ -30,7 +30,7 @@ overrides).
         { "label": "Acasă", "url": "/" },
         { "label": "Flota auto", "url": "/cars" },
         { "label": "Oferte speciale", "url": "/offers" },
-        { "label": "Rezervă acum", "url": "/checkout" }
+        { "label": "Rezervă acum", "url": "/form" }
       ],
       "footer_links": [
         { "label": "Termeni și condiții", "url": "/terms" },
@@ -64,7 +64,7 @@ overrides).
         { "label": "Acasă", "url": "/" },
         { "label": "Flota auto", "url": "/cars" },
         { "label": "Oferte speciale", "url": "/offers" },
-        { "label": "Rezervă acum", "url": "/checkout" }
+        { "label": "Rezervă acum", "url": "/form" }
       ],
       "footer_links": [
         { "label": "Termeni și condiții", "url": "/terms" },
@@ -115,7 +115,7 @@ are replaced wholesale, so send the entire array when you edit a single entry. T
       { "label": "Acasă", "url": "/" },
       { "label": "Flota auto", "url": "/cars" },
       { "label": "Oferte speciale", "url": "/offers" },
-      { "label": "Rezervă acum", "url": "/checkout" }
+      { "label": "Rezervă acum", "url": "/form" }
     ],
     "footer_links": [
       { "label": "Termeni și condiții", "url": "/terms" },
@@ -156,7 +156,7 @@ are replaced wholesale, so send the entire array when you edit a single entry. T
         { "label": "Acasă", "url": "/" },
         { "label": "Flota auto", "url": "/cars" },
         { "label": "Oferte speciale", "url": "/offers" },
-        { "label": "Rezervă acum", "url": "/checkout" }
+        { "label": "Rezervă acum", "url": "/form" }
       ],
       "footer_links": [
         { "label": "Termeni și condiții", "url": "/terms" },
@@ -190,7 +190,7 @@ are replaced wholesale, so send the entire array when you edit a single entry. T
         { "label": "Acasă", "url": "/" },
         { "label": "Flota auto", "url": "/cars" },
         { "label": "Oferte speciale", "url": "/offers" },
-        { "label": "Rezervă acum", "url": "/checkout" }
+        { "label": "Rezervă acum", "url": "/form" }
       ],
       "footer_links": [
         { "label": "Termeni și condiții", "url": "/terms" },
@@ -361,7 +361,7 @@ is built by the booking mail service and respects any JSON front matter embedded
         "menu_items": [
           { "label": "Acasă", "url": "https://dacars.ro/" },
           { "label": "Flota auto", "url": "https://dacars.ro/cars" },
-          { "label": "Rezervă acum", "url": "https://dacars.ro/checkout" }
+          { "label": "Rezervă acum", "url": "https://dacars.ro/form" }
         ],
         "footer_links": [
           { "label": "Termeni și condiții", "url": "https://dacars.ro/terms" },
@@ -378,7 +378,7 @@ is built by the booking mail service and respects any JSON front matter embedded
         "home": "https://dacars.ro/",
         "fleet": "https://dacars.ro/cars",
         "offers": "https://dacars.ro/offers",
-        "checkout": "https://dacars.ro/checkout",
+        "checkout": "https://dacars.ro/form",
         "contact_phone": "tel:+40723817551",
         "support_phone": "tel:+40722123456",
         "contact_email": "mailto:contact@dacars.ro"

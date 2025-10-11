@@ -10,7 +10,7 @@
     ],
     "cta": {
       "label": "Rezervă acum",
-      "href": "/checkout"
+      "href": "/form"
     },
     "mobileMenu": {
       "open": "Deschide meniul",

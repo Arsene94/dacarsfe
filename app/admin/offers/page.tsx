@@ -877,7 +877,7 @@ const OffersAdminPage = () => {
                                 id="offer-cta-url"
                                 value={ctaUrl}
                                 onChange={(event) => setCtaUrl(event.target.value)}
-                                placeholder="Ex: /checkout"
+                                placeholder="Ex: /form"
                             />
                         </div>
                         <div>

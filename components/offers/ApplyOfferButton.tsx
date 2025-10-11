@@ -21,7 +21,7 @@ type ApplyOfferButtonProps = {
 const ApplyOfferButton = ({
     offer,
     label,
-    href = "/checkout",
+    href = "/form",
     className,
     variant,
     ariaLabel,
@@ -54,7 +54,7 @@ const ApplyOfferButton = ({
             }
         }
 
-        const target = href && href.trim().length > 0 ? href : "/checkout";
+        const target = href && href.trim().length > 0 ? href : "/form";
         if (/^https?:\/\//i.test(target)) {
             window.location.href = target;
             return;

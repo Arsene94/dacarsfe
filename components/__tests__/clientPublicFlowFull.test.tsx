@@ -6,7 +6,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import HeroSection from '@/components/HeroSectionClient';
 import HomePageClient from '@/components/home/HomePageClient';
 import CarsPageClient from '@/components/cars/CarsPageClient';
-import ReservationPage from '@/app/checkout/page';
+import ReservationPage from '@/app/form/page';
 import { BookingContext, defaultBooking } from '@/context/booking-store';
 import { LocaleProvider } from '@/context/LocaleContext';
 import type { BookingData } from '@/types/booking';
@@ -256,7 +256,7 @@ describe('Fluxul complet al clienților DaCars', () => {
           offer_type: 'percentage_discount',
           offer_value: '10',
           primary_cta_label: 'Aplică reducerea',
-          primary_cta_url: '/checkout',
+          primary_cta_url: '/form',
         },
       ],
     });
@@ -337,7 +337,7 @@ describe('Fluxul complet al clienților DaCars', () => {
         }),
       );
     });
-    expect(pushMock).toHaveBeenCalledWith('/checkout');
+    expect(pushMock).toHaveBeenCalledWith('/form');
 
     pushMock.mockClear();
     await user.click(screen.getByRole('button', { name: 'Caută mașini' }));
@@ -441,7 +441,7 @@ describe('Fluxul complet al clienților DaCars', () => {
     });
 
     await user.click(screen.getByText('Rezervă fără garanție'));
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/checkout'));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/form'));
     await waitFor(() => {
       const lastCall = setBookingSpy.mock.calls.at(-1)?.[0];
       expect(lastCall?.withDeposit).toBe(false);
@@ -450,7 +450,7 @@ describe('Fluxul complet al clienților DaCars', () => {
 
     pushMock.mockClear();
     await user.click(screen.getByText('Rezervă cu garanție'));
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/checkout'));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/form'));
     await waitFor(() => {
       const lastCall = setBookingSpy.mock.calls.at(-1)?.[0];
       expect(lastCall?.withDeposit).toBe(true);
@@ -459,9 +459,9 @@ describe('Fluxul complet al clienților DaCars', () => {
   });
 
   it('parcurge formularul de checkout, validează coduri și trimite rezervarea completă', async () => {
-    currentPathname = '/checkout';
+    currentPathname = '/form';
     currentSearchParams = new URLSearchParams();
-    window.history.replaceState({}, '', '/checkout');
+    window.history.replaceState({}, '', '/form');
 
     const storedPrize = buildWheelPrize();
     getStoredWheelPrizeMock.mockReturnValue(storedPrize);

@@ -42,7 +42,7 @@ Gestionarea ofertelor promoționale din platforma DaCars. Endpoint-urile suport�
       "background_class": "bg-gradient-to-br from-jade to-emerald-600",
       "text_class": "text-white",
       "primary_cta_label": "Rezervă oferta",
-      "primary_cta_url": "/checkout",
+      "primary_cta_url": "/form",
       "status": "published",
       "starts_at": "2025-06-01T00:00:00+03:00",
       "ends_at": "2025-09-01T23:59:59+03:00",
@@ -79,7 +79,7 @@ Creează o ofertă. Câmpurile sunt opționale, exceptând `title`.
   "background_class": "bg-berkeley",
   "text_class": "text-white",
   "primary_cta_label": "Rezervă acum",
-  "primary_cta_url": "/checkout",
+  "primary_cta_url": "/form",
   "status": "scheduled",
   "starts_at": "2025-07-01T00:00:00+03:00",
   "ends_at": "2025-08-31T23:59:59+03:00"

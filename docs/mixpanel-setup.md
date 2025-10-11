@@ -40,8 +40,8 @@ Următoarele evenimente sunt trimise explicit. Numele sunt sensibile la literă 
 | `hero_form_submit` | `components/HeroBookingForm.tsx` | Utilizatorul trimite formularul principal de căutare. |
 | `fleet_filters_updated` | `components/cars/CarsPageClient.tsx` | Orice schimbare de filtru în pagina de flotă. |
 | `car_cta_clicked` | `components/cars/CarsPageClient.tsx` | Utilizatorul apasă CTA-ul unei mașini pentru a continua spre checkout. |
-| `checkout_loaded` | `app/checkout/page.tsx` | Checkout-ul se încarcă cu selecțiile curente. |
-| `checkout_submitted` | `app/checkout/page.tsx` | Rezervarea este trimisă către backend. |
+| `checkout_loaded` | `app/form/page.tsx` | Checkout-ul se încarcă cu selecțiile curente. |
+| `checkout_submitted` | `app/form/page.tsx` | Rezervarea este trimisă către backend. |
 
 ### Proprietăți trimise pentru fiecare eveniment
 | Eveniment | Nume proprietate | Semnificație |

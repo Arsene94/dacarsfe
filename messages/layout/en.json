@@ -10,7 +10,7 @@
     ],
     "cta": {
       "label": "Book now",
-      "href": "/checkout"
+      "href": "/form"
     },
     "mobileMenu": {
       "open": "Open menu",

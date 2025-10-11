@@ -90,7 +90,7 @@ const ProcessSection = () => {
                         </p>
 
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
-                            <Link href="/checkout" aria-label={cta.primary ?? "Rezervă acum"}>
+                            <Link href="/form" aria-label={cta.primary ?? "Rezervă acum"}>
                                 <Button
                                     className="transform hover:scale-105 shadow-lg"
                                     aria-label={cta.primary ?? "Rezervă acum"}

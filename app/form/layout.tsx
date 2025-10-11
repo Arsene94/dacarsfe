@@ -11,7 +11,7 @@ const { metadata: checkoutMetadataMessages } = checkoutMessages;
 const checkoutMetadata = buildMetadata({
     title: checkoutMetadataMessages.title,
     description: checkoutMetadataMessages.description,
-    path: "/checkout",
+    path: "/form",
     openGraphTitle: checkoutMetadataMessages.openGraphTitle,
     noIndex: true,
 });

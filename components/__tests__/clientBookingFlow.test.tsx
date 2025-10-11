@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, cleanup } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import ReservationPage from '@/app/checkout/page';
+import ReservationPage from '@/app/form/page';
 import HeroSection from '@/components/HeroSectionClient';
 import CarsPageClient from '@/components/cars/CarsPageClient';
 import { BookingContext, defaultBooking } from '@/context/booking-store';
@@ -265,7 +265,7 @@ describe('Fluxul de închiriere pentru clienți', () => {
         selectedCar: expect.objectContaining({ id: mockApiCar.id, name: mockApiCar.name }),
       }),
     );
-    expect(pushMock).toHaveBeenCalledWith('/checkout');
+    expect(pushMock).toHaveBeenCalledWith('/form');
 
     pushMock.mockClear();
 
@@ -280,7 +280,7 @@ describe('Fluxul de închiriere pentru clienți', () => {
         selectedCar: expect.objectContaining({ id: mockApiCar.id }),
       }),
     );
-    expect(pushMock).toHaveBeenCalledWith('/checkout');
+    expect(pushMock).toHaveBeenCalledWith('/form');
   }, 15000);
 
   it('păstrează opțiunile din checkout și permite schimbarea garanției', async () => {

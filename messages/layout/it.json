@@ -10,7 +10,7 @@
     ],
     "cta": {
       "label": "Prenota ora",
-      "href": "/checkout"
+      "href": "/form"
     },
     "mobileMenu": {
       "open": "Apri menu",

@@ -241,7 +241,7 @@ const OffersSection = () => {
     const remotePrimaryCtaLabel = remoteOffers.find((card) => card.ctaLabel)?.ctaLabel ?? null;
     const remotePrimaryHref = remoteOffers.find((card) => card.ctaHref)?.ctaHref ?? null;
     const primaryCtaLabel = remotePrimaryCtaLabel ?? offers.cta?.primary ?? "Profită acum";
-    const primaryCtaHref = remotePrimaryHref ?? "/checkout";
+    const primaryCtaHref = remotePrimaryHref ?? "/form";
 
     return (
         <section id="oferte" className="py-20 bg-berkeley">
@@ -303,7 +303,7 @@ const OffersSection = () => {
 
                                     <ApplyOfferButton
                                         className="px-6 py-3 bg-white !text-berkeley hover:!bg-gray-100"
-                                        href={ctaHref ?? "/checkout"}
+                                        href={ctaHref ?? "/form"}
                                         label={ctaLabel ?? primaryCtaLabel}
                                         ariaLabel={ctaLabel ?? primaryCtaLabel}
                                         offer={
@@ -333,7 +333,7 @@ const OffersSection = () => {
                         {offers.cta?.secondaryDescription ??
                             "Rezervă acum pentru perioada sărbătorilor și beneficiezi de tarife preferențiale și servicii premium incluse."}
                     </p>
-                    <Link href="/checkout" aria-label={secondaryButton}>
+                    <Link href="/form" aria-label={secondaryButton}>
                         <Button className="px-8 py-4" aria-label={secondaryButton}>
                             {secondaryButton}
                         </Button>

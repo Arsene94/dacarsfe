@@ -1325,7 +1325,7 @@ const createArrayMock = (path: string): unknown[] => {
   if (key.includes("menu") || key.includes("link")) {
     return [
       createListEntryMock("Acasă", { url: "https://dacars.ro" }),
-      createListEntryMock("Rezervă acum", { url: "https://dacars.ro/checkout" }),
+      createListEntryMock("Rezervă acum", { url: "https://dacars.ro/form" }),
     ];
   }
   if (key.includes("social")) {
