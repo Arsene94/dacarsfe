@@ -7,6 +7,7 @@ import { initMetaPixel, trackMetaPixelPageView, isMetaPixelConfigured } from "@/
 const PixelTracker = () => {
     const pathname = usePathname();
     const previousPathnameRef = useRef<string | null>(null);
+    const previousHistoryKeyRef = useRef<string | null>(null);
 
     useEffect(() => {
         initMetaPixel();
@@ -21,12 +22,31 @@ const PixelTracker = () => {
             return;
         }
 
-        if (previousPathnameRef.current === pathname) {
+        const currentHistoryKey = (() => {
+            if (typeof window === "undefined") {
+                return null;
+            }
+
+            try {
+                const state = window.history?.state as { key?: unknown } | undefined;
+                const key = state?.key;
+                return typeof key === "string" && key.length > 0 ? key : null;
+            } catch {
+                return null;
+            }
+        })();
+
+        if (
+            previousPathnameRef.current === pathname &&
+            previousHistoryKeyRef.current === currentHistoryKey
+        ) {
             return;
         }
 
         previousPathnameRef.current = pathname;
-        trackMetaPixelPageView();
+        previousHistoryKeyRef.current = currentHistoryKey;
+
+        trackMetaPixelPageView({ pathname, historyKey: currentHistoryKey ?? undefined });
     }, [pathname]);
 
     return null;

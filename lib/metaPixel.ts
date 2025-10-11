@@ -27,6 +27,13 @@ type PageViewRecord = {
     timestamp: number;
 };
 
+type PageViewContext = {
+    pathname?: string | null;
+    search?: string | null;
+    hash?: string | null;
+    historyKey?: string | null;
+};
+
 type FbqFunction = ((...args: unknown[]) => void) & {
     getState?: () => FbqState | undefined;
 };
@@ -204,17 +211,37 @@ const sanitizePayload = (payload?: Record<string, unknown>): Record<string, unkn
     return sanitized as Record<string, unknown>;
 };
 
-const buildLocationKey = (): string | null => {
+const readHistoryKey = (): string | null => {
     if (!isBrowser) {
         return null;
     }
 
     try {
-        const { pathname = "", search = "", hash = "" } = window.location ?? {};
-        return `${pathname}|${search}|${hash}`;
+        const state = window.history?.state as { key?: unknown } | undefined;
+        const key = state?.key;
+        return typeof key === "string" && key.length > 0 ? key : null;
     } catch {
         return null;
     }
+};
+
+const buildLocationKey = (context?: PageViewContext): string | null => {
+    const sourcePathname = context?.pathname ?? (isBrowser ? window.location?.pathname ?? "" : "");
+    const pathname = typeof sourcePathname === "string" ? sourcePathname : "";
+
+    if (!pathname || pathname.trim().length === 0) {
+        return null;
+    }
+
+    const normalizedPathname = pathname.trim();
+
+    const historyKey = context?.historyKey ?? readHistoryKey();
+
+    if (historyKey) {
+        return `${normalizedPathname}|${historyKey}`;
+    }
+
+    return normalizedPathname;
 };
 
 const getLastPageViewRecord = (): PageViewRecord | null => {
@@ -269,7 +296,7 @@ export const initMetaPixel = () => {
     });
 };
 
-export const trackMetaPixelPageView = () => {
+export const trackMetaPixelPageView = (context?: PageViewContext) => {
     const promise = ensureInitializedPixel();
     if (!promise) {
         return;
@@ -277,7 +304,7 @@ export const trackMetaPixelPageView = () => {
 
     promise
         .then((pixel) => {
-            const locationKey = buildLocationKey();
+            const locationKey = buildLocationKey(context);
 
             if (locationKey) {
                 const lastRecord = getLastPageViewRecord();

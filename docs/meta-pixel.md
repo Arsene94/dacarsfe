@@ -23,7 +23,12 @@ export const META_PIXEL_EVENTS = {
 } as const;
 
 export const initMetaPixel: () => void;
-export const trackMetaPixelPageView: () => void;
+export const trackMetaPixelPageView: (
+    context?: {
+        pathname?: string | null;
+        historyKey?: string | null;
+    },
+) => void;
 export const trackMetaPixelEvent: (
     eventName: MetaPixelEventName,
     payload?: Record<string, unknown>,
@@ -35,7 +40,7 @@ Helper-ul face câteva lucruri suplimentare:
 - încarcă lazy modulul `react-facebook-pixel`, astfel încât codul să nu ajungă în bundle-ul server;
 - rulează `ReactPixel.init` o singură dată chiar dacă componenta se montează de mai multe ori sau dacă Facebook injectează deja pixelul și dezactivează `autoConfig` pentru a preveni PageView-uri automate;
 - igienizează payload-urile (`sanitizePayload`) pentru a elimina `undefined`, array-uri goale sau date invalide înainte de a apela `fbq`;
-- memorează ultima locație raportată în `window.__META_PIXEL_LAST_PAGE_VIEW__` astfel încât același URL să nu trimită din nou `PageView` dacă efectele React se re-execută.
+- memorează ultima combinație `pathname` + `history.state.key` raportată în `window.__META_PIXEL_LAST_PAGE_VIEW__` astfel încât același URL să nu trimită din nou `PageView` dacă efectele React se re-execută sau dacă layout-urile sunt remontate de Next.js.
 
 ## 3. Creează componenta `components/PixelTracker.tsx`
 
@@ -49,6 +54,7 @@ import { initMetaPixel, trackMetaPixelPageView, isMetaPixelConfigured } from "@/
 const PixelTracker = () => {
     const pathname = usePathname();
     const previousPathnameRef = useRef<string | null>(null);
+    const previousHistoryKeyRef = useRef<string | null>(null);
 
     useEffect(() => {
         initMetaPixel();
@@ -63,12 +69,31 @@ const PixelTracker = () => {
             return;
         }
 
-        if (previousPathnameRef.current === pathname) {
+        const currentHistoryKey = (() => {
+            if (typeof window === "undefined") {
+                return null;
+            }
+
+            try {
+                const state = window.history?.state as { key?: unknown } | undefined;
+                const key = state?.key;
+                return typeof key === "string" && key.length > 0 ? key : null;
+            } catch {
+                return null;
+            }
+        })();
+
+        if (
+            previousPathnameRef.current === pathname &&
+            previousHistoryKeyRef.current === currentHistoryKey
+        ) {
             return;
         }
 
         previousPathnameRef.current = pathname;
-        trackMetaPixelPageView();
+        previousHistoryKeyRef.current = currentHistoryKey;
+
+        trackMetaPixelPageView({ pathname, historyKey: currentHistoryKey ?? undefined });
     }, [pathname]);
 
     return null;
@@ -80,7 +105,7 @@ export default PixelTracker;
 Componenta este marcată `"use client"` pentru a putea folosi hook-urile de routing și rulează două efecte:
 
 1. `initMetaPixel()` – încarcă modulul Facebook și îl configurează o singură dată.
-2. `trackMetaPixelPageView()` – trimite `PageView` doar când se schimbă `pathname`-ul Next.js (navigări reale între pagini). Schimbările de query string făcute prin `router.replace`/`next/link` pe aceeași rută nu mai trimit încă un `PageView`, prevenind duplicatele întâlnite pe `/cars`.
+2. `trackMetaPixelPageView({ pathname, historyKey })` – trimite `PageView` doar când se schimbă `pathname`-ul Next.js (navigări reale între pagini) și memorează combinația de `pathname` + `history.state.key` pentru a ignora remontările sau navigările soft care păstrează aceeași pagină. Schimbările de query string făcute prin `router.replace`/`next/link` pe aceeași rută nu mai trimit încă un `PageView`, prevenind duplicatele întâlnite anterior pe `/cars`.
 
 ## 4. Adaugă tracker-ul în `app/layout.tsx`
 
