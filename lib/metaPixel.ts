@@ -19,7 +19,6 @@ type ReactFacebookPixel = {
 
 let pixelModulePromise: Promise<ReactFacebookPixel> | null = null;
 let initPromise: Promise<ReactFacebookPixel> | null = null;
-let hasSentInitialPageView = false;
 
 const loadPixelModule = (): Promise<ReactFacebookPixel> => {
     if (!pixelModulePromise) {
@@ -58,11 +57,6 @@ const ensureInitializedPixel = (): Promise<ReactFacebookPixel> | null => {
                     autoConfig: true,
                     debug: process.env.NODE_ENV !== "production",
                 });
-
-                if (!hasSentInitialPageView) {
-                    pixel.pageView();
-                    hasSentInitialPageView = true;
-                }
 
                 return pixel;
             })

@@ -9,7 +9,7 @@ Integrarea Meta Pixel rulează global prin `MetaPixelInitializer`, încărcat î
 | `PageView` | La prima încărcare (după `ReactPixel.init`) și la fiecare schimbare de rută în App Router | `components/MetaPixelInitializer.tsx`, `lib/metaPixel.ts` | – |
 | `Lead` | Contacte directe (telefon, WhatsApp, email), vizualizarea checkout-ului cu date complete și confirmarea rezervării | `components/ContactSection.tsx`, `app/checkout/page.tsx`, `app/success/page.tsx` | `contact_method`, `lead_stage`, `value`, `currency`, `content_ids`, `content_name`, `content_type`, `contents`, `with_deposit`, `start_date`, `end_date`, `service_ids`, `applied_offer_ids`, `reservation_id`. |
 
-Toate payload-urile sunt igienizate în `lib/metaPixel.ts` pentru a elimina valori `undefined`, liste goale sau date invalide înainte de trimiterea către Facebook.
+Toate payload-urile sunt igienizate în `lib/metaPixel.ts` pentru a elimina valori `undefined`, liste goale sau date invalide înainte de trimiterea către Facebook. `MetaPixelInitializer` deduplică și schimbările de rută consecutive către aceeași destinație (inclusiv navigările realizate prin `next/link`), astfel încât `PageView` se trimite o singură dată per vizită.
 
 ## Pași de validare
 
