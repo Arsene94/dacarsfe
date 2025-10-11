@@ -42,71 +42,33 @@ Helper-ul folosește obiectul `ReactPixel` din bibliotecă și oferă câteva be
 
 ## 3. Tracking PageView (`components/PixelTracker.tsx`)
 
+Componenta rămâne client-only și continuă să verifice tranzițiile reale de rută înainte de a apela `trackFacebookPixelPageView()`. În plus, colectează identificatorii disponibili în browser (cookie-urile `_fbc`/`_fbp`, IP prin `/api/ip`, user agent și `external_id` din advanced matching) și îi trimite către noua rută server `POST /api/meta-page-view`. Eventul este raportat către Graph API cu `action_source=website`, astfel încât Events Manager să recepționeze și versiunile server-side ale `PageView`.
+
 ```tsx
-"use client";
+const trackMetaPageView = async () => {
+    const fbc = getBrowserCookieValue("_fbc");
+    const fbp = getBrowserCookieValue("_fbp");
+    const ipAddress = await fetchIpAddress();
+    const advancedMatching = getFacebookPixelAdvancedMatchingSnapshot();
+    const externalId = advancedMatching?.external_id;
 
-import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
-import {
-    initFacebookPixel,
-    trackFacebookPixelPageView,
-    isFacebookPixelConfigured,
-} from "@/lib/facebookPixel";
-
-const PixelTracker = () => {
-    const pathname = usePathname();
-    const previousPathnameRef = useRef<string | null>(null);
-    const previousHistoryKeyRef = useRef<string | null>(null);
-
-    useEffect(() => {
-        initFacebookPixel();
-    }, []);
-
-    useEffect(() => {
-        if (!isFacebookPixelConfigured()) {
-            return;
-        }
-
-        if (typeof pathname !== "string" || pathname.length === 0) {
-            return;
-        }
-
-        const currentHistoryKey = (() => {
-            if (typeof window === "undefined") {
-                return null;
-            }
-
-            try {
-                const state = window.history?.state as { key?: unknown } | undefined;
-                const key = state?.key;
-                return typeof key === "string" && key.length > 0 ? key : null;
-            } catch {
-                return null;
-            }
-        })();
-
-        if (
-            previousPathnameRef.current === pathname &&
-            previousHistoryKeyRef.current === currentHistoryKey
-        ) {
-            return;
-        }
-
-        previousPathnameRef.current = pathname;
-        previousHistoryKeyRef.current = currentHistoryKey;
-
-        trackFacebookPixelPageView();
-    }, [pathname]);
-
-    return null;
+    await fetch("/api/meta-page-view", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            eventName: FACEBOOK_PIXEL_EVENTS.PAGE_VIEW,
+            eventSourceUrl: window.location.href,
+            fbc,
+            fbp,
+            ipAddress,
+            userAgent: window.navigator.userAgent,
+            externalId,
+        }),
+    });
 };
-
-export default PixelTracker;
 ```
 
-Componenta rulează doar pe client, memorează ultima rută raportată și apelează `trackFacebookPixelPageView()` exclusiv când există o navigare reală – prevenind duplicatele observate anterior.
-
-Adaugă `PixelTracker` în `app/layout.tsx` (în același `Suspense` cu ceilalți trackeri) pentru ca toate rutele să emită `PageView` corect.
+Prin combinarea cu `trackFacebookPixelPageView()` continuăm să avem evenimentul client-side pentru debugging rapid, dar și varianta server-side îmbogățită cu identificatorii solicitați de Meta.
 
 ## 4. Advanced matching (Manual advanced matching)
 
