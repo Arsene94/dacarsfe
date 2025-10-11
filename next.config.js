@@ -91,6 +91,9 @@ const nextConfig = {
                 pathname: '/api/images/webp',
                 search: 'url=*',
             },
+            {
+                pathname: '/images/**',
+            },
         ],
         formats: ['image/webp'],
         deviceSizes: [360, 414, 480, 640, 750, 828, 1080, 1200, 1920],
