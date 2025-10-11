@@ -3,7 +3,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import HeroSection from '@/components/HeroSection';
+import HeroSection from '@/components/HeroSectionClient';
 import FleetSection from '@/components/FleetSection';
 import ContactSection from '@/components/ContactSection';
 import HomePageClient from '@/components/home/HomePageClient';

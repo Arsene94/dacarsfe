@@ -10,7 +10,6 @@ import {
     type ReactNode,
 } from "react";
 import dynamic from "next/dynamic";
-import HeroSection from "@/components/HeroSection";
 import { useBooking } from "@/context/useBooking";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
 
@@ -601,8 +600,7 @@ const HomePageClient = () => {
     };
 
     return (
-        <div className="pt-16 lg:pt-20">
-            <HeroSection />
+        <div>
             <LazyVisibleSection intrinsicSize="960px">
                 <FleetSection />
             </LazyVisibleSection>

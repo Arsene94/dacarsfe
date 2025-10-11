@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import HomePageClient from "@/components/home/HomePageClient";
+import HeroSection from "@/components/HeroSection";
 import StructuredData from "@/components/StructuredData";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
@@ -144,6 +145,10 @@ const HomePage = async () => {
     return (
         <>
             <StructuredData data={structuredData} id="home-structured-data" />
+            <div className="pt-16 lg:pt-20">
+                {/* Rendăm hero-ul ca secțiune server pentru a reduce JS-ul critic */}
+                <HeroSection />
+            </div>
             <HomePageClient />
         </>
     );
