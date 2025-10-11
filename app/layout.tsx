@@ -181,8 +181,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <Script
             id="cookiescript"
             src="https://cdn.cookie-script.com/s/1dbe1a6c3b981120922353311f510e1d.js"
-            strategy="beforeInteractive"
-            // Optional: if the provider recommends head placement, keep it here
+            strategy="afterInteractive"
         />
       </body>
     </html>

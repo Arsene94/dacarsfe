@@ -50,7 +50,7 @@ const InterlinkingSection = ({ copy, className }: InterlinkingSectionProps) => {
                                     key={`${link.href}-${link.label}`}
                                     href={link.href}
                                     className={cn(
-                                        "group flex h-full flex-col justify-between rounded-3xl border bg-white p-6 text-left shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl",
+                                        "group flex h-full min-h-[220px] flex-col justify-between rounded-3xl border bg-white p-6 text-left shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl",
                                         toneClasses,
                                     )}
                                     aria-label={link.label}
