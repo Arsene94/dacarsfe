@@ -535,42 +535,6 @@ const FleetPage = () => {
             view_mode: viewMode,
         });
 
-        trackTikTokEvent(TIKTOK_EVENTS.ADD_TO_CART, {
-            content_type: TIKTOK_CONTENT_TYPE,
-            contents: [
-                {
-                    content_id: car.id,
-                    content_name: car.name,
-                    quantity: 1,
-                    price: totalAmount ?? undefined,
-                },
-            ],
-            value: totalAmount ?? undefined,
-            currency: "RON",
-            start_date: startDate || undefined,
-            end_date: endDate || undefined,
-            with_deposit: withDeposit,
-        });
-
-        trackMetaPixelEvent(META_PIXEL_EVENTS.ADD_TO_CART, {
-            content_ids: [String(car.id)],
-            content_name: car.name,
-            content_type: "car",
-            contents: [
-                {
-                    id: String(car.id),
-                    quantity: 1,
-                    item_price: totalAmount ?? undefined,
-                    title: car.name,
-                },
-            ],
-            value: totalAmount ?? undefined,
-            currency: "RON",
-            start_date: startDate || undefined,
-            end_date: endDate || undefined,
-            with_deposit: withDeposit,
-        });
-
         router.push(hasCompleteBookingRange ? "/checkout" : "/");
     };
 

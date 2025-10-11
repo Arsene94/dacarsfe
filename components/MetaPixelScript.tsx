@@ -119,6 +119,7 @@ const MetaPixelScript = () => {
 
     return (
         <>
+
             <Script id="meta-pixel" strategy="lazyOnload">
                 {snippet}
             </Script>
