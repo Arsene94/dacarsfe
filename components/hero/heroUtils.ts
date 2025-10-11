@@ -33,29 +33,29 @@ export const ensureLocations = (value: unknown): LocationOption[] => {
         return [];
     }
 
-    return value
-        .map((entry) => {
-            if (!entry || typeof entry !== "object") {
-                return null;
-            }
+    return value.reduce<LocationOption[]>((acc, entry) => {
+        if (!entry || typeof entry !== "object") {
+            return acc;
+        }
 
-            const maybeLocation = entry as UnknownRecord;
-            const label = maybeLocation.label;
-            const locationValue = maybeLocation.value;
+        const maybeLocation = entry as UnknownRecord;
+        const label = maybeLocation.label;
+        const locationValue = maybeLocation.value;
 
-            const resolvedLabel = typeof label === "string" ? label : undefined;
-            const resolvedValue = typeof locationValue === "string" ? locationValue : undefined;
+        const resolvedLabel = typeof label === "string" ? label : undefined;
+        const resolvedValue = typeof locationValue === "string" ? locationValue : undefined;
 
-            if (!resolvedLabel) {
-                return null;
-            }
+        if (!resolvedLabel) {
+            return acc;
+        }
 
-            return {
-                label: resolvedLabel,
-                value: resolvedValue,
-            } satisfies LocationOption;
-        })
-        .filter((entry): entry is LocationOption => entry !== null);
+        acc.push({
+            label: resolvedLabel,
+            value: resolvedValue,
+        });
+
+        return acc;
+    }, []);
 };
 
 export const normalizeFeatures = (value: unknown): HeroFeature[] => {
