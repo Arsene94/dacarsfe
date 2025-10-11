@@ -12,6 +12,7 @@ import { updateFacebookPixelAdvancedMatching } from "@/lib/facebookPixel";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { Locale } from "@/lib/i18n/config";
 import successMessagesRo from "@/messages/success/ro.json";
+import { getBrowserCookieValue } from "@/lib/browserCookies";
 
 type SuccessMessages = typeof successMessagesRo;
 
@@ -440,22 +441,75 @@ const SuccessPage = () => {
                 ? reservationData.customer_phone.trim()
                 : "";
         const leadId = reservationTrackingIdentifier;
+        const normalizedLeadId =
+            typeof leadId === "string" && leadId.trim().length > 0 ? leadId.trim() : "";
+        const normalizedExternalId =
+            typeof metaLeadDetails?.externalId === "string" && metaLeadDetails.externalId.trim().length > 0
+                ? metaLeadDetails.externalId.trim()
+                : "";
 
-        if (!(normalizedEmail || normalizedPhone || leadId)) {
+        if (!(normalizedEmail || normalizedPhone || normalizedLeadId || normalizedExternalId)) {
             return;
         }
 
         const sendMetaLeadEvent = async () => {
             try {
+                let ipAddress: string | undefined;
+
+                if (typeof window !== "undefined") {
+                    try {
+                        const response = await fetch("/api/ip", { cache: "no-store" });
+                        if (response.ok) {
+                            const data = (await response.json()) as { ip?: unknown };
+                            const rawIp = typeof data.ip === "string" ? data.ip.trim() : "";
+                            if (rawIp.length > 0) {
+                                ipAddress = rawIp;
+                            }
+                        }
+                    } catch (error) {
+                        console.warn("Nu s-a putut obține adresa IP pentru Meta Lead", error);
+                    }
+                }
+
+                let fbc: string | undefined;
+                let fbp: string | undefined;
+                let userAgent: string | undefined;
+
+                if (typeof window !== "undefined") {
+                    const clickId = getBrowserCookieValue("_fbc");
+                    const browserId = getBrowserCookieValue("_fbp");
+                    const agent = window.navigator?.userAgent;
+
+                    if (clickId) {
+                        fbc = clickId;
+                    }
+
+                    if (browserId) {
+                        fbp = browserId;
+                    }
+
+                    if (typeof agent === "string") {
+                        const trimmedAgent = agent.trim();
+                        if (trimmedAgent.length > 0) {
+                            userAgent = trimmedAgent;
+                        }
+                    }
+                }
+
                 await fetch("/api/meta-leads", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         email: normalizedEmail || undefined,
                         phone: normalizedPhone || undefined,
-                        leadId: leadId ?? undefined,
+                        leadId: normalizedLeadId || undefined,
                         eventName: META_LEAD_EVENT_NAME,
                         crmName: META_LEAD_CRM_NAME,
+                        fbc,
+                        fbp,
+                        ipAddress,
+                        userAgent,
+                        externalId: normalizedExternalId || undefined,
                     }),
                 });
             } catch (error) {
@@ -465,7 +519,7 @@ const SuccessPage = () => {
 
         void sendMetaLeadEvent();
         hasSentMetaLeadEventRef.current = true;
-    }, [reservationData, reservationTrackingIdentifier]);
+    }, [metaLeadDetails, reservationData, reservationTrackingIdentifier]);
 
     const wheelPrize = reservationData?.wheel_prize ?? null;
     const wheelPrizeDiscountRaw = reservationData?.wheel_prize_discount ??

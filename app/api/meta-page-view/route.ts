@@ -1,25 +1,27 @@
-import crypto from "crypto";
-
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { email, phone, leadId, eventName, crmName, fbc, fbp, ipAddress, userAgent, externalId } = body;
+        const { eventName, eventSourceUrl, fbc, fbp, ipAddress, userAgent, externalId } = body ?? {};
 
         const toNonEmptyTrimmedString = (value: unknown): string | null => {
-            if (typeof value !== "string") {
-                return null;
+            if (typeof value === "string") {
+                const trimmed = value.trim();
+                return trimmed.length > 0 ? trimmed : null;
             }
-            const trimmed = value.trim();
-            return trimmed.length > 0 ? trimmed : null;
+
+            if (typeof value === "number" && Number.isFinite(value)) {
+                const normalized = String(value).trim();
+                return normalized.length > 0 ? normalized : null;
+            }
+
+            return null;
         };
 
-        // Hashare cu SHA256 pentru privacy
-        const hash = (value: string) =>
-            crypto.createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
-
-        const hashedEmail = typeof email === "string" && email.trim().length > 0 ? [hash(email)] : [];
-        const hashedPhone = typeof phone === "string" && phone.trim().length > 0 ? [hash(phone)] : [];
-        const normalizedLeadId = toNonEmptyTrimmedString(leadId);
+        const normalizedEventName =
+            typeof eventName === "string" && eventName.trim().length > 0
+                ? eventName.trim()
+                : "PageView";
+        const normalizedEventSourceUrl = toNonEmptyTrimmedString(eventSourceUrl);
         const normalizedFbc = toNonEmptyTrimmedString(fbc);
         const normalizedFbp = toNonEmptyTrimmedString(fbp);
         const normalizedIp = toNonEmptyTrimmedString(ipAddress);
@@ -29,17 +31,11 @@ export async function POST(req: Request) {
         const payload = {
             data: [
                 {
-                    action_source: "system_generated",
-                    event_name: eventName || "Lead",
+                    action_source: "website",
+                    event_name: normalizedEventName,
                     event_time: Math.floor(Date.now() / 1000),
-                    custom_data: {
-                        event_source: "crm",
-                        lead_event_source: crmName || "DaCarsCRM",
-                    },
+                    ...(normalizedEventSourceUrl ? { event_source_url: normalizedEventSourceUrl } : {}),
                     user_data: {
-                        em: hashedEmail,
-                        ph: hashedPhone,
-                        ...(normalizedLeadId ? { lead_id: normalizedLeadId } : {}),
                         ...(normalizedFbc ? { fbc: normalizedFbc } : {}),
                         ...(normalizedFbp ? { fbp: normalizedFbp } : {}),
                         ...(normalizedIp ? { client_ip_address: normalizedIp } : {}),
@@ -61,8 +57,8 @@ export async function POST(req: Request) {
 
         const data = await res.json();
         return Response.json({ success: true, data });
-    } catch (err) {
-        console.error("Meta API error:", err);
-        return new Response("Error sending lead to Meta", { status: 500 });
+    } catch (error) {
+        console.error("Meta PageView API error:", error);
+        return new Response("Error sending page view to Meta", { status: 500 });
     }
 }

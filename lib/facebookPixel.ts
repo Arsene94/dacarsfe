@@ -381,3 +381,5 @@ export const updateFacebookPixelAdvancedMatching = (
         fbq("set", "userData", { ...advancedMatching });
     });
 };
+
+export const getFacebookPixelAdvancedMatchingSnapshot = () => ({ ...advancedMatching });
