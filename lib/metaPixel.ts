@@ -22,6 +22,11 @@ type FbqState = {
     loadedPixels?: unknown;
 };
 
+type PageViewRecord = {
+    key: string;
+    timestamp: number;
+};
+
 type FbqFunction = ((...args: unknown[]) => void) & {
     getState?: () => FbqState | undefined;
 };
@@ -31,11 +36,14 @@ declare global {
         fbq?: FbqFunction;
         _fbq?: FbqFunction;
         __META_PIXEL_ACTIVE_IDS__?: string[];
+        __META_PIXEL_LAST_PAGE_VIEW__?: PageViewRecord | null;
     }
 }
 
 let pixelModulePromise: Promise<ReactFacebookPixel> | null = null;
 let initPromise: Promise<ReactFacebookPixel> | null = null;
+
+let lastPageViewRecord: PageViewRecord | null = null;
 
 const markPixelInitialized = (pixelId: string) => {
     if (!isBrowser) {
@@ -126,7 +134,7 @@ const ensureInitializedPixel = (): Promise<ReactFacebookPixel> | null => {
 
                 if (!isPixelAlreadyInitialized(pixelId)) {
                     pixel.init(pixelId, undefined, {
-                        autoConfig: true,
+                        autoConfig: false,
                         debug: process.env.NODE_ENV !== "production",
                     });
                     markPixelInitialized(pixelId);
@@ -196,6 +204,53 @@ const sanitizePayload = (payload?: Record<string, unknown>): Record<string, unkn
     return sanitized as Record<string, unknown>;
 };
 
+const buildLocationKey = (): string | null => {
+    if (!isBrowser) {
+        return null;
+    }
+
+    try {
+        const { pathname = "", search = "", hash = "" } = window.location ?? {};
+        return `${pathname}|${search}|${hash}`;
+    } catch {
+        return null;
+    }
+};
+
+const getLastPageViewRecord = (): PageViewRecord | null => {
+    if (isBrowser && window.__META_PIXEL_LAST_PAGE_VIEW__) {
+        return window.__META_PIXEL_LAST_PAGE_VIEW__ ?? null;
+    }
+
+    return lastPageViewRecord;
+};
+
+const markPageViewForKey = (key: string) => {
+    const record: PageViewRecord = {
+        key,
+        timestamp: Date.now(),
+    };
+
+    lastPageViewRecord = record;
+
+    if (isBrowser) {
+        window.__META_PIXEL_LAST_PAGE_VIEW__ = record;
+    }
+};
+
+const clearPageViewForKey = (key: string) => {
+    if (lastPageViewRecord?.key === key) {
+        lastPageViewRecord = null;
+    }
+
+    if (isBrowser) {
+        const existingRecord = window.__META_PIXEL_LAST_PAGE_VIEW__;
+        if (existingRecord?.key === key) {
+            window.__META_PIXEL_LAST_PAGE_VIEW__ = null;
+        }
+    }
+};
+
 export const META_PIXEL_EVENTS = {
     PAGE_VIEW: "PageView",
     LEAD: "Lead",
@@ -222,7 +277,26 @@ export const trackMetaPixelPageView = () => {
 
     promise
         .then((pixel) => {
-            pixel.pageView();
+            const locationKey = buildLocationKey();
+
+            if (locationKey) {
+                const lastRecord = getLastPageViewRecord();
+                if (lastRecord?.key === locationKey) {
+                    logDevWarning("Eveniment PageView Meta Pixel ignorat – locația curentă a fost deja raportată.");
+                    return;
+                }
+
+                markPageViewForKey(locationKey);
+            }
+
+            try {
+                pixel.pageView();
+            } catch (error) {
+                if (locationKey) {
+                    clearPageViewForKey(locationKey);
+                }
+                throw error;
+            }
         })
         .catch((error) => {
             logDevWarning("Nu s-a putut trimite PageView către Meta Pixel", error);

@@ -33,8 +33,9 @@ export const trackMetaPixelEvent: (
 Helper-ul face câteva lucruri suplimentare:
 
 - încarcă lazy modulul `react-facebook-pixel`, astfel încât codul să nu ajungă în bundle-ul server;
-- rulează `ReactPixel.init` o singură dată chiar dacă componenta se montează de mai multe ori sau dacă Facebook injectează deja pixelul (evităm avertismentul „The Facebook pixel activated 2 times”);
-- igienizează payload-urile (`sanitizePayload`) pentru a elimina `undefined`, array-uri goale sau date invalide înainte de a apela `fbq`.
+- rulează `ReactPixel.init` o singură dată chiar dacă componenta se montează de mai multe ori sau dacă Facebook injectează deja pixelul și dezactivează `autoConfig` pentru a preveni PageView-uri automate;
+- igienizează payload-urile (`sanitizePayload`) pentru a elimina `undefined`, array-uri goale sau date invalide înainte de a apela `fbq`;
+- memorează ultima locație raportată în `window.__META_PIXEL_LAST_PAGE_VIEW__` astfel încât același URL să nu trimită din nou `PageView` dacă efectele React se re-execută.
 
 ## 3. Creează componenta `components/PixelTracker.tsx`
 
@@ -45,10 +46,46 @@ import { useEffect, useMemo, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { initMetaPixel, trackMetaPixelPageView, isMetaPixelConfigured } from "@/lib/metaPixel";
 
+type HistoryState = {
+    key?: unknown;
+    __NA?: {
+        key?: unknown;
+    } | null;
+};
+
+const resolveHistoryKey = (): string | null => {
+    if (typeof window === "undefined" || !window.history) {
+        return null;
+    }
+
+    const state = window.history.state as HistoryState | null | undefined;
+    if (!state || typeof state !== "object") {
+        return null;
+    }
+
+    if (typeof state.key === "string" && state.key.trim().length > 0) {
+        return state.key;
+    }
+
+    const nestedState = state.__NA;
+    if (nestedState && typeof nestedState === "object") {
+        const nestedKey = (nestedState as { key?: unknown }).key;
+        if (typeof nestedKey === "string" && nestedKey.trim().length > 0) {
+            return nestedKey;
+        }
+    }
+
+    return null;
+};
+
 const PixelTracker = () => {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const previousLocationRef = useRef<{ pathname: string; searchParamsKey: string } | null>(null);
+    const previousLocationRef = useRef<{
+        pathname: string;
+        searchParamsKey: string;
+        historyKey: string | null;
+    } | null>(null);
 
     const searchParamsKey = useMemo(() => {
         if (!searchParams) {
@@ -73,10 +110,12 @@ const PixelTracker = () => {
         const normalizedPathname = pathname;
         const normalizedSearchParamsKey = typeof searchParamsKey === "string" ? searchParamsKey : "";
         const previousLocation = previousLocationRef.current;
+        const historyKey = resolveHistoryKey();
         const isSameLocation =
             previousLocation !== null &&
             previousLocation.pathname === normalizedPathname &&
-            previousLocation.searchParamsKey === normalizedSearchParamsKey;
+            previousLocation.searchParamsKey === normalizedSearchParamsKey &&
+            previousLocation.historyKey === historyKey;
 
         if (isSameLocation) {
             return;
@@ -85,6 +124,7 @@ const PixelTracker = () => {
         previousLocationRef.current = {
             pathname: normalizedPathname,
             searchParamsKey: normalizedSearchParamsKey,
+            historyKey,
         };
 
         trackMetaPixelPageView();
@@ -99,7 +139,7 @@ export default PixelTracker;
 Componenta este marcată `"use client"` pentru a putea folosi hook-urile de routing și rulează două efecte:
 
 1. `initMetaPixel()` – încarcă modulul Facebook și îl configurează o singură dată.
-2. `trackMetaPixelPageView()` – trimite `PageView` doar când schimbăm efectiv ruta (inclusiv navigări făcute cu `next/link`).
+2. `trackMetaPixelPageView()` – trimite `PageView` doar când schimbăm efectiv ruta (inclusiv navigări făcute cu `next/link`), folosind cheia de istoric din `window.history.state` pentru a evita duplicatele din tranzițiile interne Next.js.
 
 ## 4. Adaugă tracker-ul în `app/layout.tsx`
 
