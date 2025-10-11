@@ -1064,8 +1064,6 @@ const ReservationPage = () => {
             applied_offer_ids: appliedOfferIds,
         });
 
-        trackMetaPixelEvent(META_PIXEL_EVENTS.INITIATE_CHECKOUT, estimatedMetaPayload);
-
         trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
             ...estimatedMetaPayload,
             lead_stage: "checkout_view",

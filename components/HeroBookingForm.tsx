@@ -16,7 +16,6 @@ type ApiModule = typeof import("@/lib/api");
 type ApiResponseModule = typeof import("@/lib/apiResponse");
 type MixpanelModule = typeof import("@/lib/mixpanelClient");
 type TikTokModule = typeof import("@/lib/tiktokPixel");
-type MetaPixelModule = typeof import("@/lib/metaPixel");
 
 type CategoryHelpers = {
     apiClient: ApiModule["apiClient"];
@@ -27,8 +26,6 @@ type TrackingHelpers = {
     trackMixpanelEvent: MixpanelModule["trackMixpanelEvent"];
     trackTikTokEvent: TikTokModule["trackTikTokEvent"];
     TIKTOK_EVENTS: TikTokModule["TIKTOK_EVENTS"];
-    trackMetaPixelEvent: MetaPixelModule["trackMetaPixelEvent"];
-    META_PIXEL_EVENTS: MetaPixelModule["META_PIXEL_EVENTS"];
 };
 
 let categoryHelpersPromise: Promise<CategoryHelpers> | null = null;
@@ -70,14 +67,11 @@ const loadTrackingHelpers = async (): Promise<TrackingHelpers> => {
         trackingHelpersPromise = Promise.all([
             import("@/lib/mixpanelClient"),
             import("@/lib/tiktokPixel"),
-            import("@/lib/metaPixel"),
         ])
-            .then(([mixpanelModule, tikTokModule, metaModule]) => ({
+            .then(([mixpanelModule, tikTokModule]) => ({
                 trackMixpanelEvent: mixpanelModule.trackMixpanelEvent,
                 trackTikTokEvent: tikTokModule.trackTikTokEvent,
                 TIKTOK_EVENTS: tikTokModule.TIKTOK_EVENTS,
-                trackMetaPixelEvent: metaModule.trackMetaPixelEvent,
-                META_PIXEL_EVENTS: metaModule.META_PIXEL_EVENTS,
             }))
             .catch((error) => {
                 trackingHelpersPromise = null;
@@ -364,20 +358,10 @@ const HeroBookingForm = ({
             params.set("car_type", formData.car_type);
         }
 
-        const searchString = [formData.location, formData.car_type]
-            .filter((value) => typeof value === "string" && value.trim().length > 0)
-            .join(" | ");
-
         const trackingHelpers = await trackingPromise;
 
         if (trackingHelpers) {
-            const {
-                trackMixpanelEvent,
-                trackTikTokEvent,
-                TIKTOK_EVENTS,
-                trackMetaPixelEvent,
-                META_PIXEL_EVENTS,
-            } = trackingHelpers;
+            const { trackMixpanelEvent, trackTikTokEvent, TIKTOK_EVENTS } = trackingHelpers;
 
             trackMixpanelEvent("hero_form_submit", {
                 start_date: formData.start_date,
@@ -395,14 +379,6 @@ const HeroBookingForm = ({
                 ],
             });
 
-            trackMetaPixelEvent(META_PIXEL_EVENTS.SEARCH, {
-                search_source: "hero_form",
-                start_date: formData.start_date || undefined,
-                end_date: formData.end_date || undefined,
-                location: formData.location || undefined,
-                car_type: formData.car_type || undefined,
-                search_string: searchString.length > 0 ? searchString : undefined,
-            });
         }
 
         router.push(`/cars?${params.toString()}`);

@@ -14,6 +14,7 @@ declare global {
     interface Window {
         fbq?: MetaPixelFunction;
         _fbq?: MetaPixelFunction;
+        __dacarsMetaPixelHandled?: boolean;
     }
 }
 
@@ -32,6 +33,9 @@ const ensureQueue = (): MetaPixelFunction | null => {
 
     const existing = window.fbq;
     if (existing && typeof existing === "function") {
+        if (!window._fbq) {
+            window._fbq = existing;
+        }
         return existing;
     }
 
@@ -51,6 +55,7 @@ const ensureQueue = (): MetaPixelFunction | null => {
     queue.version = "2.0";
 
     window.fbq = queue;
+    window._fbq = queue;
 
     return queue;
 };
@@ -130,13 +135,7 @@ const sanitizePayload = (payload?: Record<string, unknown>): Record<string, unkn
 
 export const META_PIXEL_EVENTS = {
     PAGE_VIEW: "PageView",
-    VIEW_CONTENT: "ViewContent",
-    SEARCH: "Search",
-    ADD_TO_CART: "AddToCart",
-    INITIATE_CHECKOUT: "InitiateCheckout",
     LEAD: "Lead",
-    CONTACT: "Contact",
-    PURCHASE: "Purchase",
 } as const;
 
 export type MetaPixelEventName = (typeof META_PIXEL_EVENTS)[keyof typeof META_PIXEL_EVENTS];
