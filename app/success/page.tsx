@@ -618,6 +618,78 @@ const SuccessPage = () => {
     const contactPhone = messages.contact?.phone ?? "+40 723 817 551";
     const contactAriaLabel = t("contact.ariaLabel", { values: { phone: contactPhone } });
 
+    const rentalDaysValue = useMemo(() => {
+        if (!reservationData) {
+            return null;
+        }
+
+        const daySources: unknown[] = [
+            (reservationData as { total_days?: unknown }).total_days,
+            (reservationData as { days?: unknown }).days,
+            (reservationData as { rental_days?: unknown }).rental_days,
+            (reservationData.selectedCar as { days?: unknown } | null)?.days,
+        ];
+
+        for (const candidate of daySources) {
+            const parsed = parseMaybeNumber(candidate);
+            if (parsed && parsed > 0) {
+                return Math.round(parsed);
+            }
+        }
+
+        const startDateRaw = reservationData.rental_start_date;
+        const endDateRaw = reservationData.rental_end_date;
+        if (typeof startDateRaw !== "string" || typeof endDateRaw !== "string") {
+            return null;
+        }
+
+        const startTimestamp = Date.parse(startDateRaw);
+        const endTimestamp = Date.parse(endDateRaw);
+        if (Number.isNaN(startTimestamp) || Number.isNaN(endTimestamp)) {
+            return null;
+        }
+
+        const diffMs = endTimestamp - startTimestamp;
+        if (diffMs <= 0) {
+            return null;
+        }
+
+        const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        return days > 0 ? days : null;
+    }, [reservationData]);
+
+    const rentalDaysLabel = useMemo(() => {
+        if (!rentalDaysValue || rentalDaysValue <= 0) {
+            return null;
+        }
+
+        const pluralKey = Math.abs(rentalDaysValue) === 1 ? "one" : "other";
+        const fallbackBase = (() => {
+            switch (locale) {
+                case "ro":
+                    return `${rentalDaysValue} ${pluralKey === "one" ? "zi" : "zile"}`;
+                case "de":
+                    return `${rentalDaysValue} ${pluralKey === "one" ? "Tag" : "Tage"}`;
+                case "fr":
+                    return `${rentalDaysValue} ${pluralKey === "one" ? "jour" : "jours"}`;
+                case "es":
+                    return `${rentalDaysValue} ${pluralKey === "one" ? "día" : "días"}`;
+                case "it":
+                    return `${rentalDaysValue} ${pluralKey === "one" ? "giorno" : "giorni"}`;
+                case "en":
+                default:
+                    return `${rentalDaysValue} ${pluralKey === "one" ? "day" : "days"}`;
+            }
+        })();
+
+        const label = t(`summary.pricing.dayCount.${pluralKey}`, {
+            values: { count: rentalDaysValue },
+            fallback: fallbackBase,
+        });
+
+        return label || fallbackBase;
+    }, [locale, rentalDaysValue, t]);
+
     if (!reservationData) {
         return (
             <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
@@ -642,6 +714,8 @@ const SuccessPage = () => {
     const servicesValue = parseMaybeNumber(reservationData.total_services) ?? 0;
     const couponAmountValue = parseMaybeNumber(reservationData.coupon_amount) ?? 0;
     const totalValue = parseMaybeNumber(reservationData.total) ?? 0;
+    const pricePerDayValue = parseMaybeNumber(reservationData.price_per_day) ?? 0;
+    const shouldShowPerDayBreakdown = pricePerDayValue > 0 && (rentalDaysValue ?? 0) > 0;
 
     return (
         <div className="pt-16 lg:pt-20 min-h-screen bg-gradient-to-br from-jade/5 to-berkeley/5">
@@ -758,6 +832,12 @@ const SuccessPage = () => {
                                 <h3 className="font-poppins font-semibold text-berkeley text-lg mb-4">
                                     {t("summary.pricing.title")}
                                 </h3>
+                                {shouldShowPerDayBreakdown && (
+                                    <div className="text-lg font-dm-sans text-gray-600 mb-1">
+                                        {t("summary.pricing.perDayLabel")} {formatPrice(pricePerDayValue)}€
+                                        {rentalDaysLabel ? ` x ${rentalDaysLabel}` : ""}
+                                    </div>
+                                )}
                                 <div className="text-lg font-dm-sans text-gray-600 mb-1">
                                     {t("summary.pricing.subtotalLabel")} {formatPrice(subtotalValue)}€
                                 </div>

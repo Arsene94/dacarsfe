@@ -56,6 +56,11 @@
     },
     "pricing": {
       "title": "Gesamtkosten",
+      "perDayLabel": "Tagespreis:",
+      "dayCount": {
+        "one": "{{count}} Tag",
+        "other": "{{count}} Tage"
+      },
       "subtotalLabel": "Zwischensumme:",
       "servicesLabel": "Services:",
       "wheelPrizeLabel": "Gewinn vom Glücksrad:",

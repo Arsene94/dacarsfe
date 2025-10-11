@@ -56,6 +56,11 @@
     },
     "pricing": {
       "title": "Coste total",
+      "perDayLabel": "Precio por día:",
+      "dayCount": {
+        "one": "{{count}} día",
+        "other": "{{count}} días"
+      },
       "subtotalLabel": "Subtotal:",
       "servicesLabel": "Servicios:",
       "wheelPrizeLabel": "Premio de la Ruleta de la Fortuna:",
