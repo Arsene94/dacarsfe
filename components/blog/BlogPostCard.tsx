@@ -13,6 +13,7 @@ type BlogPostCardProps = {
   post: BlogPost;
   locale?: Locale | string;
   ctaLabel: string;
+  priority?: boolean;
 };
 
 const buildCategoryHref = (slug?: string | null, query?: string): string => {
@@ -28,7 +29,12 @@ const buildCategoryHref = (slug?: string | null, query?: string): string => {
   return queryString ? `/blog?${queryString}` : "/blog";
 };
 
-const BlogPostCard = ({ post, locale = DEFAULT_LOCALE, ctaLabel }: BlogPostCardProps) => {
+const BlogPostCard = ({
+  post,
+  locale = DEFAULT_LOCALE,
+  ctaLabel,
+  priority = false,
+}: BlogPostCardProps) => {
   const imageUrl = resolveMediaUrl(post.image ?? post.thumbnail ?? null);
   const authorName = post.author ? getUserDisplayName(post.author) : null;
   const publishedLabel = formatDate(post.published_at ?? post.created_at, undefined, locale);
@@ -46,6 +52,7 @@ const BlogPostCard = ({ post, locale = DEFAULT_LOCALE, ctaLabel }: BlogPostCardP
             fill
             sizes="(max-width: 767px) 320px, (max-width: 1023px) 50vw, 320px"
             className="object-cover"
+            priority={priority}
           />
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-berkeley/20 via-jade/10 to-berkeley/25" />
