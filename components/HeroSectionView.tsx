@@ -1,14 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Clock, Shield, Star } from "lucide-react";
 
-import heroBackground from "@/public/images/bg-hero-1920x1080.webp";
 import type { Locale } from "@/lib/i18n/config";
 
 import type { HeroFeature } from "./hero/heroUtils";
 import type { HeroBookingFormProps, LocationOption } from "./HeroBookingForm";
+import {HeroBackground} from "@/components/HeroBackground";
 
 const HeroBookingForm = dynamic<HeroBookingFormProps>(
     () => import("./HeroBookingForm"),
@@ -60,17 +59,7 @@ const HeroSectionView = ({
         <section className="relative bg-berkeley text-white overflow-hidden">
             <div className="absolute inset-0">
                 <div className="relative h-full w-full">
-                    <Image
-                        src={heroBackground}
-                        alt="Fundal aeroport"
-                        fill
-                        priority
-                        loading="eager"
-                        placeholder="blur"
-                        sizes="(max-width: 1023px) 100vw, (max-width: 1535px) 1280px, 1440px"
-                        quality={60}
-                        className="object-cover"
-                    />
+                    <HeroBackground />
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-r from-berkeley/90 to-berkeley/70 z-10" />
             </div>

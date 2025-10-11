@@ -87,28 +87,29 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       className={`${poppins.variable} ${dmSans.variable}`}
       suppressHydrationWarning
     >
-      <head>
-        <GlobalStyles />
-        <TikTokPixelScript />
-        <GoogleAnalytics gaId="G-R1B5YS77GK" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <head>
+        <GlobalStyles/>
+        <TikTokPixelScript/>
+        <GoogleAnalytics gaId="G-R1B5YS77GK"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
         <link
-          rel="preconnect"
-          href="https://backend.dacars.ro"
-          crossOrigin="anonymous"
+            rel="preconnect"
+            href="https://backend.dacars.ro"
+            crossOrigin="anonymous"
         />
-        <meta name="format-detection" content="telephone=no" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta httpEquiv="x-dns-prefetch-control" content="on" />
-      </head>
-      <body className="min-h-screen bg-white">
-        <Suspense fallback={null}>
-          <MixpanelInitializer />
-          <TikTokPixelInitializer />
-          <PixelTracker />
-          <ServiceWorkerRegistration />
+
+        <meta name="format-detection" content="telephone=no"/>
+        <meta name="mobile-web-app-capable" content="yes"/>
+        <meta name="apple-mobile-web-app-capable" content="yes"/>
+        <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+        <meta httpEquiv="x-dns-prefetch-control" content="on"/>
+    </head>
+    <body className="min-h-screen bg-white">
+    <Suspense fallback={null}>
+        <MixpanelInitializer/>
+        <TikTokPixelInitializer/>
+        <PixelTracker/>
+        <ServiceWorkerRegistration />
         </Suspense>
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`
