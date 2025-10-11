@@ -3,11 +3,28 @@ import crypto from "crypto";
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { email, phone, leadId, eventName, crmName } = body;
+        const { email, phone, leadId, eventName, crmName, fbc, fbp, ipAddress, userAgent, externalId } = body;
+
+        const toNonEmptyTrimmedString = (value: unknown): string | null => {
+            if (typeof value !== "string") {
+                return null;
+            }
+            const trimmed = value.trim();
+            return trimmed.length > 0 ? trimmed : null;
+        };
 
         // Hashare cu SHA256 pentru privacy
         const hash = (value: string) =>
             crypto.createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
+
+        const hashedEmail = typeof email === "string" && email.trim().length > 0 ? [hash(email)] : [];
+        const hashedPhone = typeof phone === "string" && phone.trim().length > 0 ? [hash(phone)] : [];
+        const normalizedLeadId = toNonEmptyTrimmedString(leadId);
+        const normalizedFbc = toNonEmptyTrimmedString(fbc);
+        const normalizedFbp = toNonEmptyTrimmedString(fbp);
+        const normalizedIp = toNonEmptyTrimmedString(ipAddress);
+        const normalizedUserAgent = toNonEmptyTrimmedString(userAgent);
+        const normalizedExternalId = toNonEmptyTrimmedString(externalId);
 
         const payload = {
             data: [
@@ -20,9 +37,14 @@ export async function POST(req: Request) {
                         lead_event_source: crmName || "DaCarsCRM",
                     },
                     user_data: {
-                        em: email ? [hash(email)] : [],
-                        ph: phone ? [hash(phone)] : [],
-                        lead_id: leadId,
+                        em: hashedEmail,
+                        ph: hashedPhone,
+                        ...(normalizedLeadId ? { lead_id: normalizedLeadId } : {}),
+                        ...(normalizedFbc ? { fbc: normalizedFbc } : {}),
+                        ...(normalizedFbp ? { fbp: normalizedFbp } : {}),
+                        ...(normalizedIp ? { client_ip_address: normalizedIp } : {}),
+                        ...(normalizedUserAgent ? { client_user_agent: normalizedUserAgent } : {}),
+                        ...(normalizedExternalId ? { external_id: normalizedExternalId } : {}),
                     },
                 },
             ],
