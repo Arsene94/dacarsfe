@@ -66,10 +66,9 @@ const HeroSectionView = ({
                         fill
                         priority
                         loading="eager"
-                        fetchPriority="high"
                         placeholder="blur"
-                        sizes="(max-width: 1023px) 100vw, 100vw"
-                        quality={55}
+                        sizes="(max-width: 1023px) 100vw, (max-width: 1535px) 1280px, 1440px"
+                        quality={60}
                         className="object-cover"
                     />
                 </div>
