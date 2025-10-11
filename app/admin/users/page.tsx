@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import {
+  ChevronDown,
   Edit,
   Loader2,
   Plus,
@@ -31,7 +32,7 @@ interface UserFormState {
   email: string;
   username: string;
   password: string;
-  rolesInput: string;
+  roles: string[];
   superUser: boolean;
   manageSupers: boolean;
 }
@@ -42,10 +43,16 @@ const defaultFormState: UserFormState = {
   email: "",
   username: "",
   password: "",
-  rolesInput: "",
+  roles: [],
   superUser: false,
   manageSupers: false,
 };
+
+interface RoleOption {
+  id: number;
+  slug: string;
+  name: string;
+}
 
 const ToggleSwitch = ({
   checked,
@@ -265,11 +272,40 @@ const extractUsers = (response: unknown): unknown[] => {
   return collected;
 };
 
-const parseRolesInput = (value: string): string[] =>
-  value
-    .split(/[\n,]+/)
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+const extractRoleCandidates = (response: unknown): unknown[] => {
+  if (Array.isArray(response)) return response;
+  if (!isRecord(response)) return [];
+
+  const collected: unknown[] = [];
+  if (Array.isArray(response.data)) collected.push(...response.data);
+  const roles = (response as { roles?: unknown }).roles;
+  if (Array.isArray(roles)) collected.push(...roles);
+  if (Array.isArray(response.items)) collected.push(...response.items);
+  if (Array.isArray(response.results)) collected.push(...response.results);
+  if (Array.isArray((response as { payload?: unknown }).payload)) {
+    collected.push(...((response as { payload?: unknown }).payload as unknown[]));
+  }
+
+  return collected;
+};
+
+const mapRoleOption = (value: unknown): RoleOption | null => {
+  if (!isRecord(value)) return null;
+
+  const id = toNumericId(value.id);
+  const slug = parseString(value.slug);
+  const name = parseString(value.name);
+
+  if (id == null || !slug) {
+    return null;
+  }
+
+  return {
+    id,
+    slug,
+    name: name ?? slug,
+  };
+};
 
 const UsersAdminPage = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -289,10 +325,41 @@ const UsersAdminPage = () => {
   const [superToggleLoading, setSuperToggleLoading] = useState<
     Record<number, boolean>
   >({});
+  const [availableRoles, setAvailableRoles] = useState<RoleOption[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesError, setRolesError] = useState<string | null>(null);
+  const [isRolesOpen, setIsRolesOpen] = useState(false);
+  const [roleSearchTerm, setRoleSearchTerm] = useState("");
   const searchRef = useRef<string>("");
+  const roleDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const subtleButtonClass =
     "inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-jade focus:ring-offset-2";
+
+  const filteredRoles = useMemo(() => {
+    const query = roleSearchTerm.trim().toLowerCase();
+    if (!query) {
+      return availableRoles;
+    }
+
+    return availableRoles.filter((role) => {
+      const name = role.name.toLowerCase();
+      const slug = role.slug.toLowerCase();
+      return name.includes(query) || slug.includes(query);
+    });
+  }, [availableRoles, roleSearchTerm]);
+
+  const selectedRoleBadges = useMemo(
+    () =>
+      formState.roles.map((slug) => {
+        const option = availableRoles.find((role) => role.slug === slug);
+        return {
+          slug,
+          name: option?.name ?? slug,
+        };
+      }),
+    [formState.roles, availableRoles],
+  );
 
   const fetchUsers = useCallback(async (nextSearch?: string) => {
     setLoading(true);
@@ -328,9 +395,65 @@ const UsersAdminPage = () => {
     }
   }, []);
 
+  const fetchRoles = useCallback(async () => {
+    setRolesLoading(true);
+    setRolesError(null);
+    try {
+      const response = await apiClient.getRoles({ perPage: 100 });
+      const rawList = extractRoleCandidates(response);
+      const mapped = rawList
+        .map((item) => mapRoleOption(item))
+        .filter((item): item is RoleOption => item !== null)
+        .sort((a, b) => a.name.localeCompare(b.name, "ro", { sensitivity: "base" }));
+      setAvailableRoles(mapped);
+    } catch (err) {
+      console.error("Failed to fetch roles", err);
+      setAvailableRoles([]);
+      setRolesError("Nu am putut încărca lista de roluri. Încearcă din nou.");
+    } finally {
+      setRolesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void fetchUsers();
   }, [fetchUsers]);
+
+  useEffect(() => {
+    void fetchRoles();
+  }, [fetchRoles]);
+
+  useEffect(() => {
+    if (!isRolesOpen) return;
+
+    const handleClick = (event: MouseEvent) => {
+      if (
+        roleDropdownRef.current &&
+        !roleDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsRolesOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isRolesOpen]);
+
+  useEffect(() => {
+    if (!isRolesOpen) {
+      setRoleSearchTerm("");
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsRolesOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isRolesOpen]);
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -346,6 +469,8 @@ const UsersAdminPage = () => {
     setEditingUser(null);
     setFormState({ ...defaultFormState });
     setFormError(null);
+    setIsRolesOpen(false);
+    setRoleSearchTerm("");
     setIsModalOpen(true);
   }, []);
 
@@ -357,11 +482,13 @@ const UsersAdminPage = () => {
       email: user.email ?? "",
       username: user.username ?? "",
       password: "",
-      rolesInput: user.roles.join(", "),
+      roles: user.roles,
       superUser: user.super_user,
       manageSupers: user.manage_supers,
     });
     setFormError(null);
+    setIsRolesOpen(false);
+    setRoleSearchTerm("");
     setIsModalOpen(true);
   }, []);
 
@@ -371,6 +498,8 @@ const UsersAdminPage = () => {
     setFormError(null);
     setFormState({ ...defaultFormState });
     setEditingUser(null);
+    setIsRolesOpen(false);
+    setRoleSearchTerm("");
   };
 
   type TextField =
@@ -378,8 +507,7 @@ const UsersAdminPage = () => {
     | "lastName"
     | "email"
     | "username"
-    | "password"
-    | "rolesInput";
+    | "password";
 
   const handleTextChange = (field: TextField) =>
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -393,6 +521,16 @@ const UsersAdminPage = () => {
       const { checked } = event.target;
       setFormState((prev) => ({ ...prev, [field]: checked }));
     };
+
+  const handleRoleToggle = (slug: string) => {
+    setFormState((prev) => {
+      const exists = prev.roles.includes(slug);
+      const updated = exists
+        ? prev.roles.filter((item) => item !== slug)
+        : [...prev.roles, slug];
+      return { ...prev, roles: updated };
+    });
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -424,7 +562,9 @@ const UsersAdminPage = () => {
       manage_supers: formState.manageSupers,
     };
 
-    const roles = parseRolesInput(formState.rolesInput);
+    const roles = formState.roles
+      .map((role) => role.trim())
+      .filter((role, index, self) => role.length > 0 && self.indexOf(role) === index);
     if (roles.length > 0) {
       payload.roles = roles;
     }
@@ -815,15 +955,124 @@ const UsersAdminPage = () => {
               >
                 Roluri
               </label>
-              <Input
-                id="user-roles"
-                value={formState.rolesInput}
-                onChange={handleTextChange("rolesInput")}
-                placeholder="admin, manager"
-              />
+              <div ref={roleDropdownRef} className="relative">
+                <button
+                  type="button"
+                  id="user-roles"
+                  aria-haspopup="listbox"
+                  aria-expanded={isRolesOpen}
+                  aria-controls="user-roles-listbox"
+                  onClick={() => setIsRolesOpen((prev) => !prev)}
+                  className={cn(
+                    "flex w-full min-h-[44px] items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2 text-left text-sm text-[#191919] shadow-sm transition focus:outline-none focus:ring-2 focus:ring-jade focus:ring-offset-2",
+                    isRolesOpen ? "border-transparent shadow-md ring-2 ring-jade" : "hover:border-gray-400",
+                  )}
+                >
+                  <div className="flex flex-1 flex-wrap items-center gap-2 pr-3">
+                    {selectedRoleBadges.length > 0 ? (
+                      selectedRoleBadges.map((role) => (
+                        <span
+                          key={role.slug}
+                          className="inline-flex items-center gap-1 rounded-full bg-jade/10 px-2.5 py-1 text-xs font-medium text-jade"
+                        >
+                          {role.name}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-500">
+                        Selectează rolurile din listă
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
+                </button>
+
+                {isRolesOpen && (
+                  <div
+                    id="user-roles-listbox"
+                    role="listbox"
+                    aria-multiselectable="true"
+                    className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-xl"
+                  >
+                    <div className="border-b p-2">
+                      <Input
+                        value={roleSearchTerm}
+                        onChange={(event) => setRoleSearchTerm(event.target.value)}
+                        placeholder="Caută roluri"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="max-h-56 overflow-y-auto py-1">
+                      {rolesLoading ? (
+                        <div className="flex items-center gap-2 px-3 py-4 text-sm text-gray-500">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Se încarcă rolurile...
+                        </div>
+                      ) : filteredRoles.length > 0 ? (
+                        filteredRoles.map((role) => {
+                          const checked = formState.roles.includes(role.slug);
+                          return (
+                            <label
+                              key={role.id}
+                              className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-gray-50"
+                              role="option"
+                              aria-selected={checked}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => handleRoleToggle(role.slug)}
+                                className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+                              />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{role.name}</p>
+                                <p className="text-xs text-gray-500">{role.slug}</p>
+                              </div>
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <div className="px-3 py-4 text-sm text-gray-500">
+                          {roleSearchTerm.trim()
+                            ? "Nu există roluri care să corespundă căutării."
+                            : rolesError ?? "Nu există roluri definite momentan."}
+                        </div>
+                      )}
+                    </div>
+                    {!rolesLoading && rolesError && (
+                      <div className="border-t px-3 py-2 text-xs text-red-600">
+                        {rolesError}{" "}
+                        <button
+                          type="button"
+                          className="font-medium underline hover:text-red-700"
+                          onClick={() => {
+                            void fetchRoles();
+                          }}
+                        >
+                          Reîncearcă
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <p className="mt-1 text-xs text-gray-500">
-                Introdu slug-urile rolurilor separate prin virgulă.
+                Alege unul sau mai multe roluri disponibile pentru utilizator.
               </p>
+              {rolesError && !rolesLoading && (
+                <p className="mt-1 text-xs text-red-600">
+                  {rolesError}{" "}
+                  <button
+                    type="button"
+                    className="font-medium underline hover:text-red-700"
+                    onClick={() => {
+                      void fetchRoles();
+                    }}
+                  >
+                    Reîncarcă lista
+                  </button>
+                </p>
+              )}
             </div>
           </div>
 

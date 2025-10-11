@@ -5,6 +5,7 @@ import UsersAdminPage from "@/app/admin/users/page";
 import type { User } from "@/types/auth";
 
 const getUsersMock = vi.hoisted(() => vi.fn());
+const getRolesMock = vi.hoisted(() => vi.fn());
 const createUserMock = vi.hoisted(() => vi.fn());
 const updateUserMock = vi.hoisted(() => vi.fn());
 const deleteUserMock = vi.hoisted(() => vi.fn());
@@ -14,6 +15,7 @@ const removeUserSuperMock = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/api", () => ({
   __esModule: true,
   default: {
+    getRoles: (...args: unknown[]) => getRolesMock(...args),
     getUsers: (...args: unknown[]) => getUsersMock(...args),
     createUser: (...args: unknown[]) => createUserMock(...args),
     updateUser: (...args: unknown[]) => updateUserMock(...args),
@@ -40,16 +42,27 @@ const baseUser: User = {
 };
 
 const renderPage = async (users: User[] = [baseUser]) => {
+  getRolesMock.mockResolvedValue({
+    data: [
+      { id: 1, slug: "admin", name: "Administrator" },
+      { id: 2, slug: "manager", name: "Manager" },
+      { id: 3, slug: "support", name: "Suport" },
+    ],
+  });
   getUsersMock.mockResolvedValue({ data: users });
   render(<UsersAdminPage />);
   await waitFor(() => {
     expect(getUsersMock).toHaveBeenCalled();
+  });
+  await waitFor(() => {
+    expect(getRolesMock).toHaveBeenCalled();
   });
 };
 
 describe("UsersAdminPage", () => {
   beforeEach(() => {
     getUsersMock.mockReset();
+    getRolesMock.mockReset();
     createUserMock.mockReset();
     updateUserMock.mockReset();
     deleteUserMock.mockReset();
@@ -156,7 +169,18 @@ describe("UsersAdminPage", () => {
     await user.type(passwordField, "supersecure8");
     await user.type(screen.getByLabelText("Prenume"), "Maria");
     await user.type(screen.getByLabelText("Nume"), "Ionescu");
-    await user.type(screen.getByLabelText("Roluri"), "admin, manager");
+
+    const rolesTrigger = screen.getByLabelText("Roluri");
+    await user.click(rolesTrigger);
+    const adminOption = await screen.findByRole("checkbox", {
+      name: /Administrator/i,
+    });
+    const managerOption = await screen.findByRole("checkbox", {
+      name: /Manager/i,
+    });
+    await user.click(adminOption);
+    await user.click(managerOption);
+    await user.click(rolesTrigger);
 
     const superCheckbox = screen.getByRole("checkbox", {
       name: "Super utilizator",
@@ -223,7 +247,10 @@ describe("UsersAdminPage", () => {
     expect(lastNameField).toHaveValue("Georgescu");
     expect(screen.getByLabelText("Email")).toHaveValue("ana@example.com");
     expect(screen.getByLabelText("Nume utilizator")).toHaveValue("ana");
-    expect(rolesField).toHaveValue("admin, support");
+    expect(
+      within(rolesField).getByText(/Administrator/i),
+    ).toBeInTheDocument();
+    expect(within(rolesField).getByText(/Suport/i)).toBeInTheDocument();
     expect(superCheckbox).toBeChecked();
     expect(manageCheckbox).toBeChecked();
 
@@ -231,8 +258,17 @@ describe("UsersAdminPage", () => {
     await user.type(firstNameField, "Ioana-Maria");
     await user.clear(lastNameField);
     await user.type(lastNameField, "Popescu");
-    await user.clear(rolesField);
-    await user.type(rolesField, "support");
+    await user.click(rolesField);
+    const adminOption = await screen.findByRole("checkbox", {
+      name: /Administrator/i,
+    });
+    const supportOption = await screen.findByRole("checkbox", {
+      name: /Suport/i,
+    });
+    expect(adminOption).toBeChecked();
+    expect(supportOption).toBeChecked();
+    await user.click(adminOption);
+    await user.click(rolesField);
     await user.click(superCheckbox);
     await user.click(manageCheckbox);
 

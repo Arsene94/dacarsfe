@@ -43,6 +43,7 @@ const InterlinkingSection = ({ copy, className }: InterlinkingSectionProps) => {
                         {links.map((link) => {
                             const tone = link.tone ?? "primary";
                             const toneClasses = toneClassMap[tone] ?? toneClassMap.primary;
+                            const shouldInvertContent = tone === "primary" || tone === "accent";
 
                             return (
                                 <Link
@@ -55,12 +56,24 @@ const InterlinkingSection = ({ copy, className }: InterlinkingSectionProps) => {
                                     aria-label={link.label}
                                 >
                                     <div>
-                                        <p className="text-sm font-dm-sans uppercase tracking-wider text-berkeley/70">
+                                        <p
+                                            className={cn(
+                                                "text-sm font-dm-sans uppercase tracking-wider text-berkeley/70",
+                                                shouldInvertContent && "group-hover:text-white",
+                                            )}
+                                        >
                                             {copy.linkPrefix}
                                         </p>
                                         <h3 className="mt-2 text-xl font-poppins font-semibold">{link.label}</h3>
                                         {link.description && (
-                                            <p className="mt-3 text-sm font-dm-sans text-gray-600">{link.description}</p>
+                                            <p
+                                                className={cn(
+                                                    "mt-3 text-sm font-dm-sans text-gray-600",
+                                                    shouldInvertContent && "group-hover:text-white",
+                                                )}
+                                            >
+                                                {link.description}
+                                            </p>
                                         )}
                                     </div>
                                     <span className="mt-6 inline-flex items-center text-sm font-semibold">
