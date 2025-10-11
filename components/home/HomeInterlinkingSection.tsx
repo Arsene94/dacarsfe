@@ -73,13 +73,23 @@ const HomeInterlinkingSection = () => {
         t("interlinking.linkCta", { fallback: FALLBACK_COPY.linkCta });
 
     const resolvedLinks = (Array.isArray(interlinking.links) ? interlinking.links : FALLBACK_COPY.links)
-        .map((link) => ({
-            ...link,
-            href: (link.href ?? FALLBACK_COPY.links.find((item) => item.label === link.label)?.href ?? "/").trim(),
-            label: (link.label ?? "").trim(),
-            tone: link.tone ?? "primary",
-        }))
-        .filter((link): link is InterlinkingLink => link.href.length > 0 && link.label.length > 0);
+        .map((link) => {
+            const fallback = FALLBACK_COPY.links.find((item) => item.label === link.label);
+            const href = (link.href ?? fallback?.href ?? "/").trim();
+            const label = (link.label ?? fallback?.label ?? "").trim();
+            const descriptionRaw = link.description ?? fallback?.description ?? "";
+            const description = descriptionRaw.trim();
+            const tone = link.tone ?? fallback?.tone ?? "primary";
+
+            const normalized: InterlinkingLink = { href, label, tone };
+
+            if (description.length > 0) {
+                normalized.description = description;
+            }
+
+            return normalized;
+        })
+        .filter((link) => link.href.length > 0 && link.label.length > 0);
 
     const copy: InterlinkingCopy = {
         title: { main: titleMain, highlight: titleHighlight },
