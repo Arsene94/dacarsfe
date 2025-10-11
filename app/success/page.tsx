@@ -8,7 +8,11 @@ import type { ReservationPayload } from "@/types/reservation";
 import type { WheelPrize } from "@/types/wheel";
 import { formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
-import { trackMetaPixelEvent, META_PIXEL_EVENTS, updateMetaPixelAdvancedMatching } from "@/lib/metaPixel";
+import {
+    trackFacebookPixelEvent,
+    FACEBOOK_PIXEL_EVENTS,
+    updateFacebookPixelAdvancedMatching,
+} from "@/lib/facebookPixel";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { Locale } from "@/lib/i18n/config";
 import successMessagesRo from "@/messages/success/ro.json";
@@ -110,7 +114,7 @@ const SuccessPage = () => {
             return;
         }
 
-        updateMetaPixelAdvancedMatching({
+        updateFacebookPixelAdvancedMatching({
             email: reservationData.customer_email,
             phone: reservationData.customer_phone,
             fullName: reservationData.customer_name,
@@ -174,7 +178,7 @@ const SuccessPage = () => {
         const carIdString =
             carId !== undefined && carId !== null ? String(carId) : undefined;
 
-        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
+        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
             value: totalAmount ?? undefined,
             currency: DEFAULT_CURRENCY,
             content_ids: carIdString ? [carIdString] : undefined,

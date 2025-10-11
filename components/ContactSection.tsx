@@ -6,7 +6,7 @@ import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
 import LazyMap from "./LazyMap";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
-import { trackMetaPixelEvent, META_PIXEL_EVENTS } from "@/lib/metaPixel";
+import { trackFacebookPixelEvent, FACEBOOK_PIXEL_EVENTS } from "@/lib/facebookPixel";
 
 type ContactMessages = {
     title?: { main?: string; highlight?: string };
@@ -104,7 +104,7 @@ const ContactSection = () => {
                                             contact_method: "phone",
                                             value: phoneNumber,
                                         });
-                                        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
+                                        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
                                             contact_method: "phone",
                                             value: phoneNumber,
                                         });
@@ -134,7 +134,7 @@ const ContactSection = () => {
                                             contact_method: "whatsapp",
                                             value: phoneNumber,
                                         });
-                                        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
+                                        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
                                             contact_method: "whatsapp",
                                             value: phoneNumber,
                                         });
@@ -164,7 +164,7 @@ const ContactSection = () => {
                                             contact_method: "email",
                                             value: emailAddress,
                                         });
-                                        trackMetaPixelEvent(META_PIXEL_EVENTS.LEAD, {
+                                        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.LEAD, {
                                             contact_method: "email",
                                             value: emailAddress,
                                         });
