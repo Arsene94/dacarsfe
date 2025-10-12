@@ -35,8 +35,10 @@ type AdvancedMatchingPayload = {
     external_id?: string;
     ct?: string;
     st?: string;
-    zp?: string;
+    zp?: string | number;
     country?: string;
+    ge?: string;
+    db?: string | number | Date;
 };
 
 type NameParts = {
@@ -137,6 +139,92 @@ const normalizePostalCode = (value: unknown): string | undefined => {
     return normalized.length > 0 ? normalized.toLowerCase() : undefined;
 };
 
+const formatDateAsYYYYMMDD = (date: Date): string => {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    return `${year}${month}${day}`;
+};
+
+const normalizeDateOfBirth = (value: unknown): string | undefined => {
+    const toDate = (candidate: unknown): Date | null => {
+        if (candidate instanceof Date) {
+            return Number.isNaN(candidate.getTime()) ? null : candidate;
+        }
+
+        if (typeof candidate === "number" && Number.isFinite(candidate)) {
+            const fromNumber = new Date(candidate);
+            return Number.isNaN(fromNumber.getTime()) ? null : fromNumber;
+        }
+
+        if (typeof candidate !== "string") {
+            return null;
+        }
+
+        const trimmed = candidate.trim();
+        if (!trimmed) {
+            return null;
+        }
+
+        const directParsed = Date.parse(trimmed);
+        if (!Number.isNaN(directParsed)) {
+            const directDate = new Date(directParsed);
+            return Number.isNaN(directDate.getTime()) ? null : directDate;
+        }
+
+        const digitsOnly = trimmed.replace(/\D+/g, "");
+        if (digitsOnly.length === 8) {
+            const yearFirstCandidate = `${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4, 6)}-${digitsOnly.slice(6, 8)}`;
+            const yearFirstParsed = Date.parse(yearFirstCandidate);
+            if (!Number.isNaN(yearFirstParsed)) {
+                const yearFirstDate = new Date(yearFirstParsed);
+                if (!Number.isNaN(yearFirstDate.getTime())) {
+                    return yearFirstDate;
+                }
+            }
+
+            const dayFirstCandidate = `${digitsOnly.slice(4, 8)}-${digitsOnly.slice(2, 4)}-${digitsOnly.slice(0, 2)}`;
+            const dayFirstParsed = Date.parse(dayFirstCandidate);
+            if (!Number.isNaN(dayFirstParsed)) {
+                const dayFirstDate = new Date(dayFirstParsed);
+                if (!Number.isNaN(dayFirstDate.getTime())) {
+                    return dayFirstDate;
+                }
+            }
+        }
+
+        return null;
+    };
+
+    const resolvedDate = toDate(value);
+    if (!resolvedDate) {
+        return undefined;
+    }
+
+    return formatDateAsYYYYMMDD(resolvedDate);
+};
+
+const normalizeGender = (value: unknown): string | undefined => {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+        return undefined;
+    }
+
+    if (["m", "male", "masculin", "bărbat", "barbat"].includes(normalized)) {
+        return "m";
+    }
+
+    if (["f", "female", "feminin", "femeie"].includes(normalized)) {
+        return "f";
+    }
+
+    return undefined;
+};
+
 const sanitizeAdvancedMatching = (
     raw?: AdvancedMatchingPayload | null,
 ): AdvancedMatchingPayload => {
@@ -191,7 +279,295 @@ const sanitizeAdvancedMatching = (
         sanitized.country = country;
     }
 
+    const gender = normalizeGender(raw.ge);
+    if (gender) {
+        sanitized.ge = gender;
+    }
+
+    const dateOfBirth = normalizeDateOfBirth(raw.db);
+    if (dateOfBirth) {
+        sanitized.db = dateOfBirth;
+    }
+
     return sanitized;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === "object";
+
+const META_CUSTOMER_DETAIL_KEYS = [
+    "customer",
+    "customer_details",
+    "customer_detail",
+    "customerdata",
+    "customer_data",
+    "customerinfo",
+    "customer_info",
+    "customerprofile",
+    "customer_profile",
+    "profile",
+    "user",
+    "contact",
+    "contacts",
+    "address",
+    "addresses",
+    "billing_address",
+    "billingaddress",
+    "shipping_address",
+    "shippingaddress",
+] as const;
+
+const toLowerCaseKey = (key: string): string => key.trim().toLowerCase();
+
+const pickRecordValue = (
+    record: Record<string, unknown>,
+    candidateKeys: string[],
+): unknown => {
+    if (candidateKeys.length === 0) {
+        return undefined;
+    }
+
+    const entries = Object.entries(record);
+    for (const key of candidateKeys) {
+        const normalizedKey = toLowerCaseKey(key);
+        for (const [entryKey, value] of entries) {
+            if (toLowerCaseKey(entryKey) === normalizedKey) {
+                if (value !== undefined && value !== null) {
+                    if (typeof value === "string") {
+                        const trimmed = value.trim();
+                        if (trimmed.length === 0) {
+                            continue;
+                        }
+                    }
+                    return value;
+                }
+            }
+        }
+    }
+
+    return undefined;
+};
+
+const collectCandidateRecords = (
+    source: unknown,
+    visited: Set<Record<string, unknown>> = new Set(),
+): Record<string, unknown>[] => {
+    if (!isRecord(source)) {
+        return [];
+    }
+
+    const queue: Record<string, unknown>[] = [source];
+    const records: Record<string, unknown>[] = [];
+
+    while (queue.length > 0) {
+        const record = queue.shift();
+        if (!record || visited.has(record)) {
+            continue;
+        }
+
+        visited.add(record);
+        records.push(record);
+
+        for (const key of META_CUSTOMER_DETAIL_KEYS) {
+            const nested = pickRecordValue(record, [key]);
+            if (!nested) {
+                continue;
+            }
+
+            if (isRecord(nested)) {
+                queue.push(nested);
+                continue;
+            }
+
+            if (Array.isArray(nested)) {
+                nested.forEach((entry) => {
+                    if (isRecord(entry)) {
+                        queue.push(entry);
+                    }
+                });
+            }
+        }
+    }
+
+    return records;
+};
+
+const resolveValueFromSources = (
+    sources: Array<unknown>,
+    candidateKeys: string[],
+): unknown => {
+    if (candidateKeys.length === 0 || sources.length === 0) {
+        return undefined;
+    }
+
+    const visited = new Set<Record<string, unknown>>();
+    for (const source of sources) {
+        const records = collectCandidateRecords(source, visited);
+        for (const record of records) {
+            const value = pickRecordValue(record, candidateKeys);
+            if (value !== undefined) {
+                return value;
+            }
+        }
+    }
+
+    return undefined;
+};
+
+export const buildMetaPixelAdvancedMatchingFromCustomer = (
+    ...sources: Array<unknown>
+): AdvancedMatchingPayload => {
+    const filteredSources = sources.filter(Boolean);
+
+    const firstNameCandidate = resolveValueFromSources(filteredSources, [
+        "customer_first_name",
+        "customerfirstname",
+        "customer_firstname",
+        "first_name",
+        "firstname",
+        "given_name",
+        "givenname",
+        "prename",
+        "forename",
+    ]);
+
+    const lastNameCandidate = resolveValueFromSources(filteredSources, [
+        "customer_last_name",
+        "customerlastname",
+        "customer_lastname",
+        "last_name",
+        "lastname",
+        "surname",
+        "family_name",
+        "familyname",
+        "second_name",
+    ]);
+
+    const fullNameCandidate = resolveValueFromSources(filteredSources, [
+        "customer_name",
+        "name",
+        "full_name",
+        "fullname",
+        "display_name",
+        "displayname",
+    ]);
+
+    const { firstName: parsedFirstName, lastName: parsedLastName } =
+        resolveMetaPixelNameParts(fullNameCandidate);
+
+    const payload: AdvancedMatchingPayload = {};
+
+    const firstName =
+        (typeof firstNameCandidate === "string" && firstNameCandidate.trim().length > 0
+            ? firstNameCandidate
+            : undefined) || parsedFirstName;
+    if (firstName) {
+        payload.fn = firstName;
+    }
+
+    const lastName =
+        (typeof lastNameCandidate === "string" && lastNameCandidate.trim().length > 0
+            ? lastNameCandidate
+            : undefined) || parsedLastName;
+    if (lastName) {
+        payload.ln = lastName;
+    }
+
+    const cityCandidate = resolveValueFromSources(filteredSources, [
+        "customer_city",
+        "customer_city_name",
+        "customer_cityname",
+        "customercity",
+        "city_name",
+        "city",
+        "customer_town",
+        "customertown",
+        "town",
+        "locality",
+        "municipality",
+    ]);
+    if (cityCandidate !== undefined) {
+        payload.ct = typeof cityCandidate === "string" ? cityCandidate : String(cityCandidate);
+    }
+
+    const regionCandidate = resolveValueFromSources(filteredSources, [
+        "customer_region",
+        "customerregion",
+        "region",
+        "customer_county",
+        "customercounty",
+        "county",
+        "state",
+        "province",
+        "state_region",
+        "state_province",
+    ]);
+    if (regionCandidate !== undefined) {
+        payload.st =
+            typeof regionCandidate === "string" ? regionCandidate : String(regionCandidate);
+    }
+
+    const countryCandidate = resolveValueFromSources(filteredSources, [
+        "customer_country",
+        "customercountry",
+        "country",
+    ]);
+    if (countryCandidate !== undefined) {
+        payload.country =
+            typeof countryCandidate === "string" ? countryCandidate : String(countryCandidate);
+    }
+
+    const postalCandidate = resolveValueFromSources(filteredSources, [
+        "customer_postcode",
+        "customerpostcode",
+        "postcode",
+        "postal_code",
+        "postalcode",
+        "zipcode",
+        "zip_code",
+        "zip",
+    ]);
+    if (postalCandidate !== undefined) {
+        payload.zp =
+            typeof postalCandidate === "string" || typeof postalCandidate === "number"
+                ? (postalCandidate as string | number)
+                : String(postalCandidate);
+    }
+
+    const genderCandidate = resolveValueFromSources(filteredSources, [
+        "customer_gender",
+        "customergender",
+        "gender",
+        "sex",
+    ]);
+    if (genderCandidate !== undefined) {
+        payload.ge =
+            typeof genderCandidate === "string"
+                ? genderCandidate
+                : String(genderCandidate);
+    }
+
+    const dateOfBirthCandidate = resolveValueFromSources(filteredSources, [
+        "customer_date_of_birth",
+        "customerdateofbirth",
+        "customerdob",
+        "date_of_birth",
+        "dateofbirth",
+        "birth_date",
+        "birthdate",
+        "dob",
+        "birthday",
+    ]);
+    if (dateOfBirthCandidate !== undefined) {
+        payload.db =
+            dateOfBirthCandidate instanceof Date ||
+            typeof dateOfBirthCandidate === "string" ||
+            typeof dateOfBirthCandidate === "number"
+                ? (dateOfBirthCandidate as string | number | Date)
+                : String(dateOfBirthCandidate);
+    }
+
+    return payload;
 };
 
 const mergeAdvancedMatching = (
@@ -200,13 +576,20 @@ const mergeAdvancedMatching = (
 ): AdvancedMatchingPayload => {
     const merged: AdvancedMatchingPayload = { ...current };
 
-    (Object.entries(incoming) as Array<[keyof AdvancedMatchingPayload, string]>).forEach(
-        ([key, value]) => {
-            if (value) {
-                merged[key] = value;
-            }
-        },
-    );
+    (Object.entries(incoming) as Array<[
+        keyof AdvancedMatchingPayload,
+        AdvancedMatchingPayload[keyof AdvancedMatchingPayload],
+    ]>).forEach(([key, value]) => {
+        if (value === undefined || value === null) {
+            return;
+        }
+
+        if (typeof value === "string" && value.trim().length === 0) {
+            return;
+        }
+
+        merged[key] = value;
+    });
 
     return merged;
 };
@@ -689,3 +1072,5 @@ export const resolveMetaPixelNameParts = (fullName: unknown): NameParts => {
         lastName,
     };
 };
+
+export type { AdvancedMatchingPayload };
