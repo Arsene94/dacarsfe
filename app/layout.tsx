@@ -136,9 +136,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 fbq('track', 'PageView');
               `}
             </Script>
-            <noscript>
-              {`<img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${metaPixelId}&ev=PageView&noscript=1" />`}
-            </noscript>
+            <noscript
+              dangerouslySetInnerHTML={{
+                __html: `<img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${metaPixelId}&ev=PageView&noscript=1" />`,
+              }}
+            />
           </>
         ) : null}
         <Script id="prefill-locale" strategy="beforeInteractive">
