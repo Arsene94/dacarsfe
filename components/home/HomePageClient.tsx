@@ -66,6 +66,7 @@ type TrackingModules = {
     trackTikTokEvent: TikTokModule["trackTikTokEvent"];
     TIKTOK_CONTENT_TYPE: TikTokModule["TIKTOK_CONTENT_TYPE"];
     TIKTOK_EVENTS: TikTokModule["TIKTOK_EVENTS"];
+    trackMetaPixelViewContent: (payload?: Record<string, unknown>) => void;
 };
 
 let wheelHelpersPromise: Promise<WheelHelpers> | null = null;
@@ -109,12 +110,14 @@ const loadTrackingModules = async (): Promise<TrackingModules> => {
         trackingModulesPromise = Promise.all([
             import("@/lib/mixpanelClient"),
             import("@/lib/tiktokPixel"),
+            import("@/lib/metaPixel"),
         ])
-            .then(([mixpanelModule, tikTokModule]) => ({
+            .then(([mixpanelModule, tikTokModule, metaPixelModule]) => ({
                 trackMixpanelEvent: mixpanelModule.trackMixpanelEvent,
                 trackTikTokEvent: tikTokModule.trackTikTokEvent,
                 TIKTOK_CONTENT_TYPE: tikTokModule.TIKTOK_CONTENT_TYPE,
                 TIKTOK_EVENTS: tikTokModule.TIKTOK_EVENTS,
+                trackMetaPixelViewContent: metaPixelModule.trackMetaPixelViewContent,
             }))
             .catch((error) => {
                 trackingModulesPromise = null;
@@ -453,6 +456,7 @@ const HomePageClient = () => {
                             trackTikTokEvent,
                             TIKTOK_CONTENT_TYPE,
                             TIKTOK_EVENTS,
+                            trackMetaPixelViewContent,
                         }) => {
                             trackMixpanelEvent("landing_view", {
                                 has_booking_range: Boolean(hasBookingRange),
@@ -472,6 +476,20 @@ const HomePageClient = () => {
                                 booking_range_key: bookingRangeKey || undefined,
                                 wheel_popup_shown: Boolean(showWheelPopup),
                                 wheel_period_id: activePeriod?.id ?? undefined,
+                            });
+
+                            trackMetaPixelViewContent({
+                                content_type: "landing_page",
+                                content_ids: ["landing_home"],
+                                contents: [
+                                    {
+                                        id: "landing_home",
+                                        quantity: 1,
+                                    },
+                                ],
+                                wheel_period_id: activePeriod?.id ?? undefined,
+                                has_booking_range: Boolean(hasBookingRange),
+                                booking_range_key: bookingRangeKey || undefined,
                             });
 
                             landingTrackedRef.current = true;

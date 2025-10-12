@@ -5,7 +5,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
-      'react-facebook-pixel': path.resolve(__dirname, './vitest.react-facebook-pixel.stub.ts'),
     },
   },
   build: {

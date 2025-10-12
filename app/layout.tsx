@@ -17,9 +17,8 @@ import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale
 import MixpanelInitializer from "../components/MixpanelInitializer";
 import TikTokPixelScript from "../components/TikTokPixelScript";
 import TikTokPixelInitializer from "../components/TikTokPixelInitializer";
-import PixelTracker from "../components/PixelTracker";
-import { GoogleAnalytics } from '@next/third-parties/google'
-import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
+import MetaPixel from "../components/MetaPixel";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -108,8 +107,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <Suspense fallback={null}>
         <MixpanelInitializer/>
         <TikTokPixelInitializer/>
-        <PixelTracker/>
-        <ServiceWorkerRegistration />
+        <MetaPixel />
         </Suspense>
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`

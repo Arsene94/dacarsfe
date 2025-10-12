@@ -6,7 +6,6 @@ import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
 import LazyMap from "./LazyMap";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
-import { trackFacebookPixelEvent, FACEBOOK_PIXEL_EVENTS } from "@/lib/facebookPixel";
 
 type ContactMessages = {
     title?: { main?: string; highlight?: string };
