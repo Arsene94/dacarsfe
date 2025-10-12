@@ -105,7 +105,7 @@ Aplicația presupune un backend Laravel ce expune API-uri REST securizate.
 | `NEXT_PUBLIC_TIKTOK_PIXEL_ID` | ID-ul pixelului TikTok folosit pentru evenimentele de marketing descrise în `docs/tiktok-pixel.md`. | – |
 | `NEXT_PUBLIC_FACEBOOK_PIXEL_ID` | ID-ul Meta Pixel folosit pentru PageView/ViewContent/Lead și potrivirea avansată descrisă în `docs/meta-pixel.md`. | – |
 
-Tokenul de autentificare este setat prin `apiClient.setToken` după login și salvat în `localStorage` sub `auth_token`. Toate request-urile includ antetul `X-API-KEY`, iar metodele standard `getCars`, `getBookings`, `getServices`, `getWheelPrizes` mapează răspunsurile la structurile TypeScript definite în `types/`.
+Tokenul de autentificare este setat prin `apiClient.setToken` după login și salvat în `localStorage` sub `auth_token`, iar profilul normalizat este păstrat în `auth_user` împreună cu data expirării (`auth_token_expires_at`). Sesiunea admin se reîmprospătează la fiecare vizită și rămâne activă până la 30 de zile fără reautentificare. Toate request-urile includ antetul `X-API-KEY`, iar metodele standard `getCars`, `getBookings`, `getServices`, `getWheelPrizes` mapează răspunsurile la structurile TypeScript definite în `types/`.
 
 ## Configurare și rulare
 1. **Instalare dependențe**: `npm install`.

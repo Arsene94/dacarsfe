@@ -2,12 +2,103 @@
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { apiClient } from "@/lib/api";
-import type { User, AuthResponse } from "@/types/auth";
 import {
   identifyAnonymousMixpanelVisitor,
   identifyMixpanelUser,
   resetMixpanelIdentity,
 } from "@/lib/mixpanelClient";
+import type { User, AuthResponse } from "@/types/auth";
+
+const TOKEN_STORAGE_KEY = "auth_token";
+const USER_STORAGE_KEY = "auth_user";
+const TOKEN_EXPIRY_STORAGE_KEY = "auth_token_expires_at";
+const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+
+type ApiErrorLike = Error & { status?: number };
+
+const readStoredToken = (): string | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return localStorage.getItem(TOKEN_STORAGE_KEY);
+};
+
+const readStoredExpiry = (): number | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const stored = localStorage.getItem(TOKEN_EXPIRY_STORAGE_KEY);
+  if (!stored) {
+    return null;
+  }
+
+  const parsed = Date.parse(stored);
+  if (Number.isNaN(parsed)) {
+    localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY);
+    return null;
+  }
+
+  return parsed;
+};
+
+const readStoredUser = (): User | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const raw = localStorage.getItem(USER_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as User;
+    if (typeof parsed !== "object" || parsed === null) {
+      return null;
+    }
+    return parsed;
+  } catch (error) {
+    console.warn("Failed to parse cached admin user from storage", error);
+    localStorage.removeItem(USER_STORAGE_KEY);
+    return null;
+  }
+};
+
+const persistSession = (token: string, user: User | null, referenceDate: Date = new Date()) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+
+  const expiresAt = new Date(referenceDate.getTime() + SESSION_DURATION_MS).toISOString();
+  localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, expiresAt);
+
+  if (user) {
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(USER_STORAGE_KEY);
+  }
+};
+
+const clearStoredSession = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  localStorage.removeItem(USER_STORAGE_KEY);
+  localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY);
+};
+
+const isUnauthorizedError = (error: unknown): boolean => {
+  if (error instanceof Error) {
+    const status = (error as ApiErrorLike).status;
+    return status === 401 || status === 403 || status === 419;
+  }
+  return false;
+};
 
 interface AuthContextType {
   user: User | null;
@@ -27,21 +118,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const pendingAnonymousIdentityRef = useRef(false);
 
   useEffect(() => {
-    const existingToken = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-    if (existingToken) {
+    if (typeof window === "undefined") {
+      setLoading(false);
+      return;
+    }
+
+    const initializeSession = async () => {
+      const existingToken = readStoredToken();
+      if (!existingToken) {
+        setLoading(false);
+        return;
+      }
+
+      const expiryTimestamp = readStoredExpiry();
+      if (!expiryTimestamp || expiryTimestamp <= Date.now()) {
+        apiClient.removeToken();
+        clearStoredSession();
+        setToken(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       setToken(existingToken);
       apiClient.setToken(existingToken);
-      apiClient
-        .me()
-        .then((u) => setUser(u))
-        .catch(() => {
+
+      const cachedUser = readStoredUser();
+      if (cachedUser) {
+        setUser(cachedUser);
+      }
+
+      try {
+        const profile = await apiClient.me();
+        setUser(profile);
+      } catch (error) {
+        if (isUnauthorizedError(error)) {
           apiClient.removeToken();
+          clearStoredSession();
           setToken(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+          setUser(null);
+        } else {
+          console.error("Failed to refresh authenticated user", error);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void initializeSession();
   }, []);
 
   const login = async (login: string, password: string) => {
@@ -55,6 +179,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to refresh authenticated user", error);
     }
   };
+
+  useEffect(() => {
+    if (!token || !user) {
+      return;
+    }
+
+    persistSession(token, user);
+  }, [token, user]);
 
   useEffect(() => {
     if (loading) {
@@ -117,6 +249,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await apiClient.logout();
     } finally {
+      apiClient.removeToken();
+      clearStoredSession();
       setUser(null);
       setToken(null);
     }
