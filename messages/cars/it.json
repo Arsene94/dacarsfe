@@ -86,6 +86,10 @@
       "reserveNoDeposit": "Prenota senza deposito",
       "reserveWithDeposit": "Prenota con deposito",
       "reserveAria": "Prenota"
+    },
+    "feedback": {
+      "selectPeriod": "Seleziona le date di ritiro e riconsegna per continuare con la prenotazione.",
+      "unavailable": "L'auto non è disponibile per il periodo selezionato. Scegli un'altra data o un altro veicolo."
     }
   },
   "cta": {

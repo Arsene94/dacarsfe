@@ -86,6 +86,10 @@
       "reserveNoDeposit": "Rezervă fără garanție",
       "reserveWithDeposit": "Rezervă cu garanție",
       "reserveAria": "Rezervă"
+    },
+    "feedback": {
+      "selectPeriod": "Selectează perioada de ridicare și returnare pentru a continua rezervarea.",
+      "unavailable": "Mașina nu este disponibilă pentru perioada selectată. Te rugăm să alegi alt interval sau un alt vehicul."
     }
   },
   "cta": {

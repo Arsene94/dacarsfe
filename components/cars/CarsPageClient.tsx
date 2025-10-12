@@ -196,6 +196,10 @@ const FleetPage = () => {
     const [viewMode, setViewMode] = useState("grid");
     const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
     const [showFilters, setShowFilters] = useState(false);
+    const [ctaFeedback, setCtaFeedback] = useState<{
+        carId: number;
+        type: "missingDates" | "unavailable";
+    } | null>(null);
 
     const startDate = searchParams.get("start_date") || "";
     const endDate   = searchParams.get("end_date") || "";
@@ -495,16 +499,34 @@ const FleetPage = () => {
 
     const handleBooking = (withDeposit: boolean, car: Car) => {
         const hasCompleteBookingRange = Boolean(startDate && endDate);
+        const isCarAvailable = car.available !== false;
 
-        if (hasCompleteBookingRange) {
-            setBooking({
-                ...booking,
-                startDate,
-                endDate,
-                withDeposit,
-                selectedCar: car,
-            });
+        if (!hasCompleteBookingRange) {
+            setCtaFeedback({ carId: car.id, type: "missingDates" });
+            if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+                try {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                } catch {
+                    // noop pentru mediile fără implementare scrollTo (ex: JSDOM)
+                }
+            }
+            return;
         }
+
+        if (!isCarAvailable) {
+            setCtaFeedback({ carId: car.id, type: "unavailable" });
+            return;
+        }
+
+        setCtaFeedback(null);
+
+        setBooking({
+            ...booking,
+            startDate,
+            endDate,
+            withDeposit,
+            selectedCar: car,
+        });
 
         const pricePerDay = toNumberOrNull(
             withDeposit ? car.rental_rate : car.rental_rate_casco,
@@ -542,8 +564,12 @@ const FleetPage = () => {
             with_deposit: withDeposit,
         });
 
-        router.push(hasCompleteBookingRange ? "/form" : "/");
+        router.push("/form");
     };
+
+    useEffect(() => {
+        setCtaFeedback(null);
+    }, [startDate, endDate]);
 
     useEffect(() => {
         if (loading) {
@@ -613,60 +639,64 @@ const FleetPage = () => {
         hasTrackedViewRef.current = true;
     }, [cars, currentPage, loading, totalCars, searchTerm, sortBy]);
 
-    const CarCard = ({ car, isListView = false }: { car: Car; isListView?: boolean; }) => (
-        <div className={`bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group border border-gray-100 ${isListView ? "flex flex-col md:flex-row" : ""}`}>
-            <div className={`relative overflow-hidden ${isListView ? "md:w-1/3 h-48 md:h-full" : "h-48"}`}>
-                <Image
-                    src={car.image}
-                    alt={car.name}
-                    fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-500"
-                    sizes={CAR_CARD_IMAGE_SIZES}
-                />
-                <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
-                    {car.type}
+    const CarCard = ({ car, isListView = false }: { car: Car; isListView?: boolean; }) => {
+        const hasCompleteBookingRange = Boolean(startDate && endDate);
+        const showFeedback = ctaFeedback && ctaFeedback.carId === car.id;
+        const feedbackType = showFeedback ? ctaFeedback?.type : null;
+
+        return (
+            <div className={`bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group border border-gray-100 ${isListView ? "flex flex-col md:flex-row" : ""}`}>
+                <div className={`relative overflow-hidden ${isListView ? "md:w-1/3 h-48 md:h-full" : "h-48"}`}>
+                    <Image
+                        src={car.image}
+                        alt={car.name}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        sizes={CAR_CARD_IMAGE_SIZES}
+                    />
+                    <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
+                        {car.type}
+                    </div>
                 </div>
-            </div>
 
-            <div className={`p-6 ${isListView ? "md:w-2/3 flex flex-col justify-between" : ""}`}>
-                <div>
-                    <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">{car.name}</h3>
-                    {isListView && <p className="text-gray-600 font-dm-sans mb-4 leading-relaxed">{car.description}</p>}
+                <div className={`p-6 ${isListView ? "md:w-2/3 flex flex-col justify-between" : ""}`}>
+                    <div>
+                        <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">{car.name}</h3>
+                        {isListView && <p className="text-gray-600 font-dm-sans mb-4 leading-relaxed">{car.description}</p>}
 
-                    <div className={`${isListView ? "grid grid-cols-2 gap-4 mb-4" : "space-y-2 mb-6"}`}>
-                        <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
-                            <div className="flex items-center space-x-2">
-                                <Users className="h-4 w-4 text-jade" />
-                                <span>{formatPassengersLabel(car.features.passengers)}</span>
-                            </div>
-                            {!isListView && (
+                        <div className={`${isListView ? "grid grid-cols-2 gap-4 mb-4" : "space-y-2 mb-6"}`}>
+                            <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                                 <div className="flex items-center space-x-2">
+                                    <Users className="h-4 w-4 text-jade" />
+                                    <span>{formatPassengersLabel(car.features.passengers)}</span>
+                                </div>
+                                {!isListView && (
+                                    <div className="flex items-center space-x-2">
+                                        <Settings className="h-4 w-4 text-jade" />
+                                        <span>{car.features.transmission}</span>
+                                    </div>
+                                )}
+                            </div>
+                            {isListView && (
+                                <div className="flex items-center space-x-2 text-sm text-gray-600 font-dm-sans">
                                     <Settings className="h-4 w-4 text-jade" />
                                     <span>{car.features.transmission}</span>
                                 </div>
                             )}
-                        </div>
-                        {isListView && (
                             <div className="flex items-center space-x-2 text-sm text-gray-600 font-dm-sans">
-                                <Settings className="h-4 w-4 text-jade" />
-                                <span>{car.features.transmission}</span>
+                                <Fuel className="h-4 w-4 text-jade" />
+                                <span>{car.features.fuel}</span>
                             </div>
-                        )}
-                        <div className="flex items-center space-x-2 text-sm text-gray-600 font-dm-sans">
-                            <Fuel className="h-4 w-4 text-jade" />
-                            <span>{car.features.fuel}</span>
                         </div>
                     </div>
-                </div>
 
-                {startDate && endDate && (
-                    <>
-                        <div className="flex items-center justify-between mb-5">
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
                             <div className="me-1">
                                 <span className="text-jade font-bold font-dm-sans">{t("card.pricing.noDepositLabel")}</span>
                                 <span className="text-base font-poppins font-bold text-jade">{" "}{car.rental_rate_casco}€</span>
                                 <span className="text-jade font-bold font-dm-sans"> {t("card.pricing.perDay")}</span>
-                                {startDate && endDate && (
+                                {hasCompleteBookingRange && (
                                     <div>
                                         <span className="text-jade font-bold font-dm-sans">
                                             {t("card.pricing.daysTotal", { values: { days: car.days } })}
@@ -676,7 +706,7 @@ const FleetPage = () => {
                                 )}
                             </div>
                             <Button
-                                onClick={startDate && endDate ? () => handleBooking(false, car) : undefined}
+                                onClick={() => handleBooking(false, car)}
                                 className="px-2 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
                                 aria-label={t("card.actions.reserveAria")}
                             >
@@ -689,7 +719,7 @@ const FleetPage = () => {
                                 <span className="text-gray-600 font-dm-sans">{t("card.pricing.withDepositLabel")}</span>
                                 <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.rental_rate}€</span>
                                 <span className="text-gray-600 font-dm-sans"> {t("card.pricing.perDay")}</span>
-                                {startDate && endDate && (
+                                {hasCompleteBookingRange && (
                                     <div>
                                         <span className="text-gray-600 font-bold font-dm-sans">
                                             {t("card.pricing.daysTotal", { values: { days: car.days } })}
@@ -699,18 +729,35 @@ const FleetPage = () => {
                                 )}
                             </div>
                             <Button
-                                onClick={startDate && endDate ? () => handleBooking(true, car) : undefined}
+                                onClick={() => handleBooking(true, car)}
                                 className="px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg hover:!bg-jade/90 hover:!text-white transition-colors duration-300"
                                 aria-label={t("card.actions.reserveAria")}
                             >
                                 {t("card.actions.reserveWithDeposit")}
                             </Button>
                         </div>
-                    </>
-                )}
+
+                        {showFeedback && feedbackType && (
+                            <p
+                                className={`text-sm font-dm-sans ${
+                                    feedbackType === "unavailable" ? "text-red-600" : "text-amber-600"
+                                }`}
+                            >
+                                {feedbackType === "unavailable"
+                                    ? t("card.feedback.unavailable")
+                                    : t("card.feedback.selectPeriod")}
+                            </p>
+                        )}
+                        {!showFeedback && hasCompleteBookingRange && car.available === false && (
+                            <p className="text-sm font-dm-sans text-red-600">
+                                {t("card.feedback.unavailable")}
+                            </p>
+                        )}
+                    </div>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const vehicleStructuredData = useMemo(() => {
         if (cars.length === 0) {

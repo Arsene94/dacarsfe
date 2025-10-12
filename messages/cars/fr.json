@@ -86,6 +86,10 @@
       "reserveNoDeposit": "Réserver sans dépôt",
       "reserveWithDeposit": "Réserver avec dépôt",
       "reserveAria": "Réserver"
+    },
+    "feedback": {
+      "selectPeriod": "Sélectionnez les dates de prise en charge et de retour pour poursuivre la réservation.",
+      "unavailable": "Ce véhicule n'est pas disponible pour la période choisie. Veuillez sélectionner d'autres dates ou un autre véhicule."
     }
   },
   "cta": {

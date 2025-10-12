@@ -163,6 +163,7 @@ beforeEach(() => {
   replaceMock.mockReset();
   searchParams = new URLSearchParams();
   window.history.replaceState({}, '', '/');
+  window.scrollTo = vi.fn();
 
   Object.values(apiClientMock).forEach((fn) => fn.mockReset());
   wheelStorageMock.getStoredWheelPrize.mockReturnValue(null);
@@ -282,6 +283,62 @@ describe('Fluxul de închiriere pentru clienți', () => {
     );
     expect(pushMock).toHaveBeenCalledWith('/form');
   }, 15000);
+
+  it('afișează mesajul de selectare a perioadei atunci când lipsește intervalul', async () => {
+    const user = userEvent.setup();
+
+    const { setBooking } = renderWithProviders(<CarsPageClient />);
+
+    await waitFor(() => expect(apiClientMock.getCarsByDateCriteria).toHaveBeenCalled());
+
+    const reserveNoDeposit = await screen.findByText(/Rezervă fără garanție/i, {
+      selector: 'button',
+    });
+
+    await user.click(reserveNoDeposit);
+
+    expect(setBooking).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+
+    expect(
+      await screen.findByText(/Selectează perioada de ridicare și returnare pentru a continua/i),
+    ).toBeInTheDocument();
+  });
+
+  it('anunță indisponibilitatea mașinii pentru perioada selectată', async () => {
+    const user = userEvent.setup();
+    const setBooking = vi.fn();
+
+    const query = new URLSearchParams({
+      start_date: '2025-09-01T09:00',
+      end_date: '2025-09-05T09:00',
+    });
+    searchParams = new URLSearchParams(query.toString());
+    window.history.replaceState({}, '', `/cars?${query.toString()}`);
+
+    apiClientMock.getCarsByDateCriteria.mockResolvedValueOnce({
+      data: [{ ...mockApiCar, available: false }],
+      meta: { total: 1, last_page: 1 },
+    });
+
+    renderWithProviders(<CarsPageClient />, { setBooking });
+
+    await waitFor(() => expect(apiClientMock.getCarsByDateCriteria).toHaveBeenCalled());
+    await screen.findByText(mockApiCar.name ?? 'Dacia Logan');
+
+    const reserveNoDeposit = await screen.findByText(/Rezervă fără garanție/i, {
+      selector: 'button',
+    });
+
+    await user.click(reserveNoDeposit);
+
+    expect(setBooking).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+
+    expect(
+      await screen.findByText(/Mașina nu este disponibilă pentru perioada selectată/i),
+    ).toBeInTheDocument();
+  });
 
   it('păstrează opțiunile din checkout și permite schimbarea garanției', async () => {
     const user = userEvent.setup();

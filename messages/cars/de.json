@@ -86,6 +86,10 @@
       "reserveNoDeposit": "Ohne Kaution buchen",
       "reserveWithDeposit": "Mit Kaution buchen",
       "reserveAria": "Buchen"
+    },
+    "feedback": {
+      "selectPeriod": "Bitte wähle Abhol- und Rückgabedatum, um mit der Reservierung fortzufahren.",
+      "unavailable": "Dieses Fahrzeug ist im gewählten Zeitraum nicht verfügbar. Bitte wähle andere Daten oder ein anderes Fahrzeug."
     }
   },
   "cta": {

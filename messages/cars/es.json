@@ -86,6 +86,10 @@
       "reserveNoDeposit": "Reservar sin depósito",
       "reserveWithDeposit": "Reservar con depósito",
       "reserveAria": "Reservar"
+    },
+    "feedback": {
+      "selectPeriod": "Selecciona las fechas de recogida y devolución para continuar con la reserva.",
+      "unavailable": "Este coche no está disponible para las fechas seleccionadas. Elige otras fechas u otro vehículo."
     }
   },
   "cta": {
