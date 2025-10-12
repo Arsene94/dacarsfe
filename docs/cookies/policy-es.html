@@ -62,17 +62,17 @@
         </tr>
         <tr>
             <td>Marketing</td>
-            <td>_fbp, _fbc</td>
-            <td>Meta Pixel &ndash; mide la eficacia de las campañas de Facebook/Instagram y atribuye conversiones.</td>
-            <td>3 meses</td>
-            <td>Meta Platforms Ireland</td>
-        </tr>
-        <tr>
-            <td>Marketing</td>
             <td>_ttp</td>
             <td>TikTok Pixel &ndash; optimiza la entrega de anuncios en TikTok y registra conversiones.</td>
             <td>13 meses</td>
             <td>TikTok Technology Limited</td>
+        </tr>
+        <tr>
+            <td>Marketing</td>
+            <td>_fbp, _fbc</td>
+            <td>Meta Pixel &ndash; mide visitas y eventos ViewContent/Lead; el advanced matching manual aplica hash al correo y teléfono para mejorar la atribución.</td>
+            <td>3 meses</td>
+            <td>Meta Platforms Ireland Limited</td>
         </tr>
         <tr>
             <td>Estadística / Marketing</td>
@@ -83,9 +83,9 @@
         </tr>
     </tbody>
 </table>
-<p>Además de las Cookies, Mixpanel y el selector de idioma utilizan valores persistentes en el <strong>localStorage</strong>: <code>dacars.locale</code> (idioma preferido) y <code>mp_{token}_mixpanel</code>, <code>mp_{token}_mixpanel__c</code> (identificadores anónimos de Mixpanel). Estos valores no se comparten con terceros y pueden eliminarse desde la configuración del navegador.</p>
+<p>Además de las Cookies, Mixpanel y el selector de idioma utilizan valores persistentes en el <strong>localStorage</strong>: <code>dacars.locale</code> (idioma preferido) y <code>mp_{token}_mixpanel</code>, <code>mp_{token}_mixpanel__c</code> (identificadores anónimos de Mixpanel). Meta Pixel guarda los datos con hash del advanced matching en el <strong>sessionStorage</strong> bajo <code>dacars:meta:advanced-matching</code> y marca los Leads enviados con <code>dacars:meta:lead:{id}</code>; estos valores permanecen en el navegador y pueden eliminarse manualmente.</p>
 <h2>4. Uso de Cookies en el Sitio</h2>
-<p>Durante la visita se instalan automáticamente las cookies necesarias. Las cookies analíticas y de marketing solo se activan si el navegador lo permite. La implementación de Meta Pixel verifica la señal <em>Global Privacy Control</em> y la opción <em>Do Not Track</em>; si están activas, no se envían eventos de marketing.</p>
+<p>Durante la visita se instalan automáticamente las cookies necesarias. Las cookies analíticas y de marketing solo se activan si el navegador lo permite.</p>
 <p>Las cookies estadísticas y de marketing nos permiten:</p>
 <ul>
     <li>analizar el rendimiento del Sitio y adaptar el contenido a sus preferencias;</li>
@@ -95,18 +95,18 @@
 <p>Los terceros pueden establecer cookies anónimas para medir determinadas campañas o personalizar la experiencia. El Sitio no puede acceder a dichas cookies, y los terceros no pueden acceder a las cookies establecidas por nosotros.</p>
 <h2>5. Transferencia de la información recopilada a través de Cookies</h2>
 <p>La Sociedad utiliza proveedores externos para operar el Sitio, quienes actúan como encargados del tratamiento. Los empleados responsables de la gestión de datos y los socios implicados pueden acceder a la información recopilada mediante Cookies.</p>
-<p>Los datos derivados de las Cookies no se comparten con otros sujetos sin consentimiento, salvo obligación legal. Google, Meta, TikTok y Mixpanel pueden transferir datos a Estados Unidos; en esos casos se aplican las cláusulas contractuales tipo y las medidas de seguridad adicionales previstas por dichos proveedores.</p>
+<p>Los datos derivados de las Cookies no se comparten con otros sujetos sin consentimiento, salvo obligación legal. Google, TikTok y Mixpanel pueden transferir datos a Estados Unidos; en esos casos se aplican las cláusulas contractuales tipo y las medidas de seguridad adicionales previstas por dichos proveedores.</p>
 <p>Políticas de privacidad de nuestros socios:</p>
 <ul>
     <li>Google Analytics: <a href="https://policies.google.com/privacy?hl=es">https://policies.google.com/privacy?hl=es</a></li>
-    <li>Meta Pixel: <a href="https://www.facebook.com/privacy/policy">https://www.facebook.com/privacy/policy</a></li>
     <li>TikTok Pixel: <a href="https://ads.tiktok.com/i18n/official/policy/privacy">https://ads.tiktok.com/i18n/official/policy/privacy</a></li>
+    <li>Meta Pixel: <a href="https://www.facebook.com/privacy/policy">https://www.facebook.com/privacy/policy</a></li>
     <li>Mixpanel: <a href="https://mixpanel.com/legal/privacy-policy/">https://mixpanel.com/legal/privacy-policy/</a></li>
 </ul>
 <h2>6. Ajuste de la configuración del navegador</h2>
 <p>Si es el único usuario de un dispositivo, puede configurar un período de almacenamiento más largo. Si el dispositivo es compartido, puede configurar el navegador para que borre los datos al cerrar la sesión.</p>
 <h2>7. ¿Cómo desactivar o eliminar Cookies?</h2>
-<p>Puede retirar el consentimiento para las Cookies no esenciales configurando el navegador para bloquearlas o eliminarlas. También puede utilizar las herramientas ofrecidas por los proveedores: Google (<a href="https://tools.google.com/dlpage/gaoptout">https://tools.google.com/dlpage/gaoptout</a>), Meta (<a href="https://www.facebook.com/adpreferences/ad_settings">https://www.facebook.com/adpreferences/ad_settings</a>) y TikTok (<a href="https://ads.tiktok.com/i18n/official/article?aid=111871">https://ads.tiktok.com/i18n/official/article?aid=111871</a>).</p>
+<p>Puede retirar el consentimiento para las Cookies no esenciales configurando el navegador para bloquearlas o eliminarlas. También puede utilizar las herramientas ofrecidas por los proveedores: Google (<a href="https://tools.google.com/dlpage/gaoptout">https://tools.google.com/dlpage/gaoptout</a>) y TikTok (<a href="https://ads.tiktok.com/i18n/official/article?aid=111871">https://ads.tiktok.com/i18n/official/article?aid=111871</a>).</p>
 <p>La desactivación de determinadas Cookies puede afectar al funcionamiento del Sitio. Los navegadores modernos ofrecen ajustes específicos; consulte las instrucciones oficiales:</p>
 <ul>
     <li>Internet Explorer: <a href="https://support.microsoft.com/es-es/help/17442">https://support.microsoft.com/es-es/help/17442</a></li>

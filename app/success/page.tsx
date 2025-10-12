@@ -8,28 +8,18 @@ import type { ReservationPayload } from "@/types/reservation";
 import type { WheelPrize } from "@/types/wheel";
 import { formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
-import { updateFacebookPixelAdvancedMatching } from "@/lib/facebookPixel";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { Locale } from "@/lib/i18n/config";
 import successMessagesRo from "@/messages/success/ro.json";
-import { getBrowserCookieValue } from "@/lib/browserCookies";
+import {
+    hasTrackedMetaPixelLead,
+    markMetaPixelLeadTracked,
+    trackMetaPixelLead,
+    updateMetaPixelAdvancedMatching,
+    resolveMetaPixelNameParts,
+} from "@/lib/metaPixel";
 
 type SuccessMessages = typeof successMessagesRo;
-
-type MetaLeadDetails = {
-    email?: string;
-    phone?: string;
-    fullName?: string;
-    firstName?: string;
-    lastName?: string;
-    gender?: string;
-    dateOfBirth?: string;
-    city?: string;
-    state?: string;
-    postalCode?: string;
-    country?: string;
-    externalId?: string;
-};
 
 const LOCALE_TO_INTL: Record<Locale, string> = {
     ro: "ro-RO",
@@ -41,8 +31,6 @@ const LOCALE_TO_INTL: Record<Locale, string> = {
 };
 
 const DEFAULT_CURRENCY = "EUR";
-const META_LEAD_EVENT_NAME = "Lead";
-const META_LEAD_CRM_NAME = "DaCarsCRM";
 const ENABLE_TIKTOK_LEAD_EVENT = false;
 
 const SESSION_STORAGE_LEAD_KEY_PREFIX = "dacars:success:lead:";
@@ -93,170 +81,15 @@ const resolveReservationTrackingIdentifier = (
     return null;
 };
 
-const toNullableTrimmedString = (value: unknown): string | null => {
-    if (typeof value === "string") {
-        const trimmed = value.trim();
-        return trimmed.length > 0 ? trimmed : null;
-    }
-
-    if (typeof value === "number" || typeof value === "boolean") {
-        const normalized = String(value).trim();
-        return normalized.length > 0 ? normalized : null;
-    }
-
-    return null;
-};
-
-const splitFullName = (
-    fullName: string | null,
-): { firstName?: string; lastName?: string } => {
-    if (!fullName) {
-        return {};
-    }
-
-    const normalized = fullName.trim();
-    if (!normalized) {
-        return {};
-    }
-
-    const parts = normalized.split(/\s+/).filter(Boolean);
-    if (parts.length === 0) {
-        return {};
-    }
-
-    const [first, ...rest] = parts;
-    const last = rest.length > 0 ? rest[rest.length - 1] : undefined;
-
-    return {
-        firstName: first,
-        lastName: last,
-    };
-};
-
-const getReservationStringField = (
-    record: (ReservationPayload & Record<string, unknown>) | null,
-    keys: readonly string[],
-): string | null => {
-    if (!record) {
-        return null;
-    }
-
-    for (const key of keys) {
-        if (key in record) {
-            const value = toNullableTrimmedString((record as Record<string, unknown>)[key]);
-            if (value) {
-                return value;
-            }
-        }
-    }
-
-    return null;
-};
-
-const buildMetaLeadDetails = (
-    reservation: ReservationPayload | null,
-    reservationTrackingIdentifier: string | null,
-): MetaLeadDetails | null => {
-    if (!reservation) {
-        return null;
-    }
-
-    const record = reservation as ReservationPayload & Record<string, unknown>;
-    const details: MetaLeadDetails = {};
-
-    const email = toNullableTrimmedString(record.customer_email);
-    if (email) {
-        details.email = email;
-    }
-
-    const phone = toNullableTrimmedString(record.customer_phone);
-    if (phone) {
-        details.phone = phone;
-    }
-
-    const fullName = toNullableTrimmedString(record.customer_name);
-    if (fullName) {
-        details.fullName = fullName;
-        const { firstName, lastName } = splitFullName(fullName);
-        if (firstName) {
-            details.firstName = firstName;
-        }
-        if (lastName) {
-            details.lastName = lastName;
-        }
-    }
-
-    const gender = getReservationStringField(record, ["customer_gender", "gender"]);
-    if (gender) {
-        details.gender = gender;
-    }
-
-    const dateOfBirth = getReservationStringField(record, [
-        "customer_birthdate",
-        "birthdate",
-        "date_of_birth",
-        "dob",
-    ]);
-    if (dateOfBirth) {
-        details.dateOfBirth = dateOfBirth;
-    }
-
-    const city = getReservationStringField(record, ["customer_city", "city", "customer_location_city"]);
-    if (city) {
-        details.city = city;
-    }
-
-    const state = getReservationStringField(record, ["customer_state", "state", "region", "county"]);
-    if (state) {
-        details.state = state;
-    }
-
-    const postalCode = getReservationStringField(record, [
-        "customer_postal_code",
-        "postal_code",
-        "postalCode",
-        "zip",
-        "zip_code",
-        "customer_zip",
-    ]);
-    if (postalCode) {
-        details.postalCode = postalCode;
-    }
-
-    const country = getReservationStringField(record, ["customer_country", "country"]);
-    if (country) {
-        details.country = country;
-    }
-
-    if (reservationTrackingIdentifier) {
-        details.externalId = reservationTrackingIdentifier;
-    } else {
-        const fallbackExternalId = getReservationStringField(record, [
-            "external_id",
-            "lead_id",
-            "customer_id",
-        ]);
-        if (fallbackExternalId) {
-            details.externalId = fallbackExternalId;
-        }
-    }
-
-    return details;
-};
-
 const SuccessPage = () => {
     const [reservationData, setReservationData] = useState<ReservationPayload | null>(null);
     const { locale, messages, t } = useTranslations<SuccessMessages>("success");
     const intlLocale = LOCALE_TO_INTL[locale] ?? LOCALE_TO_INTL.ro;
     const hasTrackedConversionRef = useRef(false);
-    const hasSentMetaLeadEventRef = useRef(false);
+    const hasTrackedMetaLeadRef = useRef(false);
     const reservationTrackingIdentifier = useMemo(
         () => resolveReservationTrackingIdentifier(reservationData),
         [reservationData],
-    );
-    const metaLeadDetails = useMemo(
-        () => buildMetaLeadDetails(reservationData, reservationTrackingIdentifier),
-        [reservationData, reservationTrackingIdentifier],
     );
 
     const priceFormatter = useMemo(
@@ -320,25 +153,94 @@ const SuccessPage = () => {
     }, []);
 
     useEffect(() => {
-        if (!metaLeadDetails) {
+        if (!reservationData) {
             return;
         }
 
-        updateFacebookPixelAdvancedMatching({
-            email: metaLeadDetails.email ?? null,
-            phone: metaLeadDetails.phone ?? null,
-            fullName: metaLeadDetails.fullName ?? null,
-            firstName: metaLeadDetails.firstName ?? null,
-            lastName: metaLeadDetails.lastName ?? null,
-            gender: metaLeadDetails.gender ?? null,
-            dateOfBirth: metaLeadDetails.dateOfBirth ?? null,
-            city: metaLeadDetails.city ?? null,
-            state: metaLeadDetails.state ?? null,
-            postalCode: metaLeadDetails.postalCode ?? null,
-            country: metaLeadDetails.country ?? null,
-            externalId: metaLeadDetails.externalId ?? null,
+        const { firstName, lastName } = resolveMetaPixelNameParts(
+            (reservationData as { customer_name?: unknown }).customer_name,
+        );
+
+        const customerEmailRaw = (reservationData as { customer_email?: unknown }).customer_email;
+        const customerPhoneRaw = (reservationData as { customer_phone?: unknown }).customer_phone;
+
+        updateMetaPixelAdvancedMatching({
+            em: typeof customerEmailRaw === "string" ? customerEmailRaw : undefined,
+            ph: typeof customerPhoneRaw === "string" ? customerPhoneRaw : undefined,
+            fn: firstName,
+            ln: lastName,
         });
-    }, [metaLeadDetails]);
+
+        if (hasTrackedMetaLeadRef.current) {
+            return;
+        }
+
+        const leadIdentifier = reservationTrackingIdentifier ?? null;
+        if (hasTrackedMetaPixelLead(leadIdentifier)) {
+            hasTrackedMetaLeadRef.current = true;
+            return;
+        }
+
+        const totalAmountRaw = reservationData.total;
+        const totalAmount =
+            typeof totalAmountRaw === "number" && Number.isFinite(totalAmountRaw)
+                ? totalAmountRaw
+                : parseMaybeNumber(totalAmountRaw);
+
+        const car = reservationData.selectedCar ?? null;
+        const carId =
+            car && typeof (car as { id?: unknown }).id === "number" && Number.isFinite((car as { id: number }).id)
+                ? (car as { id: number }).id
+                : undefined;
+
+        const rentalStartRaw = (reservationData as { rental_start_date?: unknown }).rental_start_date;
+        const rentalEndRaw = (reservationData as { rental_end_date?: unknown }).rental_end_date;
+        const fallbackStartRaw = (reservationData as { start_date?: unknown }).start_date;
+        const fallbackEndRaw = (reservationData as { end_date?: unknown }).end_date;
+        const withDepositRaw = (reservationData as { with_deposit?: unknown }).with_deposit;
+
+        const startDate =
+            typeof rentalStartRaw === "string"
+                ? rentalStartRaw
+                : typeof fallbackStartRaw === "string"
+                    ? fallbackStartRaw
+                    : undefined;
+        const endDate =
+            typeof rentalEndRaw === "string"
+                ? rentalEndRaw
+                : typeof fallbackEndRaw === "string"
+                    ? fallbackEndRaw
+                    : undefined;
+        const withDeposit = typeof withDepositRaw === "boolean" ? withDepositRaw : undefined;
+
+        const serviceIdsPayload = Array.isArray(reservationData.service_ids)
+            ? reservationData.service_ids
+            : undefined;
+
+        trackMetaPixelLead({
+            value: totalAmount ?? undefined,
+            currency: DEFAULT_CURRENCY,
+            content_type: "vehicle",
+            content_ids: carId ? [carId] : undefined,
+            contents: carId
+                ? [
+                      {
+                          id: carId,
+                          quantity: 1,
+                          item_price: totalAmount ?? undefined,
+                      },
+                  ]
+                : undefined,
+            reservation_id: reservationTrackingIdentifier ?? undefined,
+            start_date: startDate,
+            end_date: endDate,
+            with_deposit: withDeposit,
+            service_ids: serviceIdsPayload,
+        });
+
+        markMetaPixelLeadTracked(leadIdentifier);
+        hasTrackedMetaLeadRef.current = true;
+    }, [reservationData, reservationTrackingIdentifier]);
 
     useEffect(() => {
         if (!reservationData) {
@@ -423,103 +325,6 @@ const SuccessPage = () => {
             console.warn("Nu s-a putut salva statusul evenimentului Lead", error);
         }
     }, [reservationData, reservationTrackingIdentifier]);
-
-    useEffect(() => {
-        if (!reservationData) {
-            return;
-        }
-        if (hasSentMetaLeadEventRef.current) {
-            return;
-        }
-
-        const normalizedEmail =
-            typeof reservationData.customer_email === "string"
-                ? reservationData.customer_email.trim()
-                : "";
-        const normalizedPhone =
-            typeof reservationData.customer_phone === "string"
-                ? reservationData.customer_phone.trim()
-                : "";
-        const leadId = reservationTrackingIdentifier;
-        const normalizedLeadId =
-            typeof leadId === "string" && leadId.trim().length > 0 ? leadId.trim() : "";
-        const normalizedExternalId =
-            typeof metaLeadDetails?.externalId === "string" && metaLeadDetails.externalId.trim().length > 0
-                ? metaLeadDetails.externalId.trim()
-                : "";
-
-        if (!(normalizedEmail || normalizedPhone || normalizedLeadId || normalizedExternalId)) {
-            return;
-        }
-
-        const sendMetaLeadEvent = async () => {
-            try {
-                let ipAddress: string | undefined;
-
-                if (typeof window !== "undefined") {
-                    try {
-                        const response = await fetch("/api/ip", { cache: "no-store" });
-                        if (response.ok) {
-                            const data = (await response.json()) as { ip?: unknown };
-                            const rawIp = typeof data.ip === "string" ? data.ip.trim() : "";
-                            if (rawIp.length > 0) {
-                                ipAddress = rawIp;
-                            }
-                        }
-                    } catch (error) {
-                        console.warn("Nu s-a putut obține adresa IP pentru Meta Lead", error);
-                    }
-                }
-
-                let fbc: string | undefined;
-                let fbp: string | undefined;
-                let userAgent: string | undefined;
-
-                if (typeof window !== "undefined") {
-                    const clickId = getBrowserCookieValue("_fbc");
-                    const browserId = getBrowserCookieValue("_fbp");
-                    const agent = window.navigator?.userAgent;
-
-                    if (clickId) {
-                        fbc = clickId;
-                    }
-
-                    if (browserId) {
-                        fbp = browserId;
-                    }
-
-                    if (typeof agent === "string") {
-                        const trimmedAgent = agent.trim();
-                        if (trimmedAgent.length > 0) {
-                            userAgent = trimmedAgent;
-                        }
-                    }
-                }
-
-                await fetch("/api/meta-leads", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        email: normalizedEmail || undefined,
-                        phone: normalizedPhone || undefined,
-                        leadId: normalizedLeadId || undefined,
-                        eventName: META_LEAD_EVENT_NAME,
-                        crmName: META_LEAD_CRM_NAME,
-                        fbc,
-                        fbp,
-                        ipAddress,
-                        userAgent,
-                        externalId: normalizedExternalId || undefined,
-                    }),
-                });
-            } catch (error) {
-                console.warn("Nu s-a putut trimite evenimentul Meta Lead", error);
-            }
-        };
-
-        void sendMetaLeadEvent();
-        hasSentMetaLeadEventRef.current = true;
-    }, [metaLeadDetails, reservationData, reservationTrackingIdentifier]);
 
     const wheelPrize = reservationData?.wheel_prize ?? null;
     const wheelPrizeDiscountRaw = reservationData?.wheel_prize_discount ??

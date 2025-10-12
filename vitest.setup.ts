@@ -40,22 +40,3 @@ vi.mock('next/image', () => ({
   },
 }));
 
-vi.mock('react-facebook-pixel', () => {
-  const noop = vi.fn();
-
-  return {
-    __esModule: true,
-    default: {
-      init: noop,
-      pageView: noop,
-      track: noop,
-      trackSingle: noop,
-      trackCustom: noop,
-      trackSingleCustom: noop,
-      loadPixel: noop,
-      revokeConsent: noop,
-      grantConsent: noop,
-      clear: noop,
-    },
-  };
-});

@@ -19,6 +19,7 @@ import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackTikTokEvent, TIKTOK_CONTENT_TYPE, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
+import { trackMetaPixelViewContent } from "@/lib/metaPixel";
 
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
@@ -576,6 +577,34 @@ const FleetPage = () => {
             contents,
             currency: "RON",
             value: contents[0]?.price ?? undefined,
+            total_results: totalCars,
+            search_term: searchTerm || undefined,
+            sort_by: sortBy,
+        });
+
+        const metaContents = contents
+            .filter((item) => typeof item.content_id === "number")
+            .map((item) => ({
+                id: item.content_id,
+                quantity: item.quantity ?? 1,
+                item_price:
+                    typeof item.price === "number" && Number.isFinite(item.price)
+                        ? item.price
+                        : undefined,
+            }));
+
+        const metaContentIds = metaContents.map((item) => item.id);
+        const primaryPrice =
+            typeof contents[0]?.price === "number" && Number.isFinite(contents[0]?.price)
+                ? (contents[0]?.price as number)
+                : undefined;
+
+        trackMetaPixelViewContent({
+            content_type: "vehicle",
+            content_ids: metaContentIds,
+            contents: metaContents,
+            currency: "RON",
+            value: primaryPrice,
             total_results: totalCars,
             search_term: searchTerm || undefined,
             sort_by: sortBy,

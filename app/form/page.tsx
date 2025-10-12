@@ -10,10 +10,12 @@ import { apiClient } from "@/lib/api";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import {
-    trackFacebookPixelEvent,
-    FACEBOOK_PIXEL_EVENTS,
-    updateFacebookPixelAdvancedMatching,
-} from "@/lib/facebookPixel";
+    trackMetaPixelLead,
+    trackMetaPixelViewContent,
+    updateMetaPixelAdvancedMatching,
+    markMetaPixelLeadTracked,
+    resolveMetaPixelNameParts,
+} from "@/lib/metaPixel";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
@@ -451,13 +453,6 @@ const ReservationPage = () => {
         coupon_code: storedDiscount?.code || "",
     });
     useEffect(() => {
-        updateFacebookPixelAdvancedMatching({
-            email: formData.customer_email,
-            phone: formData.customer_phone,
-            fullName: formData.customer_name,
-        });
-    }, [formData.customer_email, formData.customer_phone, formData.customer_name]);
-    useEffect(() => {
         if (booking.startDate && booking.endDate && booking.selectedCar) {
             const [rental_start_date, rental_start_time] = booking.startDate.split("T");
             const [rental_end_date, rental_end_time] = booking.endDate.split("T");
@@ -590,6 +585,7 @@ const ReservationPage = () => {
     const [isValidatingCode, setIsValidatingCode] = useState(false);
     const [originalCar, setOriginalCar] = useState<Car | null>(storedOriginalCar);
     const checkoutLoadedTrackedRef = useRef(false);
+    const hasTrackedMetaViewContentRef = useRef(false);
     const lastValidatedRef = useRef<{ carId: number | null; withDeposit: boolean | null }>({
         carId: null,
         withDeposit: null,
@@ -1022,27 +1018,6 @@ const ReservationPage = () => {
             return totalWithoutDeposit || totalWithDeposit || 0;
         })();
 
-        const estimatedMetaPayload = {
-            value: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
-            currency: DEFAULT_CURRENCY,
-            content_ids: [String(selectedCar.id)],
-            content_name: selectedCar.name,
-            content_type: "car",
-            contents: [
-                {
-                    id: String(selectedCar.id),
-                    quantity: 1,
-                    item_price: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
-                    title: selectedCar.name,
-                },
-            ],
-            start_date: bookingStartDate,
-            end_date: bookingEndDate,
-            with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
-            service_ids: serviceIds,
-            applied_offer_ids: appliedOfferIds,
-        } as const;
-
         trackMixpanelEvent("checkout_loaded", {
             selected_car_id: selectedCar.id,
             selected_car_name: selectedCar.name,
@@ -1073,10 +1048,6 @@ const ReservationPage = () => {
             with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
             service_ids: serviceIds,
             applied_offer_ids: appliedOfferIds,
-        });
-
-        trackFacebookPixelEvent(FACEBOOK_PIXEL_EVENTS.VIEW_CONTENT, {
-            ...estimatedMetaPayload,
         });
 
         checkoutLoadedTrackedRef.current = true;
@@ -1527,6 +1498,48 @@ const ReservationPage = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [booking.selectedCar, booking.withDeposit, isValidatingCode]);
 
+    useEffect(() => {
+        if (hasTrackedMetaViewContentRef.current) {
+            return;
+        }
+
+        if (!booking.startDate || !booking.endDate || !selectedCar) {
+            return;
+        }
+
+        const value = Number.isFinite(totalValue)
+            ? Math.round(totalValue * 100) / 100
+            : undefined;
+
+        trackMetaPixelViewContent({
+            content_type: "vehicle",
+            content_ids: [selectedCar.id],
+            contents: [
+                {
+                    id: selectedCar.id,
+                    quantity: 1,
+                    item_price: value,
+                },
+            ],
+            currency: DEFAULT_CURRENCY,
+            value,
+            start_date: booking.startDate,
+            end_date: booking.endDate,
+            with_deposit:
+                typeof booking.withDeposit === "boolean"
+                    ? booking.withDeposit
+                    : undefined,
+        });
+
+        hasTrackedMetaViewContentRef.current = true;
+    }, [
+        booking.endDate,
+        booking.startDate,
+        booking.withDeposit,
+        selectedCar,
+        totalValue,
+    ]);
+
     if (!booking.startDate || !booking.endDate || !booking.selectedCar) {
         return (
             <div className="pt-16 lg:pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1709,6 +1722,40 @@ const ReservationPage = () => {
                 wheel_prize_id: payload.wheel_of_fortune_prize_id ?? null,
                 applied_offer_ids: appliedOfferIds,
             });
+            const { firstName, lastName } = resolveMetaPixelNameParts(
+                formData.customer_name,
+            );
+            updateMetaPixelAdvancedMatching({
+                em: formData.customer_email,
+                ph: formData.customer_phone,
+                fn: firstName,
+                ln: lastName,
+            });
+            const leadValue = Number.isFinite(totalAfterAdjustments)
+                ? totalAfterAdjustments
+                : undefined;
+            trackMetaPixelLead({
+                content_type: "vehicle",
+                content_ids: [selectedCar.id],
+                contents: [
+                    {
+                        id: selectedCar.id,
+                        quantity: 1,
+                        item_price: leadValue,
+                    },
+                ],
+                currency: DEFAULT_CURRENCY,
+                value: leadValue,
+                reservation_id: reservationId,
+                service_ids: serviceIds,
+                start_date: booking.startDate || undefined,
+                end_date: booking.endDate || undefined,
+                with_deposit:
+                    typeof booking.withDeposit === "boolean"
+                        ? booking.withDeposit
+                        : undefined,
+            });
+            markMetaPixelLeadTracked(reservationId);
             localStorage.setItem(
                 "reservationData",
                 JSON.stringify({
