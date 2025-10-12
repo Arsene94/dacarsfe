@@ -116,24 +116,149 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <>
             <Script id="meta-pixel" strategy="afterInteractive">
               {`
-                !(function (f, b, e, v, n, t, s) {
-                  if (f.fbq) return;
-                  n = f.fbq = function () {
-                    n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+                (function () {
+                  var PIXEL_ID = ${JSON.stringify(metaPixelId)};
+                  if (!PIXEL_ID) {
+                    return;
+                  }
+
+                  var warnedDuplicate = false;
+
+                  var allowCommand = function (command, args) {
+                    if (command !== 'init') {
+                      return true;
+                    }
+
+                    var candidate = '';
+                    if (args && args.length > 1 && typeof args[1] === 'string') {
+                      candidate = args[1].trim();
+                    }
+
+                    if (!candidate || candidate === PIXEL_ID) {
+                      return Boolean(candidate);
+                    }
+
+                    if (!warnedDuplicate && typeof console !== 'undefined' && typeof console.warn === 'function') {
+                      console.warn('[Meta Pixel] A fost ignorat un init pentru un Pixel secundar.');
+                      warnedDuplicate = true;
+                    }
+
+                    return false;
                   };
-                  if (!f._fbq) f._fbq = n;
-                  n.push = n;
-                  n.loaded = !0;
-                  n.version = '2.0';
-                  n.queue = [];
-                  t = b.createElement(e);
-                  t.async = !0;
-                  t.src = 'https://connect.facebook.net/en_US/fbevents.js';
-                  s = b.getElementsByTagName(e)[0];
-                  s.parentNode.insertBefore(t, s);
-                })(window, document, 'script');
-                fbq('init', ${JSON.stringify(metaPixelId)});
-                fbq('track', 'PageView');
+
+                  var wrapCallMethod = function (instance) {
+                    if (!instance || typeof instance.callMethod !== 'function' || instance.__dacarsCallGuarded) {
+                      return;
+                    }
+
+                    var originalCall = instance.callMethod;
+                    instance.callMethod = function () {
+                      var command = arguments.length > 0 ? arguments[0] : null;
+                      if (!allowCommand(command, arguments)) {
+                        return;
+                      }
+                      return originalCall.apply(instance, arguments);
+                    };
+
+                    instance.__dacarsCallGuarded = true;
+                  };
+
+                  var guardFbq = function (instance) {
+                    if (!instance) {
+                      return instance;
+                    }
+
+                    var needsWrap = !instance.__dacarsGuarded;
+                    var original = needsWrap ? instance : instance.__dacarsOriginal || instance;
+
+                    if (!needsWrap) {
+                      wrapCallMethod(instance);
+                      return instance;
+                    }
+
+                    var guarded = function () {
+                      var command = arguments.length > 0 ? arguments[0] : null;
+                      if (!allowCommand(command, arguments)) {
+                        return;
+                      }
+                      return original.apply(this, arguments);
+                    };
+
+                    for (var key in original) {
+                      if (Object.prototype.hasOwnProperty.call(original, key)) {
+                        guarded[key] = original[key];
+                      }
+                    }
+
+                    guarded.push = guarded;
+                    guarded.__dacarsGuarded = true;
+                    guarded.__dacarsOriginal = original;
+
+                    wrapCallMethod(guarded);
+
+                    return guarded;
+                  };
+
+                  !(function (f, b, e, v, n, t, s) {
+                    if (f.fbq) {
+                      f.fbq = guardFbq(f.fbq);
+                      if (f._fbq !== f.fbq) {
+                        f._fbq = f.fbq;
+                      }
+                      wrapCallMethod(f.fbq);
+                      return;
+                    }
+                    n = function () {
+                      n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+                    };
+                    f.fbq = guardFbq(n);
+                    f.fbq.push = f.fbq;
+                    f.fbq.loaded = !0;
+                    f.fbq.version = '2.0';
+                    f.fbq.queue = [];
+                    if (!f._fbq) {
+                      f._fbq = f.fbq;
+                    }
+                    t = b.createElement(e);
+                    t.async = !0;
+                    t.src = 'https://connect.facebook.net/en_US/fbevents.js';
+                    t.onload = function () {
+                      wrapCallMethod(f.fbq);
+                    };
+                    s = b.getElementsByTagName(e)[0];
+                    s.parentNode.insertBefore(t, s);
+                  })(window, document, 'script');
+
+                  if (window.fbq) {
+                    window.fbq = guardFbq(window.fbq);
+                    if (window._fbq !== window.fbq) {
+                      window._fbq = window.fbq;
+                    }
+                    wrapCallMethod(window.fbq);
+                  }
+
+                  try {
+                    if (window.fbq && typeof window.fbq.getState === 'function') {
+                      var state = window.fbq.getState();
+                      if (state && Array.isArray(state.pixels)) {
+                        state.pixels = state.pixels.filter(function (pixel) {
+                          return pixel && pixel.id === PIXEL_ID;
+                        });
+                      }
+                    }
+                  } catch (error) {
+                    if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+                      console.warn('[Meta Pixel] Nu am putut filtra lista de pixeli', error);
+                    }
+                  }
+
+                  if (window.__dacarsMetaPixelId !== PIXEL_ID) {
+                    window.__dacarsMetaPixelId = PIXEL_ID;
+                    window.fbq('init', PIXEL_ID);
+                  }
+
+                  window.fbq('track', 'PageView');
+                })();
               `}
             </Script>
             <noscript
