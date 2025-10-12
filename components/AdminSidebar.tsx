@@ -570,15 +570,15 @@ const menuItems: readonly AdminSidebarItem[] = [
       "cashflows",
     ]),
   },
-  {
-    name: "Cheltuieli flotă",
-    href: "/admin/expenses",
-    icon: Receipt,
-    requiredPermissions: buildPermissionList("expenses", [
-      "expense",
-      "fleet-expenses",
-    ]),
-  },
+  // {
+  //   name: "Cheltuieli flotă",
+  //   href: "/admin/expenses",
+  //   icon: Receipt,
+  //   requiredPermissions: buildPermissionList("expenses", [
+  //     "expense",
+  //     "fleet-expenses",
+  //   ]),
+  // },
   {
     name: "Service mașini",
     href: "/admin/service-reports",
@@ -589,12 +589,12 @@ const menuItems: readonly AdminSidebarItem[] = [
       "maintenance",
     ]),
   },
-  {
-    name: "Activități operaționale",
-    href: "/admin/activity-tracking",
-    icon: ClipboardList,
-    restrictedToUserIds: [1],
-  },
+  // {
+  //   name: "Activități operaționale",
+  //   href: "/admin/activity-tracking",
+  //   icon: ClipboardList,
+  //   restrictedToUserIds: [1],
+  // },
   {
     name: "Mail Branding",
     href: "/admin/mail-branding",
