@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { ChartData, ChartOptions } from "chart.js";
 import { ArrowRight, CalendarDays, RefreshCw } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { AdminReportOverviewResponse } from "@/types/reports";
@@ -15,8 +14,8 @@ import {
   ReportSection,
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
-import { BarChart } from "@/components/admin/reports/ChartPrimitives";
-import "@/components/admin/reports/chartSetup";
+import type { BarSeries } from "@/components/admin/reports/ChartPrimitives";
+import { SimpleBarChart } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
 import { formatCurrency } from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
@@ -103,67 +102,50 @@ export default function AdminReportsOverviewPage() {
     setFormQuarter(data?.quarter.code ?? "");
   }, [data]);
 
-  const quarterChartData = useMemo<ChartData<"bar"> | null>(() => {
+  const quarterChartData = useMemo(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.quarter.chart.map((point) => point.label),
-      datasets: [
-        {
-          label: data.quarter.code,
-          data: data.quarter.chart.map((point) => point.current),
-          backgroundColor: getColor("primary"),
-          borderRadius: 12,
-        },
-        {
-          label: data.quarter.comparison_code,
-          data: data.quarter.chart.map((point) => point.previous),
-          backgroundColor: getColor("accentLight"),
-          borderRadius: 12,
-        },
-      ],
-    } satisfies ChartData<"bar">;
+    return data.quarter.chart.map((point) => ({
+      label: point.label,
+      current: point.current,
+      previous: point.previous,
+    }));
   }, [data]);
 
-  const quarterChartOptions = useMemo<ChartOptions<"bar">>(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "bottom",
-        labels: {
-          usePointStyle: true,
-        },
-      },
-      tooltip: {
-        callbacks: {
-          label: (context) => {
-            const currency = data?.week.currency ?? "EUR";
-            const value = context.raw as number;
-            return `${context.dataset.label}: ${formatCurrency(value, currency)}`;
-          },
-        },
-      },
+  const quarterChartSeries = useMemo<BarSeries[]>(
+    () =>
+      data
+        ? [
+            {
+              dataKey: "current",
+              name: data.quarter.code,
+              color: getColor("primary"),
+              radius: 12,
+            },
+            {
+              dataKey: "previous",
+              name: data.quarter.comparison_code,
+              color: getColor("accentLight"),
+              radius: 12,
+            },
+          ]
+        : [],
+    [data],
+  );
+
+  const formatThousands = useCallback(
+    (value: number | string) => {
+      if (typeof value !== "number") {
+        return value;
+      }
+      if (Math.abs(value) < 1000) {
+        return value.toLocaleString("ro-RO", { maximumFractionDigits: 0 });
+      }
+      return `${(value / 1000).toFixed(0)}k`;
     },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { color: "#1A3661" },
-      },
-      y: {
-        grid: { color: "#E2E8F0" },
-        ticks: {
-          callback: (value) => {
-            if (typeof value === "number") {
-              return `${(value / 1000).toFixed(0)}k`;
-            }
-            return value;
-          },
-        },
-      },
-    },
-  }), [data]);
+    [],
+  );
 
   return (
     <div className="space-y-6 p-6 lg:p-8">
@@ -286,7 +268,15 @@ export default function AdminReportsOverviewPage() {
           >
             <ChartContainer>
               {quarterChartData ? (
-                <BarChart options={quarterChartOptions} data={quarterChartData} />
+                <SimpleBarChart
+                  data={quarterChartData}
+                  xKey="label"
+                  series={quarterChartSeries}
+                  yTickFormatter={formatThousands}
+                  valueFormatter={(value, name) =>
+                    `${name}: ${formatCurrency(value, data.week.currency)}`
+                  }
+                />
               ) : null}
             </ChartContainer>
           </ReportSection>

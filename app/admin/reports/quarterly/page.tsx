@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ChartData, ChartOptions } from "chart.js";
 import { Briefcase, RefreshCw, Sparkles } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { AdminReportQuarterlyResponse } from "@/types/reports";
@@ -15,11 +14,8 @@ import {
   ReportSection,
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
-import {
-  BarChart,
-  DoughnutChart,
-} from "@/components/admin/reports/ChartPrimitives";
-import "@/components/admin/reports/chartSetup";
+import type { BarSeries, DoughnutSlice } from "@/components/admin/reports/ChartPrimitives";
+import { DoughnutChart, SimpleBarChart } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
 import { formatCurrency } from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
@@ -137,158 +133,97 @@ export default function AdminQuarterlyReportPage() {
     });
   }, [data, formQuarter]);
 
-  const revenueData = useMemo<ChartData<"bar"> | null>(() => {
+  const formatThousands = useCallback((value: number | string) => {
+    if (typeof value !== "number") {
+      return value;
+    }
+    if (Math.abs(value) < 1000) {
+      return value.toLocaleString("ro-RO", { maximumFractionDigits: 0 });
+    }
+    return `${(value / 1000).toFixed(0)}k`;
+  }, []);
+
+  const revenueData = useMemo(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.quarterly_revenue.map((item) => item.label),
-      datasets: [
-        {
-          label: data.period.label,
-          data: data.quarterly_revenue.map((item) => item.current),
-          backgroundColor: getColor("primary"),
-          borderRadius: 12,
-        },
-        {
-          label: data.period.comparison.label,
-          data: data.quarterly_revenue.map((item) => item.previous),
-          backgroundColor: getColor("accentLight"),
-          borderRadius: 12,
-        },
-      ],
-    } satisfies ChartData<"bar">;
+    return data.quarterly_revenue.map((item) => ({
+      label: item.label,
+      current: item.current,
+      previous: item.previous,
+    }));
   }, [data]);
 
-  const revenueOptions = useMemo<ChartOptions<"bar">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const currency = data?.kpi.currency ?? "EUR";
-              const value = context.raw as number;
-              return `${context.dataset.label}: ${formatCurrency(value, currency)}`;
+  const revenueSeries = useMemo<BarSeries[]>(
+    () =>
+      data
+        ? [
+            {
+              dataKey: "current",
+              name: data.period.label,
+              color: getColor("primary"),
+              radius: 12,
             },
-          },
-        },
-      },
-      scales: {
-        x: { grid: { display: false } },
-        y: {
-          grid: { color: "#E2E8F0" },
-          ticks: {
-            callback: (value) => {
-              if (typeof value === "number") {
-                return `${(value / 1000).toFixed(0)}k`;
-              }
-              return value;
+            {
+              dataKey: "previous",
+              name: data.period.comparison.label,
+              color: getColor("accentLight"),
+              radius: 12,
             },
-          },
-        },
-      },
-    }),
+          ]
+        : [],
     [data],
   );
 
-  const profitBySegmentData = useMemo<ChartData<"bar"> | null>(() => {
+  const profitBySegmentData = useMemo(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.profit_by_segment.map((item) => item.segment),
-      datasets: [
-        {
-          label: data.period.label,
-          data: data.profit_by_segment.map((item) => item.current),
-          backgroundColor: getColor("accent"),
-          borderRadius: 12,
-        },
-        {
-          label: data.period.comparison.label,
-          data: data.profit_by_segment.map((item) => item.previous),
-          backgroundColor: getColor("info"),
-          borderRadius: 12,
-        },
-      ],
-    } satisfies ChartData<"bar">;
+    return data.profit_by_segment.map((item) => ({
+      segment: item.segment,
+      current: item.current,
+      previous: item.previous,
+    }));
   }, [data]);
 
-  const profitBySegmentOptions = useMemo<ChartOptions<"bar">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: "y",
-      plugins: {
-        legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const currency = data?.kpi.currency ?? "EUR";
-              const value = context.raw as number;
-              return `${context.dataset.label}: ${formatCurrency(value, currency)}`;
+  const profitBySegmentSeries = useMemo<BarSeries[]>(
+    () =>
+      data
+        ? [
+            {
+              dataKey: "current",
+              name: data.period.label,
+              color: getColor("accent"),
+              radius: 12,
             },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { color: "#E2E8F0" },
-          ticks: {
-            callback: (value) => {
-              if (typeof value === "number") {
-                return `${(value / 1000).toFixed(0)}k`;
-              }
-              return value;
+            {
+              dataKey: "previous",
+              name: data.period.comparison.label,
+              color: getColor("info"),
+              radius: 12,
             },
-          },
-        },
-        y: { grid: { display: false } },
-      },
-    }),
+          ]
+        : [],
     [data],
   );
 
-  const availabilityData = useMemo<ChartData<"doughnut"> | null>(() => {
+  const availabilityData = useMemo<DoughnutSlice[] | null>(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.fleet_availability.map((item) => item.label),
-      datasets: [
-        {
-          data: data.fleet_availability.map((item) => item.current_percent),
-          backgroundColor: [
-            getColor("primary"),
-            getColor("accent"),
-            getColor("warning"),
-            getColor("neutral"),
-          ],
-          borderColor: "#ffffff",
-          borderWidth: 2,
-        },
-      ],
-    } satisfies ChartData<"doughnut">;
+    const colors = [
+      getColor("primary"),
+      getColor("accent"),
+      getColor("warning"),
+      getColor("neutral"),
+    ];
+    return data.fleet_availability.map((item, index) => ({
+      name: item.label,
+      value: item.current_percent,
+      color: colors[index % colors.length],
+      previousPercent: item.previous_percent,
+    }));
   }, [data]);
-
-  const availabilityOptions = useMemo<ChartOptions<"doughnut">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (context) => `${context.label}: ${context.raw}%`,
-          },
-        },
-      },
-    }),
-    [],
-  );
 
   const topProfitSegment = useMemo(() => {
     if (!data || data.profit_by_segment.length === 0) {
@@ -451,7 +386,15 @@ export default function AdminQuarterlyReportPage() {
           >
             <ChartContainer>
               {revenueData ? (
-                <BarChart options={revenueOptions} data={revenueData} />
+                <SimpleBarChart
+                  data={revenueData}
+                  xKey="label"
+                  series={revenueSeries}
+                  yTickFormatter={formatThousands}
+                  valueFormatter={(value, name) =>
+                    `${name}: ${formatCurrency(value, data.kpi.currency)}`
+                  }
+                />
               ) : null}
             </ChartContainer>
           </ReportSection>
@@ -463,7 +406,16 @@ export default function AdminQuarterlyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {profitBySegmentData ? (
-                  <BarChart options={profitBySegmentOptions} data={profitBySegmentData} />
+                  <SimpleBarChart
+                    data={profitBySegmentData}
+                    xKey="segment"
+                    series={profitBySegmentSeries}
+                    layout="vertical"
+                    yTickFormatter={formatThousands}
+                    valueFormatter={(value, name) =>
+                      `${name}: ${formatCurrency(value, data.kpi.currency)}`
+                    }
+                  />
                 ) : null}
               </ChartContainer>
             </ReportSection>
@@ -474,7 +426,15 @@ export default function AdminQuarterlyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {availabilityData ? (
-                  <DoughnutChart options={availabilityOptions} data={availabilityData} />
+                  <DoughnutChart
+                    data={availabilityData}
+                    valueFormatter={(value, name, payload) => {
+                      const previous = payload?.previousPercent;
+                      return previous !== undefined
+                        ? `${name}: ${value}% (anterior ${previous}%)`
+                        : `${name}: ${value}%`;
+                    }}
+                  />
                 ) : null}
               </ChartContainer>
             </ReportSection>
