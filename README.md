@@ -103,13 +103,16 @@ Aplicația presupune un backend Laravel ce expune API-uri REST securizate.
 | `ANALYZE` | Activează bundle analyzer (setare Next.js). | – |
 | `NEXT_PUBLIC_MIXPANEL_DEBUG` | Controlează logging-ul de debugging pentru evenimentele Mixpanel. Setează `true` pentru a vedea în consolă toate evenimentele, `false` pentru a dezactiva log-urile chiar și în dezvoltare. | – (implicit activ în dezvoltare) |
 | `NEXT_PUBLIC_TIKTOK_PIXEL_ID` | ID-ul pixelului TikTok folosit pentru evenimentele de marketing descrise în `docs/tiktok-pixel.md`. | – |
-| `NEXT_PUBLIC_META_PIXEL_ID` | ID-ul Meta Pixel (Facebook) folosit pentru evenimentele descrise în `docs/meta-pixel.md`. | – |
+| `NEXT_PUBLIC_META_PIXEL_ID` | ID-ul Meta Pixel folosit pe client (ex. `721655939471514`). | – |
+| `META_ACCESS_TOKEN` | Token server-side pentru Meta Conversions API. Nu se expune în bundle-ul client. | – |
+| `META_DATASET_ID` | ID-ul dataset-ului Meta Conversions API (pentru DaCars: `721655939471514`). | – |
+| `META_API_VERSION` | Versiunea Graph API folosită pentru CAPI (implicit `v24.0`). | `v24.0` |
 
 Tokenul de autentificare este setat prin `apiClient.setToken` după login și salvat în `localStorage` sub `auth_token`. Toate request-urile includ antetul `X-API-KEY`, iar metodele standard `getCars`, `getBookings`, `getServices`, `getWheelPrizes` mapează răspunsurile la structurile TypeScript definite în `types/`.
 
 ## Configurare și rulare
 1. **Instalare dependențe**: `npm install`.
-2. **Configurare `.env.local`** cu variabilele din tabelul de mai sus.
+2. **Configurare `.env.local`**: pornește de la `cp .env.local.example .env.local` și completează variabilele din tabelul de mai sus (tokenul Meta rămâne doar pe server!).
 3. **Rulare în dezvoltare**: `npm run dev` (pornește Next.js cu Turbopack și reîncarcare live).
 4. **Build de producție**: `npm run build` (compilează Tailwind, apoi rulează `next build`).
 5. **Pornire server producție**: `npm run start`.
@@ -117,6 +120,14 @@ Tokenul de autentificare este setat prin `apiClient.setToken` după login și sa
 7. **Optimizare imagini**: `npm run images:webp` rulează scriptul `scripts/convert-images.cjs` care convertește întreg directorul `public/` în WebP (acceptă opțiuni precum `--quality`, `--effort`, `--lossless`) și actualizează manifestul `config/webp-manifest.json` folosit de middleware pentru rescrierea automată în format WebP. Pentru URL-urile dinamice sau remote necontrolate, endpoint-ul `app/api/images/webp/route.ts` face conversia la cerere, folosind allowlist-ul din `config/image-proxy.json` și extensia `resolveMediaUrl` din `lib/media.ts`.
 
 > **Sfat:** în mediile CI setați `CI=1` înainte de `npm run lint` pentru a opri fix-urile interactive.
+
+### Integrare Meta Pixel + Conversions API
+
+- **Demo end-to-end**: ruta `/demo-lead` include un formular ce trimite evenimentul `Lead` atât prin Meta Pixel, cât și prin Meta Conversions API (CAPI) folosind același `event_id` pentru deduplicare.
+- **Hashing obligatoriu**: emailul și telefonul sunt normalizate și hash-uite cu SHA-256 înainte de a ajunge în server; valorile raw nu sunt logate.
+- **fbc/fbp & test events**: endpoint-ul `/api/meta/lead` citește automat cookie-urile `_fbc`/`_fbp` sau parametrii `fbclid` și acceptă `test_event_code` (setat din formular) pentru a valida integrarea în Events Manager → Test Events.
+- **Configurare rapidă**: setați `META_ACCESS_TOKEN`, `META_DATASET_ID`, `META_API_VERSION` și `NEXT_PUBLIC_META_PIXEL_ID` în `.env.local`, rulați `npm run dev` (sau `pnpm dev`), apoi folosiți `/demo-lead` cu un `test_event_code` din Events Manager pentru a vedea evenimentele în timp real.
+- **Bune practici**: nu logați PII în clar, reutilizați `setMetaEventId` + `trackMetaEvent` pentru deduplicare, și curățați câmpurile `undefined` înainte de a construi payload-ul Meta.
 
 ## Calitate și testare
 - **ESLint + TypeScript strict**: se rulează prin `npm run lint`, folosind `eslint-config-next`, `eslint-plugin-react`, `eslint-plugin-tailwindcss` și reguli suplimentare pentru accesibilitate.

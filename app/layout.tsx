@@ -17,7 +17,7 @@ import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale
 import MixpanelInitializer from "../components/MixpanelInitializer";
 import TikTokPixelScript from "../components/TikTokPixelScript";
 import TikTokPixelInitializer from "../components/TikTokPixelInitializer";
-import PixelTracker from "../components/PixelTracker";
+import MetaPixelListener from "./(tracking)/meta-pixel-listener";
 import { GoogleAnalytics } from '@next/third-parties/google'
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 
@@ -79,6 +79,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     ...localeBootstrapConfig,
     initialLocale,
   });
+  const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim();
 
   return (
     <html
@@ -108,9 +109,38 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <Suspense fallback={null}>
         <MixpanelInitializer/>
         <TikTokPixelInitializer/>
-        <PixelTracker/>
         <ServiceWorkerRegistration />
+        <MetaPixelListener />
         </Suspense>
+        {metaPixelId ? (
+          <>
+            <Script id="meta-pixel" strategy="afterInteractive">
+              {`
+                !(function (f, b, e, v, n, t, s) {
+                  if (f.fbq) return;
+                  n = f.fbq = function () {
+                    n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+                  };
+                  if (!f._fbq) f._fbq = n;
+                  n.push = n;
+                  n.loaded = !0;
+                  n.version = '2.0';
+                  n.queue = [];
+                  t = b.createElement(e);
+                  t.async = !0;
+                  t.src = 'https://connect.facebook.net/en_US/fbevents.js';
+                  s = b.getElementsByTagName(e)[0];
+                  s.parentNode.insertBefore(t, s);
+                })(window, document, 'script');
+                fbq('init', ${JSON.stringify(metaPixelId)});
+                fbq('track', 'PageView');
+              `}
+            </Script>
+            <noscript>
+              {`<img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${metaPixelId}&ev=PageView&noscript=1" />`}
+            </noscript>
+          </>
+        ) : null}
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`
             (function() {
