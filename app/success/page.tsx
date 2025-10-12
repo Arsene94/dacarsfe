@@ -368,6 +368,7 @@ const SuccessPage = () => {
         if (!wheelPrize) {
             return null;
         }
+
         const prizeId = parseMaybeNumber((wheelPrize as { prize_id?: unknown }).prize_id) ?? 0;
         const periodId = parseMaybeNumber((wheelPrize as { wheel_of_fortune_id?: unknown }).wheel_of_fortune_id) ?? 0;
         const titleSource = (wheelPrize as { title?: unknown }).title;
@@ -377,15 +378,27 @@ const SuccessPage = () => {
             null;
         const typeSource = (wheelPrize as { type?: unknown }).type;
         const amountValue = parseMaybeNumber(amountSource);
-        const titleValue = typeof titleSource === "string" && titleSource.trim().length > 0
-            ? titleSource
-            : "Premiu DaCars";
+        const hasRelevantData = [
+            prizeId > 0,
+            periodId > 0,
+            typeof titleSource === "string" && titleSource.trim().length > 0,
+            typeof descriptionSource === "string" && descriptionSource.trim().length > 0,
+            typeof amountValue === "number" && Number.isFinite(amountValue) && amountValue !== 0,
+            typeof typeSource === "string" && typeSource.trim().length > 0,
+        ].some(Boolean);
+
+        if (!hasRelevantData) {
+            return null;
+        }
+
+        const titleValue = typeof titleSource === "string" ? titleSource.trim() : "";
         const descriptionValue = typeof descriptionSource === "string" && descriptionSource.trim().length > 0
             ? descriptionSource
             : null;
         const typeValue = typeof typeSource === "string" && typeSource.trim().length > 0
             ? typeSource
             : "other";
+
         return {
             id: prizeId,
             period_id: periodId,
@@ -431,16 +444,39 @@ const SuccessPage = () => {
         typeof wheelPrizeExpiryRaw === "string" && wheelPrizeExpiryRaw.trim().length > 0
             ? formatWheelPrizeExpiry(wheelPrizeExpiryRaw, intlLocale)
             : null;
-    const hasWheelPrize = Boolean(wheelPrize);
     const wheelPrizeAmountSuffix =
         typeof wheelPrizeAmountLabel === "string" && wheelPrizeAmountLabel.length > 0
             ? t("wheelPrize.amountSuffix", { values: { amount: wheelPrizeAmountLabel } })
             : "";
 
-    const wheelPrizeTitle = (() => {
+    const wheelPrizeTitle = useMemo(() => {
         const titleSource = (wheelPrize as { title?: unknown } | null)?.title;
-        return typeof titleSource === "string" ? titleSource : "";
-    })();
+        if (typeof titleSource === "string") {
+            const trimmed = titleSource.trim();
+            if (trimmed.length > 0) {
+                return trimmed;
+            }
+        }
+
+        return wheelPrizeDescriptionSource?.title ?? "";
+    }, [wheelPrize, wheelPrizeDescriptionSource]);
+
+    const hasWheelPrize = useMemo(() => {
+        if (!wheelPrize) {
+            return false;
+        }
+
+        const titleSource = (wheelPrize as { title?: unknown }).title;
+        const amountLabelSource = (wheelPrize as { amount_label?: unknown }).amount_label;
+        const discountSource = parseMaybeNumber((wheelPrize as { discount_value?: unknown }).discount_value);
+        const hasTitle = typeof titleSource === "string" && titleSource.trim().length > 0;
+        const hasAmountLabel = typeof amountLabelSource === "string" && amountLabelSource.trim().length > 0;
+        const hasDiscount = (discountSource ?? 0) > 0 || wheelPrizeDiscount > 0;
+        const hasAmountSuffix = wheelPrizeAmountSuffix.trim().length > 0;
+        const hasExpiry = typeof wheelPrizeExpiryLabel === "string" && wheelPrizeExpiryLabel.trim().length > 0;
+
+        return hasTitle || hasAmountLabel || hasDiscount || hasAmountSuffix || hasExpiry;
+    }, [wheelPrize, wheelPrizeDiscount, wheelPrizeAmountSuffix, wheelPrizeExpiryLabel]);
 
     const selectedCar = reservationData?.selectedCar ?? null;
     const selectedCarName = typeof (selectedCar as { name?: unknown } | null)?.name === "string"
