@@ -365,6 +365,33 @@ describe('ApiClient bookings management', () => {
     expect(parsed.searchParams.has('end_date')).toBe(false);
   });
 
+  it('deletes a booking by id using the DELETE verb', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('admin-token');
+
+    const apiResponse = { success: true };
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await client.deleteBooking(88);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseURL}/bookings/88`,
+      expect.objectContaining({
+        method: 'DELETE',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer admin-token',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+      }),
+    );
+  });
+
   it('generates a booking contract as PDF with admin credentials', async () => {
     const client = new ApiClient(baseURL);
     client.setToken('contract-admin');

@@ -56,6 +56,11 @@
     },
     "pricing": {
       "title": "Coût total",
+      "perDayLabel": "Tarif journalier :",
+      "dayCount": {
+        "one": "{{count}} jour",
+        "other": "{{count}} jours"
+      },
       "subtotalLabel": "Sous-total :",
       "servicesLabel": "Services :",
       "wheelPrizeLabel": "Prix Roue de la Fortune :",
