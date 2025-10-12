@@ -576,10 +576,9 @@ const mergeAdvancedMatching = (
 ): AdvancedMatchingPayload => {
     const merged: AdvancedMatchingPayload = { ...current };
 
-    (Object.entries(incoming) as Array<[
-        keyof AdvancedMatchingPayload,
-        AdvancedMatchingPayload[keyof AdvancedMatchingPayload],
-    ]>).forEach(([key, value]) => {
+    const assignValue = <K extends keyof AdvancedMatchingPayload>(key: K) => {
+        const value = incoming[key];
+
         if (value === undefined || value === null) {
             return;
         }
@@ -589,7 +588,19 @@ const mergeAdvancedMatching = (
         }
 
         merged[key] = value;
-    });
+    };
+
+    assignValue("em");
+    assignValue("ph");
+    assignValue("fn");
+    assignValue("ln");
+    assignValue("external_id");
+    assignValue("ct");
+    assignValue("st");
+    assignValue("zp");
+    assignValue("country");
+    assignValue("ge");
+    assignValue("db");
 
     return merged;
 };
