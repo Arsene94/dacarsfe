@@ -394,6 +394,7 @@ const ReservationPage = () => {
         () => ({
             success: t("form.discount.messages.success"),
             error: t("form.discount.messages.error"),
+            pending: t("form.discount.messages.pending"),
         }),
         [t],
     );
@@ -567,7 +568,7 @@ const ReservationPage = () => {
     const [availabilityErrorKey, setAvailabilityErrorKey] = useState<AvailabilityErrorKey | null>(null);
     type DiscountStatus = {
         isValid: boolean;
-        messageKey: "success" | "error";
+        messageKey: "success" | "error" | "pending";
         discount: string;
         discountCasco: string;
         couponType?: string | null;
@@ -1370,6 +1371,10 @@ const ReservationPage = () => {
         quoteResult?.coupon_total_discount_details,
     );
 
+    const trimmedCouponCode = formData.coupon_code.trim();
+    const requiresCouponValidation =
+        trimmedCouponCode.length > 0 && discountStatus?.isValid !== true;
+
     const handleDiscountCodeValidation = async (
         force = false,
         baseCar?: Car | null,
@@ -1553,6 +1558,18 @@ const ReservationPage = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (availabilityErrorKey || !booking.startDate || !booking.endDate || !selectedCar) return;
+        if (requiresCouponValidation) {
+            if (!discountStatus || discountStatus.messageKey !== "error") {
+                setDiscountStatus({
+                    isValid: false,
+                    messageKey: "pending",
+                    discount: "0",
+                    discountCasco: "0",
+                    couponType: null,
+                });
+            }
+            return;
+        }
         setIsSubmitting(true);
 
         const start = new Date(booking.startDate);
@@ -2171,7 +2188,12 @@ const ReservationPage = () => {
 
                                 <button
                                     type="submit"
-                                    disabled={isSubmitting || isQuoteLoading || !!availabilityErrorKey}
+                                    disabled={
+                                        isSubmitting ||
+                                        isQuoteLoading ||
+                                        !!availabilityErrorKey ||
+                                        requiresCouponValidation
+                                    }
                                     className="w-full py-4 bg-jade text-white font-dm-sans font-semibold text-lg rounded-lg hover:bg-jade/90 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg flex items-center justify-center space-x-2"
                                     aria-label={t("form.submit.ariaLabel")}
                                 >

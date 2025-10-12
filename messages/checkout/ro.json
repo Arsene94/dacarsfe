@@ -46,7 +46,8 @@
       "ariaLabel": "Validează codul",
       "messages": {
         "success": "Reducere aplicată!",
-        "error": "Eroare la validarea codului."
+        "error": "Eroare la validarea codului.",
+        "pending": "Te rugăm să validezi codul înainte de a continua."
       }
     },
     "services": {
