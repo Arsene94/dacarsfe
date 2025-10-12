@@ -12,12 +12,14 @@ import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { Locale } from "@/lib/i18n/config";
 import successMessagesRo from "@/messages/success/ro.json";
 import {
+    buildMetaPixelAdvancedMatchingFromCustomer,
     hasTrackedMetaPixelLead,
     markMetaPixelLeadTracked,
     trackMetaPixelLead,
     updateMetaPixelAdvancedMatching,
     resolveMetaPixelNameParts,
 } from "@/lib/metaPixel";
+import { useAuth } from "@/context/AuthContext";
 
 type SuccessMessages = typeof successMessagesRo;
 
@@ -35,6 +37,8 @@ const ENABLE_TIKTOK_LEAD_EVENT = false;
 
 const SESSION_STORAGE_LEAD_KEY_PREFIX = "dacars:success:lead:";
 const SESSION_STORAGE_LEAD_FALLBACK_KEY = "dacars:success:lead:fallback";
+const IN_MEMORY_META_LEAD_FALLBACK_KEY = "__fallback__";
+const trackedMetaLeadIdentifiers = new Set<string>();
 
 const parseMaybeNumber = (value: unknown): number | null => {
     if (typeof value === "number") {
@@ -84,6 +88,7 @@ const resolveReservationTrackingIdentifier = (
 const SuccessPage = () => {
     const [reservationData, setReservationData] = useState<ReservationPayload | null>(null);
     const { locale, messages, t } = useTranslations<SuccessMessages>("success");
+    const { user } = useAuth();
     const intlLocale = LOCALE_TO_INTL[locale] ?? LOCALE_TO_INTL.ro;
     const hasTrackedConversionRef = useRef(false);
     const hasTrackedMetaLeadRef = useRef(false);
@@ -164,20 +169,46 @@ const SuccessPage = () => {
         const customerEmailRaw = (reservationData as { customer_email?: unknown }).customer_email;
         const customerPhoneRaw = (reservationData as { customer_phone?: unknown }).customer_phone;
 
-        updateMetaPixelAdvancedMatching({
+        const customerDetailsPayload = buildMetaPixelAdvancedMatchingFromCustomer(
+            reservationData,
+            (reservationData as { customer?: unknown }).customer,
+            user,
+        );
+
+        const advancedMatchingPayload = {
+            ...customerDetailsPayload,
             em: typeof customerEmailRaw === "string" ? customerEmailRaw : undefined,
             ph: typeof customerPhoneRaw === "string" ? customerPhoneRaw : undefined,
-            fn: firstName,
-            ln: lastName,
-        });
+        };
+
+        if (!advancedMatchingPayload.fn && firstName) {
+            advancedMatchingPayload.fn = firstName;
+        }
+
+        if (!advancedMatchingPayload.ln && lastName) {
+            advancedMatchingPayload.ln = lastName;
+        }
+
+        updateMetaPixelAdvancedMatching(advancedMatchingPayload);
 
         if (hasTrackedMetaLeadRef.current) {
             return;
         }
 
         const leadIdentifier = reservationTrackingIdentifier ?? null;
+        const leadTrackingKey =
+            typeof reservationTrackingIdentifier === "string" && reservationTrackingIdentifier.trim().length > 0
+                ? reservationTrackingIdentifier.trim()
+                : IN_MEMORY_META_LEAD_FALLBACK_KEY;
+
+        if (trackedMetaLeadIdentifiers.has(leadTrackingKey)) {
+            hasTrackedMetaLeadRef.current = true;
+            return;
+        }
+
         if (hasTrackedMetaPixelLead(leadIdentifier)) {
             hasTrackedMetaLeadRef.current = true;
+            trackedMetaLeadIdentifiers.add(leadTrackingKey);
             return;
         }
 
@@ -239,8 +270,9 @@ const SuccessPage = () => {
         });
 
         markMetaPixelLeadTracked(leadIdentifier);
+        trackedMetaLeadIdentifiers.add(leadTrackingKey);
         hasTrackedMetaLeadRef.current = true;
-    }, [reservationData, reservationTrackingIdentifier]);
+    }, [reservationData, reservationTrackingIdentifier, user]);
 
     useEffect(() => {
         if (!reservationData) {

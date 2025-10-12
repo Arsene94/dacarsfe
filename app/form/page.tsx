@@ -10,6 +10,7 @@ import { apiClient } from "@/lib/api";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import {
+    buildMetaPixelAdvancedMatchingFromCustomer,
     trackMetaPixelLead,
     trackMetaPixelViewContent,
     updateMetaPixelAdvancedMatching,
@@ -1725,12 +1726,24 @@ const ReservationPage = () => {
             const { firstName, lastName } = resolveMetaPixelNameParts(
                 formData.customer_name,
             );
-            updateMetaPixelAdvancedMatching({
+            const customerDetailsPayload = buildMetaPixelAdvancedMatchingFromCustomer(
+                formData,
+            );
+            const advancedMatchingPayload = {
+                ...customerDetailsPayload,
                 em: formData.customer_email,
                 ph: formData.customer_phone,
-                fn: firstName,
-                ln: lastName,
-            });
+            };
+
+            if (!advancedMatchingPayload.fn && firstName) {
+                advancedMatchingPayload.fn = firstName;
+            }
+
+            if (!advancedMatchingPayload.ln && lastName) {
+                advancedMatchingPayload.ln = lastName;
+            }
+
+            updateMetaPixelAdvancedMatching(advancedMatchingPayload);
             const leadValue = Number.isFinite(totalAfterAdjustments)
                 ? totalAfterAdjustments
                 : undefined;
