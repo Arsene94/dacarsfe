@@ -664,14 +664,14 @@ const FleetPage = () => {
                         <div className="flex items-center justify-between mb-5">
                             <div className="me-1">
                                 <span className="text-jade font-bold font-dm-sans">{t("card.pricing.noDepositLabel")}</span>
-                                <span className="text-base font-poppins font-bold text-jade">{car.rental_rate_casco}€</span>
+                                <span className="text-base font-poppins font-bold text-jade">{" "}{car.rental_rate_casco}€</span>
                                 <span className="text-jade font-bold font-dm-sans"> {t("card.pricing.perDay")}</span>
                                 {startDate && endDate && (
                                     <div>
                                         <span className="text-jade font-bold font-dm-sans">
                                             {t("card.pricing.daysTotal", { values: { days: car.days } })}
                                         </span>
-                                        <span className="text-base font-poppins font-bold text-jade">{car.total_without_deposit}€</span>
+                                        <span className="text-base font-poppins font-bold text-jade">{" "}{car.total_without_deposit}€</span>
                                     </div>
                                 )}
                             </div>
@@ -687,14 +687,14 @@ const FleetPage = () => {
                         <div className="flex items-center justify-between">
                             <div className="me-3">
                                 <span className="text-gray-600 font-dm-sans">{t("card.pricing.withDepositLabel")}</span>
-                                <span className="text-base font-poppins font-bold text-berkeley">{car.rental_rate}€</span>
+                                <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.rental_rate}€</span>
                                 <span className="text-gray-600 font-dm-sans"> {t("card.pricing.perDay")}</span>
                                 {startDate && endDate && (
                                     <div>
                                         <span className="text-gray-600 font-bold font-dm-sans">
                                             {t("card.pricing.daysTotal", { values: { days: car.days } })}
                                         </span>
-                                        <span className="text-base font-poppins font-bold text-berkeley">{car.total_deposit}€</span>
+                                        <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.total_deposit}€</span>
                                     </div>
                                 )}
                             </div>
