@@ -3323,7 +3323,7 @@ export class ApiClient {
     }
 
     async createCategoryPriceCalendar(payload: CategoryPriceCalendarPayload): Promise<ApiItemResult<CategoryPriceCalendar>> {
-        return this.request<ApiItemResult<CategoryPriceCalendar>>(`/price-calendars`, {
+        return this.request<ApiItemResult<CategoryPriceCalendar>>(`/price-calendar`, {
             method: 'POST',
             body: JSON.stringify(payload),
         });
@@ -3333,9 +3333,14 @@ export class ApiClient {
         id: number,
         payload: CategoryPriceCalendarPayload,
     ): Promise<ApiItemResult<CategoryPriceCalendar>> {
-        return this.request<ApiItemResult<CategoryPriceCalendar>>(`/price-calendars/${id}`, {
+        return this.request<ApiItemResult<CategoryPriceCalendar>>(`/price-calendar/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${this.token}`
+            },
         });
     }
 
