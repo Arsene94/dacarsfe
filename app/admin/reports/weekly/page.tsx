@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ChartData, ChartOptions } from "chart.js";
 import { AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { AdminReportWeeklyResponse } from "@/types/reports";
@@ -15,12 +14,16 @@ import {
   ReportSection,
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
+import type {
+  DoughnutSlice,
+  LineSeries,
+  RadarSeries,
+} from "@/components/admin/reports/ChartPrimitives";
 import {
   DoughnutChart,
   LineChart,
   RadarChart,
 } from "@/components/admin/reports/ChartPrimitives";
-import "@/components/admin/reports/chartSetup";
 import { getColor } from "@/components/admin/reports/chartSetup";
 import { formatCurrency } from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
@@ -134,157 +137,97 @@ export default function AdminWeeklyReportPage() {
     return `${data.period.comparison_start} – ${data.period.comparison_end}`;
   }, [data]);
 
-  const revenueChart = useMemo<ChartData<"line"> | null>(() => {
+  const formatThousands = useCallback((value: number | string) => {
+    if (typeof value !== "number") {
+      return value;
+    }
+    if (Math.abs(value) < 1000) {
+      return value.toLocaleString("ro-RO", { maximumFractionDigits: 0 });
+    }
+    return `${(value / 1000).toFixed(0)}k`;
+  }, []);
+
+  const revenueChartData = useMemo(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.daily_revenue.map((point) => point.label),
-      datasets: [
-        {
-          label: "Venit curent",
-          data: data.daily_revenue.map((point) => point.current),
-          borderColor: getColor("primary"),
-          backgroundColor: "rgba(26, 54, 97, 0.25)",
-          tension: 0.35,
-          fill: true,
-          pointRadius: 4,
-        },
-        {
-          label: "Venit comparație",
-          data: data.daily_revenue.map((point) => point.previous),
-          borderColor: getColor("accentLight"),
-          backgroundColor: "rgba(56, 178, 117, 0.2)",
-          borderDash: [6, 4],
-          tension: 0.25,
-          pointRadius: 4,
-        },
-      ],
-    } satisfies ChartData<"line">;
+    return data.daily_revenue.map((point) => ({
+      label: point.label,
+      current: point.current,
+      previous: point.previous,
+    }));
   }, [data]);
 
-  const revenueChartOptions = useMemo<ChartOptions<"line">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "bottom", labels: { usePointStyle: true } },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const currency = data?.totals.currency ?? "EUR";
-              const value = context.raw as number;
-              return `${context.dataset.label}: ${formatCurrency(value, currency)}`;
+  const revenueChartSeries = useMemo<LineSeries[]>(
+    () =>
+      data
+        ? [
+            {
+              dataKey: "current",
+              name: "Venit curent",
+              color: getColor("primary"),
+              fillOpacity: 0.25,
             },
-          },
-        },
-      },
-      scales: {
-        x: { grid: { display: false } },
-        y: {
-          grid: { color: "#E2E8F0" },
-          ticks: {
-            callback: (value) => {
-              if (typeof value === "number") {
-                return `${(value / 1000).toFixed(0)}k`;
-              }
-              return value;
+            {
+              dataKey: "previous",
+              name: "Venit comparație",
+              color: getColor("accentLight"),
+              strokeDasharray: "6 4",
+              fillOpacity: 0.15,
             },
-          },
-        },
-      },
-    }),
+          ]
+        : [],
     [data],
   );
 
-  const channelMixData = useMemo<ChartData<"doughnut"> | null>(() => {
+  const channelMixData = useMemo<DoughnutSlice[] | null>(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.channel_mix.map((item) => item.label),
-      datasets: [
-        {
-          label: "Canal curent",
-          data: data.channel_mix.map((item) => item.current_percent),
-          backgroundColor: [
-            getColor("primary"),
-            getColor("accent"),
-            getColor("info"),
-            getColor("neutral"),
-          ],
-          borderColor: "#ffffff",
-          borderWidth: 2,
-        },
-      ],
-    } satisfies ChartData<"doughnut">;
+    const colors = [
+      getColor("primary"),
+      getColor("accent"),
+      getColor("info"),
+      getColor("neutral"),
+    ];
+    return data.channel_mix.map((item, index) => ({
+      name: item.label,
+      value: item.current_percent,
+      color: colors[index % colors.length],
+      previousPercent: item.previous_percent,
+    }));
   }, [data]);
 
-  const channelMixOptions = useMemo<ChartOptions<"doughnut">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const value = context.raw as number;
-              return `${context.label}: ${value}%`;
+  const occupancyData = useMemo(() => {
+    if (!data) {
+      return null;
+    }
+    return data.occupancy_by_segment.map((item) => ({
+      segment: item.label,
+      current: Number((item.current * 100).toFixed(1)),
+      previous: Number((item.previous * 100).toFixed(1)),
+    }));
+  }, [data]);
+
+  const occupancySeries = useMemo<RadarSeries[]>(
+    () =>
+      data
+        ? [
+            {
+              dataKey: "current",
+              name: "Ocupare curentă",
+              color: getColor("primary"),
+              fillOpacity: 0.3,
             },
-          },
-        },
-      },
-    }),
-    [],
-  );
-
-  const occupancyData = useMemo<ChartData<"radar"> | null>(() => {
-    if (!data) {
-      return null;
-    }
-    return {
-      labels: data.occupancy_by_segment.map((item) => item.label),
-      datasets: [
-        {
-          label: "Ocupare curentă",
-          data: data.occupancy_by_segment.map((item) => item.current * 100),
-          borderColor: getColor("primary"),
-          backgroundColor: "rgba(26, 54, 97, 0.2)",
-          pointBackgroundColor: getColor("primary"),
-        },
-        {
-          label: "Referință",
-          data: data.occupancy_by_segment.map((item) => item.previous * 100),
-          borderColor: getColor("accentLight"),
-          backgroundColor: "rgba(56, 178, 117, 0.2)",
-          pointBackgroundColor: getColor("accentLight"),
-        },
-      ],
-    } satisfies ChartData<"radar">;
-  }, [data]);
-
-  const occupancyOptions = useMemo<ChartOptions<"radar">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        r: {
-          beginAtZero: true,
-          max: 100,
-          ticks: {
-            callback: (value) => `${value}%`,
-            stepSize: 20,
-          },
-          grid: { color: "rgba(100, 116, 139, 0.2)" },
-          angleLines: { color: "rgba(100, 116, 139, 0.25)" },
-        },
-      },
-      plugins: {
-        legend: { position: "bottom" },
-      },
-    }),
-    [],
+            {
+              dataKey: "previous",
+              name: "Referință",
+              color: getColor("accentLight"),
+              fillOpacity: 0.25,
+            },
+          ]
+        : [],
+    [data],
   );
 
   return (
@@ -428,8 +371,16 @@ export default function AdminWeeklyReportPage() {
             description="Compară trendul zilnic cu intervalul de referință."
           >
             <ChartContainer>
-              {revenueChart ? (
-                <LineChart options={revenueChartOptions} data={revenueChart} />
+              {revenueChartData ? (
+                <LineChart
+                  data={revenueChartData}
+                  xKey="label"
+                  series={revenueChartSeries}
+                  yTickFormatter={formatThousands}
+                  valueFormatter={(value, name) =>
+                    `${name}: ${formatCurrency(value, data.totals.currency)}`
+                  }
+                />
               ) : null}
             </ChartContainer>
           </ReportSection>
@@ -441,7 +392,15 @@ export default function AdminWeeklyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {channelMixData ? (
-                  <DoughnutChart options={channelMixOptions} data={channelMixData} />
+                  <DoughnutChart
+                    data={channelMixData}
+                    valueFormatter={(value, name, payload) => {
+                      const previous = payload?.previousPercent;
+                      return previous !== undefined
+                        ? `${name}: ${value}% (anterior ${previous}%)`
+                        : `${name}: ${value}%`;
+                    }}
+                  />
                 ) : null}
               </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">
@@ -465,7 +424,16 @@ export default function AdminWeeklyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {occupancyData ? (
-                  <RadarChart options={occupancyOptions} data={occupancyData} />
+                  <RadarChart
+                    data={occupancyData}
+                    angleKey="segment"
+                    series={occupancySeries}
+                    domain={[0, 100]}
+                    tickFormatter={(value) => `${value}%`}
+                    valueFormatter={(value, name) =>
+                      `${name}: ${value.toFixed(1)}%`
+                    }
+                  />
                 ) : null}
               </ChartContainer>
             </ReportSection>

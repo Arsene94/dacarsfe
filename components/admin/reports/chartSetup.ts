@@ -1,34 +1,3 @@
-"use client";
-
-import {
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  Filler,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  RadialLinearScale,
-  Title,
-  Tooltip,
-} from "chart.js";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  RadialLinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-);
-
 export const REPORT_COLORS = {
   primary: "#1A3661",
   primaryLight: "#4F6FA4",

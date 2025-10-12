@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ChartData, ChartOptions } from "chart.js";
 import { Building2, RefreshCw, Target } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { AdminReportMonthlyResponse } from "@/types/reports";
@@ -15,12 +14,16 @@ import {
   ReportSection,
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
+import type {
+  BarSeries,
+  DoughnutSlice,
+  LineSeries,
+} from "@/components/admin/reports/ChartPrimitives";
 import {
   BarChart,
   DoughnutChart,
   LineChart,
 } from "@/components/admin/reports/ChartPrimitives";
-import "@/components/admin/reports/chartSetup";
 import { getColor } from "@/components/admin/reports/chartSetup";
 import { formatCurrency } from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
@@ -121,167 +124,112 @@ export default function AdminMonthlyReportPage() {
     });
   }, [data, formMonth]);
 
-  const trendData = useMemo<ChartData<"line"> | null>(() => {
+  const formatThousands = useCallback((value: number | string) => {
+    if (typeof value !== "number") {
+      return value;
+    }
+    if (Math.abs(value) < 1000) {
+      return value.toLocaleString("ro-RO", { maximumFractionDigits: 0 });
+    }
+    return `${(value / 1000).toFixed(0)}k`;
+  }, []);
+
+  const trendData = useMemo(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.six_month_trend.map((item) => item.label),
-      datasets: [
-        {
-          label: "Venituri",
-          data: data.six_month_trend.map((item) => item.revenue),
-          borderColor: getColor("primary"),
-          backgroundColor: "rgba(26, 54, 97, 0.25)",
-          tension: 0.35,
-          fill: true,
-          pointRadius: 4,
-        },
-        {
-          label: "Profit",
-          data: data.six_month_trend.map((item) => item.profit),
-          borderColor: getColor("accentLight"),
-          backgroundColor: "rgba(56, 178, 117, 0.25)",
-          tension: 0.35,
-          pointRadius: 4,
-        },
-      ],
-    } satisfies ChartData<"line">;
+    return data.six_month_trend.map((item) => ({
+      label: item.label,
+      revenue: item.revenue,
+      profit: item.profit,
+    }));
   }, [data]);
 
-  const trendOptions = useMemo<ChartOptions<"line">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "bottom", labels: { usePointStyle: true } },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const currency = data?.financials.currency ?? "EUR";
-              const value = context.raw as number;
-              return `${context.dataset.label}: ${formatCurrency(value, currency)}`;
+  const trendSeries = useMemo<LineSeries[]>(
+    () =>
+      data
+        ? [
+            {
+              dataKey: "revenue",
+              name: "Venituri",
+              color: getColor("primary"),
+              fillOpacity: 0.25,
             },
-          },
-        },
-      },
-      scales: {
-        x: { grid: { display: false } },
-        y: {
-          grid: { color: "#E2E8F0" },
-          ticks: {
-            callback: (value) => {
-              if (typeof value === "number") {
-                return `${(value / 1000).toFixed(0)}k`;
-              }
-              return value;
+            {
+              dataKey: "profit",
+              name: "Profit",
+              color: getColor("accentLight"),
+              fillOpacity: 0.2,
             },
-          },
-        },
-      },
-    }),
+          ]
+        : [],
     [data],
   );
 
-  const customerMixData = useMemo<ChartData<"doughnut"> | null>(() => {
+  const customerMixData = useMemo<DoughnutSlice[] | null>(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.customer_mix.map((item) => item.label),
-      datasets: [
-        {
-          data: data.customer_mix.map((item) => item.current_percent),
-          backgroundColor: [
-            getColor("primary"),
-            getColor("accent"),
-            getColor("info"),
-            getColor("neutral"),
-          ],
-          borderWidth: 2,
-          borderColor: "#ffffff",
-        },
-      ],
-    } satisfies ChartData<"doughnut">;
-  }, [data]);
-
-  const customerMixOptions = useMemo<ChartOptions<"doughnut">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (context) => `${context.label}: ${context.raw}%`,
-          },
-        },
-      },
-    }),
-    [],
-  );
-
-  const costStructureData = useMemo<ChartData<"bar"> | null>(() => {
-    if (!data) {
-      return null;
-    }
-    const costs = [
-      { label: "Flotă", value: data.cost_structure.fleet.current, previous: data.cost_structure.fleet.previous },
-      { label: "Operațiuni", value: data.cost_structure.operations.current, previous: data.cost_structure.operations.previous },
-      { label: "Marketing", value: data.cost_structure.marketing.current, previous: data.cost_structure.marketing.previous },
-      { label: "Alte costuri", value: data.cost_structure.other.current, previous: data.cost_structure.other.previous },
+    const colors = [
+      getColor("primary"),
+      getColor("accent"),
+      getColor("info"),
+      getColor("neutral"),
     ];
-    return {
-      labels: costs.map((item) => item.label),
-      datasets: [
-        {
-          label: data.period.label,
-          data: costs.map((item) => item.value),
-          backgroundColor: getColor("primary"),
-          borderRadius: 10,
-        },
-        {
-          label: data.period.comparison.label,
-          data: costs.map((item) => item.previous),
-          backgroundColor: getColor("accentLight"),
-          borderRadius: 10,
-        },
-      ],
-    } satisfies ChartData<"bar">;
+    return data.customer_mix.map((item, index) => ({
+      name: item.label,
+      value: item.current_percent,
+      color: colors[index % colors.length],
+      previousPercent: item.previous_percent,
+    }));
   }, [data]);
 
-  const costStructureOptions = useMemo<ChartOptions<"bar">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: "y",
-      plugins: {
-        legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const currency = data?.financials.currency ?? "EUR";
-              const value = context.raw as number;
-              return `${context.dataset.label}: ${formatCurrency(value, currency)}`;
-            },
-          },
-        },
+  const costStructureData = useMemo(() => {
+    if (!data) {
+      return null;
+    }
+    return [
+      {
+        label: "Flotă",
+        current: data.cost_structure.fleet.current,
+        previous: data.cost_structure.fleet.previous,
       },
-      scales: {
-        x: {
-          grid: { color: "#E2E8F0" },
-          ticks: {
-            callback: (value) => {
-              if (typeof value === "number") {
-                return `${(value / 1000).toFixed(0)}k`;
-              }
-              return value;
-            },
-          },
-        },
-        y: { grid: { display: false } },
+      {
+        label: "Operațiuni",
+        current: data.cost_structure.operations.current,
+        previous: data.cost_structure.operations.previous,
       },
-    }),
+      {
+        label: "Marketing",
+        current: data.cost_structure.marketing.current,
+        previous: data.cost_structure.marketing.previous,
+      },
+      {
+        label: "Alte costuri",
+        current: data.cost_structure.other.current,
+        previous: data.cost_structure.other.previous,
+      },
+    ];
+  }, [data]);
+
+  const costStructureSeries = useMemo<BarSeries[]>(
+    () =>
+      data
+        ? [
+            {
+              dataKey: "current",
+              name: data.period.label,
+              color: getColor("primary"),
+              radius: 10,
+            },
+            {
+              dataKey: "previous",
+              name: data.period.comparison.label,
+              color: getColor("accentLight"),
+              radius: 10,
+            },
+          ]
+        : [],
     [data],
   );
 
@@ -423,7 +371,15 @@ export default function AdminMonthlyReportPage() {
           >
             <ChartContainer>
               {trendData ? (
-                <LineChart options={trendOptions} data={trendData} />
+                <LineChart
+                  data={trendData}
+                  xKey="label"
+                  series={trendSeries}
+                  yTickFormatter={formatThousands}
+                  valueFormatter={(value, name) =>
+                    `${name}: ${formatCurrency(value, data.financials.currency)}`
+                  }
+                />
               ) : null}
             </ChartContainer>
           </ReportSection>
@@ -435,7 +391,15 @@ export default function AdminMonthlyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {customerMixData ? (
-                  <DoughnutChart options={customerMixOptions} data={customerMixData} />
+                  <DoughnutChart
+                    data={customerMixData}
+                    valueFormatter={(value, name, payload) => {
+                      const previous = payload?.previousPercent;
+                      return previous !== undefined
+                        ? `${name}: ${value}% (anterior ${previous}%)`
+                        : `${name}: ${value}%`;
+                    }}
+                  />
                 ) : null}
               </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">
@@ -459,7 +423,16 @@ export default function AdminMonthlyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {costStructureData ? (
-                  <BarChart options={costStructureOptions} data={costStructureData} />
+                  <BarChart
+                    data={costStructureData}
+                    xKey="label"
+                    series={costStructureSeries}
+                    layout="vertical"
+                    yTickFormatter={formatThousands}
+                    valueFormatter={(value, name) =>
+                      `${name}: ${formatCurrency(value, data.financials.currency)}`
+                    }
+                  />
                 ) : null}
               </ChartContainer>
             </ReportSection>

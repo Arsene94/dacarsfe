@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ChartData, ChartOptions } from "chart.js";
 import { ArrowDownRight, ArrowUpRight, BarChart3, RefreshCw, Users } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { AdminReportAnnualResponse } from "@/types/reports";
@@ -15,12 +14,16 @@ import {
   ReportSection,
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
+import type {
+  BarSeries,
+  DoughnutSlice,
+  LineSeries,
+} from "@/components/admin/reports/ChartPrimitives";
 import {
   BarChart,
   DoughnutChart,
   LineChart,
 } from "@/components/admin/reports/ChartPrimitives";
-import "@/components/admin/reports/chartSetup";
 import { getColor } from "@/components/admin/reports/chartSetup";
 import { formatCurrency } from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
@@ -131,210 +134,128 @@ export default function AdminAnnualReportPage() {
     });
   }, [data, formYear]);
 
-  const quarterTrend = useMemo<ChartData<"line"> | null>(() => {
+  const formatThousands = useCallback((value: number | string) => {
+    if (typeof value !== "number") {
+      return value;
+    }
+    if (Math.abs(value) < 1000) {
+      return value.toLocaleString("ro-RO", { maximumFractionDigits: 0 });
+    }
+    return `${(value / 1000).toFixed(0)}k`;
+  }, []);
+
+  const quarterTrendData = useMemo(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.quarter_breakdown.map((item) => item.label),
-      datasets: [
-        {
-          label: data.period.label,
-          data: data.quarter_breakdown.map((item) => item.revenue.current),
-          borderColor: getColor("primary"),
-          backgroundColor: "rgba(26, 54, 97, 0.2)",
-          tension: 0.35,
-          fill: true,
-          pointRadius: 4,
-        },
-        {
-          label: data.period.comparison.label,
-          data: data.quarter_breakdown.map((item) => item.revenue.previous),
-          borderColor: getColor("accentLight"),
-          backgroundColor: "rgba(56, 178, 117, 0.2)",
-          tension: 0.35,
-          pointRadius: 4,
-        },
-      ],
-    } satisfies ChartData<"line">;
+    return data.quarter_breakdown.map((item) => ({
+      label: item.label,
+      current: item.revenue.current,
+      previous: item.revenue.previous,
+    }));
   }, [data]);
 
-  const quarterTrendOptions = useMemo<ChartOptions<"line">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "bottom", labels: { usePointStyle: true } },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const currency = data?.executive_summary.currency ?? "EUR";
-              const value = context.raw as number;
-              return `${context.dataset.label}: ${formatCurrency(value, currency)}`;
+  const quarterTrendSeries = useMemo<LineSeries[]>(
+    () =>
+      data
+        ? [
+            {
+              dataKey: "current",
+              name: data.period.label,
+              color: getColor("primary"),
+              fillOpacity: 0.25,
             },
-          },
-        },
-      },
-      scales: {
-        x: { grid: { display: false } },
-        y: {
-          grid: { color: "#E2E8F0" },
-          ticks: {
-            callback: (value) => {
-              if (typeof value === "number") {
-                return `${(value / 1000).toFixed(0)}k`;
-              }
-              return value;
+            {
+              dataKey: "previous",
+              name: data.period.comparison.label,
+              color: getColor("accentLight"),
+              fillOpacity: 0.2,
             },
-          },
-        },
-      },
-    }),
+          ]
+        : [],
     [data],
   );
 
-  const segmentPerformanceData = useMemo<ChartData<"bar"> | null>(() => {
+  const segmentPerformanceData = useMemo(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.segment_performance.segments.map((item) => item.segment),
-      datasets: [
-        {
-          label: data.period.label,
-          data: data.segment_performance.segments.map((item) => item.revenue.current),
-          backgroundColor: getColor("primary"),
-          borderRadius: 12,
-        },
-        {
-          label: data.period.comparison.label,
-          data: data.segment_performance.segments.map((item) => item.revenue.previous),
-          backgroundColor: getColor("accentLight"),
-          borderRadius: 12,
-        },
-      ],
-    } satisfies ChartData<"bar">;
+    return data.segment_performance.segments.map((item) => ({
+      segment: item.segment,
+      current: item.revenue.current,
+      previous: item.revenue.previous,
+    }));
   }, [data]);
 
-  const segmentPerformanceOptions = useMemo<ChartOptions<"bar">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: "y",
-      plugins: {
-        legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const currency = data?.executive_summary.currency ?? "EUR";
-              const value = context.raw as number;
-              return `${context.dataset.label}: ${formatCurrency(value, currency)}`;
+  const segmentPerformanceSeries = useMemo<BarSeries[]>(
+    () =>
+      data
+        ? [
+            {
+              dataKey: "current",
+              name: data.period.label,
+              color: getColor("primary"),
+              radius: 12,
             },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { color: "#E2E8F0" },
-          ticks: {
-            callback: (value) => {
-              if (typeof value === "number") {
-                return `${(value / 1000).toFixed(0)}k`;
-              }
-              return value;
+            {
+              dataKey: "previous",
+              name: data.period.comparison.label,
+              color: getColor("accentLight"),
+              radius: 12,
             },
-          },
-        },
-        y: { grid: { display: false } },
-      },
-    }),
+          ]
+        : [],
     [data],
   );
 
-  const channelMixData = useMemo<ChartData<"doughnut"> | null>(() => {
+  const channelMixData = useMemo<DoughnutSlice[] | null>(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.channel_performance.mix.map((item) => item.label),
-      datasets: [
-        {
-          data: data.channel_performance.mix.map((item) => item.current_percent),
-          backgroundColor: [
-            getColor("primary"),
-            getColor("accent"),
-            getColor("info"),
-            getColor("neutral"),
-          ],
-          borderWidth: 2,
-          borderColor: "#ffffff",
-        },
-      ],
-    } satisfies ChartData<"doughnut">;
+    const colors = [
+      getColor("primary"),
+      getColor("accent"),
+      getColor("info"),
+      getColor("neutral"),
+    ];
+    return data.channel_performance.mix.map((item, index) => ({
+      name: item.label,
+      value: item.current_percent,
+      color: colors[index % colors.length],
+      previousPercent: item.previous_percent,
+    }));
   }, [data]);
 
-  const channelMixOptions = useMemo<ChartOptions<"doughnut">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (context) => `${context.label}: ${context.raw}%`,
-          },
-        },
-      },
-    }),
-    [],
-  );
-
-  const cityPerformanceData = useMemo<ChartData<"bar"> | null>(() => {
+  const cityPerformanceData = useMemo(() => {
     if (!data) {
       return null;
     }
-    return {
-      labels: data.city_performance.top_cities.map((item) => item.city),
-      datasets: [
-        {
-          label: data.period.label,
-          data: data.city_performance.top_cities.map((item) => item.current),
-          backgroundColor: getColor("primary"),
-          borderRadius: 12,
-        },
-        {
-          label: data.period.comparison.label,
-          data: data.city_performance.top_cities.map((item) => item.previous),
-          backgroundColor: getColor("accentLight"),
-          borderRadius: 12,
-        },
-      ],
-    } satisfies ChartData<"bar">;
+    return data.city_performance.top_cities.map((item) => ({
+      city: item.city,
+      current: item.current,
+      previous: item.previous,
+    }));
   }, [data]);
 
-  const cityPerformanceOptions = useMemo<ChartOptions<"bar">>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "bottom" },
-      },
-      scales: {
-        x: { grid: { display: false } },
-        y: {
-          grid: { color: "#E2E8F0" },
-          ticks: {
-            callback: (value) => {
-              if (typeof value === "number") {
-                return `${value}`;
-              }
-              return value;
+  const cityPerformanceSeries = useMemo<BarSeries[]>(
+    () =>
+      data
+        ? [
+            {
+              dataKey: "current",
+              name: data.period.label,
+              color: getColor("primary"),
+              radius: 12,
             },
-          },
-        },
-      },
-    }),
-    [],
+            {
+              dataKey: "previous",
+              name: data.period.comparison.label,
+              color: getColor("accentLight"),
+              radius: 12,
+            },
+          ]
+        : [],
+    [data],
   );
 
   const dominantChannel = useMemo(() => data?.channel_performance.dominant_channel ?? null, [data]);
@@ -481,8 +402,16 @@ export default function AdminAnnualReportPage() {
             description="Compară dinamica fiecărui trimestru cu anul de referință."
           >
             <ChartContainer>
-              {quarterTrend ? (
-                <LineChart options={quarterTrendOptions} data={quarterTrend} />
+              {quarterTrendData ? (
+                <LineChart
+                  data={quarterTrendData}
+                  xKey="label"
+                  series={quarterTrendSeries}
+                  yTickFormatter={formatThousands}
+                  valueFormatter={(value, name) =>
+                    `${name}: ${formatCurrency(value, data.executive_summary.currency)}`
+                  }
+                />
               ) : null}
             </ChartContainer>
           </ReportSection>
@@ -494,7 +423,16 @@ export default function AdminAnnualReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {segmentPerformanceData ? (
-                  <BarChart options={segmentPerformanceOptions} data={segmentPerformanceData} />
+                  <BarChart
+                    data={segmentPerformanceData}
+                    xKey="segment"
+                    series={segmentPerformanceSeries}
+                    layout="vertical"
+                    yTickFormatter={formatThousands}
+                    valueFormatter={(value, name) =>
+                      `${name}: ${formatCurrency(value, data.executive_summary.currency)}`
+                    }
+                  />
                 ) : null}
               </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">
@@ -515,7 +453,15 @@ export default function AdminAnnualReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {channelMixData ? (
-                  <DoughnutChart options={channelMixOptions} data={channelMixData} />
+                  <DoughnutChart
+                    data={channelMixData}
+                    valueFormatter={(value, name, payload) => {
+                      const previous = payload?.previousPercent;
+                      return previous !== undefined
+                        ? `${name}: ${value}% (anterior ${previous}%)`
+                        : `${name}: ${value}%`;
+                    }}
+                  />
                 ) : null}
               </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">
@@ -555,7 +501,19 @@ export default function AdminAnnualReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {cityPerformanceData ? (
-                  <BarChart options={cityPerformanceOptions} data={cityPerformanceData} />
+                  <BarChart
+                    data={cityPerformanceData}
+                    xKey="city"
+                    series={cityPerformanceSeries}
+                    yTickFormatter={(value) =>
+                      typeof value === "number"
+                        ? value.toLocaleString("ro-RO", { maximumFractionDigits: 0 })
+                        : value
+                    }
+                    valueFormatter={(value, name) =>
+                      `${name}: ${Math.round(value).toLocaleString("ro-RO")}`
+                    }
+                  />
                 ) : null}
               </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">
