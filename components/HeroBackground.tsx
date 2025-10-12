@@ -13,7 +13,6 @@ export const HeroBackground = () => {
             sizes="100vw"
             quality={55}
             decoding="async"
-            formats={["image/webp"]}
             className="object-cover"
         />
     );
