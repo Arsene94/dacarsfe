@@ -111,6 +111,59 @@ const resolveCarRelationName = (relation: CarRelation): string => {
   return "";
 };
 
+const hasText = (value: string | null | undefined): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+const resolveCarDepositValue = (car?: AdminBookingCarOption | null): string => {
+  if (!car) {
+    return "";
+  }
+
+  const primaryKeys = ["deposit", "security_deposit", "deposit_amount"] as const;
+  for (const key of primaryKeys) {
+    const raw = (car as Record<string, unknown>)[key];
+    const value = toSafeString(raw);
+    if (value.trim().length > 0) {
+      return value;
+    }
+  }
+
+  const fallbackKeys = ["total_deposit", "total_without_deposit"] as const;
+  for (const key of fallbackKeys) {
+    const raw = (car as Record<string, unknown>)[key];
+    const value = toSafeString(raw);
+    if (value.trim().length > 0) {
+      return value;
+    }
+  }
+
+  return "";
+};
+
+const normalizeAmountInput = (value: string): number | undefined => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+
+  const cleaned = trimmed.replace(/\s+/g, "").replace(/[^0-9,.-]/g, "");
+  if (cleaned.length === 0) {
+    return undefined;
+  }
+
+  const normalized = cleaned.replace(/,/g, ".");
+  const parts = normalized.split(".");
+  const canonical =
+    parts.length > 2 ? `${parts.slice(0, -1).join("")}.${parts[parts.length - 1]}` : normalized;
+  const parsed = Number(canonical);
+
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
 const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose, reservation }) => {
   const [form, setForm] = useState<BookingContractFormState>(EMPTY_FORM);
   const [carSearch, setCarSearch] = useState("");
@@ -179,8 +232,12 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
           ...prev,
           car: { ...normalized },
           pricePerDay:
-            prev.pricePerDay || toSafeString(normalized.rental_rate ?? reservation.pricePerDay),
-          deposit: prev.deposit || toSafeString(normalized.total_deposit ?? normalized.deposit),
+            hasText(prev.pricePerDay)
+              ? prev.pricePerDay
+              : toSafeString(normalized.rental_rate ?? reservation?.pricePerDay),
+          deposit: hasText(prev.deposit)
+            ? prev.deposit
+            : resolveCarDepositValue(normalized),
         }));
       } catch (error) {
         console.error("Error loading car for contract:", error);
@@ -243,8 +300,10 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
     setForm((prev) => ({
       ...prev,
       car: { ...car },
-      pricePerDay: prev.pricePerDay || toSafeString(car.rental_rate),
-      deposit: prev.deposit || toSafeString(car.total_deposit ?? car.deposit),
+      pricePerDay: hasText(prev.pricePerDay)
+        ? prev.pricePerDay
+        : toSafeString(car.rental_rate),
+      deposit: hasText(prev.deposit) ? prev.deposit : resolveCarDepositValue(car),
     }));
   };
 
@@ -290,6 +349,11 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
 
   const generateContract = async () => {
     try {
+      const depositValue = normalizeAmountInput(form.deposit);
+      const pricePerDayValue = normalizeAmountInput(form.pricePerDay);
+      const advanceValue = normalizeAmountInput(form.advance);
+      const servicesValue = normalizeAmountInput(form.services);
+
       // build payload explicitly to avoid carrying over read-only properties
       const payload = {
         id: form.id,
@@ -302,10 +366,10 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
         start: form.start,
         end: form.end,
         car_id: form.car?.id,
-        deposit: form.deposit,
-        pricePerDay: form.pricePerDay,
-        advance: form.advance,
-        services: form.services,
+        deposit: depositValue ?? undefined,
+        pricePerDay: pricePerDayValue ?? undefined,
+        advance: advanceValue ?? undefined,
+        services: servicesValue ?? undefined,
         withDeposit: form.withDeposit,
       };
       const cleanPayload = JSON.parse(JSON.stringify(payload)) as typeof payload;
@@ -323,6 +387,11 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
 
   const storeAndGenerateContract = async () => {
     try {
+      const depositValue = normalizeAmountInput(form.deposit);
+      const pricePerDayValue = normalizeAmountInput(form.pricePerDay);
+      const advanceValue = normalizeAmountInput(form.advance);
+      const servicesValue = normalizeAmountInput(form.services);
+
       const payload = {
         cnp: form.cnp,
         license: form.license,
@@ -333,10 +402,10 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
         rental_start_date: form.start,
         rental_end_date: form.end,
         car_id: form.car?.id,
-        deposit: form.deposit,
-        price_per_day: form.pricePerDay,
-        advance_payment: form.advance,
-        services: form.services,
+        deposit: depositValue ?? undefined,
+        price_per_day: pricePerDayValue ?? undefined,
+        advance_payment: advanceValue ?? undefined,
+        services: servicesValue ?? undefined,
         withDeposit: form.withDeposit,
       };
       const cleanPayload = JSON.parse(JSON.stringify(payload)) as typeof payload;

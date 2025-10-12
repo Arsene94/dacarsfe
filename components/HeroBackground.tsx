@@ -1,14 +1,14 @@
-import heroBackground from "@/public/images/bg-hero-1280x720.avif";
 import Image from "next/image";
+
+import heroBackgroundWebp from "@/public/images/bg-hero-1280x720.webp";
 
 export const HeroBackground = () => {
     return (
         <Image
-            src={heroBackground}
+            src={heroBackgroundWebp}
             alt="Fundal aeroport"
             fill
             priority
-            fetchPriority="high"
             loading="eager"
             sizes="100vw"
             quality={55}
@@ -16,4 +16,4 @@ export const HeroBackground = () => {
             className="object-cover"
         />
     );
-}
+};

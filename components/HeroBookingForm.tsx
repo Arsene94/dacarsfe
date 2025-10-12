@@ -12,6 +12,36 @@ import { useBooking } from "@/context/useBooking";
 import type { CarCategory } from "@/types/car";
 import type { ApiListResult } from "@/types/api";
 
+type ExtendedWindow = Window & {
+    requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+    cancelIdleCallback?: (handle: number) => void;
+};
+
+const scheduleIdleTask = (task: () => void) => {
+    if (typeof window === "undefined") {
+        task();
+        return () => {};
+    }
+
+    const { requestIdleCallback, cancelIdleCallback } = window as ExtendedWindow;
+
+    if (typeof requestIdleCallback === "function") {
+        const handle = requestIdleCallback(() => {
+            task();
+        });
+
+        return () => {
+            cancelIdleCallback?.(handle);
+        };
+    }
+
+    const timeout = window.setTimeout(task, 150);
+
+    return () => {
+        window.clearTimeout(timeout);
+    };
+};
+
 type ApiModule = typeof import("@/lib/api");
 type ApiResponseModule = typeof import("@/lib/apiResponse");
 type MixpanelModule = typeof import("@/lib/mixpanelClient");
@@ -225,6 +255,7 @@ const HeroBookingForm = ({
 
     useEffect(() => {
         let cancelled = false;
+        let cancelIdleFetch = () => {};
 
         const getCategories = async () => {
             const helpers = await loadCategoryHelpers().catch((error) => {
@@ -310,10 +341,13 @@ const HeroBookingForm = ({
             }
         };
 
-        void getCategories();
+        cancelIdleFetch = scheduleIdleTask(() => {
+            void getCategories();
+        });
 
         return () => {
             cancelled = true;
+            cancelIdleFetch();
         };
     }, [locale]);
 
