@@ -9,8 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useBooking } from "@/context/useBooking";
-import type { CarCategory } from "@/types/car";
+import { apiClient } from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
+import { trackMixpanelEvent } from "@/lib/mixpanelClient";
+import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import type { ApiListResult } from "@/types/api";
+import type { CarCategory } from "@/types/car";
 
 type ExtendedWindow = Window & {
     requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
@@ -40,76 +44,6 @@ const scheduleIdleTask = (task: () => void) => {
     return () => {
         window.clearTimeout(timeout);
     };
-};
-
-type ApiModule = typeof import("@/lib/api");
-type ApiResponseModule = typeof import("@/lib/apiResponse");
-type MixpanelModule = typeof import("@/lib/mixpanelClient");
-type TikTokModule = typeof import("@/lib/tiktokPixel");
-
-type CategoryHelpers = {
-    apiClient: ApiModule["apiClient"];
-    extractList: ApiResponseModule["extractList"];
-};
-
-type TrackingHelpers = {
-    trackMixpanelEvent: MixpanelModule["trackMixpanelEvent"];
-    trackTikTokEvent: TikTokModule["trackTikTokEvent"];
-    TIKTOK_EVENTS: TikTokModule["TIKTOK_EVENTS"];
-};
-
-let categoryHelpersPromise: Promise<CategoryHelpers> | null = null;
-let trackingHelpersPromise: Promise<TrackingHelpers> | null = null;
-
-const loadCategoryHelpers = async (): Promise<CategoryHelpers> => {
-    if (!categoryHelpersPromise) {
-        categoryHelpersPromise = Promise.all([
-            import("@/lib/api"),
-            import("@/lib/apiResponse"),
-        ])
-            .then(([apiModule, responseModule]) => {
-                const client = (apiModule.apiClient ?? apiModule.default) as
-                    | ApiModule["apiClient"]
-                    | undefined;
-
-                if (!client) {
-                    throw new Error(
-                        "Clientul API nu a putut fi încărcat pentru formularul hero.",
-                    );
-                }
-
-                return {
-                    apiClient: client,
-                    extractList: responseModule.extractList,
-                };
-            })
-            .catch((error) => {
-                categoryHelpersPromise = null;
-                throw error;
-            });
-    }
-
-    return categoryHelpersPromise;
-};
-
-const loadTrackingHelpers = async (): Promise<TrackingHelpers> => {
-    if (!trackingHelpersPromise) {
-        trackingHelpersPromise = Promise.all([
-            import("@/lib/mixpanelClient"),
-            import("@/lib/tiktokPixel"),
-        ])
-            .then(([mixpanelModule, tikTokModule]) => ({
-                trackMixpanelEvent: mixpanelModule.trackMixpanelEvent,
-                trackTikTokEvent: tikTokModule.trackTikTokEvent,
-                TIKTOK_EVENTS: tikTokModule.TIKTOK_EVENTS,
-            }))
-            .catch((error) => {
-                trackingHelpersPromise = null;
-                throw error;
-            });
-    }
-
-    return trackingHelpersPromise;
 };
 
 export type LocationOption = {
@@ -258,86 +192,79 @@ const HeroBookingForm = ({
         let cancelIdleFetch = () => {};
 
         const getCategories = async () => {
-            const helpers = await loadCategoryHelpers().catch((error) => {
+            try {
+                const res = await apiClient.getCarCategories({ language: locale });
+                const list = extractList<Record<string, unknown>>(
+                    res as ApiListResult<Record<string, unknown>>,
+                );
+
+                const normalized: Array<{
+                    id: number;
+                    name: string;
+                    order?: number;
+                    status?: string | null;
+                }> = [];
+
+                list.forEach((entry) => {
+                    if (!isRecord(entry)) return;
+                    const idCandidate = entry.id ?? entry.value ?? entry.key;
+                    const id = Number(idCandidate);
+                    if (!Number.isFinite(id)) return;
+                    const nameSource = entry.name ?? entry.title ?? entry.label;
+                    if (typeof nameSource !== "string" || nameSource.trim().length === 0) return;
+                    normalized.push({
+                        id,
+                        name: nameSource.trim(),
+                        order:
+                            typeof entry.order === "number"
+                                ? entry.order
+                                : Number.isFinite(Number(entry.order))
+                                    ? Number(entry.order)
+                                    : undefined,
+                        status:
+                            typeof entry.status === "string"
+                                ? entry.status
+                                : null,
+                    });
+                });
+
+                if (
+                    normalized.length === 0 &&
+                    isRecord(res) &&
+                    !("data" in res) &&
+                    !("items" in res) &&
+                    !("results" in res) &&
+                    !("payload" in res)
+                ) {
+                    Object.entries(res).forEach(([id, name]) => {
+                        const numericId = Number(id);
+                        if (!Number.isFinite(numericId)) return;
+                        const title = typeof name === "string" ? name : String(name);
+                        if (title.trim().length === 0) return;
+                        normalized.push({ id: numericId, name: title.trim() });
+                    });
+                }
+
+                const cat: CarCategory[] = normalized
+                    .filter((item) => !item.status || item.status === "published")
+                    .map(({ id, name, order }) => ({ id, name, order }));
+
+                cat.sort((a, b) => {
+                    const ao = a.order ?? Number.POSITIVE_INFINITY;
+                    const bo = b.order ?? Number.POSITIVE_INFINITY;
+                    return ao - bo || a.id - b.id;
+                });
+
+                if (!cancelled) {
+                    setCategories(cat);
+                }
+            } catch (error) {
                 if (process.env.NODE_ENV !== "production") {
                     console.error(
-                        "Nu am putut încărca modulele necesare pentru categoriile formularului hero",
+                        "Nu am putut încărca categoriile pentru formularul hero",
                         error,
                     );
                 }
-                return null;
-            });
-
-            if (!helpers) {
-                return;
-            }
-
-            const { apiClient: client, extractList } = helpers;
-
-            const res = await client.getCarCategories({ language: locale });
-            const list = extractList<Record<string, unknown>>(
-                res as ApiListResult<Record<string, unknown>>,
-            );
-
-            const normalized: Array<{
-                id: number;
-                name: string;
-                order?: number;
-                status?: string | null;
-            }> = [];
-
-            list.forEach((entry) => {
-                if (!isRecord(entry)) return;
-                const idCandidate = entry.id ?? entry.value ?? entry.key;
-                const id = Number(idCandidate);
-                if (!Number.isFinite(id)) return;
-                const nameSource = entry.name ?? entry.title ?? entry.label;
-                if (typeof nameSource !== "string" || nameSource.trim().length === 0) return;
-                normalized.push({
-                    id,
-                    name: nameSource.trim(),
-                    order:
-                        typeof entry.order === "number"
-                            ? entry.order
-                            : Number.isFinite(Number(entry.order))
-                                ? Number(entry.order)
-                                : undefined,
-                    status:
-                        typeof entry.status === "string"
-                            ? entry.status
-                            : null,
-                });
-            });
-
-            if (
-                normalized.length === 0 &&
-                isRecord(res) &&
-                !("data" in res) &&
-                !("items" in res) &&
-                !("results" in res) &&
-                !("payload" in res)
-            ) {
-                Object.entries(res).forEach(([id, name]) => {
-                    const numericId = Number(id);
-                    if (!Number.isFinite(numericId)) return;
-                    const title = typeof name === "string" ? name : String(name);
-                    if (title.trim().length === 0) return;
-                    normalized.push({ id: numericId, name: title.trim() });
-                });
-            }
-
-            const cat: CarCategory[] = normalized
-                .filter((item) => !item.status || item.status === "published")
-                .map(({ id, name, order }) => ({ id, name, order }));
-
-            cat.sort((a, b) => {
-                const ao = a.order ?? Number.POSITIVE_INFINITY;
-                const bo = b.order ?? Number.POSITIVE_INFINITY;
-                return ao - bo || a.id - b.id;
-            });
-
-            if (!cancelled) {
-                setCategories(cat);
             }
         };
 
@@ -366,18 +293,8 @@ const HeroBookingForm = ({
         }));
     };
 
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-
-        const trackingPromise = loadTrackingHelpers().catch((error) => {
-            if (process.env.NODE_ENV !== "production") {
-                console.error(
-                    "Nu am putut încărca modulele de tracking pentru formularul hero",
-                    error,
-                );
-            }
-            return null;
-        });
 
         const params = new URLSearchParams({
             start_date: formData.start_date,
@@ -392,11 +309,7 @@ const HeroBookingForm = ({
             params.set("car_type", formData.car_type);
         }
 
-        const trackingHelpers = await trackingPromise;
-
-        if (trackingHelpers) {
-            const { trackMixpanelEvent, trackTikTokEvent, TIKTOK_EVENTS } = trackingHelpers;
-
+        try {
             trackMixpanelEvent("hero_form_submit", {
                 start_date: formData.start_date,
                 end_date: formData.end_date,
@@ -412,7 +325,13 @@ const HeroBookingForm = ({
                     },
                 ],
             });
-
+        } catch (error) {
+            if (process.env.NODE_ENV !== "production") {
+                console.error(
+                    "Nu am putut trimite evenimentele de tracking pentru formularul hero",
+                    error,
+                );
+            }
         }
 
         router.push(`/cars?${params.toString()}`);
