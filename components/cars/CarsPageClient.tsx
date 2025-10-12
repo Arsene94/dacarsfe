@@ -9,6 +9,8 @@ import JsonLd from "@/components/seo/JsonLd";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Popup } from "@/components/ui/popup";
 import { apiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { resolveMediaUrl } from "@/lib/media";
@@ -215,6 +217,18 @@ const FleetPage = () => {
     const hasTrackedViewRef = useRef(false);
 
     const [categories, setCategories] = useState<CarCategory[]>();
+    const [availabilityFeedback, setAvailabilityFeedback] = useState<{
+        carId: number | null;
+        message: string | null;
+    }>({ carId: null, message: null });
+    const [checkingAvailabilityFor, setCheckingAvailabilityFor] = useState<number | null>(null);
+    const [dateModalState, setDateModalState] = useState<{
+        open: boolean;
+        car: Car | null;
+        withDeposit: boolean;
+    }>({ open: false, car: null, withDeposit: false });
+    const [dateModalDates, setDateModalDates] = useState<{ start: string; end: string }>({ start: "", end: "" });
+    const [dateModalError, setDateModalError] = useState<string | null>(null);
 
     // derive filters from loaded cars (for dropdowns)
     const filterOptions = useMemo(() => {
@@ -493,57 +507,183 @@ const FleetPage = () => {
         return active;
     }, [filters, categories, filterOptions, formatPassengersLabel]);
 
-    const handleBooking = (withDeposit: boolean, car: Car) => {
-        const hasCompleteBookingRange = Boolean(startDate && endDate);
+    const openDateModal = useCallback((car: Car, withDeposit: boolean) => {
+        setDateModalState({ open: true, car, withDeposit });
+        setDateModalDates({
+            start: booking.startDate || startDate || "",
+            end: booking.endDate || endDate || "",
+        });
+        setDateModalError(null);
+        setAvailabilityFeedback({ carId: null, message: null });
+    }, [booking.endDate, booking.startDate, endDate, startDate]);
 
-        if (hasCompleteBookingRange) {
-            setBooking({
-                ...booking,
-                startDate,
-                endDate,
-                withDeposit,
-                selectedCar: car,
-            });
+    const closeDateModal = useCallback(() => {
+        setDateModalState({ open: false, car: null, withDeposit: false });
+        setDateModalError(null);
+    }, []);
+
+    const requestBooking = useCallback(
+        async (
+            car: Car,
+            withDeposit: boolean,
+            start: string,
+            end: string,
+            { fromModal }: { fromModal: boolean },
+        ): Promise<boolean> => {
+            const trimmedStart = start?.trim();
+            const trimmedEnd = end?.trim();
+
+            if (!trimmedStart || !trimmedEnd) {
+                const message = t("card.availability.periodRequired", {
+                    fallback: "Selectează o perioadă completă pentru a continua.",
+                });
+                if (fromModal) {
+                    setDateModalError(message);
+                } else {
+                    openDateModal(car, withDeposit);
+                    setDateModalError(message);
+                }
+                return false;
+            }
+
+            if (car.available === false) {
+                const message = t("card.availability.unavailable", {
+                    fallback: "Mașina nu este disponibilă în perioada selectată.",
+                });
+                if (fromModal) {
+                    setDateModalError(message);
+                } else {
+                    setAvailabilityFeedback({ carId: car.id, message });
+                }
+                return false;
+            }
+
+            setCheckingAvailabilityFor(car.id);
+            if (!fromModal) {
+                setAvailabilityFeedback((prev) =>
+                    prev.carId === car.id ? { carId: null, message: null } : prev,
+                );
+            } else {
+                setDateModalError(null);
+            }
+
+            try {
+                const availability = await apiClient.checkCarAvailability({
+                    car_id: car.id,
+                    start_date: trimmedStart,
+                    end_date: trimmedEnd,
+                });
+
+                if (availability?.available === false) {
+                    const message = availability.message?.trim() ||
+                        t("card.availability.unavailable", {
+                            fallback: "Mașina nu este disponibilă în perioada selectată.",
+                        });
+                    if (fromModal) {
+                        setDateModalError(message);
+                    } else {
+                        setAvailabilityFeedback({ carId: car.id, message });
+                    }
+                    return false;
+                }
+
+                const pricePerDay = toNumberOrNull(
+                    withDeposit ? car.rental_rate : car.rental_rate_casco,
+                );
+                const totalAmount = toNumberOrNull(
+                    withDeposit ? car.total_deposit : car.total_without_deposit,
+                );
+
+                setBooking({
+                    ...booking,
+                    startDate: trimmedStart,
+                    endDate: trimmedEnd,
+                    withDeposit,
+                    selectedCar: car,
+                });
+
+                trackMixpanelEvent("car_cta_clicked", {
+                    car_id: car.id,
+                    car_name: car.name,
+                    with_deposit: withDeposit,
+                    car_price_plan: withDeposit ? "with_deposit" : "no_deposit",
+                    car_price_per_day: pricePerDay,
+                    car_total: totalAmount,
+                    start_date: trimmedStart,
+                    end_date: trimmedEnd,
+                    view_mode: viewMode,
+                });
+
+                trackTikTokEvent(TIKTOK_EVENTS.ADD_TO_CART, {
+                    content_type: TIKTOK_CONTENT_TYPE,
+                    contents: [
+                        {
+                            content_id: car.id,
+                            content_name: car.name,
+                            quantity: 1,
+                            price: totalAmount ?? undefined,
+                        },
+                    ],
+                    value: totalAmount ?? undefined,
+                    currency: "RON",
+                    start_date: trimmedStart,
+                    end_date: trimmedEnd,
+                    with_deposit: withDeposit,
+                });
+
+                if (fromModal || !startDate || !endDate) {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set("start_date", trimmedStart);
+                    params.set("end_date", trimmedEnd);
+                    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+                }
+
+                setAvailabilityFeedback({ carId: null, message: null });
+                closeDateModal();
+                router.push("/form");
+                return true;
+            } catch (error) {
+                console.error(error);
+                const message = t("card.availability.error", {
+                    fallback: "A apărut o eroare la verificarea disponibilității. Încearcă din nou.",
+                });
+                if (fromModal) {
+                    setDateModalError(message);
+                } else {
+                    setAvailabilityFeedback({ carId: car.id, message });
+                }
+                return false;
+            } finally {
+                setCheckingAvailabilityFor(null);
+            }
+        },
+        [booking, closeDateModal, endDate, openDateModal, pathname, router, setBooking, startDate, t, viewMode],
+    );
+
+    const handleBooking = useCallback(
+        (withDeposit: boolean, car: Car) => {
+            if (!startDate || !endDate) {
+                openDateModal(car, withDeposit);
+                return;
+            }
+
+            void requestBooking(car, withDeposit, startDate, endDate, { fromModal: false });
+        },
+        [endDate, openDateModal, requestBooking, startDate],
+    );
+
+    const handleDateModalSubmit = useCallback(async () => {
+        if (!dateModalState.car) {
+            return;
         }
-
-        const pricePerDay = toNumberOrNull(
-            withDeposit ? car.rental_rate : car.rental_rate_casco,
+        await requestBooking(
+            dateModalState.car,
+            dateModalState.withDeposit,
+            dateModalDates.start,
+            dateModalDates.end,
+            { fromModal: true },
         );
-        const totalAmount = toNumberOrNull(
-            withDeposit ? car.total_deposit : car.total_without_deposit,
-        );
-
-        trackMixpanelEvent("car_cta_clicked", {
-            car_id: car.id,
-            car_name: car.name,
-            with_deposit: withDeposit,
-            car_price_plan: withDeposit ? "with_deposit" : "no_deposit",
-            car_price_per_day: pricePerDay,
-            car_total: totalAmount,
-            start_date: startDate || null,
-            end_date: endDate || null,
-            view_mode: viewMode,
-        });
-
-        trackTikTokEvent(TIKTOK_EVENTS.ADD_TO_CART, {
-            content_type: TIKTOK_CONTENT_TYPE,
-            contents: [
-                {
-                    content_id: car.id,
-                    content_name: car.name,
-                    quantity: 1,
-                    price: totalAmount ?? undefined,
-                },
-            ],
-            value: totalAmount ?? undefined,
-            currency: "RON",
-            start_date: startDate || undefined,
-            end_date: endDate || undefined,
-            with_deposit: withDeposit,
-        });
-
-        router.push(hasCompleteBookingRange ? "/form" : "/");
-    };
+    }, [dateModalDates.end, dateModalDates.start, dateModalState, requestBooking]);
 
     useEffect(() => {
         if (loading) {
@@ -659,55 +799,75 @@ const FleetPage = () => {
                     </div>
                 </div>
 
-                {startDate && endDate && (
-                    <>
-                        <div className="flex items-center justify-between mb-5">
-                            <div className="me-1">
-                                <span className="text-jade font-bold font-dm-sans">{t("card.pricing.noDepositLabel")}</span>
-                                <span className="text-base font-poppins font-bold text-jade">{" "}{car.rental_rate_casco}€</span>
-                                <span className="text-jade font-bold font-dm-sans"> {t("card.pricing.perDay")}</span>
-                                {startDate && endDate && (
-                                    <div>
-                                        <span className="text-jade font-bold font-dm-sans">
-                                            {t("card.pricing.daysTotal", { values: { days: car.days } })}
-                                        </span>
-                                        <span className="text-base font-poppins font-bold text-jade">{" "}{car.total_without_deposit}€</span>
-                                    </div>
-                                )}
-                            </div>
-                            <Button
-                                onClick={startDate && endDate ? () => handleBooking(false, car) : undefined}
-                                className="px-2 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
-                                aria-label={t("card.actions.reserveAria")}
-                            >
-                                {t("card.actions.reserveNoDeposit")}
-                            </Button>
+                <>
+                    <div className="flex items-center justify-between mb-5">
+                        <div className="me-1">
+                            <span className="text-jade font-bold font-dm-sans">{t("card.pricing.noDepositLabel")}</span>
+                            <span className="text-base font-poppins font-bold text-jade">{" "}{car.rental_rate_casco}€</span>
+                            <span className="text-jade font-bold font-dm-sans"> {t("card.pricing.perDay")}</span>
+                            {Boolean(startDate && endDate) && (
+                                <div>
+                                    <span className="text-jade font-bold font-dm-sans">
+                                        {t("card.pricing.daysTotal", { values: { days: car.days } })}
+                                    </span>
+                                    <span className="text-base font-poppins font-bold text-jade">{" "}{car.total_without_deposit}€</span>
+                                </div>
+                            )}
                         </div>
+                        <Button
+                            onClick={() => handleBooking(false, car)}
+                            disabled={checkingAvailabilityFor === car.id}
+                            aria-busy={checkingAvailabilityFor === car.id}
+                            className={`px-4 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg transition-colors duration-300 ${
+                                checkingAvailabilityFor === car.id
+                                    ? "opacity-75 cursor-not-allowed"
+                                    : "hover:bg-jade/90"
+                            }`}
+                            aria-label={t("card.actions.reserveAria")}
+                        >
+                            {checkingAvailabilityFor === car.id
+                                ? t("card.availability.checking", { fallback: "Se verifică..." })
+                                : t("card.actions.reserveNoDeposit")}
+                        </Button>
+                    </div>
 
-                        <div className="flex items-center justify-between">
-                            <div className="me-3">
-                                <span className="text-gray-600 font-dm-sans">{t("card.pricing.withDepositLabel")}</span>
-                                <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.rental_rate}€</span>
-                                <span className="text-gray-600 font-dm-sans"> {t("card.pricing.perDay")}</span>
-                                {startDate && endDate && (
-                                    <div>
-                                        <span className="text-gray-600 font-bold font-dm-sans">
-                                            {t("card.pricing.daysTotal", { values: { days: car.days } })}
-                                        </span>
-                                        <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.total_deposit}€</span>
-                                    </div>
-                                )}
-                            </div>
-                            <Button
-                                onClick={startDate && endDate ? () => handleBooking(true, car) : undefined}
-                                className="px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg hover:!bg-jade/90 hover:!text-white transition-colors duration-300"
-                                aria-label={t("card.actions.reserveAria")}
-                            >
-                                {t("card.actions.reserveWithDeposit")}
-                            </Button>
+                    <div className="flex items-center justify-between">
+                        <div className="me-3">
+                            <span className="text-gray-600 font-dm-sans">{t("card.pricing.withDepositLabel")}</span>
+                            <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.rental_rate}€</span>
+                            <span className="text-gray-600 font-dm-sans"> {t("card.pricing.perDay")}</span>
+                            {Boolean(startDate && endDate) && (
+                                <div>
+                                    <span className="text-gray-600 font-bold font-dm-sans">
+                                        {t("card.pricing.daysTotal", { values: { days: car.days } })}
+                                    </span>
+                                    <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.total_deposit}€</span>
+                                </div>
+                            )}
                         </div>
-                    </>
-                )}
+                        <Button
+                            onClick={() => handleBooking(true, car)}
+                            disabled={checkingAvailabilityFor === car.id}
+                            aria-busy={checkingAvailabilityFor === car.id}
+                            className={`px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg transition-colors duration-300 ${
+                                checkingAvailabilityFor === car.id
+                                    ? "opacity-75 cursor-not-allowed"
+                                    : "hover:!bg-jade/90 hover:!text-white"
+                            }`}
+                            aria-label={t("card.actions.reserveAria")}
+                        >
+                            {checkingAvailabilityFor === car.id
+                                ? t("card.availability.checking", { fallback: "Se verifică..." })
+                                : t("card.actions.reserveWithDeposit")}
+                        </Button>
+                    </div>
+
+                    {availabilityFeedback.carId === car.id && availabilityFeedback.message && (
+                        <p className="mt-4 text-sm text-red-600 font-dm-sans">
+                            {availabilityFeedback.message}
+                        </p>
+                    )}
+                </>
             </div>
         </div>
     );
@@ -973,6 +1133,93 @@ const FleetPage = () => {
                     </div>
                 </div>
             </div>
+
+            <Popup open={dateModalState.open} onClose={closeDateModal} className="max-w-2xl">
+                <div className="space-y-6">
+                    <div className="space-y-1">
+                        <h2 className="text-2xl font-poppins font-semibold text-berkeley">
+                            {t("card.availability.title", { fallback: "Selectează perioada de închiriere" })}
+                        </h2>
+                        <p className="text-sm text-gray-600 font-dm-sans">
+                            {t("card.availability.description", {
+                                fallback: "Pentru a continua rezervarea, selectează datele de ridicare și returnare.",
+                            })}
+                        </p>
+                    </div>
+
+                    {dateModalState.car && (
+                        <div className="rounded-lg bg-gray-50 px-4 py-3">
+                            <p className="text-sm font-dm-sans text-gray-700">
+                                {t("card.availability.selectedCar", {
+                                    values: { car: dateModalState.car.name },
+                                    fallback: `Mașină selectată: ${dateModalState.car.name}`,
+                                })}
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="reserve-start-date" className="text-sm font-semibold text-gray-700 font-dm-sans">
+                                {t("card.availability.startLabel", { fallback: "Data ridicare" })}
+                            </Label>
+                            <Input
+                                id="reserve-start-date"
+                                type="datetime-local"
+                                value={dateModalDates.start}
+                                onChange={(event) => {
+                                    const value = event.target.value;
+                                    setDateModalDates((prev) => ({ ...prev, start: value }));
+                                    if (dateModalError) setDateModalError(null);
+                                }}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="reserve-end-date" className="text-sm font-semibold text-gray-700 font-dm-sans">
+                                {t("card.availability.endLabel", { fallback: "Data returnare" })}
+                            </Label>
+                            <Input
+                                id="reserve-end-date"
+                                type="datetime-local"
+                                value={dateModalDates.end}
+                                onChange={(event) => {
+                                    const value = event.target.value;
+                                    setDateModalDates((prev) => ({ ...prev, end: value }));
+                                    if (dateModalError) setDateModalError(null);
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {dateModalError && (
+                        <p className="text-sm text-red-600 font-dm-sans">{dateModalError}</p>
+                    )}
+
+                    <div className="flex justify-end gap-3">
+                        <Button
+                            variant="outline"
+                            onClick={closeDateModal}
+                            className="px-4"
+                        >
+                            {t("card.availability.cancel", { fallback: "Anulează" })}
+                        </Button>
+                        <Button
+                            onClick={handleDateModalSubmit}
+                            disabled={checkingAvailabilityFor === dateModalState.car?.id}
+                            aria-busy={checkingAvailabilityFor === dateModalState.car?.id}
+                            className={`px-4 ${
+                                checkingAvailabilityFor === dateModalState.car?.id
+                                    ? "opacity-75 cursor-not-allowed"
+                                    : ""
+                            }`}
+                        >
+                            {checkingAvailabilityFor === dateModalState.car?.id
+                                ? t("card.availability.checking", { fallback: "Se verifică..." })
+                                : t("card.availability.confirm", { fallback: "Verifică disponibilitatea" })}
+                        </Button>
+                    </div>
+                </div>
+            </Popup>
         </>
     );
 };

@@ -86,6 +86,19 @@
       "reserveNoDeposit": "Book without deposit",
       "reserveWithDeposit": "Book with deposit",
       "reserveAria": "Book"
+    },
+    "availability": {
+      "title": "Choose your rental period",
+      "description": "To continue with the reservation, please select the pickup and return dates.",
+      "startLabel": "Pickup date",
+      "endLabel": "Return date",
+      "confirm": "Check availability",
+      "cancel": "Cancel",
+      "periodRequired": "Select a complete period to continue.",
+      "unavailable": "The car is not available for the selected dates.",
+      "error": "Something went wrong while checking availability. Please try again.",
+      "checking": "Checking...",
+      "selectedCar": "Selected car: {{car}}"
     }
   },
   "cta": {

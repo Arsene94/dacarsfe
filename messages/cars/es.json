@@ -86,6 +86,19 @@
       "reserveNoDeposit": "Reservar sin depósito",
       "reserveWithDeposit": "Reservar con depósito",
       "reserveAria": "Reservar"
+    },
+    "availability": {
+      "title": "Selecciona el periodo de alquiler",
+      "description": "Para continuar con la reserva, elige las fechas de recogida y devolución.",
+      "startLabel": "Fecha de recogida",
+      "endLabel": "Fecha de devolución",
+      "confirm": "Comprobar disponibilidad",
+      "cancel": "Cancelar",
+      "periodRequired": "Selecciona un periodo completo para continuar.",
+      "unavailable": "El coche no está disponible en las fechas seleccionadas.",
+      "error": "Se produjo un error al comprobar la disponibilidad. Inténtalo de nuevo.",
+      "checking": "Comprobando...",
+      "selectedCar": "Vehículo seleccionado: {{car}}"
     }
   },
   "cta": {

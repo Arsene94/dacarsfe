@@ -86,6 +86,19 @@
       "reserveNoDeposit": "Rezervă fără garanție",
       "reserveWithDeposit": "Rezervă cu garanție",
       "reserveAria": "Rezervă"
+    },
+    "availability": {
+      "title": "Selectează perioada de închiriere",
+      "description": "Pentru a continua rezervarea, selectează datele de ridicare și returnare.",
+      "startLabel": "Data ridicare",
+      "endLabel": "Data returnare",
+      "confirm": "Verifică disponibilitatea",
+      "cancel": "Anulează",
+      "periodRequired": "Selectează o perioadă completă pentru a continua.",
+      "unavailable": "Mașina nu este disponibilă în perioada selectată.",
+      "error": "A apărut o eroare la verificarea disponibilității. Încearcă din nou.",
+      "checking": "Se verifică...",
+      "selectedCar": "Mașină selectată: {{car}}"
     }
   },
   "cta": {
