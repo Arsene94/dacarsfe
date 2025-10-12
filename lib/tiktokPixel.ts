@@ -71,36 +71,41 @@ const enqueueEvent = (
     }
 };
 
-const dispatchEvent = (
+const invokeQueueMethod = (
     queue: TikTokQueue,
     method: keyof Pick<TikTokQueue, "page" | "track">,
     args: Array<unknown>,
-) => {
+): boolean => {
     try {
-        if (typeof queue.call === "function") {
-            queue.call(method, ...args);
-            return;
-        }
-
-        if (method === "track" && typeof queue.track === "function") {
-            queue.track(...(args as Parameters<NonNullable<TikTokQueue["track"]>>));
-            return;
-        }
-
-        if (method === "page" && typeof queue.page === "function") {
-            queue.page(...(args as Parameters<TikTokQueue["page"]>));
-            return;
+        const handler = queue?.[method];
+        if (typeof handler === "function") {
+            (
+                handler as (
+                    ...params: Parameters<TikTokQueue[typeof method]>
+                ) => void
+            ).apply(queue, args as Parameters<TikTokQueue[typeof method]>);
+            return true;
         }
     } catch (error) {
         if (process.env.NODE_ENV !== "production") {
             console.warn(
-                `Nu am putut trimite direct evenimentul TikTok ${method}`,
+                `Nu am putut apela direct handler-ul TikTok ${method}`,
                 error,
             );
         }
     }
 
-    enqueueEvent(queue, method, args);
+    return false;
+};
+
+const dispatchEvent = (
+    queue: TikTokQueue,
+    method: keyof Pick<TikTokQueue, "page" | "track">,
+    args: Array<unknown>,
+) => {
+    if (!invokeQueueMethod(queue, method, args)) {
+        enqueueEvent(queue, method, args);
+    }
 };
 
 const sanitizeValue = (value: unknown): unknown => {
