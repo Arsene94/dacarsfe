@@ -849,6 +849,9 @@ const CarsPage = () => {
   const [selectedPartner, setSelectedPartner] = useState<PartnerOption | null>(
     null,
   );
+  const [deleteTarget, setDeleteTarget] = useState<AdminCar | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const descriptionEditorConfig = useMemo(
     () => ({
@@ -1265,10 +1268,21 @@ const CarsPage = () => {
     setIsModalOpen(true);
   };
 
+  const handleOpenDelete = (car: AdminCar) => {
+    setDeleteTarget(car);
+    setDeleteError(null);
+  };
+
   const handleCloseModal = () => {
     if (saving) return;
     setIsModalOpen(false);
     resetPartnerLookup();
+  };
+
+  const handleCloseDelete = () => {
+    if (deleting) return;
+    setDeleteError(null);
+    setDeleteTarget(null);
   };
 
   const handleFormChange = (
@@ -1409,6 +1423,33 @@ const CarsPage = () => {
     });
     if (!nextIsPartner) {
       resetPartnerLookup();
+    }
+  };
+
+  const handleDeleteCar = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const carId = deleteTarget.id;
+      await apiClient.deleteCar(carId);
+      setCars((prev) => prev.filter((car) => car.id !== carId));
+      setTotalCars((prev) => (prev > 0 ? prev - 1 : 0));
+      await fetchMetrics();
+      setHasMore(true);
+      setCurrentPage(1);
+      await fetchCars(1, false);
+      setDeleteTarget(null);
+    } catch (err) {
+      console.error("Error deleting car:", err);
+      setDeleteError(
+        err instanceof Error
+          ? err.message
+          : "A apărut o eroare la ștergerea mașinii.",
+      );
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -1777,8 +1818,9 @@ const CarsPage = () => {
                       </button>
                       <button
                         type="button"
+                        onClick={() => handleOpenDelete(car)}
                         className="ml-3 p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        aria-label="Șterge"
+                        aria-label={`Șterge ${car.licensePlate ?? car.name}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -2304,6 +2346,60 @@ const CarsPage = () => {
             </Button>
           </div>
         </form>
+      </Popup>
+      <Popup
+        open={Boolean(deleteTarget)}
+        onClose={handleCloseDelete}
+        className="max-w-md w-full"
+      >
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-xl font-poppins font-semibold text-berkeley">
+              Ștergere mașină
+            </h3>
+            <p className="text-sm text-gray-600 font-dm-sans">
+              Ești sigur că vrei să ștergi mașina {" "}
+              <span className="font-semibold text-gray-900">
+                {deleteTarget?.licensePlate ?? deleteTarget?.name ?? "selectată"}
+              </span>
+              ? Această acțiune nu poate fi anulată.
+            </p>
+          </div>
+          {deleteError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 font-dm-sans">
+              {deleteError}
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleCloseDelete}
+              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-dm-sans hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label="Anulează ștergerea mașinii"
+              disabled={deleting}
+            >
+              Anulează
+            </button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={handleDeleteCar}
+              disabled={deleting}
+              className="gap-2"
+              aria-label="Confirmă ștergerea mașinii"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Se șterge...
+                </>
+              ) : (
+                "Șterge mașina"
+              )}
+            </Button>
+          </div>
+        </div>
       </Popup>
     </div>
   );

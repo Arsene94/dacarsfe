@@ -537,6 +537,12 @@ export class ApiClient {
         });
     }
 
+    async deleteCar(id: number | string): Promise<ApiDeleteResponse> {
+        return this.request<ApiDeleteResponse>(`/cars/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
     async syncCarCategories(
         id: number | string,
         payload: CarSyncCategoriesPayload,
