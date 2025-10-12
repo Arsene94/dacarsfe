@@ -137,6 +137,20 @@ const toOptionalNumber = (value: unknown): number | null => {
     return null;
 };
 
+const isFiniteNumber = (value: unknown): value is number =>
+    typeof value === "number" && Number.isFinite(value);
+
+const areApproximatelyEqual = (
+    a: number | null | undefined,
+    b: number | null | undefined,
+    epsilon = 0.01,
+): boolean => {
+    if (!isFiniteNumber(a) || !isFiniteNumber(b)) {
+        return false;
+    }
+    return Math.abs(a - b) < epsilon;
+};
+
 const pickFirstNumber = (candidates: unknown[]): number | null => {
     for (const candidate of candidates) {
         const parsed = toOptionalNumber(candidate);
@@ -2232,13 +2246,74 @@ const BookingForm: React.FC<BookingFormProps> = ({
             : Math.round(totalDisplay * 100) / 100;
     const originalTotalLei = formatLeiAmount(originalTotalRounded);
     const discountedTotalLei = formatLeiAmount(totalDisplay);
+    const manualCouponType = normalizeManualCouponType(bookingInfo.coupon_type);
+    const manualCouponAmount = toOptionalNumber(bookingInfo.coupon_amount);
+    const bookingBaseRate = resolvePlanNumber(
+        preferCascoPlan,
+        bookingBasePriceDeposit,
+        bookingBasePriceCasco,
+    );
+    const normalizedDiscountedRate = isFiniteNumber(discountedRate) ? discountedRate : null;
+    let derivedOriginalDailyRate = isFiniteNumber(originalRateFromBooking)
+        ? originalRateFromBooking
+        : null;
+
+    if (
+        manualCouponType === "per_day" &&
+        normalizedDiscountedRate != null &&
+        isFiniteNumber(manualCouponAmount) &&
+        manualCouponAmount !== 0
+    ) {
+        const candidate = normalizedDiscountedRate + manualCouponAmount;
+        if (
+            Number.isFinite(candidate) &&
+            candidate > 0 &&
+            (derivedOriginalDailyRate == null ||
+                areApproximatelyEqual(derivedOriginalDailyRate, normalizedDiscountedRate) ||
+                areApproximatelyEqual(derivedOriginalDailyRate, candidate))
+        ) {
+            derivedOriginalDailyRate = candidate;
+        }
+    } else if (
+        manualCouponType === "fixed_per_day" &&
+        isFiniteNumber(bookingBaseRate) &&
+        bookingBaseRate > 0
+    ) {
+        if (
+            derivedOriginalDailyRate == null ||
+            areApproximatelyEqual(derivedOriginalDailyRate, normalizedDiscountedRate) ||
+            areApproximatelyEqual(derivedOriginalDailyRate, manualCouponAmount)
+        ) {
+            derivedOriginalDailyRate = bookingBaseRate;
+        }
+    }
+
+    if (
+        (derivedOriginalDailyRate == null || derivedOriginalDailyRate <= 0) &&
+        isFiniteNumber(bookingBaseRate) &&
+        bookingBaseRate > 0
+    ) {
+        derivedOriginalDailyRate = bookingBaseRate;
+    } else if (
+        (derivedOriginalDailyRate == null || derivedOriginalDailyRate <= 0) &&
+        isFiniteNumber(totalBeforeDiscounts) &&
+        totalBeforeDiscounts > 0 &&
+        days > 0
+    ) {
+        derivedOriginalDailyRate = totalBeforeDiscounts / days;
+    } else if (
+        derivedOriginalDailyRate == null &&
+        isFiniteNumber(roundedBaseRate) &&
+        roundedBaseRate > 0
+    ) {
+        derivedOriginalDailyRate = roundedBaseRate;
+    }
+
     const roundedOriginalRate =
-        typeof originalRateFromBooking === "number" && Number.isFinite(originalRateFromBooking)
-            ? Math.round(originalRateFromBooking * 100) / 100
-            : typeof totalBeforeDiscounts === "number" && days > 0
-                ? Math.round((totalBeforeDiscounts / days) * 100) / 100
-                : roundedBaseRate;
-    const originalRateLei = formatLeiAmount(roundedOriginalRate);
+        derivedOriginalDailyRate != null && Number.isFinite(derivedOriginalDailyRate)
+            ? Math.round(derivedOriginalDailyRate * 100) / 100
+            : roundedBaseRate;
+    const originalRateLei = formatLeiAmount(derivedOriginalDailyRate);
 
     const isNewBooking = bookingInfo?.id == null;
 
