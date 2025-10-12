@@ -2,6 +2,14 @@ import { getBrowserCookieValue } from "@/lib/browserCookies";
 
 const PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID?.trim();
 const META_PIXEL_CLICK_ID_COOKIE_NAME = "_fbc";
+const FACEBOOK_LOGIN_ID_COOKIE_NAME = "fb_login_id";
+const FACEBOOK_LOGIN_ID_COOKIE_PREFIX = "fblo_";
+const FACEBOOK_LOGIN_ID_STORAGE_KEYS = [
+    "fb_login_id",
+    "_fb_login_id",
+    "fbLoginId",
+    "facebook_login_id",
+] as const;
 
 const ADVANCED_MATCHING_STORAGE_KEY = "dacars:meta:advanced-matching";
 const META_PIXEL_LEAD_STORAGE_KEY_PREFIX = "dacars:meta:lead:";
@@ -37,6 +45,7 @@ type NameParts = {
 };
 
 let advancedMatchingCache: AdvancedMatchingPayload = {};
+let cachedFacebookLoginId: string | null = null;
 
 const isBrowser = typeof window !== "undefined";
 
@@ -281,6 +290,245 @@ const buildLeadStorageKey = (identifier?: string | null): string => {
         : META_PIXEL_LEAD_STORAGE_FALLBACK_KEY;
 };
 
+const normalizeFacebookLoginId = (value: unknown): string | undefined => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+        const normalized = Math.abs(Math.trunc(value));
+        return normalized ? String(normalized) : undefined;
+    }
+
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return undefined;
+        }
+
+        const match = trimmed.match(/\d{5,}/);
+        return match ? match[0] : undefined;
+    }
+
+    if (Array.isArray(value)) {
+        for (const entry of value) {
+            const candidate = normalizeFacebookLoginId(entry);
+            if (candidate) {
+                return candidate;
+            }
+        }
+        return undefined;
+    }
+
+    if (value && typeof value === "object") {
+        const candidateKeys = ["fb_login_id", "login_id", "user_id", "userID", "uid", "id"] as const;
+
+        for (const key of candidateKeys) {
+            if (key in (value as Record<string, unknown>)) {
+                const candidate = normalizeFacebookLoginId(
+                    (value as Record<string, unknown>)[key],
+                );
+                if (candidate) {
+                    return candidate;
+                }
+            }
+        }
+    }
+
+    return undefined;
+};
+
+const decodeUriComponentSafely = (value: string): string | undefined => {
+    try {
+        const decoded = decodeURIComponent(value);
+        return decoded !== value ? decoded : undefined;
+    } catch {
+        return undefined;
+    }
+};
+
+const tryParseJson = (value: string): unknown => {
+    try {
+        return JSON.parse(value);
+    } catch {
+        return undefined;
+    }
+};
+
+const resolveFacebookLoginIdFromSerialized = (value: string): string | undefined => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return undefined;
+    }
+
+    const directCandidate = normalizeFacebookLoginId(trimmed);
+    if (directCandidate) {
+        return directCandidate;
+    }
+
+    const decoded = decodeUriComponentSafely(trimmed);
+    if (decoded) {
+        const decodedCandidate = normalizeFacebookLoginId(decoded);
+        if (decodedCandidate) {
+            return decodedCandidate;
+        }
+
+        const parsedDecoded = tryParseJson(decoded);
+        const parsedDecodedCandidate = normalizeFacebookLoginId(parsedDecoded);
+        if (parsedDecodedCandidate) {
+            return parsedDecodedCandidate;
+        }
+    }
+
+    const parsed = tryParseJson(trimmed);
+    const parsedCandidate = normalizeFacebookLoginId(parsed);
+    if (parsedCandidate) {
+        return parsedCandidate;
+    }
+
+    return undefined;
+};
+
+const getFacebookLoginIdFromStorage = (storage: Storage | null | undefined): string | null => {
+    if (!storage) {
+        return null;
+    }
+
+    for (const key of FACEBOOK_LOGIN_ID_STORAGE_KEYS) {
+        try {
+            const storedValue = storage.getItem(key);
+            if (!storedValue) {
+                continue;
+            }
+
+            const candidate = resolveFacebookLoginIdFromSerialized(storedValue);
+            if (candidate) {
+                return candidate;
+            }
+        } catch (error) {
+            if (process.env.NODE_ENV !== "production") {
+                console.warn(
+                    "Nu s-a putut citi Facebook Login ID din stocare",
+                    key,
+                    error,
+                );
+            }
+        }
+    }
+
+    return null;
+};
+
+const getFacebookLoginIdFromCookies = (): string | null => {
+    if (typeof document === "undefined") {
+        return null;
+    }
+
+    const cookieCandidate = getBrowserCookieValue(FACEBOOK_LOGIN_ID_COOKIE_NAME);
+    if (cookieCandidate) {
+        const resolved = resolveFacebookLoginIdFromSerialized(cookieCandidate);
+        if (resolved) {
+            return resolved;
+        }
+    }
+
+    const entries = document.cookie ? document.cookie.split(";") : [];
+
+    for (const entry of entries) {
+        const [rawName, ...rawValueParts] = entry.split("=");
+        if (!rawName || rawValueParts.length === 0) {
+            continue;
+        }
+
+        if (!rawName.trim().startsWith(FACEBOOK_LOGIN_ID_COOKIE_PREFIX)) {
+            continue;
+        }
+
+        const rawValue = rawValueParts.join("=").trim();
+        if (!rawValue) {
+            continue;
+        }
+
+        const resolved = resolveFacebookLoginIdFromSerialized(rawValue);
+        if (resolved) {
+            return resolved;
+        }
+    }
+
+    return null;
+};
+
+const resolveFacebookLoginId = (): string | null => {
+    if (!isBrowser) {
+        return null;
+    }
+
+    if (cachedFacebookLoginId) {
+        return cachedFacebookLoginId;
+    }
+
+    const fbWindow = window as typeof window & {
+        FB?: {
+            getAuthResponse?: () => {
+                userID?: string | number;
+                userId?: string | number;
+                uid?: string | number;
+            } | null;
+        };
+    };
+
+    const fb = fbWindow.FB;
+    if (fb && typeof fb.getAuthResponse === "function") {
+        try {
+            const authResponse = fb.getAuthResponse();
+            const candidate = normalizeFacebookLoginId(authResponse);
+            if (candidate) {
+                cachedFacebookLoginId = candidate;
+                return cachedFacebookLoginId;
+            }
+        } catch (error) {
+            if (process.env.NODE_ENV !== "production") {
+                console.warn("Nu s-a putut obține Facebook Login ID din SDK", error);
+            }
+        }
+    }
+
+    const fromCookies = getFacebookLoginIdFromCookies();
+    if (fromCookies) {
+        cachedFacebookLoginId = fromCookies;
+        return cachedFacebookLoginId;
+    }
+
+    let fromLocalStorage: string | null = null;
+    try {
+        fromLocalStorage = getFacebookLoginIdFromStorage(window.localStorage);
+    } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+            console.warn("Nu s-a putut accesa localStorage pentru Facebook Login ID", error);
+        }
+    }
+
+    if (fromLocalStorage) {
+        cachedFacebookLoginId = fromLocalStorage;
+        return cachedFacebookLoginId;
+    }
+
+    let fromSessionStorage: string | null = null;
+    try {
+        fromSessionStorage = getFacebookLoginIdFromStorage(window.sessionStorage);
+    } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+            console.warn(
+                "Nu s-a putut accesa sessionStorage pentru Facebook Login ID",
+                error,
+            );
+        }
+    }
+
+    if (fromSessionStorage) {
+        cachedFacebookLoginId = fromSessionStorage;
+        return cachedFacebookLoginId;
+    }
+
+    return null;
+};
+
 export const isMetaPixelConfigured = (): boolean => Boolean(PIXEL_ID);
 
 export const getMetaPixelAdvancedMatchingSnapshot = (): AdvancedMatchingPayload => ({
@@ -353,6 +601,18 @@ const trackMetaPixelEvent = (
 
         if (!hasCustomClickId) {
             (eventPayload as { fbc?: string }).fbc = clickId;
+        }
+    }
+
+    const facebookLoginId = resolveFacebookLoginId();
+
+    if (facebookLoginId) {
+        const existingLoginId = (eventPayload as { fb_login_id?: unknown }).fb_login_id;
+        const hasCustomLoginId =
+            typeof existingLoginId === "string" && existingLoginId.trim().length > 0;
+
+        if (!hasCustomLoginId) {
+            (eventPayload as { fb_login_id?: string }).fb_login_id = facebookLoginId;
         }
     }
 
