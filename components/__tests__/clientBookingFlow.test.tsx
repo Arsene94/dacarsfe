@@ -265,6 +265,11 @@ describe('Fluxul de închiriere pentru clienți', () => {
         selectedCar: expect.objectContaining({ id: mockApiCar.id, name: mockApiCar.name }),
       }),
     );
+    expect(apiClientMock.checkCarAvailability).toHaveBeenCalledWith({
+      car_id: mockApiCar.id,
+      start_date: '2025-07-01T08:00',
+      end_date: '2025-07-05T10:00',
+    });
     expect(pushMock).toHaveBeenCalledWith('/form');
 
     pushMock.mockClear();
@@ -280,8 +285,57 @@ describe('Fluxul de închiriere pentru clienți', () => {
         selectedCar: expect.objectContaining({ id: mockApiCar.id }),
       }),
     );
+    expect(apiClientMock.checkCarAvailability).toHaveBeenLastCalledWith({
+      car_id: mockApiCar.id,
+      start_date: '2025-07-01T08:00',
+      end_date: '2025-07-05T10:00',
+    });
     expect(pushMock).toHaveBeenCalledWith('/form');
   }, 15000);
+
+  it('solicită perioada de închiriere dacă lipsește și deschide modalul pentru selectare', async () => {
+    const user = userEvent.setup();
+    const setBooking = vi.fn();
+
+    apiClientMock.checkCarAvailability.mockResolvedValue({ available: true });
+
+    renderWithProviders(<CarsPageClient />, { setBooking });
+
+    await waitFor(() => expect(apiClientMock.getCarsByDateCriteria).toHaveBeenCalled());
+
+    await screen.findByText(mockApiCar.name ?? 'Dacia Logan', undefined, {
+      timeout: 8000,
+    });
+
+    await user.click(screen.getByText(/Rezervă fără garanție/i));
+
+    const startInput = await screen.findByLabelText('Data ridicare');
+    const endInput = await screen.findByLabelText('Data returnare');
+
+    await user.clear(startInput);
+    await user.type(startInput, '2025-09-10T09:00');
+    await user.clear(endInput);
+    await user.type(endInput, '2025-09-15T10:00');
+
+    await user.click(screen.getByRole('button', { name: /Verifică disponibilitatea/i }));
+
+    await waitFor(() =>
+      expect(apiClientMock.checkCarAvailability).toHaveBeenCalledWith({
+        car_id: mockApiCar.id,
+        start_date: '2025-09-10T09:00',
+        end_date: '2025-09-15T10:00',
+      }),
+    );
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/form'));
+    expect(setBooking).toHaveBeenCalledWith(
+      expect.objectContaining({
+        startDate: '2025-09-10T09:00',
+        endDate: '2025-09-15T10:00',
+        selectedCar: expect.objectContaining({ id: mockApiCar.id }),
+      }),
+    );
+  });
 
   it('păstrează opțiunile din checkout și permite schimbarea garanției', async () => {
     const user = userEvent.setup();

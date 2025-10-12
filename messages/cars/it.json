@@ -86,6 +86,19 @@
       "reserveNoDeposit": "Prenota senza deposito",
       "reserveWithDeposit": "Prenota con deposito",
       "reserveAria": "Prenota"
+    },
+    "availability": {
+      "title": "Seleziona il periodo di noleggio",
+      "description": "Per continuare con la prenotazione, scegli le date di ritiro e riconsegna.",
+      "startLabel": "Data ritiro",
+      "endLabel": "Data riconsegna",
+      "confirm": "Verifica disponibilità",
+      "cancel": "Annulla",
+      "periodRequired": "Seleziona un periodo completo per continuare.",
+      "unavailable": "L'auto non è disponibile per le date selezionate.",
+      "error": "Si è verificato un errore durante la verifica della disponibilità. Riprova.",
+      "checking": "Verifica in corso...",
+      "selectedCar": "Auto selezionata: {{car}}"
     }
   },
   "cta": {

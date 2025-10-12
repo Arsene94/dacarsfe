@@ -86,6 +86,19 @@
       "reserveNoDeposit": "Réserver sans dépôt",
       "reserveWithDeposit": "Réserver avec dépôt",
       "reserveAria": "Réserver"
+    },
+    "availability": {
+      "title": "Sélectionnez la période de location",
+      "description": "Pour poursuivre la réservation, choisissez les dates de prise en charge et de restitution.",
+      "startLabel": "Date de prise en charge",
+      "endLabel": "Date de restitution",
+      "confirm": "Vérifier la disponibilité",
+      "cancel": "Annuler",
+      "periodRequired": "Sélectionnez une période complète pour continuer.",
+      "unavailable": "Le véhicule n'est pas disponible aux dates choisies.",
+      "error": "Une erreur est survenue lors de la vérification de la disponibilité. Réessayez.",
+      "checking": "Vérification...",
+      "selectedCar": "Véhicule sélectionné : {{car}}"
     }
   },
   "cta": {

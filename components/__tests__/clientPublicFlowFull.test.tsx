@@ -387,6 +387,7 @@ describe('Fluxul complet al clienților DaCars', () => {
         last_page: 1,
       },
     });
+    apiClientMock.checkCarAvailability.mockResolvedValue({ available: true });
 
     const initialBooking: BookingData = {
       ...defaultBooking,
@@ -447,6 +448,11 @@ describe('Fluxul complet al clienților DaCars', () => {
       expect(lastCall?.withDeposit).toBe(false);
       expect(lastCall?.selectedCar?.id).toBe(77);
     });
+    expect(apiClientMock.checkCarAvailability).toHaveBeenCalledWith({
+      car_id: 77,
+      start_date: '2030-07-01T09:00',
+      end_date: '2030-07-05T09:00',
+    });
 
     pushMock.mockClear();
     await user.click(screen.getByText('Rezervă cu garanție'));
@@ -455,6 +461,11 @@ describe('Fluxul complet al clienților DaCars', () => {
       const lastCall = setBookingSpy.mock.calls.at(-1)?.[0];
       expect(lastCall?.withDeposit).toBe(true);
       expect(lastCall?.selectedCar?.id).toBe(77);
+    });
+    expect(apiClientMock.checkCarAvailability).toHaveBeenLastCalledWith({
+      car_id: 77,
+      start_date: '2030-07-01T09:00',
+      end_date: '2030-07-05T09:00',
     });
   });
 
