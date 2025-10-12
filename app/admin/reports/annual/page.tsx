@@ -20,9 +20,9 @@ import type {
   LineSeries,
 } from "@/components/admin/reports/ChartPrimitives";
 import {
-  BarChart,
   DoughnutChart,
   LineChart,
+  SimpleBarChart,
 } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
 import { formatCurrency } from "@/components/admin/reports/formatting";
@@ -423,7 +423,7 @@ export default function AdminAnnualReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {segmentPerformanceData ? (
-                  <BarChart
+                  <SimpleBarChart
                     data={segmentPerformanceData}
                     xKey="segment"
                     series={segmentPerformanceSeries}
@@ -501,7 +501,7 @@ export default function AdminAnnualReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {cityPerformanceData ? (
-                  <BarChart
+                  <SimpleBarChart
                     data={cityPerformanceData}
                     xKey="city"
                     series={cityPerformanceSeries}

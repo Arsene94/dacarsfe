@@ -59,14 +59,14 @@ export interface BarSeries {
   stackId?: string;
 }
 
-export interface BarChartProps extends BaseCartesianProps {
+export interface SimpleBarChartProps extends BaseCartesianProps {
   series: BarSeries[];
   layout?: "horizontal" | "vertical";
   barCategoryGap?: number | string;
   barGap?: number;
 }
 
-export function BarChart({
+export function SimpleBarChart({
   data,
   xKey,
   series,
@@ -80,7 +80,7 @@ export function BarChart({
   hideLegend = false,
   barCategoryGap = "20%",
   barGap = 8,
-}: BarChartProps) {
+}: SimpleBarChartProps) {
   const isHorizontal = layout === "horizontal";
 
   return (

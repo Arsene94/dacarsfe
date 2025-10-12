@@ -15,7 +15,7 @@ import {
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
 import type { BarSeries } from "@/components/admin/reports/ChartPrimitives";
-import { BarChart } from "@/components/admin/reports/ChartPrimitives";
+import { SimpleBarChart } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
 import { formatCurrency } from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
@@ -268,7 +268,7 @@ export default function AdminReportsOverviewPage() {
           >
             <ChartContainer>
               {quarterChartData ? (
-                <BarChart
+                <SimpleBarChart
                   data={quarterChartData}
                   xKey="label"
                   series={quarterChartSeries}

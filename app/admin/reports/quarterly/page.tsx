@@ -15,7 +15,7 @@ import {
   StatGrid,
 } from "@/components/admin/reports/ReportElements";
 import type { BarSeries, DoughnutSlice } from "@/components/admin/reports/ChartPrimitives";
-import { BarChart, DoughnutChart } from "@/components/admin/reports/ChartPrimitives";
+import { DoughnutChart, SimpleBarChart } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
 import { formatCurrency } from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
@@ -386,7 +386,7 @@ export default function AdminQuarterlyReportPage() {
           >
             <ChartContainer>
               {revenueData ? (
-                <BarChart
+                <SimpleBarChart
                   data={revenueData}
                   xKey="label"
                   series={revenueSeries}
@@ -406,7 +406,7 @@ export default function AdminQuarterlyReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {profitBySegmentData ? (
-                  <BarChart
+                  <SimpleBarChart
                     data={profitBySegmentData}
                     xKey="segment"
                     series={profitBySegmentSeries}
