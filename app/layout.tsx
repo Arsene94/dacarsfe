@@ -123,23 +123,43 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                   }
 
                   var warnedDuplicate = false;
+                  var blockableCommands = { init: true, addPixelId: true };
+
+                  var normalizePixelId = function (value) {
+                    if (typeof value === 'string') {
+                      return value.trim();
+                    }
+                    if (value && typeof value === 'object') {
+                      if (typeof value.id === 'string') {
+                        return value.id.trim();
+                      }
+                      if (typeof value.pixelId === 'string') {
+                        return value.pixelId.trim();
+                      }
+                    }
+                    return '';
+                  };
 
                   var allowCommand = function (command, args) {
-                    if (command !== 'init') {
+                    if (!command || !blockableCommands[command]) {
                       return true;
                     }
 
                     var candidate = '';
-                    if (args && args.length > 1 && typeof args[1] === 'string') {
-                      candidate = args[1].trim();
+                    if (args && args.length > 1) {
+                      candidate = normalizePixelId(args[1]);
                     }
 
-                    if (!candidate || candidate === PIXEL_ID) {
-                      return Boolean(candidate);
+                    if (!candidate) {
+                      return false;
+                    }
+
+                    if (candidate === PIXEL_ID) {
+                      return true;
                     }
 
                     if (!warnedDuplicate && typeof console !== 'undefined' && typeof console.warn === 'function') {
-                      console.warn('[Meta Pixel] A fost ignorat un init pentru un Pixel secundar.');
+                      console.warn('[Meta Pixel] A fost ignorată o comandă pentru un Pixel secundar.');
                       warnedDuplicate = true;
                     }
 
@@ -211,11 +231,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                     n = function () {
                       n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
                     };
+                    n.push = n;
+                    n.loaded = !0;
+                    n.version = '2.0';
+                    n.queue = [];
                     f.fbq = guardFbq(n);
                     f.fbq.push = f.fbq;
                     f.fbq.loaded = !0;
                     f.fbq.version = '2.0';
-                    f.fbq.queue = [];
+                    f.fbq.queue = n.queue;
                     if (!f._fbq) {
                       f._fbq = f.fbq;
                     }
