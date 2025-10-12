@@ -3,32 +3,35 @@
 import dynamic from "next/dynamic";
 import { Clock, Shield, Star } from "lucide-react";
 
+import { HeroBackground } from "@/components/HeroBackground";
 import type { Locale } from "@/lib/i18n/config";
 
 import type { HeroFeature } from "./hero/heroUtils";
 import type { HeroBookingFormProps, LocationOption } from "./HeroBookingForm";
-import {HeroBackground} from "@/components/HeroBackground";
+
+function HeroBookingFormSkeleton() {
+    return (
+        <div
+            role="status"
+            aria-live="polite"
+            className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5"
+        >
+            {[...Array(5)].map((_, index) => (
+                <div key={`hero-form-skeleton-${index}`} className="space-y-2">
+                    <div className="h-4 w-28 rounded bg-white/30" />
+                    <div className="h-12 rounded-md bg-white/20" />
+                </div>
+            ))}
+        </div>
+    );
+}
 
 const HeroBookingForm = dynamic<HeroBookingFormProps>(
     () => import("./HeroBookingForm"),
     {
         loading: () => <HeroBookingFormSkeleton />,
+        ssr: false,
     },
-);
-
-const HeroBookingFormSkeleton = () => (
-    <div
-        role="status"
-        aria-live="polite"
-        className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5"
-    >
-        {[...Array(5)].map((_, index) => (
-            <div key={`hero-form-skeleton-${index}`} className="space-y-2">
-                <div className="h-4 w-28 rounded bg-white/30" />
-                <div className="h-12 rounded-md bg-white/20" />
-            </div>
-        ))}
-    </div>
 );
 
 type HeroSectionViewProps = {
