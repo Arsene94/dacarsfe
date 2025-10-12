@@ -801,24 +801,25 @@ const FleetPage = () => {
 
                 <>
                     <div className="flex items-center justify-between mb-5">
-                        <div className="me-1">
-                            <span className="text-jade font-bold font-dm-sans">{t("card.pricing.noDepositLabel")}</span>
-                            <span className="text-base font-poppins font-bold text-jade">{" "}{car.rental_rate_casco}€</span>
-                            <span className="text-jade font-bold font-dm-sans"> {t("card.pricing.perDay")}</span>
-                            {Boolean(startDate && endDate) && (
-                                <div>
-                                    <span className="text-jade font-bold font-dm-sans">
-                                        {t("card.pricing.daysTotal", { values: { days: car.days } })}
-                                    </span>
-                                    <span className="text-base font-poppins font-bold text-jade">{" "}{car.total_without_deposit}€</span>
-                                </div>
-                            )}
-                        </div>
+                        {Boolean(startDate && endDate) && (
+                            <div className="me-1">
+                                <span className="text-jade font-bold font-dm-sans">{t("card.pricing.noDepositLabel")}</span>
+                                <span className="text-base font-poppins font-bold text-jade">{" "}{car.rental_rate_casco}€</span>
+                                <span className="text-jade font-bold font-dm-sans"> {t("card.pricing.perDay")}</span>
+
+                                    <div>
+                                        <span className="text-jade font-bold font-dm-sans">
+                                            {t("card.pricing.daysTotal", { values: { days: car.days } })}
+                                        </span>
+                                        <span className="text-base font-poppins font-bold text-jade">{" "}{car.total_without_deposit}€</span>
+                                    </div>
+                            </div>
+                        )}
                         <Button
                             onClick={() => handleBooking(false, car)}
                             disabled={checkingAvailabilityFor === car.id}
                             aria-busy={checkingAvailabilityFor === car.id}
-                            className={`px-4 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg transition-colors duration-300 ${
+                            className={`${!Boolean(startDate && endDate) ? 'w-full' : ''} !px-4 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg transition-colors duration-300 ${
                                 checkingAvailabilityFor === car.id
                                     ? "opacity-75 cursor-not-allowed"
                                     : "hover:bg-jade/90"
@@ -832,24 +833,24 @@ const FleetPage = () => {
                     </div>
 
                     <div className="flex items-center justify-between">
-                        <div className="me-3">
-                            <span className="text-gray-600 font-dm-sans">{t("card.pricing.withDepositLabel")}</span>
-                            <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.rental_rate}€</span>
-                            <span className="text-gray-600 font-dm-sans"> {t("card.pricing.perDay")}</span>
-                            {Boolean(startDate && endDate) && (
-                                <div>
-                                    <span className="text-gray-600 font-bold font-dm-sans">
-                                        {t("card.pricing.daysTotal", { values: { days: car.days } })}
-                                    </span>
-                                    <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.total_deposit}€</span>
-                                </div>
-                            )}
-                        </div>
+                        {Boolean(startDate && endDate) && (
+                            <div className="me-3">
+                                <span className="text-gray-600 font-dm-sans">{t("card.pricing.withDepositLabel")}</span>
+                                <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.rental_rate}€</span>
+                                <span className="text-gray-600 font-dm-sans"> {t("card.pricing.perDay")}</span>
+                                    <div>
+                                        <span className="text-gray-600 font-bold font-dm-sans">
+                                            {t("card.pricing.daysTotal", { values: { days: car.days } })}
+                                        </span>
+                                        <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.total_deposit}€</span>
+                                    </div>
+                            </div>
+                        )}
                         <Button
                             onClick={() => handleBooking(true, car)}
                             disabled={checkingAvailabilityFor === car.id}
                             aria-busy={checkingAvailabilityFor === car.id}
-                            className={`px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg transition-colors duration-300 ${
+                            className={`${!Boolean(startDate && endDate) ? 'w-full' : ''} px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg transition-colors duration-300 ${
                                 checkingAvailabilityFor === car.id
                                     ? "opacity-75 cursor-not-allowed"
                                     : "hover:!bg-jade/90 hover:!text-white"
