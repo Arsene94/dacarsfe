@@ -296,7 +296,7 @@ const mapActivityReservationToAdmin = (
     carLicensePlate: reservation.car?.license_plate,
     startDate: reservation.rental_start_date ?? "",
     endDate: reservation.rental_end_date ?? "",
-    plan: reservation.with_deposit ? 1 : 0,
+    plan: reservation.with_deposit ? 1 : 2,
     status: mapActivityStatus(reservation.status ?? ""),
     total: reservation.total ?? 0,
     pricePerDay: reservation.price_per_day ?? undefined,
