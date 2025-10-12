@@ -1,6 +1,6 @@
 # Admin Authentication API
 
-These endpoints issue and manage Sanctum tokens for the internal admin SPA. All routes live under the `/api` prefix. Only the "me" and logout operations require an authenticated admin token.
+These endpoints issue and manage Sanctum tokens for the internal admin SPA. All routes live under the `/api` prefix. Only the "me" and logout operations require an authenticated admin token. Sesiunea din aplicația React salvează token-ul curent în `localStorage` (`auth_token`), păstrează profilul în `auth_user` și actualizează o dată de expirare (`auth_token_expires_at`) astfel încât autentificarea să rămână valabilă până la 30 de zile fără re-login.
 
 ## Endpoint overview
 | Method | URL | Description | Auth | Notes |

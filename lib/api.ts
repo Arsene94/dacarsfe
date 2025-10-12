@@ -302,6 +302,8 @@ export class ApiClient {
         this.token = null;
         if (typeof window !== 'undefined') {
             localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            localStorage.removeItem('auth_token_expires_at');
         }
     }
 
