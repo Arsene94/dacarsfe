@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import PageTransition from "../components/PageTransition";
+import ScrollPositionManager from "../components/ScrollPositionManager";
 import Script from "next/script";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
@@ -168,6 +169,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <LocaleProvider initialLocale={initialLocale}>
           <AuthProvider>
             <BookingProvider>
+              <ScrollPositionManager />
               <Header />
               <main className="mt-12">
                 <PageTransition>{children}</PageTransition>
