@@ -665,7 +665,7 @@ export default function CategoriesPage() {
                             <td key={key} className="border p-2 text-xs">
                               {(
                                 parseFloat(p.price) *
-                                (1 - (discounts[i] ?? 0) / 100)
+                                (1 + (discounts[i] ?? 0) / 100)
                               ).toFixed(2)}
                             </td>
                           ))}
