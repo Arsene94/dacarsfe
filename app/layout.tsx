@@ -19,6 +19,7 @@ import MixpanelInitializer from "../components/MixpanelInitializer";
 import TikTokPixelScript from "../components/TikTokPixelScript";
 import TikTokPixelInitializer from "../components/TikTokPixelInitializer";
 import MetaPixel from "../components/MetaPixel";
+import MetaPixelServiceWorker from "../components/MetaPixelServiceWorker";
 import { GoogleAnalytics } from "@next/third-parties/google";
 
 const poppins = Poppins({
@@ -109,6 +110,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <MixpanelInitializer/>
         <TikTokPixelInitializer/>
         <MetaPixel />
+        <MetaPixelServiceWorker />
         </Suspense>
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`
