@@ -31,6 +31,7 @@ import type {
     ReservationWheelPrizePayload,
     ReservationWheelPrizeSummary,
     Service,
+    CouponTotalDiscountDetails,
 } from "@/types/reservation";
 import type { Offer, OfferStatus } from "@/types/offer";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
@@ -2206,20 +2207,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const subtotalLei = formatLeiAmount(subtotalDisplay);
     const totalLei = formatLeiAmount(totalDisplay);
     const restToPayLei = formatLeiAmount(restToPay);
-    const normalizedDiscountValue =
-        typeof discount === "number" && Number.isFinite(discount)
-            ? Math.round(Math.abs(discount) * 100) / 100
-            : 0;
-    const normalizedCouponDiscount =
-        Math.round(
-            Math.abs(toOptionalNumber(bookingInfo.coupon_total_discount) ?? 0) * 100,
-        ) / 100;
-    const effectiveDiscountValue =
-        normalizedDiscountValue !== 0 ? normalizedDiscountValue : normalizedCouponDiscount;
-    const discountAmountForDisplay =
-        effectiveDiscountValue !== 0 ? effectiveDiscountValue : null;
-    const discountLei = formatLeiAmount(discountAmountForDisplay);
-    const wheelPrizeDiscountLei = formatLeiAmount(normalizedWheelPrizeDiscount);
     const roundedBaseRate = Math.round(baseRate * 100) / 100;
     const baseRateLei = formatLeiAmount(baseRate);
     const roundedDiscountedRate = Math.round(discountedRate * 100) / 100;
@@ -2230,22 +2217,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
         typeof normalizedWheelPrizeDiscount === "number"
             ? Math.round(Math.abs(normalizedWheelPrizeDiscount) * 100) / 100
             : 0;
-    const totalBeforeDiscounts =
-        typeof bookingTotalBeforeWheelPrize === "number"
-            ? bookingTotalBeforeWheelPrize + normalizedWheelPrizeDiscountValue
-            : discountAmountForDisplay != null || normalizedWheelPrizeDiscountValue !== 0
-                ? totalDisplay + (discountAmountForDisplay ?? 0) + normalizedWheelPrizeDiscountValue
-                : null;
-    const hasDiscountDetails =
-        (discountAmountForDisplay != null || normalizedWheelPrizeDiscountValue !== 0) &&
-        Number.isFinite(totalDisplay) &&
-        totalDisplay > 0;
-    const originalTotalRounded =
-        typeof totalBeforeDiscounts === "number"
-            ? Math.round(totalBeforeDiscounts * 100) / 100
-            : Math.round(totalDisplay * 100) / 100;
-    const originalTotalLei = formatLeiAmount(originalTotalRounded);
-    const discountedTotalLei = formatLeiAmount(totalDisplay);
     const manualCouponType = normalizeManualCouponType(bookingInfo.coupon_type);
     const manualCouponAmount = toOptionalNumber(bookingInfo.coupon_amount);
     const bookingBaseRate = resolvePlanNumber(
@@ -2296,17 +2267,125 @@ const BookingForm: React.FC<BookingFormProps> = ({
         derivedOriginalDailyRate = bookingBaseRate;
     } else if (
         (derivedOriginalDailyRate == null || derivedOriginalDailyRate <= 0) &&
-        isFiniteNumber(totalBeforeDiscounts) &&
-        totalBeforeDiscounts > 0 &&
-        days > 0
-    ) {
-        derivedOriginalDailyRate = totalBeforeDiscounts / days;
-    } else if (
-        derivedOriginalDailyRate == null &&
         isFiniteNumber(roundedBaseRate) &&
         roundedBaseRate > 0
     ) {
         derivedOriginalDailyRate = roundedBaseRate;
+    }
+
+    const manualDiscountFromRates =
+        derivedOriginalDailyRate != null &&
+        normalizedDiscountedRate != null &&
+        derivedOriginalDailyRate > normalizedDiscountedRate &&
+        days > 0
+            ? (derivedOriginalDailyRate - normalizedDiscountedRate) * days
+            : 0;
+    const normalizedManualDiscountFromRates =
+        manualDiscountFromRates > 0 && Number.isFinite(manualDiscountFromRates)
+            ? Math.round(manualDiscountFromRates * 100) / 100
+            : 0;
+    const manualCouponTotalDiscount = resolvePlanAmount(
+        preferCascoPlan,
+        [
+            (
+                quote as {
+                    coupon_total_discount_details?: CouponTotalDiscountDetails<unknown>;
+                    coupon_total_discount?: unknown;
+                }
+            )?.coupon_total_discount_details?.deposit,
+            quote?.coupon_total_discount,
+            bookingInfo.coupon_total_discount_details?.deposit,
+            bookingInfo.coupon_total_discount,
+        ],
+        [
+            (
+                quote as {
+                    coupon_total_discount_details?: CouponTotalDiscountDetails<unknown>;
+                    coupon_total_discount?: unknown;
+                }
+            )?.coupon_total_discount_details?.casco,
+            quote?.coupon_total_discount,
+            bookingInfo.coupon_total_discount_details?.casco,
+            bookingInfo.coupon_total_discount,
+        ],
+    );
+    const normalizedManualCouponTotalDiscount =
+        typeof manualCouponTotalDiscount === "number" && Number.isFinite(manualCouponTotalDiscount)
+            ? Math.round(Math.abs(manualCouponTotalDiscount) * 100) / 100
+            : 0;
+    const normalizedDiscountValue =
+        typeof discount === "number" && Number.isFinite(discount)
+            ? Math.round(Math.abs(discount) * 100) / 100
+            : 0;
+    const normalizedCouponDiscount =
+        Math.round(
+            Math.abs(toOptionalNumber(bookingInfo.coupon_total_discount) ?? 0) * 100,
+        ) / 100;
+    const effectiveDiscountValue = Math.max(
+        normalizedDiscountValue,
+        normalizedCouponDiscount,
+        normalizedManualCouponTotalDiscount,
+        normalizedManualDiscountFromRates,
+    );
+    const discountAmountForDisplay =
+        effectiveDiscountValue > 0 ? effectiveDiscountValue : null;
+    const discountLei = formatLeiAmount(discountAmountForDisplay);
+    const wheelPrizeDiscountLei = formatLeiAmount(normalizedWheelPrizeDiscount);
+    const totalDiscountContribution =
+        (discountAmountForDisplay ?? 0) +
+        (normalizedWheelPrizeDiscountValue > 0 ? normalizedWheelPrizeDiscountValue : 0);
+    const derivedOriginalSubtotalCandidate =
+        derivedOriginalDailyRate != null &&
+        Number.isFinite(derivedOriginalDailyRate) &&
+        derivedOriginalDailyRate > 0 &&
+        days > 0
+            ? derivedOriginalDailyRate * days
+            : null;
+    const derivedOriginalTotalCandidate =
+        derivedOriginalSubtotalCandidate != null
+            ? derivedOriginalSubtotalCandidate + totalServicesDisplay
+            : null;
+    const totalBeforeWheelWithManual =
+        typeof bookingTotalBeforeWheelPrize === "number" &&
+        Number.isFinite(bookingTotalBeforeWheelPrize) &&
+        bookingTotalBeforeWheelPrize > 0
+            ? bookingTotalBeforeWheelPrize + (discountAmountForDisplay ?? 0)
+            : null;
+    const reconstructedTotalFromDisplay =
+        Number.isFinite(totalDisplay) &&
+        totalDisplay > 0 &&
+        totalDiscountContribution > 0
+            ? totalDisplay + totalDiscountContribution
+            : null;
+    const totalBeforeDiscountsCandidates = [
+        derivedOriginalTotalCandidate,
+        totalBeforeWheelWithManual,
+        reconstructedTotalFromDisplay,
+    ].filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0);
+    const totalBeforeDiscounts =
+        totalBeforeDiscountsCandidates.length > 0
+            ? Math.max(...totalBeforeDiscountsCandidates)
+            : null;
+    const hasManualRateDifference = normalizedManualDiscountFromRates > 0;
+    const hasDiscountDetails =
+        Number.isFinite(totalDisplay) &&
+        totalDisplay > 0 &&
+        (totalDiscountContribution > 0 || hasManualRateDifference);
+    const originalTotalRounded =
+        typeof totalBeforeDiscounts === "number" && Number.isFinite(totalBeforeDiscounts)
+            ? Math.round(totalBeforeDiscounts * 100) / 100
+            : Math.round(totalDisplay * 100) / 100;
+    const originalTotalLei = formatLeiAmount(originalTotalRounded);
+    const discountedTotalLei = formatLeiAmount(totalDisplay);
+
+    if (
+        (derivedOriginalDailyRate == null || derivedOriginalDailyRate <= 0) &&
+        typeof totalBeforeDiscounts === "number" &&
+        Number.isFinite(totalBeforeDiscounts) &&
+        totalBeforeDiscounts > 0 &&
+        days > 0
+    ) {
+        derivedOriginalDailyRate = totalBeforeDiscounts / days;
     }
 
     const roundedOriginalRate =
