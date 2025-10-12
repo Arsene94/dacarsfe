@@ -1,4 +1,7 @@
+import { getBrowserCookieValue } from "@/lib/browserCookies";
+
 const PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID?.trim();
+const META_PIXEL_CLICK_ID_COOKIE_NAME = "_fbc";
 
 const ADVANCED_MATCHING_STORAGE_KEY = "dacars:meta:advanced-matching";
 const META_PIXEL_LEAD_STORAGE_KEY_PREFIX = "dacars:meta:lead:";
@@ -340,7 +343,20 @@ const trackMetaPixelEvent = (
         return;
     }
 
-    const sanitized = sanitizeEventPayload(payload);
+    const eventPayload: Record<string, unknown> = payload ? { ...payload } : {};
+    const clickId = getBrowserCookieValue(META_PIXEL_CLICK_ID_COOKIE_NAME);
+
+    if (clickId) {
+        const existingClickId = (eventPayload as { fbc?: unknown }).fbc;
+        const hasCustomClickId =
+            typeof existingClickId === "string" && existingClickId.trim().length > 0;
+
+        if (!hasCustomClickId) {
+            (eventPayload as { fbc?: string }).fbc = clickId;
+        }
+    }
+
+    const sanitized = sanitizeEventPayload(eventPayload);
     withFbq((fbq) => {
         if (sanitized) {
             fbq("track", eventName, sanitized);
