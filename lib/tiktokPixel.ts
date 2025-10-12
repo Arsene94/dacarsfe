@@ -47,6 +47,62 @@ const resolveQueue = (): TikTokQueue | null => {
     return queue;
 };
 
+const enqueueEvent = (
+    queue: TikTokQueue,
+    method: keyof Pick<TikTokQueue, "page" | "track">,
+    args: Array<unknown>,
+) => {
+    try {
+        if (typeof queue.push === "function") {
+            queue.push([method, ...args]);
+            return;
+        }
+
+        if (Array.isArray(queue)) {
+            (queue as unknown as Array<unknown>).push([method, ...args]);
+        }
+    } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+            console.warn(
+                `Nu am putut pune în coadă evenimentul TikTok ${method}`,
+                error,
+            );
+        }
+    }
+};
+
+const dispatchEvent = (
+    queue: TikTokQueue,
+    method: keyof Pick<TikTokQueue, "page" | "track">,
+    args: Array<unknown>,
+) => {
+    try {
+        if (typeof queue.call === "function") {
+            queue.call(method, ...args);
+            return;
+        }
+
+        if (method === "track" && typeof queue.track === "function") {
+            queue.track(...(args as Parameters<NonNullable<TikTokQueue["track"]>>));
+            return;
+        }
+
+        if (method === "page" && typeof queue.page === "function") {
+            queue.page(...(args as Parameters<TikTokQueue["page"]>));
+            return;
+        }
+    } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+            console.warn(
+                `Nu am putut trimite direct evenimentul TikTok ${method}`,
+                error,
+            );
+        }
+    }
+
+    enqueueEvent(queue, method, args);
+};
+
 const sanitizeValue = (value: unknown): unknown => {
     if (value === undefined || value === null) {
         return undefined;
@@ -199,13 +255,7 @@ export const trackTikTokPageView = () => {
         return;
     }
 
-    try {
-        queue.page();
-    } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-            console.warn("Nu s-a putut trimite PageView către TikTok", error);
-        }
-    }
+    dispatchEvent(queue, "page", []);
 };
 
 export const trackTikTokEvent = (
@@ -226,17 +276,11 @@ export const trackTikTokEvent = (
 
     const sanitizedPayload = sanitizePayload(payload);
 
-    try {
-        if (sanitizedPayload) {
-            queue.track(eventName, sanitizedPayload);
-        } else {
-            queue.track(eventName);
-        }
-    } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-            console.warn(`Nu s-a putut trimite evenimentul TikTok ${eventName}`, error);
-        }
-    }
+    const args: Array<unknown> = sanitizedPayload
+        ? [eventName, sanitizedPayload]
+        : [eventName];
+
+    dispatchEvent(queue, "track", args);
 };
 
 export const isTikTokPixelConfigured = () => hasPixelId();
