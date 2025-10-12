@@ -29,7 +29,7 @@ export async function POST(req: Request) {
         const payload = {
             data: [
                 {
-                    action_source: "system_generated",
+                    action_source: "website",
                     event_name: eventName || "Lead",
                     event_time: Math.floor(Date.now() / 1000),
                     custom_data: {

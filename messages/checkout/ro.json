@@ -4,6 +4,7 @@
     "description": "Completează datele și opțiunile pentru a confirma rezervarea mașinii alese de la DaCars.",
     "openGraphTitle": "Finalizează rezervarea ta | DaCars Rent a Car"
   },
+  "days": "zile",
   "fallbacks": {
     "carName": "Autovehicul"
   },
