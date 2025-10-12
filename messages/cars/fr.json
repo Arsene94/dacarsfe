@@ -92,6 +92,15 @@
       "unavailable": "Ce véhicule n'est pas disponible pour la période choisie. Veuillez sélectionner d'autres dates ou un autre véhicule."
     }
   },
+  "dateModal": {
+    "title": "Sélectionne ta période de location",
+    "description": "Choisis les dates de retrait et de retour pour poursuivre la réservation.",
+    "pickupLabel": "Date de retrait",
+    "returnLabel": "Date de retour",
+    "invalidRange": "Sélectionne des dates valides. Le retour doit être postérieur au retrait.",
+    "cancel": "Annuler",
+    "confirm": "Continuer la réservation"
+  },
   "cta": {
     "title": "Vous ne trouvez pas la bonne voiture ?",
     "description": "Contactez-nous et nous vous aiderons à trouver l'option idéale pour votre voyage.",

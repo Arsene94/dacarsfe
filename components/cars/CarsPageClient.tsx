@@ -9,6 +9,8 @@ import JsonLd from "@/components/seo/JsonLd";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Popup } from "@/components/ui/popup";
 import { apiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { resolveMediaUrl } from "@/lib/media";
@@ -201,8 +203,8 @@ const FleetPage = () => {
         type: "missingDates" | "unavailable";
     } | null>(null);
 
-    const startDate = searchParams.get("start_date") || "";
-    const endDate   = searchParams.get("end_date") || "";
+    const startDateParam = searchParams.get("start_date") || "";
+    const endDateParam = searchParams.get("end_date") || "";
     const carTypeParam = searchParams.get("car_type") || "";
     const location  = searchParams.get("location") || "";
 
@@ -219,6 +221,47 @@ const FleetPage = () => {
     const hasTrackedViewRef = useRef(false);
 
     const [categories, setCategories] = useState<CarCategory[]>();
+    const [selectedStartDate, setSelectedStartDate] = useState(startDateParam);
+    const [selectedEndDate, setSelectedEndDate] = useState(endDateParam);
+    const [showDateModal, setShowDateModal] = useState(false);
+    const [pendingBookingAction, setPendingBookingAction] = useState<{
+        car: Car;
+        withDeposit: boolean;
+    } | null>(null);
+    const [dateDraft, setDateDraft] = useState<{ start: string; end: string }>(() => ({
+        start: startDateParam,
+        end: endDateParam,
+    }));
+    const [awaitingUpdatedCarData, setAwaitingUpdatedCarData] = useState(false);
+
+    useEffect(() => {
+        if (startDateParam !== selectedStartDate) {
+            setSelectedStartDate(startDateParam);
+        }
+        if (endDateParam !== selectedEndDate) {
+            setSelectedEndDate(endDateParam);
+        }
+    }, [endDateParam, selectedEndDate, selectedStartDate, startDateParam]);
+
+    const toDateTimeLocalString = useCallback((date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }, []);
+
+    const getDefaultDateRange = useCallback(() => {
+        const now = new Date();
+        now.setMinutes(0, 0, 0);
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return {
+            start: toDateTimeLocalString(now),
+            end: toDateTimeLocalString(tomorrow),
+        };
+    }, [toDateTimeLocalString]);
 
     // derive filters from loaded cars (for dropdowns)
     const filterOptions = useMemo(() => {
@@ -258,8 +301,8 @@ const FleetPage = () => {
 
         // construim payload doar cu valori „reale”
         const payload: CarSearchUiPayload = {
-            start_date: startDate || undefined,
-            end_date: endDate || undefined,
+            start_date: selectedStartDate || undefined,
+            end_date: selectedEndDate || undefined,
             car_type: carTypeParam || undefined,
             location: location || undefined,
             page: currentPage,
@@ -325,8 +368,8 @@ const FleetPage = () => {
         sortBy,
         filters,
         searchTerm,
-        startDate,
-        endDate,
+        selectedStartDate,
+        selectedEndDate,
         carTypeParam,
         location,
         locale,
@@ -341,7 +384,7 @@ const FleetPage = () => {
         setCurrentPage(1);
         hasMoreRef.current = true;
         hasTrackedViewRef.current = false;
-    }, [filters, sortBy, searchTerm, startDate, endDate, carTypeParam, location]);
+    }, [filters, sortBy, searchTerm, selectedStartDate, selectedEndDate, carTypeParam, location]);
 
     // categories (reîncărcare la schimbarea localei pentru fallback-uri)
     useEffect(() => {
@@ -395,8 +438,10 @@ const FleetPage = () => {
         if (searchTerm) params.set("search", searchTerm); else params.delete("search");
         params.set("sort_by", sortBy);
         params.set("page", String(currentPage));
+        if (selectedStartDate) params.set("start_date", selectedStartDate); else params.delete("start_date");
+        if (selectedEndDate) params.set("end_date", selectedEndDate); else params.delete("end_date");
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, [filters, searchTerm, sortBy, currentPage, router, pathname]);
+    }, [filters, searchTerm, sortBy, currentPage, router, pathname, selectedStartDate, selectedEndDate]);
 
     // IntersectionObserver pentru infinite scroll
     useEffect(() => {
@@ -497,8 +542,61 @@ const FleetPage = () => {
         return active;
     }, [filters, categories, filterOptions, formatPassengersLabel]);
 
+    const finalizeBooking = useCallback(
+        (withDeposit: boolean, car: Car, start: string, end: string) => {
+            setCtaFeedback(null);
+
+            setBooking({
+                ...booking,
+                startDate: start,
+                endDate: end,
+                withDeposit,
+                selectedCar: car,
+            });
+
+            const pricePerDay = toNumberOrNull(
+                withDeposit ? car.rental_rate : car.rental_rate_casco,
+            );
+            const totalAmount = toNumberOrNull(
+                withDeposit ? car.total_deposit : car.total_without_deposit,
+            );
+
+            trackMixpanelEvent("car_cta_clicked", {
+                car_id: car.id,
+                car_name: car.name,
+                with_deposit: withDeposit,
+                car_price_plan: withDeposit ? "with_deposit" : "no_deposit",
+                car_price_per_day: pricePerDay,
+                car_total: totalAmount,
+                start_date: start || null,
+                end_date: end || null,
+                view_mode: viewMode,
+            });
+
+            trackTikTokEvent(TIKTOK_EVENTS.ADD_TO_CART, {
+                content_type: TIKTOK_CONTENT_TYPE,
+                contents: [
+                    {
+                        content_id: car.id,
+                        content_name: car.name,
+                        quantity: 1,
+                        price: totalAmount ?? undefined,
+                    },
+                ],
+                value: totalAmount ?? undefined,
+                currency: "RON",
+                start_date: start || undefined,
+                end_date: end || undefined,
+                with_deposit: withDeposit,
+            });
+
+            router.push("/form");
+        },
+        [booking, router, setBooking, viewMode],
+    );
+
     const handleBooking = (withDeposit: boolean, car: Car) => {
-        const hasCompleteBookingRange = Boolean(startDate && endDate);
+        const hasCompleteBookingRange = Boolean(selectedStartDate && selectedEndDate);
         const isCarAvailable = car.available !== false;
 
         if (!hasCompleteBookingRange) {
@@ -510,6 +608,14 @@ const FleetPage = () => {
                     // noop pentru mediile fără implementare scrollTo (ex: JSDOM)
                 }
             }
+            const defaults = getDefaultDateRange();
+            setDateDraft({
+                start: selectedStartDate || booking.startDate || defaults.start,
+                end: selectedEndDate || booking.endDate || defaults.end,
+            });
+            setPendingBookingAction({ car, withDeposit });
+            setShowDateModal(true);
+            setAwaitingUpdatedCarData(false);
             return;
         }
 
@@ -518,58 +624,116 @@ const FleetPage = () => {
             return;
         }
 
-        setCtaFeedback(null);
-
-        setBooking({
-            ...booking,
-            startDate,
-            endDate,
-            withDeposit,
-            selectedCar: car,
-        });
-
-        const pricePerDay = toNumberOrNull(
-            withDeposit ? car.rental_rate : car.rental_rate_casco,
-        );
-        const totalAmount = toNumberOrNull(
-            withDeposit ? car.total_deposit : car.total_without_deposit,
-        );
-
-        trackMixpanelEvent("car_cta_clicked", {
-            car_id: car.id,
-            car_name: car.name,
-            with_deposit: withDeposit,
-            car_price_plan: withDeposit ? "with_deposit" : "no_deposit",
-            car_price_per_day: pricePerDay,
-            car_total: totalAmount,
-            start_date: startDate || null,
-            end_date: endDate || null,
-            view_mode: viewMode,
-        });
-
-        trackTikTokEvent(TIKTOK_EVENTS.ADD_TO_CART, {
-            content_type: TIKTOK_CONTENT_TYPE,
-            contents: [
-                {
-                    content_id: car.id,
-                    content_name: car.name,
-                    quantity: 1,
-                    price: totalAmount ?? undefined,
-                },
-            ],
-            value: totalAmount ?? undefined,
-            currency: "RON",
-            start_date: startDate || undefined,
-            end_date: endDate || undefined,
-            with_deposit: withDeposit,
-        });
-
-        router.push("/form");
+        finalizeBooking(withDeposit, car, selectedStartDate, selectedEndDate);
     };
 
     useEffect(() => {
         setCtaFeedback(null);
-    }, [startDate, endDate]);
+    }, [selectedStartDate, selectedEndDate]);
+
+    const handleCloseDateModal = () => {
+        setShowDateModal(false);
+        setAwaitingUpdatedCarData(false);
+        setPendingBookingAction(null);
+    };
+
+    const draftRangeState = useMemo(() => {
+        if (!dateDraft.start || !dateDraft.end) {
+            return { disabled: true, showError: false } as const;
+        }
+        const start = new Date(dateDraft.start);
+        const end = new Date(dateDraft.end);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+            return { disabled: true, showError: true } as const;
+        }
+        if (end <= start) {
+            return { disabled: true, showError: true } as const;
+        }
+        return { disabled: false, showError: false } as const;
+    }, [dateDraft.end, dateDraft.start]);
+
+    const handleConfirmDateSelection = () => {
+        if (!pendingBookingAction) {
+            handleCloseDateModal();
+            return;
+        }
+
+        const { car, withDeposit } = pendingBookingAction;
+        const nextStart = dateDraft.start;
+        const nextEnd = dateDraft.end;
+
+        if (!nextStart || !nextEnd) {
+            return;
+        }
+
+        setShowDateModal(false);
+        const didChangeRange =
+            nextStart !== selectedStartDate || nextEnd !== selectedEndDate;
+
+        setSelectedStartDate(nextStart);
+        setSelectedEndDate(nextEnd);
+
+        if (didChangeRange) {
+            setAwaitingUpdatedCarData(true);
+            return;
+        }
+
+        if (car.available === false) {
+            setCtaFeedback({ carId: car.id, type: "unavailable" });
+            setPendingBookingAction(null);
+            setAwaitingUpdatedCarData(false);
+            return;
+        }
+
+        finalizeBooking(withDeposit, car, nextStart, nextEnd);
+        setPendingBookingAction(null);
+        setAwaitingUpdatedCarData(false);
+    };
+
+    useEffect(() => {
+        if (!awaitingUpdatedCarData || !pendingBookingAction) {
+            return;
+        }
+        if (loading) {
+            return;
+        }
+        if (!selectedStartDate || !selectedEndDate) {
+            setAwaitingUpdatedCarData(false);
+            return;
+        }
+
+        const updatedCar = cars.find((entry) => entry.id === pendingBookingAction.car.id);
+        if (!updatedCar) {
+            setCtaFeedback({ carId: pendingBookingAction.car.id, type: "unavailable" });
+            setAwaitingUpdatedCarData(false);
+            setPendingBookingAction(null);
+            return;
+        }
+
+        if (updatedCar.available === false) {
+            setCtaFeedback({ carId: updatedCar.id, type: "unavailable" });
+            setAwaitingUpdatedCarData(false);
+            setPendingBookingAction(null);
+            return;
+        }
+
+        finalizeBooking(
+            pendingBookingAction.withDeposit,
+            updatedCar,
+            selectedStartDate,
+            selectedEndDate,
+        );
+        setAwaitingUpdatedCarData(false);
+        setPendingBookingAction(null);
+    }, [
+        awaitingUpdatedCarData,
+        cars,
+        finalizeBooking,
+        loading,
+        pendingBookingAction,
+        selectedEndDate,
+        selectedStartDate,
+    ]);
 
     useEffect(() => {
         if (loading) {
@@ -640,7 +804,7 @@ const FleetPage = () => {
     }, [cars, currentPage, loading, totalCars, searchTerm, sortBy]);
 
     const CarCard = ({ car, isListView = false }: { car: Car; isListView?: boolean; }) => {
-        const hasCompleteBookingRange = Boolean(startDate && endDate);
+        const hasCompleteBookingRange = Boolean(selectedStartDate && selectedEndDate);
         const showFeedback = ctaFeedback && ctaFeedback.carId === car.id;
         const feedbackType = showFeedback ? ctaFeedback?.type : null;
 
@@ -707,7 +871,7 @@ const FleetPage = () => {
                             </div>
                             <Button
                                 onClick={() => handleBooking(false, car)}
-                                className="px-2 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
+                                className="px-4 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg hover:bg-jade/90 transition-colors duration-300"
                                 aria-label={t("card.actions.reserveAria")}
                             >
                                 {t("card.actions.reserveNoDeposit")}
@@ -802,6 +966,84 @@ const FleetPage = () => {
             {vehicleStructuredData && (
                 <JsonLd data={vehicleStructuredData} id="dacars-cars-itemlist" />
             )}
+            <Popup open={showDateModal} onClose={handleCloseDateModal} className="max-w-lg">
+                <div className="space-y-4">
+                    <div>
+                        <h2 className="text-2xl font-poppins font-semibold text-berkeley">
+                            {t("dateModal.title", { fallback: "Selectează perioada de rezervare" })}
+                        </h2>
+                        <p className="mt-2 text-sm text-gray-600 font-dm-sans">
+                            {t("dateModal.description", {
+                                fallback:
+                                    "Alege datele de ridicare și returnare pentru a continua rezervarea mașinii.",
+                            })}
+                        </p>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="fleet-date-start" className="text-sm font-semibold text-gray-700">
+                                {t("dateModal.pickupLabel", { fallback: "Data ridicare" })}
+                            </Label>
+                            <Input
+                                id="fleet-date-start"
+                                type="datetime-local"
+                                value={dateDraft.start}
+                                onChange={(event) =>
+                                    setDateDraft((previous) => ({
+                                        ...previous,
+                                        start: event.target.value,
+                                    }))
+                                }
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="fleet-date-end" className="text-sm font-semibold text-gray-700">
+                                {t("dateModal.returnLabel", { fallback: "Data returnare" })}
+                            </Label>
+                            <Input
+                                id="fleet-date-end"
+                                type="datetime-local"
+                                value={dateDraft.end}
+                                min={dateDraft.start || undefined}
+                                onChange={(event) =>
+                                    setDateDraft((previous) => ({
+                                        ...previous,
+                                        end: event.target.value,
+                                    }))
+                                }
+                            />
+                        </div>
+                    </div>
+
+                    {draftRangeState.showError && (
+                        <p className="text-sm font-dm-sans text-amber-600">
+                            {t("dateModal.invalidRange", {
+                                fallback: "Selectează date valide. Returnarea trebuie să fie după ridicare.",
+                            })}
+                        </p>
+                    )}
+
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={handleCloseDateModal}
+                            className="font-dm-sans"
+                        >
+                            {t("dateModal.cancel", { fallback: "Renunță" })}
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleConfirmDateSelection}
+                            disabled={draftRangeState.disabled}
+                            className="font-dm-sans"
+                        >
+                            {t("dateModal.confirm", { fallback: "Continuă rezervarea" })}
+                        </Button>
+                    </div>
+                </div>
+            </Popup>
             {/* spinner full-screen DOAR la prima pagină */}
             {loading && currentPage === 1 && (
                 <div className="fixed inset-0 flex items-center justify-center bg-white/80 z-50">

@@ -92,6 +92,15 @@
       "unavailable": "Este coche no está disponible para las fechas seleccionadas. Elige otras fechas u otro vehículo."
     }
   },
+  "dateModal": {
+    "title": "Selecciona el periodo de alquiler",
+    "description": "Elige las fechas de recogida y devolución para continuar con la reserva.",
+    "pickupLabel": "Fecha de recogida",
+    "returnLabel": "Fecha de devolución",
+    "invalidRange": "Selecciona fechas válidas. La devolución debe ser posterior a la recogida.",
+    "cancel": "Cancelar",
+    "confirm": "Continuar con la reserva"
+  },
   "cta": {
     "title": "¿No encuentras el coche adecuado?",
     "description": "Ponte en contacto y te ayudaremos a encontrar la opción perfecta para tu viaje.",

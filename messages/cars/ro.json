@@ -92,6 +92,15 @@
       "unavailable": "Mașina nu este disponibilă pentru perioada selectată. Te rugăm să alegi alt interval sau un alt vehicul."
     }
   },
+  "dateModal": {
+    "title": "Selectează perioada de rezervare",
+    "description": "Alege datele de ridicare și returnare pentru a continua rezervarea mașinii.",
+    "pickupLabel": "Data ridicare",
+    "returnLabel": "Data returnare",
+    "invalidRange": "Selectează date valide. Returnarea trebuie să fie după ridicare.",
+    "cancel": "Renunță",
+    "confirm": "Continuă rezervarea"
+  },
   "cta": {
     "title": "Nu găsești mașina potrivită?",
     "description": "Contactează-ne și te ajutăm să găsești soluția perfectă pentru călătoria ta.",

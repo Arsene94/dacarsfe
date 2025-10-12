@@ -284,7 +284,7 @@ describe('Fluxul de închiriere pentru clienți', () => {
     expect(pushMock).toHaveBeenCalledWith('/form');
   }, 15000);
 
-  it('afișează mesajul de selectare a perioadei atunci când lipsește intervalul', async () => {
+  it('solicită selectarea perioadei prin popup și continuă rezervarea după confirmare', async () => {
     const user = userEvent.setup();
 
     const { setBooking } = renderWithProviders(<CarsPageClient />);
@@ -303,6 +303,35 @@ describe('Fluxul de închiriere pentru clienți', () => {
     expect(
       await screen.findByText(/Selectează perioada de ridicare și returnare pentru a continua/i),
     ).toBeInTheDocument();
+
+    const popupTitle = await screen.findByText('Selectează perioada de rezervare');
+    expect(popupTitle).toBeInTheDocument();
+
+    const pickupInput = screen.getByLabelText('Data ridicare');
+    const returnInput = screen.getByLabelText('Data returnare');
+
+    await user.clear(pickupInput);
+    await user.type(pickupInput, '2025-11-01T10:00');
+    await user.clear(returnInput);
+    await user.type(returnInput, '2025-11-05T10:00');
+
+    const confirmButton = screen.getByRole('button', { name: 'Continuă rezervarea' });
+    await user.click(confirmButton);
+
+    await waitFor(() => expect(apiClientMock.getCarsByDateCriteria).toHaveBeenCalledTimes(2));
+
+    await waitFor(() =>
+      expect(setBooking).toHaveBeenCalledWith(
+        expect.objectContaining({
+          startDate: '2025-11-01T10:00',
+          endDate: '2025-11-05T10:00',
+          withDeposit: false,
+          selectedCar: expect.objectContaining({ id: mockApiCar.id, name: mockApiCar.name }),
+        }),
+      ),
+    );
+
+    expect(pushMock).toHaveBeenCalledWith('/form');
   });
 
   it('anunță indisponibilitatea mașinii pentru perioada selectată', async () => {

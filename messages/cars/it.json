@@ -92,6 +92,15 @@
       "unavailable": "L'auto non è disponibile per il periodo selezionato. Scegli un'altra data o un altro veicolo."
     }
   },
+  "dateModal": {
+    "title": "Seleziona il periodo di noleggio",
+    "description": "Scegli le date di ritiro e riconsegna per continuare la prenotazione.",
+    "pickupLabel": "Data ritiro",
+    "returnLabel": "Data riconsegna",
+    "invalidRange": "Seleziona date valide. La riconsegna deve essere successiva al ritiro.",
+    "cancel": "Annulla",
+    "confirm": "Continua la prenotazione"
+  },
   "cta": {
     "title": "Non trovi l'auto giusta?",
     "description": "Contattaci e ti aiuteremo a trovare l'opzione perfetta per il tuo viaggio.",

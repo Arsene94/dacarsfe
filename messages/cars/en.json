@@ -92,6 +92,15 @@
       "unavailable": "This car is not available for the selected period. Please choose different dates or another vehicle."
     }
   },
+  "dateModal": {
+    "title": "Choose your rental period",
+    "description": "Pick the pick-up and drop-off dates to continue with your booking.",
+    "pickupLabel": "Pick-up date",
+    "returnLabel": "Drop-off date",
+    "invalidRange": "Please select valid dates. Drop-off must be after pick-up.",
+    "cancel": "Cancel",
+    "confirm": "Continue booking"
+  },
   "cta": {
     "title": "Can't find the right car?",
     "description": "Get in touch and we'll help you find the perfect option for your trip.",

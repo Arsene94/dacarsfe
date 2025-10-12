@@ -92,6 +92,15 @@
       "unavailable": "Dieses Fahrzeug ist im gewählten Zeitraum nicht verfügbar. Bitte wähle andere Daten oder ein anderes Fahrzeug."
     }
   },
+  "dateModal": {
+    "title": "Mietzeitraum auswählen",
+    "description": "Wähle Abhol- und Rückgabedatum, um mit der Buchung fortzufahren.",
+    "pickupLabel": "Abholdatum",
+    "returnLabel": "Rückgabedatum",
+    "invalidRange": "Bitte gültige Daten wählen. Die Rückgabe muss nach der Abholung liegen.",
+    "cancel": "Abbrechen",
+    "confirm": "Buchung fortsetzen"
+  },
   "cta": {
     "title": "Du findest nicht das richtige Auto?",
     "description": "Melde dich bei uns und wir helfen dir, die perfekte Option für deine Reise zu finden.",
