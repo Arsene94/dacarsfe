@@ -1,38 +1,13 @@
-"use client";
-
-import dynamic from "next/dynamic";
 import { Clock, Shield, Star } from "lucide-react";
 
 import { HeroBackground } from "@/components/HeroBackground";
 import type { Locale } from "@/lib/i18n/config";
 
 import type { HeroFeature } from "./hero/heroUtils";
-import type { HeroBookingFormProps, LocationOption } from "./HeroBookingForm";
+import type { LocationOption } from "./HeroBookingForm";
+import { HeroBookingFormLoader } from "./hero/HeroBookingFormLoader";
 
-function HeroBookingFormSkeleton() {
-    return (
-        <div
-            role="status"
-            aria-live="polite"
-            className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5"
-        >
-            {[...Array(5)].map((_, index) => (
-                <div key={`hero-form-skeleton-${index}`} className="space-y-2">
-                    <div className="h-4 w-28 rounded bg-white/30" />
-                    <div className="h-12 rounded-md bg-white/20" />
-                </div>
-            ))}
-        </div>
-    );
-}
-
-const HeroBookingForm = dynamic<HeroBookingFormProps>(
-    () => import("./HeroBookingForm"),
-    {
-        loading: () => <HeroBookingFormSkeleton />,
-        ssr: false,
-    },
-);
+const FEATURE_ICONS = [Clock, Shield, Star] as const;
 
 type HeroSectionViewProps = {
     badge: string;
@@ -86,29 +61,27 @@ const HeroSectionView = ({
                         </p>
 
                         <div className="hidden sm:grid sm:grid-cols-3 gap-6">
-                            {features.map((feature, index) => (
-                                <div key={`${feature.title}-${index}`} className="flex items-center space-x-3">
-                                    <div className="bg-jade/20 p-2 rounded-lg">
-                                        {index === 0 ? (
-                                            <Clock className="h-5 w-5 text-jade" aria-hidden="true" />
-                                        ) : index === 1 ? (
-                                            <Shield className="h-5 w-5 text-jade" aria-hidden="true" />
-                                        ) : (
-                                            <Star className="h-5 w-5 text-jade" aria-hidden="true" />
-                                        )}
+                            {features.map((feature, index) => {
+                                const Icon = FEATURE_ICONS[index] ?? Star;
+
+                                return (
+                                    <div key={`${feature.title}-${index}`} className="flex items-center space-x-3">
+                                        <div className="bg-jade/20 p-2 rounded-lg">
+                                            <Icon className="h-5 w-5 text-jade" aria-hidden="true" />
+                                        </div>
+                                        <div>
+                                            <p className="font-dm-sans font-semibold">{feature.title}</p>
+                                            <p className="text-sm text-gray-300">{feature.description}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-dm-sans font-semibold">{feature.title}</p>
-                                        <p className="text-sm text-gray-300">{feature.description}</p>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
 
                 <div className="mt-5">
-                    <HeroBookingForm
+                    <HeroBookingFormLoader
                         labels={form.labels}
                         placeholders={form.placeholders}
                         ariaLabels={form.ariaLabels}

@@ -10,8 +10,9 @@ export const HeroBackground = () => {
             fill
             priority
             loading="eager"
+            placeholder="blur"
             sizes="100vw"
-            quality={55}
+            quality={60}
             decoding="async"
             className="object-cover"
         />
