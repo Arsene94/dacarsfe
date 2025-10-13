@@ -8,7 +8,6 @@ import PhoneInput from "@/components/PhoneInput";
 import {useBooking} from "@/context/useBooking";
 import { apiClient } from "@/lib/api";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
-import {trackTikTokEvent, TIKTOK_EVENTS, TIKTOK_CONTENT_TYPE} from "@/lib/tiktokPixel";
 import {
     buildMetaPixelAdvancedMatchingFromCustomer,
     trackMetaPixelLead,
@@ -1025,15 +1024,6 @@ const ReservationPage = () => {
                 ? Math.round(estimatedCheckoutValue * 100) / 100
                 : undefined;
 
-        const contents = [
-            {
-                content_id: selectedCar.id,
-                content_name: selectedCar.name,
-                quantity: 1,
-                price: normalizedCheckoutValue,
-            },
-        ];
-
         trackMixpanelEvent("checkout_loaded", {
             selected_car_id: selectedCar.id,
             selected_car_name: selectedCar.name,
@@ -1046,25 +1036,6 @@ const ReservationPage = () => {
             has_wheel_prize: hasWheelPrize,
             wheel_prize_id: wheelPrizeId,
             quote_ready: Boolean(quoteResult),
-        });
-
-        trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
-            content_type: TIKTOK_CONTENT_TYPE,
-            content_id: selectedCar.id,
-            content_ids: [selectedCar.id],
-            content_name: selectedCar.name,
-            currency: DEFAULT_CURRENCY,
-            value: normalizedCheckoutValue,
-            contents,
-            start_date: bookingStartDate,
-            end_date: bookingEndDate,
-            with_deposit:
-                typeof booking.withDeposit === "boolean"
-                    ? booking.withDeposit
-                    : undefined,
-            service_ids: serviceIds,
-            applied_offer_ids: appliedOfferIds,
-            wheel_prize_id: wheelPrizeId ?? undefined,
         });
 
         checkoutLoadedTrackedRef.current = true;
@@ -1706,34 +1677,6 @@ const ReservationPage = () => {
                     ? wheelPrizeIdForPayload
                     : undefined,
         };
-
-        const normalizedSubmitTotal =
-            typeof totalAfterAdjustments === "number" && Number.isFinite(totalAfterAdjustments)
-                ? Math.round(totalAfterAdjustments * 100) / 100
-                : undefined;
-
-        trackTikTokEvent(TIKTOK_EVENTS.SUBMIT_FORM, {
-            form_name: "checkout_reservation",
-            value: normalizedSubmitTotal,
-            currency: DEFAULT_CURRENCY,
-            content_type: TIKTOK_CONTENT_TYPE,
-            content_id: selectedCar.id,
-            content_ids: [selectedCar.id],
-            content_name: selectedCar.name,
-            with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
-            start_date: booking.startDate || undefined,
-            end_date: booking.endDate || undefined,
-            contents: [
-                {
-                    content_id: selectedCar.id,
-                    content_name: selectedCar.name,
-                    quantity: 1,
-                    price: normalizedSubmitTotal,
-                },
-            ],
-            service_ids: serviceIds,
-            applied_offer_ids: appliedOffersPayload.map((offer) => offer.id),
-        });
 
         try {
             const res = await apiClient.createBooking(payload);

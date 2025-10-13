@@ -20,7 +20,6 @@ import { useBooking } from "@/context/useBooking";
 import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
-import { trackTikTokEvent, TIKTOK_CONTENT_TYPE, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import { trackMetaPixelViewContent } from "@/lib/metaPixel";
 
 const siteUrl = siteMetadata.siteUrl;
@@ -456,16 +455,6 @@ const FleetPage = () => {
             total_results: totalCars,
         });
 
-        trackTikTokEvent(TIKTOK_EVENTS.SEARCH, {
-            search_type: "fleet_filters",
-            filter_key: key,
-            filter_value: value,
-            search_term: searchTerm || undefined,
-            sort_by: sortBy,
-            page: 1,
-            total_results: totalCars,
-        });
-
     };
 
     const clearFilters = () => {
@@ -614,30 +603,6 @@ const FleetPage = () => {
                     view_mode: viewMode,
                 });
 
-                const normalizedTotal =
-                    typeof totalAmount === "number" && Number.isFinite(totalAmount)
-                        ? Math.round(totalAmount * 100) / 100
-                        : undefined;
-
-                const contents = [
-                    {
-                        content_id: car.id,
-                        content_name: car.name,
-                        quantity: 1,
-                        price: normalizedTotal,
-                    },
-                ];
-
-                trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
-                    content_type: TIKTOK_CONTENT_TYPE,
-                    contents,
-                    currency: "RON",
-                    value: normalizedTotal,
-                    start_date: trimmedStart,
-                    end_date: trimmedEnd,
-                    with_deposit: withDeposit,
-                });
-
                 if (fromModal || !startDate || !endDate) {
                     const params = new URLSearchParams(window.location.search);
                     params.set("start_date", trimmedStart);
@@ -717,22 +682,6 @@ const FleetPage = () => {
                 quantity: 1,
                 price: resolvedPrice ?? undefined,
             };
-        });
-
-        const contentIds = contents
-            .map((item) => item.content_id)
-            .filter((id): id is number => typeof id === "number");
-
-        trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
-            content_type: TIKTOK_CONTENT_TYPE,
-            contents,
-            currency: "RON",
-            value: contents[0]?.price ?? undefined,
-            total_results: totalCars,
-            search_term: searchTerm || undefined,
-            sort_by: sortBy,
-            content_id: contentIds[0] ?? undefined,
-            content_ids: contentIds.length > 0 ? contentIds : undefined,
         });
 
         const metaContents = contents
