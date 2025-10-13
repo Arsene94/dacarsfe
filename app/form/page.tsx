@@ -10,12 +10,11 @@ import { apiClient } from "@/lib/api";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import {
     buildMetaPixelAdvancedMatchingFromCustomer,
-    trackMetaPixelLead,
     trackMetaPixelViewContent,
     updateMetaPixelAdvancedMatching,
-    markMetaPixelLeadTracked,
     resolveMetaPixelNameParts,
 } from "@/lib/metaPixel";
+import { trackTikTokViewContent } from "@/lib/tiktokPixel";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { extractFirstCar } from "@/lib/adminBookingHelpers";
 import { describeWheelPrizeAmount } from "@/lib/wheelFormatting";
@@ -1523,6 +1522,23 @@ const ReservationPage = () => {
                     : undefined,
         });
 
+        const carName =
+            typeof selectedCar.name === "string" && selectedCar.name.trim().length > 0
+                ? selectedCar.name.trim()
+                : undefined;
+
+        trackTikTokViewContent({
+            contents: [
+                {
+                    content_id: String(selectedCar.id),
+                    content_type: "product",
+                    ...(carName ? { content_name: carName } : {}),
+                },
+            ],
+            currency: DEFAULT_CURRENCY,
+            ...(typeof value === "number" ? { value } : {}),
+        });
+
         hasTrackedMetaViewContentRef.current = true;
     }, [
         booking.endDate,
@@ -1728,31 +1744,6 @@ const ReservationPage = () => {
             }
 
             updateMetaPixelAdvancedMatching(advancedMatchingPayload);
-            const leadValue = Number.isFinite(totalAfterAdjustments)
-                ? totalAfterAdjustments
-                : undefined;
-            trackMetaPixelLead({
-                content_type: "vehicle",
-                content_ids: [selectedCar.id],
-                contents: [
-                    {
-                        id: selectedCar.id,
-                        quantity: 1,
-                        item_price: leadValue,
-                    },
-                ],
-                currency: DEFAULT_CURRENCY,
-                value: leadValue,
-                reservation_id: reservationId,
-                service_ids: serviceIds,
-                start_date: booking.startDate || undefined,
-                end_date: booking.endDate || undefined,
-                with_deposit:
-                    typeof booking.withDeposit === "boolean"
-                        ? booking.withDeposit
-                        : undefined,
-            });
-            markMetaPixelLeadTracked(reservationId);
             localStorage.setItem(
                 "reservationData",
                 JSON.stringify({

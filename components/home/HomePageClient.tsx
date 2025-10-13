@@ -12,6 +12,7 @@ import {
 import dynamic from "next/dynamic";
 import { useBooking } from "@/context/useBooking";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
+import { trackTikTokViewContent } from "@/lib/tiktokPixel";
 
 const FleetSection = dynamic(() => import("@/components/FleetSection"), {
     loading: () => null,
@@ -225,6 +226,25 @@ const HomePageClient = () => {
     const [hasUserAdjustedBookingRange, setHasUserAdjustedBookingRange] = useState(false);
     const [shouldRenderElfsight, setShouldRenderElfsight] = useState(false);
     const landingTrackedRef = useRef(false);
+    const landingTikTokTrackedRef = useRef(false);
+
+    useEffect(() => {
+        if (landingTikTokTrackedRef.current) {
+            return;
+        }
+
+        trackTikTokViewContent({
+            contents: [
+                {
+                    content_id: "landing_home",
+                    content_type: "page",
+                    content_name: "Pagina principală DaCars",
+                },
+            ],
+        });
+
+        landingTikTokTrackedRef.current = true;
+    }, []);
 
     const scheduleIdle = useCallback(
         (callback: () => void, options?: { timeout?: number }) => {
