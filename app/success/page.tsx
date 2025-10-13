@@ -15,9 +15,20 @@ import {
     hasTrackedMetaPixelLead,
     markMetaPixelLeadTracked,
     trackMetaPixelLead,
+    trackMetaPixelPageView,
+    trackMetaPixelViewContent,
     updateMetaPixelAdvancedMatching,
     resolveMetaPixelNameParts,
 } from "@/lib/metaPixel";
+import {
+    hashTikTokEmail,
+    hashTikTokExternalId,
+    hashTikTokPhone,
+    identifyTikTokUser,
+    trackTikTokLead,
+    trackTikTokSearch,
+    trackTikTokViewContent,
+} from "@/lib/tiktokPixel";
 import { useAuth } from "@/context/AuthContext";
 
 type SuccessMessages = typeof successMessagesRo;
@@ -34,81 +45,6 @@ const LOCALE_TO_INTL: Record<Locale, string> = {
 const DEFAULT_CURRENCY = "EUR";
 const IN_MEMORY_META_LEAD_FALLBACK_KEY = "__fallback__";
 const trackedMetaLeadIdentifiers = new Set<string>();
-
-type TikTokQueue = {
-    identify?: (payload: Record<string, unknown>) => void;
-    track?: (event: string, payload?: Record<string, unknown>) => void;
-};
-
-declare global {
-    interface Window {
-        ttq?: TikTokQueue;
-    }
-}
-
-const resolveSubtleCrypto = (): SubtleCrypto | null => {
-    if (typeof window !== "undefined" && window.crypto?.subtle) {
-        return window.crypto.subtle;
-    }
-    if (typeof globalThis !== "undefined") {
-        const cryptoLike = (globalThis as typeof globalThis & { crypto?: Crypto }).crypto;
-        if (cryptoLike?.subtle) {
-            return cryptoLike.subtle;
-        }
-    }
-    return null;
-};
-
-const sha256Hex = async (value: string): Promise<string | null> => {
-    if (!value) {
-        return null;
-    }
-    const subtle = resolveSubtleCrypto();
-    if (!subtle) {
-        return null;
-    }
-    const encoded = new TextEncoder().encode(value);
-    const digest = await subtle.digest("SHA-256", encoded);
-    return Array.from(new Uint8Array(digest))
-        .map((byte) => byte.toString(16).padStart(2, "0"))
-        .join("");
-};
-
-const hashEmailForTikTok = async (value: unknown): Promise<string | null> => {
-    if (typeof value !== "string") {
-        return null;
-    }
-    const normalized = value.trim().toLowerCase();
-    if (!normalized) {
-        return null;
-    }
-    return sha256Hex(normalized);
-};
-
-const hashPhoneForTikTok = async (value: unknown): Promise<string | null> => {
-    if (typeof value !== "string") {
-        return null;
-    }
-    const normalized = value.replace(/[^0-9+]/g, "");
-    if (!normalized) {
-        return null;
-    }
-    return sha256Hex(normalized);
-};
-
-const hashExternalIdForTikTok = async (value: unknown): Promise<string | null> => {
-    if (typeof value === "number" && Number.isFinite(value)) {
-        return sha256Hex(String(value));
-    }
-    if (typeof value === "string") {
-        const normalized = value.trim().toLowerCase();
-        if (!normalized) {
-            return null;
-        }
-        return sha256Hex(normalized);
-    }
-    return null;
-};
 
 const parseMaybeNumber = (value: unknown): number | null => {
     if (typeof value === "number") {
@@ -161,6 +97,7 @@ const SuccessPage = () => {
     const { user } = useAuth();
     const intlLocale = LOCALE_TO_INTL[locale] ?? LOCALE_TO_INTL.ro;
     const hasTrackedMetaLeadRef = useRef(false);
+    const hasTrackedMetaPageEventsRef = useRef(false);
     const hasTrackedTikTokRef = useRef(false);
     const reservationTrackingIdentifier = useMemo(
         () => resolveReservationTrackingIdentifier(reservationData),
@@ -271,17 +208,6 @@ const SuccessPage = () => {
                 ? reservationTrackingIdentifier.trim()
                 : IN_MEMORY_META_LEAD_FALLBACK_KEY;
 
-        if (trackedMetaLeadIdentifiers.has(leadTrackingKey)) {
-            hasTrackedMetaLeadRef.current = true;
-            return;
-        }
-
-        if (hasTrackedMetaPixelLead(leadIdentifier)) {
-            hasTrackedMetaLeadRef.current = true;
-            trackedMetaLeadIdentifiers.add(leadTrackingKey);
-            return;
-        }
-
         const totalAmountRaw = reservationData.total;
         const totalAmount =
             typeof totalAmountRaw === "number" && Number.isFinite(totalAmountRaw)
@@ -318,26 +244,54 @@ const SuccessPage = () => {
             ? reservationData.service_ids
             : undefined;
 
-        trackMetaPixelLead({
+        const metaPayload: Record<string, unknown> = {
             value: totalAmount ?? undefined,
             currency: DEFAULT_CURRENCY,
-            content_type: "vehicle",
-            content_ids: carId ? [carId] : undefined,
-            contents: carId
-                ? [
-                      {
-                          id: carId,
-                          quantity: 1,
-                          item_price: totalAmount ?? undefined,
-                      },
-                  ]
-                : undefined,
             reservation_id: reservationTrackingIdentifier ?? undefined,
             start_date: startDate,
             end_date: endDate,
             with_deposit: withDeposit,
             service_ids: serviceIdsPayload,
-        });
+        };
+
+        if (carId) {
+            metaPayload.content_type = "vehicle";
+            metaPayload.content_ids = [carId];
+            metaPayload.contents = [
+                {
+                    id: carId,
+                    quantity: 1,
+                    item_price: totalAmount ?? undefined,
+                },
+            ];
+        }
+
+        if (!hasTrackedMetaPageEventsRef.current) {
+            const pagePayload = {
+                ...metaPayload,
+                page_section: "checkout_success",
+            };
+
+            trackMetaPixelPageView(pagePayload);
+            trackMetaPixelViewContent({
+                ...pagePayload,
+                status: "success",
+            });
+            hasTrackedMetaPageEventsRef.current = true;
+        }
+
+        if (trackedMetaLeadIdentifiers.has(leadTrackingKey)) {
+            hasTrackedMetaLeadRef.current = true;
+            return;
+        }
+
+        if (hasTrackedMetaPixelLead(leadIdentifier)) {
+            hasTrackedMetaLeadRef.current = true;
+            trackedMetaLeadIdentifiers.add(leadTrackingKey);
+            return;
+        }
+
+        trackMetaPixelLead(metaPayload);
 
         markMetaPixelLeadTracked(leadIdentifier);
         trackedMetaLeadIdentifiers.add(leadTrackingKey);
@@ -345,21 +299,11 @@ const SuccessPage = () => {
     }, [reservationData, reservationTrackingIdentifier, user]);
 
     useEffect(() => {
-        if (!reservationData || typeof window === "undefined") {
+        if (!reservationData) {
             return;
         }
 
         if (hasTrackedTikTokRef.current) {
-            return;
-        }
-
-        const ttqQueue = window.ttq;
-        if (!ttqQueue) {
-            return;
-        }
-
-        const track = ttqQueue.track;
-        if (typeof track !== "function") {
             return;
         }
 
@@ -380,28 +324,17 @@ const SuccessPage = () => {
                     (user ? user.id : null);
 
                 const [hashedEmail, hashedPhone, hashedExternalId] = await Promise.all([
-                    hashEmailForTikTok(customerEmailRaw),
-                    hashPhoneForTikTok(customerPhoneRaw),
-                    hashExternalIdForTikTok(externalIdSource),
+                    hashTikTokEmail(customerEmailRaw),
+                    hashTikTokPhone(customerPhoneRaw),
+                    hashTikTokExternalId(externalIdSource),
                 ]);
 
-                // add this before event code to all pages where PII data postback is expected and appropriate
-                const identify = typeof ttqQueue.identify === "function" ? ttqQueue.identify.bind(ttqQueue) : null;
-                if (identify) {
-                    const identifyPayload: Record<string, string> = {};
-                    if (hashedEmail) {
-                        identifyPayload.email = hashedEmail;
-                    }
-                    if (hashedPhone) {
-                        identifyPayload.phone_number = hashedPhone;
-                    }
-                    if (hashedExternalId) {
-                        identifyPayload.external_id = hashedExternalId;
-                    }
-
-                    if (Object.keys(identifyPayload).length > 0) {
-                        identify(identifyPayload);
-                    }
+                if (hashedEmail || hashedPhone || hashedExternalId) {
+                    identifyTikTokUser({
+                        ...(hashedEmail ? { email: hashedEmail } : {}),
+                        ...(hashedPhone ? { phone_number: hashedPhone } : {}),
+                        ...(hashedExternalId ? { external_id: hashedExternalId } : {}),
+                    });
                 }
 
                 const totalAmount = parseMaybeNumber(reservationData.total);
@@ -450,19 +383,18 @@ const SuccessPage = () => {
 
                 const searchString = searchParts.length > 0 ? searchParts.join(" | ") : undefined;
 
-                const baseEventPayload: Record<string, unknown> = {
+                const baseEventPayload = {
                     currency,
                     ...(contents ? { contents } : {}),
                     ...(typeof totalAmount === "number" ? { value: totalAmount } : {}),
                 };
 
-                const boundTrack = track.bind(ttqQueue);
-                boundTrack("ViewContent", baseEventPayload);
-                boundTrack("Search", {
+                trackTikTokViewContent(baseEventPayload);
+                trackTikTokSearch({
                     ...baseEventPayload,
                     ...(searchString ? { search_string: searchString } : {}),
                 });
-                boundTrack("Lead", baseEventPayload);
+                trackTikTokLead(baseEventPayload);
 
                 hasTrackedTikTokRef.current = true;
             } catch (error) {

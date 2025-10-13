@@ -21,6 +21,7 @@ import { ApiCar, Car, CarCategory, type CarSearchUiPayload } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackMetaPixelViewContent } from "@/lib/metaPixel";
+import { trackTikTokSearch, trackTikTokViewContent } from "@/lib/tiktokPixel";
 
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
@@ -710,6 +711,35 @@ const FleetPage = () => {
             total_results: totalCars,
             search_term: searchTerm || undefined,
             sort_by: sortBy,
+        });
+
+        const tikTokContents = contents.map((item, index) => {
+            const resolvedId =
+                typeof item.content_id === "string"
+                    ? item.content_id
+                    : typeof item.content_id === "number" && Number.isFinite(item.content_id)
+                        ? String(item.content_id)
+                        : item.content_name
+                            ? `${item.content_name}-${index}`
+                            : `car-${index}`;
+
+            return {
+                content_id: resolvedId,
+                content_type: "product",
+                ...(item.content_name ? { content_name: item.content_name } : {}),
+            };
+        });
+
+        const tikTokBasePayload = {
+            ...(tikTokContents.length > 0 ? { contents: tikTokContents } : {}),
+            currency: "RON",
+            ...(typeof primaryPrice === "number" ? { value: primaryPrice } : {}),
+        };
+
+        trackTikTokViewContent(tikTokBasePayload);
+        trackTikTokSearch({
+            ...tikTokBasePayload,
+            ...(searchTerm ? { search_string: searchTerm } : {}),
         });
 
         hasTrackedViewRef.current = true;
