@@ -353,8 +353,13 @@ const SuccessPage = () => {
             return;
         }
 
-        const ttq = window.ttq;
-        if (!ttq || typeof ttq.track !== "function") {
+        const ttqQueue = window.ttq;
+        if (!ttqQueue) {
+            return;
+        }
+
+        const track = ttqQueue.track;
+        if (typeof track !== "function") {
             return;
         }
 
@@ -381,7 +386,8 @@ const SuccessPage = () => {
                 ]);
 
                 // add this before event code to all pages where PII data postback is expected and appropriate
-                if (typeof ttq.identify === "function") {
+                const identify = typeof ttqQueue.identify === "function" ? ttqQueue.identify.bind(ttqQueue) : null;
+                if (identify) {
                     const identifyPayload: Record<string, string> = {};
                     if (hashedEmail) {
                         identifyPayload.email = hashedEmail;
@@ -394,7 +400,7 @@ const SuccessPage = () => {
                     }
 
                     if (Object.keys(identifyPayload).length > 0) {
-                        ttq.identify(identifyPayload);
+                        identify(identifyPayload);
                     }
                 }
 
@@ -450,12 +456,13 @@ const SuccessPage = () => {
                     ...(typeof totalAmount === "number" ? { value: totalAmount } : {}),
                 };
 
-                ttq.track("ViewContent", baseEventPayload);
-                ttq.track("Search", {
+                const boundTrack = track.bind(ttqQueue);
+                boundTrack("ViewContent", baseEventPayload);
+                boundTrack("Search", {
                     ...baseEventPayload,
                     ...(searchString ? { search_string: searchString } : {}),
                 });
-                ttq.track("Lead", baseEventPayload);
+                boundTrack("Lead", baseEventPayload);
 
                 hasTrackedTikTokRef.current = true;
             } catch (error) {
