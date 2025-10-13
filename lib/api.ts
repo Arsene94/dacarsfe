@@ -2138,6 +2138,11 @@ export class ApiClient {
     async deleteBooking(id: number | string): Promise<ApiDeleteResponse> {
         return this.request<ApiDeleteResponse>(`/bookings/${id}`, {
             method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${this.token}`
+            },
         });
     }
 
