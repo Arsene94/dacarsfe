@@ -1269,7 +1269,8 @@ const AdminDashboard = () => {
                                                                     </div>
                                                                     <div className="flex items-center space-x-1">
                                                                         <Phone className="h-4 w-4" />
-                                                                        <span>{r.customer_phone}</span>
+                                                                        <span><a href={`https://wa.me/${(r.customer_phone)
+                                                                            .replace(/[^\d]/g, "")}`} rel="noopener noreferrer">{r.customer_phone}</a></span>
                                                                     </div>
 
                                                                     {r.flight_number && (
