@@ -721,7 +721,7 @@ const FleetPage = () => {
 
         const contentIds = contents
             .map((item) => item.content_id)
-            .filter((id): id is number | string => typeof id === "number" || typeof id === "string");
+            .filter((id): id is number => typeof id === "number");
 
         trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
             content_type: TIKTOK_CONTENT_TYPE,
