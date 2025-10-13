@@ -472,6 +472,7 @@ const HomePageClient = () => {
                                 content_id: "landing_home",
                                 content_name: "Landing Page",
                                 content_type: TIKTOK_CONTENT_TYPE,
+                                content_ids: ["landing_home"],
                                 has_booking_range: Boolean(hasBookingRange),
                                 booking_range_key: bookingRangeKey || undefined,
                                 wheel_popup_shown: Boolean(showWheelPopup),

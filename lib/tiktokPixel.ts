@@ -193,7 +193,7 @@ export const initTikTokPixel = () => {
     }
 };
 
-export const trackTikTokPageView = () => {
+export const trackTikTokPageView = (payload?: Record<string, unknown>) => {
     const queue = resolveQueue();
     if (!queue) {
         return;
@@ -204,6 +204,19 @@ export const trackTikTokPageView = () => {
     } catch (error) {
         if (process.env.NODE_ENV !== "production") {
             console.warn("Nu s-a putut trimite PageView către TikTok", error);
+        }
+    }
+
+    const sanitizedPayload = sanitizePayload(payload);
+    if (!sanitizedPayload) {
+        return;
+    }
+
+    try {
+        queue.track(TIKTOK_EVENTS.PAGE_VIEW, sanitizedPayload);
+    } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+            console.warn("Nu s-a putut trimite detaliile PageView către TikTok", error);
         }
     }
 };

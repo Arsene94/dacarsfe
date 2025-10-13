@@ -614,9 +614,28 @@ const FleetPage = () => {
                     view_mode: viewMode,
                 });
 
+                const normalizedTotal =
+                    typeof totalAmount === "number" && Number.isFinite(totalAmount)
+                        ? Math.round(totalAmount * 100) / 100
+                        : undefined;
+
+                const contents = [
+                    {
+                        content_id: car.id,
+                        content_name: car.name,
+                        quantity: 1,
+                        price: normalizedTotal,
+                    },
+                ];
+
                 trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
                     content_type: TIKTOK_CONTENT_TYPE,
                     contents,
+                    currency: "RON",
+                    value: normalizedTotal,
+                    start_date: trimmedStart,
+                    end_date: trimmedEnd,
+                    with_deposit: withDeposit,
                 });
 
                 if (fromModal || !startDate || !endDate) {
@@ -700,6 +719,10 @@ const FleetPage = () => {
             };
         });
 
+        const contentIds = contents
+            .map((item) => item.content_id)
+            .filter((id): id is number => typeof id === "number");
+
         trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
             content_type: TIKTOK_CONTENT_TYPE,
             contents,
@@ -708,6 +731,8 @@ const FleetPage = () => {
             total_results: totalCars,
             search_term: searchTerm || undefined,
             sort_by: sortBy,
+            content_id: contentIds[0] ?? undefined,
+            content_ids: contentIds.length > 0 ? contentIds : undefined,
         });
 
         const metaContents = contents
