@@ -35,6 +35,81 @@ const DEFAULT_CURRENCY = "EUR";
 const IN_MEMORY_META_LEAD_FALLBACK_KEY = "__fallback__";
 const trackedMetaLeadIdentifiers = new Set<string>();
 
+type TikTokQueue = {
+    identify?: (payload: Record<string, unknown>) => void;
+    track?: (event: string, payload?: Record<string, unknown>) => void;
+};
+
+declare global {
+    interface Window {
+        ttq?: TikTokQueue;
+    }
+}
+
+const resolveSubtleCrypto = (): SubtleCrypto | null => {
+    if (typeof window !== "undefined" && window.crypto?.subtle) {
+        return window.crypto.subtle;
+    }
+    if (typeof globalThis !== "undefined") {
+        const cryptoLike = (globalThis as typeof globalThis & { crypto?: Crypto }).crypto;
+        if (cryptoLike?.subtle) {
+            return cryptoLike.subtle;
+        }
+    }
+    return null;
+};
+
+const sha256Hex = async (value: string): Promise<string | null> => {
+    if (!value) {
+        return null;
+    }
+    const subtle = resolveSubtleCrypto();
+    if (!subtle) {
+        return null;
+    }
+    const encoded = new TextEncoder().encode(value);
+    const digest = await subtle.digest("SHA-256", encoded);
+    return Array.from(new Uint8Array(digest))
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+};
+
+const hashEmailForTikTok = async (value: unknown): Promise<string | null> => {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+        return null;
+    }
+    return sha256Hex(normalized);
+};
+
+const hashPhoneForTikTok = async (value: unknown): Promise<string | null> => {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const normalized = value.replace(/[^0-9+]/g, "");
+    if (!normalized) {
+        return null;
+    }
+    return sha256Hex(normalized);
+};
+
+const hashExternalIdForTikTok = async (value: unknown): Promise<string | null> => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return sha256Hex(String(value));
+    }
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (!normalized) {
+            return null;
+        }
+        return sha256Hex(normalized);
+    }
+    return null;
+};
+
 const parseMaybeNumber = (value: unknown): number | null => {
     if (typeof value === "number") {
         return Number.isFinite(value) ? value : null;
@@ -86,6 +161,7 @@ const SuccessPage = () => {
     const { user } = useAuth();
     const intlLocale = LOCALE_TO_INTL[locale] ?? LOCALE_TO_INTL.ro;
     const hasTrackedMetaLeadRef = useRef(false);
+    const hasTrackedTikTokRef = useRef(false);
     const reservationTrackingIdentifier = useMemo(
         () => resolveReservationTrackingIdentifier(reservationData),
         [reservationData],
@@ -266,6 +342,128 @@ const SuccessPage = () => {
         markMetaPixelLeadTracked(leadIdentifier);
         trackedMetaLeadIdentifiers.add(leadTrackingKey);
         hasTrackedMetaLeadRef.current = true;
+    }, [reservationData, reservationTrackingIdentifier, user]);
+
+    useEffect(() => {
+        if (!reservationData || typeof window === "undefined") {
+            return;
+        }
+
+        if (hasTrackedTikTokRef.current) {
+            return;
+        }
+
+        const ttq = window.ttq;
+        if (!ttq || typeof ttq.track !== "function") {
+            return;
+        }
+
+        const trackTikTokEvents = async () => {
+            try {
+                const customerEmailRaw = (reservationData as { customer_email?: unknown }).customer_email;
+                const customerPhoneRaw = (reservationData as { customer_phone?: unknown }).customer_phone;
+                const customer = (reservationData as { customer?: unknown }).customer;
+
+                const customerIdFromRelation =
+                    customer && typeof (customer as { id?: unknown }).id !== "undefined"
+                        ? (customer as { id?: unknown }).id
+                        : undefined;
+                const externalIdSource =
+                    reservationTrackingIdentifier ??
+                    customerIdFromRelation ??
+                    (reservationData as { customer_id?: unknown }).customer_id ??
+                    (user ? user.id : null);
+
+                const [hashedEmail, hashedPhone, hashedExternalId] = await Promise.all([
+                    hashEmailForTikTok(customerEmailRaw),
+                    hashPhoneForTikTok(customerPhoneRaw),
+                    hashExternalIdForTikTok(externalIdSource),
+                ]);
+
+                // add this before event code to all pages where PII data postback is expected and appropriate
+                if (typeof ttq.identify === "function") {
+                    const identifyPayload: Record<string, string> = {};
+                    if (hashedEmail) {
+                        identifyPayload.email = hashedEmail;
+                    }
+                    if (hashedPhone) {
+                        identifyPayload.phone_number = hashedPhone;
+                    }
+                    if (hashedExternalId) {
+                        identifyPayload.external_id = hashedExternalId;
+                    }
+
+                    if (Object.keys(identifyPayload).length > 0) {
+                        ttq.identify(identifyPayload);
+                    }
+                }
+
+                const totalAmount = parseMaybeNumber(reservationData.total);
+                const currencyRaw = (reservationData as { currency?: unknown }).currency;
+                const currency =
+                    typeof currencyRaw === "string" && currencyRaw.trim().length >= 3
+                        ? currencyRaw.trim().slice(0, 3).toUpperCase()
+                        : DEFAULT_CURRENCY;
+                const selectedCar = reservationData.selectedCar ?? null;
+                const carIdRaw = (selectedCar as { id?: unknown } | null)?.id;
+                const carId =
+                    typeof carIdRaw === "number" && Number.isFinite(carIdRaw)
+                        ? String(carIdRaw)
+                        : typeof carIdRaw === "string"
+                            ? carIdRaw
+                            : reservationTrackingIdentifier ?? undefined;
+                const carNameRaw = (selectedCar as { name?: unknown } | null)?.name;
+                const carName =
+                    typeof carNameRaw === "string" && carNameRaw.trim().length > 0
+                        ? carNameRaw
+                        : undefined;
+                const locationRaw = (reservationData as { location?: unknown }).location;
+                const locationLabel =
+                    typeof locationRaw === "string" && locationRaw.trim().length > 0 ? locationRaw : undefined;
+
+                const contents =
+                    carId || carName
+                        ? [
+                              {
+                                  content_id: carId ?? (reservationTrackingIdentifier ?? "reservation"),
+                                  content_type: selectedCar ? "product" : "product_group",
+                                  content_name:
+                                      carName ?? locationLabel ?? "Rezervare auto",
+                              },
+                          ]
+                        : undefined;
+
+                const searchParts = [
+                    carName,
+                    locationLabel,
+                    typeof reservationData.rental_start_date === "string" ? reservationData.rental_start_date : undefined,
+                    typeof reservationData.rental_end_date === "string" ? reservationData.rental_end_date : undefined,
+                ]
+                    .map((part) => (typeof part === "string" ? part.trim() : ""))
+                    .filter((part) => part.length > 0);
+
+                const searchString = searchParts.length > 0 ? searchParts.join(" | ") : undefined;
+
+                const baseEventPayload: Record<string, unknown> = {
+                    currency,
+                    ...(contents ? { contents } : {}),
+                    ...(typeof totalAmount === "number" ? { value: totalAmount } : {}),
+                };
+
+                ttq.track("ViewContent", baseEventPayload);
+                ttq.track("Search", {
+                    ...baseEventPayload,
+                    ...(searchString ? { search_string: searchString } : {}),
+                });
+                ttq.track("Lead", baseEventPayload);
+
+                hasTrackedTikTokRef.current = true;
+            } catch (error) {
+                console.error("Nu s-a putut trimite evenimentele TikTok Pixel", error);
+            }
+        };
+
+        void trackTikTokEvents();
     }, [reservationData, reservationTrackingIdentifier, user]);
 
     const wheelPrize = reservationData?.wheel_prize ?? null;
