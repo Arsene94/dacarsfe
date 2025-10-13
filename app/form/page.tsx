@@ -8,7 +8,7 @@ import PhoneInput from "@/components/PhoneInput";
 import {useBooking} from "@/context/useBooking";
 import { apiClient } from "@/lib/api";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
-import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
+import {trackTikTokEvent, TIKTOK_EVENTS, TIKTOK_CONTENT_TYPE} from "@/lib/tiktokPixel";
 import {
     buildMetaPixelAdvancedMatchingFromCustomer,
     trackMetaPixelLead,
@@ -1034,22 +1034,9 @@ const ReservationPage = () => {
             quote_ready: Boolean(quoteResult),
         });
 
-        trackTikTokEvent(TIKTOK_EVENTS.INITIATE_CHECKOUT, {
-            value: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
-            currency: DEFAULT_CURRENCY,
-            contents: [
-                {
-                    content_id: selectedCar.id,
-                    content_name: selectedCar.name,
-                    quantity: 1,
-                    price: Number.isFinite(estimatedCheckoutValue) ? estimatedCheckoutValue : undefined,
-                },
-            ],
-            start_date: bookingStartDate,
-            end_date: bookingEndDate,
-            with_deposit: typeof booking.withDeposit === "boolean" ? booking.withDeposit : undefined,
-            service_ids: serviceIds,
-            applied_offer_ids: appliedOfferIds,
+        trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
+            content_type: TIKTOK_CONTENT_TYPE,
+            contents,
         });
 
         checkoutLoadedTrackedRef.current = true;

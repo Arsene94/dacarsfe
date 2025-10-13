@@ -614,21 +614,9 @@ const FleetPage = () => {
                     view_mode: viewMode,
                 });
 
-                trackTikTokEvent(TIKTOK_EVENTS.ADD_TO_CART, {
+                trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
                     content_type: TIKTOK_CONTENT_TYPE,
-                    contents: [
-                        {
-                            content_id: car.id,
-                            content_name: car.name,
-                            quantity: 1,
-                            price: totalAmount ?? undefined,
-                        },
-                    ],
-                    value: totalAmount ?? undefined,
-                    currency: "RON",
-                    start_date: trimmedStart,
-                    end_date: trimmedEnd,
-                    with_deposit: withDeposit,
+                    contents,
                 });
 
                 if (fromModal || !startDate || !endDate) {
