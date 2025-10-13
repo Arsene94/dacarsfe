@@ -700,6 +700,10 @@ const FleetPage = () => {
             };
         });
 
+        const contentIds = contents
+            .map((item) => item.content_id)
+            .filter((id): id is number | string => typeof id === "number" || typeof id === "string");
+
         trackTikTokEvent(TIKTOK_EVENTS.VIEW_CONTENT, {
             content_type: TIKTOK_CONTENT_TYPE,
             contents,
@@ -708,6 +712,8 @@ const FleetPage = () => {
             total_results: totalCars,
             search_term: searchTerm || undefined,
             sort_by: sortBy,
+            content_id: contentIds[0] ?? undefined,
+            content_ids: contentIds.length > 0 ? contentIds : undefined,
         });
 
         const metaContents = contents

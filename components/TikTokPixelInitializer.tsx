@@ -23,7 +23,26 @@ const TikTokPixelInitializer = () => {
         if (!isTikTokPixelConfigured()) {
             return;
         }
-        trackTikTokPageView();
+
+        const pagePayload = {
+            page_path: pathname || undefined,
+            page_search: searchParamsKey || undefined,
+            page_title:
+                typeof document !== "undefined" && document.title.trim().length > 0
+                    ? document.title
+                    : undefined,
+            page_url: typeof window !== "undefined" ? window.location.href : undefined,
+            referrer:
+                typeof document !== "undefined" && document.referrer.trim().length > 0
+                    ? document.referrer
+                    : undefined,
+            language:
+                typeof navigator !== "undefined" && navigator.language
+                    ? navigator.language
+                    : undefined,
+        } satisfies Record<string, unknown>;
+
+        trackTikTokPageView(pagePayload);
     }, [pathname, searchParamsKey]);
 
     return null;

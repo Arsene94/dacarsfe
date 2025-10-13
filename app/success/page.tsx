@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { ReservationPayload } from "@/types/reservation";
 import type { WheelPrize } from "@/types/wheel";
 import { formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
-import { trackTikTokEvent, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
+import { trackTikTokEvent, TIKTOK_CONTENT_TYPE, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { Locale } from "@/lib/i18n/config";
 import successMessagesRo from "@/messages/success/ro.json";
@@ -33,7 +33,7 @@ const LOCALE_TO_INTL: Record<Locale, string> = {
 };
 
 const DEFAULT_CURRENCY = "EUR";
-const ENABLE_TIKTOK_LEAD_EVENT = false;
+const ENABLE_TIKTOK_LEAD_EVENT = true;
 
 const SESSION_STORAGE_LEAD_KEY_PREFIX = "dacars:success:lead:";
 const SESSION_STORAGE_LEAD_FALLBACK_KEY = "dacars:success:lead:fallback";
@@ -325,15 +325,24 @@ const SuccessPage = () => {
                   .filter((id): id is number => typeof id === "number" && Number.isFinite(id))
             : [];
 
+        const normalizedTotal =
+            typeof totalAmount === "number" && Number.isFinite(totalAmount)
+                ? Math.round(totalAmount * 100) / 100
+                : undefined;
+
         trackTikTokEvent(TIKTOK_EVENTS.LEAD, {
-            value: totalAmount ?? undefined,
+            value: normalizedTotal,
             currency: DEFAULT_CURRENCY,
+            content_type: TIKTOK_CONTENT_TYPE,
+            content_id: carId ?? undefined,
+            content_ids: carId ? [carId] : undefined,
+            content_name: carName ?? undefined,
             contents: [
                 {
                     content_id: carId ?? undefined,
                     content_name: carName ?? undefined,
                     quantity: 1,
-                    price: totalAmount ?? undefined,
+                    price: normalizedTotal,
                 },
             ],
             reservation_id:

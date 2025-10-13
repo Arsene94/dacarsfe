@@ -56,6 +56,7 @@ type TrackingHelpers = {
     trackMixpanelEvent: MixpanelModule["trackMixpanelEvent"];
     trackTikTokEvent: TikTokModule["trackTikTokEvent"];
     TIKTOK_EVENTS: TikTokModule["TIKTOK_EVENTS"];
+    TIKTOK_CONTENT_TYPE: TikTokModule["TIKTOK_CONTENT_TYPE"];
 };
 
 let categoryHelpersPromise: Promise<CategoryHelpers> | null = null;
@@ -102,6 +103,7 @@ const loadTrackingHelpers = async (): Promise<TrackingHelpers> => {
                 trackMixpanelEvent: mixpanelModule.trackMixpanelEvent,
                 trackTikTokEvent: tikTokModule.trackTikTokEvent,
                 TIKTOK_EVENTS: tikTokModule.TIKTOK_EVENTS,
+                TIKTOK_CONTENT_TYPE: tikTokModule.TIKTOK_CONTENT_TYPE,
             }))
             .catch((error) => {
                 trackingHelpersPromise = null;
@@ -395,7 +397,12 @@ const HeroBookingForm = ({
         const trackingHelpers = await trackingPromise;
 
         if (trackingHelpers) {
-            const { trackMixpanelEvent, trackTikTokEvent, TIKTOK_EVENTS } = trackingHelpers;
+            const {
+                trackMixpanelEvent,
+                trackTikTokEvent,
+                TIKTOK_EVENTS,
+                TIKTOK_CONTENT_TYPE,
+            } = trackingHelpers;
 
             trackMixpanelEvent("hero_form_submit", {
                 start_date: formData.start_date,
@@ -405,12 +412,21 @@ const HeroBookingForm = ({
             });
 
             trackTikTokEvent(TIKTOK_EVENTS.SUBMIT_FORM, {
+                form_name: "hero_booking",
+                content_type: TIKTOK_CONTENT_TYPE,
+                content_id: "hero_booking_form",
+                content_ids: ["hero_booking_form"],
                 contents: [
                     {
                         content_id: "hero_booking_form",
                         content_name: "booking", // eslint-disable-line camelcase -- cerință pixel TikTok
+                        quantity: 1,
                     },
                 ],
+                start_date: formData.start_date || undefined,
+                end_date: formData.end_date || undefined,
+                location: formData.location || undefined,
+                car_type: formData.car_type || undefined,
             });
 
         }
