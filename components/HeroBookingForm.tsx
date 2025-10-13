@@ -45,7 +45,6 @@ const scheduleIdleTask = (task: () => void) => {
 type ApiModule = typeof import("@/lib/api");
 type ApiResponseModule = typeof import("@/lib/apiResponse");
 type MixpanelModule = typeof import("@/lib/mixpanelClient");
-type TikTokModule = typeof import("@/lib/tiktokPixel");
 
 type CategoryHelpers = {
     apiClient: ApiModule["apiClient"];
@@ -54,9 +53,6 @@ type CategoryHelpers = {
 
 type TrackingHelpers = {
     trackMixpanelEvent: MixpanelModule["trackMixpanelEvent"];
-    trackTikTokEvent: TikTokModule["trackTikTokEvent"];
-    TIKTOK_EVENTS: TikTokModule["TIKTOK_EVENTS"];
-    TIKTOK_CONTENT_TYPE: TikTokModule["TIKTOK_CONTENT_TYPE"];
 };
 
 let categoryHelpersPromise: Promise<CategoryHelpers> | null = null;
@@ -95,15 +91,9 @@ const loadCategoryHelpers = async (): Promise<CategoryHelpers> => {
 
 const loadTrackingHelpers = async (): Promise<TrackingHelpers> => {
     if (!trackingHelpersPromise) {
-        trackingHelpersPromise = Promise.all([
-            import("@/lib/mixpanelClient"),
-            import("@/lib/tiktokPixel"),
-        ])
-            .then(([mixpanelModule, tikTokModule]) => ({
+        trackingHelpersPromise = import("@/lib/mixpanelClient")
+            .then((mixpanelModule) => ({
                 trackMixpanelEvent: mixpanelModule.trackMixpanelEvent,
-                trackTikTokEvent: tikTokModule.trackTikTokEvent,
-                TIKTOK_EVENTS: tikTokModule.TIKTOK_EVENTS,
-                TIKTOK_CONTENT_TYPE: tikTokModule.TIKTOK_CONTENT_TYPE,
             }))
             .catch((error) => {
                 trackingHelpersPromise = null;
@@ -397,36 +387,13 @@ const HeroBookingForm = ({
         const trackingHelpers = await trackingPromise;
 
         if (trackingHelpers) {
-            const {
-                trackMixpanelEvent,
-                trackTikTokEvent,
-                TIKTOK_EVENTS,
-                TIKTOK_CONTENT_TYPE,
-            } = trackingHelpers;
+            const { trackMixpanelEvent } = trackingHelpers;
 
             trackMixpanelEvent("hero_form_submit", {
                 start_date: formData.start_date,
                 end_date: formData.end_date,
                 location: formData.location,
                 car_type: formData.car_type,
-            });
-
-            trackTikTokEvent(TIKTOK_EVENTS.SUBMIT_FORM, {
-                form_name: "hero_booking",
-                content_type: TIKTOK_CONTENT_TYPE,
-                content_id: "hero_booking_form",
-                content_ids: ["hero_booking_form"],
-                contents: [
-                    {
-                        content_id: "hero_booking_form",
-                        content_name: "booking", // eslint-disable-line camelcase -- cerință pixel TikTok
-                        quantity: 1,
-                    },
-                ],
-                start_date: formData.start_date || undefined,
-                end_date: formData.end_date || undefined,
-                location: formData.location || undefined,
-                car_type: formData.car_type || undefined,
             });
 
         }

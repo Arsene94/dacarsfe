@@ -17,7 +17,6 @@ import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY } from "@/lib/i18n/config";
 import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale";
 import MixpanelInitializer from "../components/MixpanelInitializer";
 import TikTokPixelScript from "../components/TikTokPixelScript";
-import TikTokPixelInitializer from "../components/TikTokPixelInitializer";
 import MetaPixel from "../components/MetaPixel";
 import MetaPixelServiceWorker from "../components/MetaPixelServiceWorker";
 import { GoogleAnalytics } from "@next/third-parties/google";
@@ -108,7 +107,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <body className="min-h-screen bg-white">
     <Suspense fallback={null}>
         <MixpanelInitializer/>
-        <TikTokPixelInitializer/>
         <MetaPixel />
         <MetaPixelServiceWorker />
         </Suspense>

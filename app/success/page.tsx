@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import type { ReservationPayload } from "@/types/reservation";
 import type { WheelPrize } from "@/types/wheel";
 import { formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
-import { trackTikTokEvent, TIKTOK_CONTENT_TYPE, TIKTOK_EVENTS } from "@/lib/tiktokPixel";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { Locale } from "@/lib/i18n/config";
 import successMessagesRo from "@/messages/success/ro.json";
@@ -33,10 +32,6 @@ const LOCALE_TO_INTL: Record<Locale, string> = {
 };
 
 const DEFAULT_CURRENCY = "EUR";
-const ENABLE_TIKTOK_LEAD_EVENT = true;
-
-const SESSION_STORAGE_LEAD_KEY_PREFIX = "dacars:success:lead:";
-const SESSION_STORAGE_LEAD_FALLBACK_KEY = "dacars:success:lead:fallback";
 const IN_MEMORY_META_LEAD_FALLBACK_KEY = "__fallback__";
 const trackedMetaLeadIdentifiers = new Set<string>();
 
@@ -90,7 +85,6 @@ const SuccessPage = () => {
     const { locale, messages, t } = useTranslations<SuccessMessages>("success");
     const { user } = useAuth();
     const intlLocale = LOCALE_TO_INTL[locale] ?? LOCALE_TO_INTL.ro;
-    const hasTrackedConversionRef = useRef(false);
     const hasTrackedMetaLeadRef = useRef(false);
     const reservationTrackingIdentifier = useMemo(
         () => resolveReservationTrackingIdentifier(reservationData),
@@ -273,99 +267,6 @@ const SuccessPage = () => {
         trackedMetaLeadIdentifiers.add(leadTrackingKey);
         hasTrackedMetaLeadRef.current = true;
     }, [reservationData, reservationTrackingIdentifier, user]);
-
-    useEffect(() => {
-        if (!reservationData) {
-            return;
-        }
-        if (hasTrackedConversionRef.current) {
-            return;
-        }
-        if (typeof window === "undefined") {
-            return;
-        }
-
-        if (!ENABLE_TIKTOK_LEAD_EVENT) {
-            return;
-        }
-
-        const sessionStorageKey = reservationTrackingIdentifier
-            ? `${SESSION_STORAGE_LEAD_KEY_PREFIX}${reservationTrackingIdentifier}`
-            : SESSION_STORAGE_LEAD_FALLBACK_KEY;
-
-        try {
-            const hasTrackedAlready = window.sessionStorage.getItem(sessionStorageKey) === "1";
-            if (hasTrackedAlready) {
-                hasTrackedConversionRef.current = true;
-                return;
-            }
-        } catch (error) {
-            console.warn("Nu s-a putut citi statusul evenimentului Lead", error);
-        }
-
-        const totalAmountRaw = reservationData.total;
-        const totalAmount =
-            typeof totalAmountRaw === "number" && Number.isFinite(totalAmountRaw)
-                ? totalAmountRaw
-                : parseMaybeNumber(totalAmountRaw);
-
-        const car = reservationData.selectedCar ?? null;
-        const carId =
-            car && typeof (car as { id?: unknown }).id === "number" && Number.isFinite((car as { id: number }).id)
-                ? (car as { id: number }).id
-                : undefined;
-        const carName =
-            car && typeof (car as { name?: unknown }).name === "string"
-                ? (car as { name: string }).name
-                : undefined;
-
-        const normalizedServices = Array.isArray(reservationData.service_ids)
-            ? reservationData.service_ids
-                  .map((serviceId) => parseMaybeNumber(serviceId))
-                  .filter((id): id is number => typeof id === "number" && Number.isFinite(id))
-            : [];
-
-        const normalizedTotal =
-            typeof totalAmount === "number" && Number.isFinite(totalAmount)
-                ? Math.round(totalAmount * 100) / 100
-                : undefined;
-
-        trackTikTokEvent(TIKTOK_EVENTS.LEAD, {
-            value: normalizedTotal,
-            currency: DEFAULT_CURRENCY,
-            content_type: TIKTOK_CONTENT_TYPE,
-            content_id: carId ?? undefined,
-            content_ids: carId ? [carId] : undefined,
-            content_name: carName ?? undefined,
-            contents: [
-                {
-                    content_id: carId ?? undefined,
-                    content_name: carName ?? undefined,
-                    quantity: 1,
-                    price: normalizedTotal,
-                },
-            ],
-            reservation_id:
-                typeof reservationData.reservationId === "string" && reservationData.reservationId.trim().length > 0
-                    ? reservationData.reservationId
-                    : undefined,
-            start_date: reservationData.rental_start_date || undefined,
-            end_date: reservationData.rental_end_date || undefined,
-            with_deposit:
-                typeof reservationData.with_deposit === "boolean"
-                    ? reservationData.with_deposit
-                    : undefined,
-            service_ids: normalizedServices,
-        });
-
-        hasTrackedConversionRef.current = true;
-
-        try {
-            window.sessionStorage.setItem(sessionStorageKey, "1");
-        } catch (error) {
-            console.warn("Nu s-a putut salva statusul evenimentului Lead", error);
-        }
-    }, [reservationData, reservationTrackingIdentifier]);
 
     const wheelPrize = reservationData?.wheel_prize ?? null;
     const wheelPrizeDiscountRaw = reservationData?.wheel_prize_discount ??
