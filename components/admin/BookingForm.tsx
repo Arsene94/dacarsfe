@@ -1591,6 +1591,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo?.customer_email,
         bookingInfo?.service_ids,
         bookingInfo?.with_deposit,
+        bookingInfo?.keep_old_price,
         bookingInfo?.wheel_prize,
         bookingInfo?.wheel_prize_discount,
         appliedOffersQuoteKey,
