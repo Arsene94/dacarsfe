@@ -2461,6 +2461,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     return;
                 }
 
+                payload.booking_id = bookingId;
                 await apiClient.updateBooking(bookingId, payload);
             }
             onClose();
