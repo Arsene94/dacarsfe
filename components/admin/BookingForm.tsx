@@ -1745,24 +1745,21 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 ? 0
                 : parsedCouponAmount ?? (typeof info.coupon_amount === "number" ? info.coupon_amount : 0);
 
-        const fallbackBase =
-            toOptionalNumber(info.base_price) ??
-            toOptionalNumber(info.price_per_day) ??
-            toOptionalNumber(info.original_price_per_day);
-        const fallbackCasco =
-            toOptionalNumber(info.base_price_casco) ??
-            toOptionalNumber(info.base_price) ??
-            fallbackBase;
+        const pricePerDayValue = toOptionalNumber(info.price_per_day);
+        const basePriceValue = toOptionalNumber(info.base_price);
+        const basePriceCascoValue = toOptionalNumber(info.base_price_casco);
+        const originalPriceValue = toOptionalNumber(info.original_price_per_day);
 
-        const nextBase =
-            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
-                ? resolvedCouponAmount
-                : fallbackBase ?? null;
-        const nextBaseCasco =
-            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
-                ? resolvedCouponAmount
-                : fallbackCasco ?? null;
-        const nextOriginal = info.original_price_per_day ?? fallbackBase ?? null;
+        const fallbackBase = basePriceValue ?? pricePerDayValue ?? originalPriceValue ?? null;
+        const fallbackCasco = basePriceCascoValue ?? basePriceValue ?? fallbackBase ?? null;
+        const hasFixedPerDayOverride = normalizedType === "fixed_per_day" && resolvedCouponAmount > 0;
+        const hasActivePerDayDiscount = normalizedType === "per_day" && resolvedCouponAmount > 0;
+
+        const nextBase = hasFixedPerDayOverride ? resolvedCouponAmount : fallbackBase;
+        const nextBaseCasco = hasFixedPerDayOverride ? resolvedCouponAmount : fallbackCasco ?? nextBase;
+        const nextOriginal = hasActivePerDayDiscount
+            ? pickFirstNumber([originalPriceValue, fallbackBase, pricePerDayValue])
+            : pickFirstNumber([pricePerDayValue, fallbackBase, originalPriceValue]);
 
         const hasChanges =
             info.coupon_type !== normalizedType ||
