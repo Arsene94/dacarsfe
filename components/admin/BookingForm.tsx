@@ -2325,7 +2325,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         days > 0
             ? (derivedOriginalDailyRate - normalizedDiscountedRate) * days
             : 0;
-    const normalizedManualDiscountFromRates =
+    let normalizedManualDiscountFromRates =
         manualDiscountFromRates > 0 && Number.isFinite(manualDiscountFromRates)
             ? Math.round(manualDiscountFromRates * 100) / 100
             : 0;
@@ -2366,6 +2366,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
         Math.round(
             Math.abs(toOptionalNumber(bookingInfo.coupon_total_discount) ?? 0) * 100,
         ) / 100;
+    const hasExplicitManualDiscountType =
+        manualCouponType === "per_day" || manualCouponType === "fixed_per_day";
+    const hasBackendDiscounts =
+        normalizedDiscountValue > 0 ||
+        normalizedCouponDiscount > 0 ||
+        normalizedManualCouponTotalDiscount > 0 ||
+        normalizedWheelPrizeDiscountValue > 0;
+    const manualRateDifferenceActive =
+        normalizedManualDiscountFromRates > 0 &&
+        (hasBackendDiscounts || hasExplicitManualDiscountType);
+    if (!manualRateDifferenceActive) {
+        normalizedManualDiscountFromRates = 0;
+    }
     const effectiveDiscountValue = Math.max(
         normalizedDiscountValue,
         normalizedCouponDiscount,
@@ -2411,7 +2424,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         totalBeforeDiscountsCandidates.length > 0
             ? Math.max(...totalBeforeDiscountsCandidates)
             : null;
-    const hasManualRateDifference = normalizedManualDiscountFromRates > 0;
+    const hasManualRateDifference = manualRateDifferenceActive;
     const hasDiscountDetails =
         Number.isFinite(totalDisplay) &&
         totalDisplay > 0 &&
