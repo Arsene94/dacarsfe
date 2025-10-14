@@ -778,6 +778,7 @@ const buildQuotePayload = (
         rental_start_date: toApiDateTime(values.rental_start_date) ?? values.rental_start_date,
         rental_end_date: toApiDateTime(values.rental_end_date) ?? values.rental_end_date,
         with_deposit: values.with_deposit,
+        keep_old_price: values.keep_old_price !== false,
         service_ids: serviceIds,
     };
 
