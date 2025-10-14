@@ -2112,11 +2112,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
             pricePerDayValue,
             originalRateFromBooking,
         ]) ?? null;
-    const baseRate =
+    let baseRate =
         (preferCascoPlan
             ? normalizedCascoRate ?? normalizedDepositRate
             : normalizedDepositRate ?? normalizedCascoRate) ?? 0;
-    const discountedRate =
+    let discountedRate =
         (preferCascoPlan
             ? pickFirstNumber([
                   quotePricePerDayCasco,
@@ -2202,6 +2202,51 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const restToPayEuroDisplay = Number.isFinite(restToPay)
         ? Math.round(restToPay * 100) / 100
         : null;
+
+    const normalizedSubtotalValue =
+        typeof subtotalDisplay === "number" && Number.isFinite(subtotalDisplay)
+            ? subtotalDisplay
+            : null;
+    const normalizedTotalValue =
+        typeof totalDisplay === "number" && Number.isFinite(totalDisplay)
+            ? totalDisplay
+            : null;
+    const normalizedServicesValue =
+        typeof totalServicesValue === "number" && Number.isFinite(totalServicesValue)
+            ? totalServicesValue
+            : 0;
+    const inferredCarSubtotal =
+        normalizedSubtotalValue ??
+        (normalizedTotalValue != null ? normalizedTotalValue - normalizedServicesValue : null);
+
+    const normalizedDaysForRates =
+        typeof days === "number" ? days : Number.isFinite(Number(days)) ? Number(days) : null;
+
+    if (
+        inferredCarSubtotal != null &&
+        inferredCarSubtotal > 0 &&
+        typeof normalizedDaysForRates === "number" &&
+        Number.isFinite(normalizedDaysForRates) &&
+        normalizedDaysForRates > 0
+    ) {
+        const inferredRateRaw = inferredCarSubtotal / normalizedDaysForRates;
+        if (Number.isFinite(inferredRateRaw) && inferredRateRaw > 0) {
+            const inferredRate = Math.round(inferredRateRaw * 100) / 100;
+            const mismatchThreshold = 0.5;
+            if (
+                !isFiniteNumber(baseRate) ||
+                Math.abs(baseRate * normalizedDaysForRates - inferredCarSubtotal) > mismatchThreshold
+            ) {
+                baseRate = inferredRate;
+            }
+            if (
+                !isFiniteNumber(discountedRate) ||
+                Math.abs(discountedRate * normalizedDaysForRates - inferredCarSubtotal) > mismatchThreshold
+            ) {
+                discountedRate = inferredRate;
+            }
+        }
+    }
 
     const depositWaived = bookingInfo.deposit_waived === true;
     const subtotalLei = formatLeiAmount(subtotalDisplay);
