@@ -1142,17 +1142,27 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const bookingCarLicense = bookingInfo?.car_license_plate ?? "";
     const bookingCarTransmission = bookingInfo?.car_transmission ?? "";
     const bookingCarFuel = bookingInfo?.car_fuel ?? "";
-    const couponTypeValue = normalizeManualCouponType(bookingInfo?.coupon_type);
+    const normalizedCouponType = normalizeManualCouponType(bookingInfo?.coupon_type);
+    const hasManualCoupon = normalizedCouponType.length > 0;
+    const couponTypeValue = hasManualCoupon ? normalizedCouponType : "none";
     const couponValueLabel =
-        couponTypeValue === "code"
+        normalizedCouponType === "code"
             ? "Cod cupon"
-            : couponTypeValue === "percentage"
+            : normalizedCouponType === "percentage"
                 ? "Procentaj (%)"
                 : "Valoare";
     const couponValueInputProps =
-        couponTypeValue === "percentage"
+        normalizedCouponType === "percentage"
             ? { min: 0, max: 100, step: 0.1 }
             : {};
+    const couponValueInputType = normalizedCouponType === "code" ? "text" : "number";
+    const couponValueInputDisabled = !hasManualCoupon;
+    const couponValue =
+        normalizedCouponType === "code"
+            ? bookingInfo?.coupon_code ?? ""
+            : hasManualCoupon
+                ? bookingInfo?.coupon_amount ?? 0
+                : "";
     const selectedCarOption = bookingInfo?.car_id
         ? normalizeAdminCarOption({
               id: bookingInfo.car_id,
@@ -2695,6 +2705,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             value={couponTypeValue}
                             onValueChange={(value) =>
                                 updateBookingInfo((prev) => {
+                                    if (value === "none") {
+                                        return recalcTotals({
+                                            ...prev,
+                                            coupon_type: "",
+                                            coupon_amount: 0,
+                                            coupon_code: "",
+                                        });
+                                    }
+
                                     const normalized = normalizeManualCouponType(value);
                                     return recalcTotals({
                                         ...prev,
@@ -2706,6 +2725,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             }
                             placeholder="Selectează"
                         >
+                            <option value="none">Fără discount</option>
                             <option value="fixed_per_day">Pret fix pe zi</option>
                             <option value="per_day">Reducere pret pe zi</option>
                             <option value="days">Zile</option>
@@ -2718,13 +2738,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         <Label htmlFor="coupon-value">{couponValueLabel}</Label>
                         <Input
                             id="coupon-value"
-                            type={couponTypeValue === "code" ? "text" : "number"}
+                            type={couponValueInputType}
+                            disabled={couponValueInputDisabled}
                             {...couponValueInputProps}
-                            value={
-                                couponTypeValue === "code"
-                                    ? bookingInfo.coupon_code ?? ""
-                                    : bookingInfo.coupon_amount ?? 0
-                            }
+                            value={couponValue}
                             onChange={(e) => {
                                 const rawValue = e.target.value;
                                 updateBookingInfo((prev) => {
