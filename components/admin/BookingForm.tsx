@@ -886,6 +886,25 @@ const buildBookingUpdatePayload = (
         deposit_waived: values.deposit_waived === true,
     };
 
+    let bookingIdentifier: string | number | null = null;
+    if (typeof values.id === "number" && Number.isFinite(values.id)) {
+        bookingIdentifier = values.id;
+    } else if (typeof values.id === "string") {
+        bookingIdentifier = trimmedOrNull(values.id);
+    }
+
+    if (bookingIdentifier == null) {
+        if (typeof values.booking_number === "number" && Number.isFinite(values.booking_number)) {
+            bookingIdentifier = values.booking_number;
+        } else if (typeof values.booking_number === "string") {
+            bookingIdentifier = trimmedOrNull(values.booking_number);
+        }
+    }
+
+    if (bookingIdentifier != null) {
+        payload.booking_id = bookingIdentifier;
+    }
+
     const rentalStart = toApiDateTime(values.rental_start_date);
     if (rentalStart) {
         payload.rental_start_date = rentalStart;
