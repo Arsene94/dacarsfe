@@ -778,6 +778,7 @@ const buildQuotePayload = (
         rental_start_date: toApiDateTime(values.rental_start_date) ?? values.rental_start_date,
         rental_end_date: toApiDateTime(values.rental_end_date) ?? values.rental_end_date,
         with_deposit: values.with_deposit,
+        keep_old_price: values.keep_old_price !== false,
         service_ids: serviceIds,
     };
 
@@ -1590,6 +1591,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo?.customer_email,
         bookingInfo?.service_ids,
         bookingInfo?.with_deposit,
+        bookingInfo?.keep_old_price,
         bookingInfo?.wheel_prize,
         bookingInfo?.wheel_prize_discount,
         appliedOffersQuoteKey,
@@ -1743,24 +1745,21 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 ? 0
                 : parsedCouponAmount ?? (typeof info.coupon_amount === "number" ? info.coupon_amount : 0);
 
-        const fallbackBase =
-            toOptionalNumber(info.base_price) ??
-            toOptionalNumber(info.price_per_day) ??
-            toOptionalNumber(info.original_price_per_day);
-        const fallbackCasco =
-            toOptionalNumber(info.base_price_casco) ??
-            toOptionalNumber(info.base_price) ??
-            fallbackBase;
+        const pricePerDayValue = toOptionalNumber(info.price_per_day);
+        const basePriceValue = toOptionalNumber(info.base_price);
+        const basePriceCascoValue = toOptionalNumber(info.base_price_casco);
+        const originalPriceValue = toOptionalNumber(info.original_price_per_day);
 
-        const nextBase =
-            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
-                ? resolvedCouponAmount
-                : fallbackBase ?? null;
-        const nextBaseCasco =
-            normalizedType === "fixed_per_day" && resolvedCouponAmount > 0
-                ? resolvedCouponAmount
-                : fallbackCasco ?? null;
-        const nextOriginal = info.original_price_per_day ?? fallbackBase ?? null;
+        const fallbackBase = basePriceValue ?? pricePerDayValue ?? originalPriceValue ?? null;
+        const fallbackCasco = basePriceCascoValue ?? basePriceValue ?? fallbackBase ?? null;
+        const hasFixedPerDayOverride = normalizedType === "fixed_per_day" && resolvedCouponAmount > 0;
+        const hasActivePerDayDiscount = normalizedType === "per_day" && resolvedCouponAmount > 0;
+
+        const nextBase = hasFixedPerDayOverride ? resolvedCouponAmount : fallbackBase;
+        const nextBaseCasco = hasFixedPerDayOverride ? resolvedCouponAmount : fallbackCasco ?? nextBase;
+        const nextOriginal = hasActivePerDayDiscount
+            ? pickFirstNumber([originalPriceValue, fallbackBase, pricePerDayValue])
+            : pickFirstNumber([pricePerDayValue, fallbackBase, originalPriceValue]);
 
         const hasChanges =
             info.coupon_type !== normalizedType ||

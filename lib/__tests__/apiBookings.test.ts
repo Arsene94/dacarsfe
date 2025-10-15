@@ -432,6 +432,46 @@ describe('ApiClient bookings management', () => {
     expect(result).toEqual(apiResponse);
   });
 
+  it('avoids appending undefined booking ids when generating ad-hoc contracts', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('contract-admin');
+
+    const payload = {
+      customer_name: 'Popescu Ion',
+      with_signature: true,
+    } satisfies Record<string, unknown>;
+
+    const apiResponse = {
+      data: { url: 'https://storage/contract-adhoc.pdf' },
+    };
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.generateContract(payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseURL}/bookings/contract`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+        cache: 'no-cache',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Accept: 'application/pdf',
+          Authorization: 'Bearer contract-admin',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+      }),
+    );
+
+    expect(result).toEqual(apiResponse);
+  });
+
   it('stores and generates a new booking contract in a single call', async () => {
     const client = new ApiClient(baseURL);
     client.setToken('contract-admin');

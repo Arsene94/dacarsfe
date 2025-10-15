@@ -177,6 +177,7 @@ export interface QuotePricePayload {
   rental_start_date: string;
   rental_end_date: string;
   with_deposit?: boolean | null;
+  keep_old_price?: boolean | null;
   customer_email?: string | null;
   coupon_type?: string | null;
   coupon_amount?: number | string;
