@@ -176,6 +176,7 @@ export interface QuotePricePayload {
   car_id: number | string;
   rental_start_date: string;
   rental_end_date: string;
+  booking_id?: number | string;
   with_deposit?: boolean | null;
   keep_old_price?: boolean | null;
   customer_email?: string | null;

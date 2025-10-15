@@ -275,6 +275,35 @@ const trimmedOrNull = (value: unknown): string | null => {
     return trimmed.length > 0 ? trimmed : null;
 };
 
+const resolveBookingIdentifier = (
+    values: Pick<AdminBookingFormValues, "id" | "booking_number">,
+): number | string | null => {
+    if (typeof values.id === "number" && Number.isFinite(values.id)) {
+        return values.id;
+    }
+    if (typeof values.id === "string") {
+        const normalized = trimmedOrNull(values.id);
+        if (normalized) {
+            return normalized;
+        }
+    }
+
+    if (
+        typeof values.booking_number === "number" &&
+        Number.isFinite(values.booking_number)
+    ) {
+        return values.booking_number;
+    }
+    if (typeof values.booking_number === "string") {
+        const normalized = trimmedOrNull(values.booking_number);
+        if (normalized) {
+            return normalized;
+        }
+    }
+
+    return null;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null;
 
@@ -782,6 +811,11 @@ const buildQuotePayload = (
         service_ids: serviceIds,
     };
 
+    const bookingIdentifier = resolveBookingIdentifier(values);
+    if (bookingIdentifier != null) {
+        payload.booking_id = bookingIdentifier;
+    }
+
     const customerEmail = trimmedOrNull(values.customer_email);
     if (customerEmail) {
         payload.customer_email = customerEmail;
@@ -885,6 +919,12 @@ const buildBookingUpdatePayload = (
         send_email: values.send_email !== false,
         deposit_waived: values.deposit_waived === true,
     };
+
+    const bookingIdentifier = resolveBookingIdentifier(values);
+
+    if (bookingIdentifier != null) {
+        payload.booking_id = bookingIdentifier;
+    }
 
     const rentalStart = toApiDateTime(values.rental_start_date);
     if (rentalStart) {
@@ -1142,17 +1182,27 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const bookingCarLicense = bookingInfo?.car_license_plate ?? "";
     const bookingCarTransmission = bookingInfo?.car_transmission ?? "";
     const bookingCarFuel = bookingInfo?.car_fuel ?? "";
-    const couponTypeValue = normalizeManualCouponType(bookingInfo?.coupon_type);
+    const normalizedCouponType = normalizeManualCouponType(bookingInfo?.coupon_type);
+    const hasManualCoupon = normalizedCouponType.length > 0;
+    const couponTypeValue = hasManualCoupon ? normalizedCouponType : "none";
     const couponValueLabel =
-        couponTypeValue === "code"
+        normalizedCouponType === "code"
             ? "Cod cupon"
-            : couponTypeValue === "percentage"
+            : normalizedCouponType === "percentage"
                 ? "Procentaj (%)"
                 : "Valoare";
     const couponValueInputProps =
-        couponTypeValue === "percentage"
+        normalizedCouponType === "percentage"
             ? { min: 0, max: 100, step: 0.1 }
             : {};
+    const couponValueInputType = normalizedCouponType === "code" ? "text" : "number";
+    const couponValueInputDisabled = !hasManualCoupon;
+    const couponValue =
+        normalizedCouponType === "code"
+            ? bookingInfo?.coupon_code ?? ""
+            : hasManualCoupon
+                ? bookingInfo?.coupon_amount ?? 0
+                : "";
     const selectedCarOption = bookingInfo?.car_id
         ? normalizeAdminCarOption({
               id: bookingInfo.car_id,
@@ -2695,6 +2745,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             value={couponTypeValue}
                             onValueChange={(value) =>
                                 updateBookingInfo((prev) => {
+                                    if (value === "none") {
+                                        return recalcTotals({
+                                            ...prev,
+                                            coupon_type: "",
+                                            coupon_amount: 0,
+                                            coupon_code: "",
+                                        });
+                                    }
+
                                     const normalized = normalizeManualCouponType(value);
                                     return recalcTotals({
                                         ...prev,
@@ -2706,6 +2765,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             }
                             placeholder="Selectează"
                         >
+                            <option value="none">Fără discount</option>
                             <option value="fixed_per_day">Pret fix pe zi</option>
                             <option value="per_day">Reducere pret pe zi</option>
                             <option value="days">Zile</option>
@@ -2718,13 +2778,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         <Label htmlFor="coupon-value">{couponValueLabel}</Label>
                         <Input
                             id="coupon-value"
-                            type={couponTypeValue === "code" ? "text" : "number"}
+                            type={couponValueInputType}
+                            disabled={couponValueInputDisabled}
                             {...couponValueInputProps}
-                            value={
-                                couponTypeValue === "code"
-                                    ? bookingInfo.coupon_code ?? ""
-                                    : bookingInfo.coupon_amount ?? 0
-                            }
+                            value={couponValue}
                             onChange={(e) => {
                                 const rawValue = e.target.value;
                                 updateBookingInfo((prev) => {
