@@ -275,6 +275,35 @@ const trimmedOrNull = (value: unknown): string | null => {
     return trimmed.length > 0 ? trimmed : null;
 };
 
+const resolveBookingIdentifier = (
+    values: Pick<AdminBookingFormValues, "id" | "booking_number">,
+): number | string | null => {
+    if (typeof values.id === "number" && Number.isFinite(values.id)) {
+        return values.id;
+    }
+    if (typeof values.id === "string") {
+        const normalized = trimmedOrNull(values.id);
+        if (normalized) {
+            return normalized;
+        }
+    }
+
+    if (
+        typeof values.booking_number === "number" &&
+        Number.isFinite(values.booking_number)
+    ) {
+        return values.booking_number;
+    }
+    if (typeof values.booking_number === "string") {
+        const normalized = trimmedOrNull(values.booking_number);
+        if (normalized) {
+            return normalized;
+        }
+    }
+
+    return null;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null;
 
@@ -782,6 +811,11 @@ const buildQuotePayload = (
         service_ids: serviceIds,
     };
 
+    const bookingIdentifier = resolveBookingIdentifier(values);
+    if (bookingIdentifier != null) {
+        payload.booking_id = bookingIdentifier;
+    }
+
     const customerEmail = trimmedOrNull(values.customer_email);
     if (customerEmail) {
         payload.customer_email = customerEmail;
@@ -886,20 +920,7 @@ const buildBookingUpdatePayload = (
         deposit_waived: values.deposit_waived === true,
     };
 
-    let bookingIdentifier: string | number | null = null;
-    if (typeof values.id === "number" && Number.isFinite(values.id)) {
-        bookingIdentifier = values.id;
-    } else if (typeof values.id === "string") {
-        bookingIdentifier = trimmedOrNull(values.id);
-    }
-
-    if (bookingIdentifier == null) {
-        if (typeof values.booking_number === "number" && Number.isFinite(values.booking_number)) {
-            bookingIdentifier = values.booking_number;
-        } else if (typeof values.booking_number === "string") {
-            bookingIdentifier = trimmedOrNull(values.booking_number);
-        }
-    }
+    const bookingIdentifier = resolveBookingIdentifier(values);
 
     if (bookingIdentifier != null) {
         payload.booking_id = bookingIdentifier;
