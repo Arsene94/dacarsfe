@@ -30,7 +30,7 @@ interface BookingContractFormProps {
 }
 
 const EMPTY_FORM: BookingContractFormState = {
-  id: "",
+  id: undefined,
   cnp: "",
   license: "",
   bookingNumber: "",
@@ -138,6 +138,21 @@ const resolveCarDepositValue = (car?: AdminBookingCarOption | null): string => {
   }
 
   return "";
+};
+
+const resolveBookingId = (
+  value: BookingContractFormState["id"],
+): string | number | undefined => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+
+  return undefined;
 };
 
 const normalizeAmountInput = (value: string): number | undefined => {
@@ -353,10 +368,11 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       const pricePerDayValue = normalizeAmountInput(form.pricePerDay);
       const advanceValue = normalizeAmountInput(form.advance);
       const servicesValue = normalizeAmountInput(form.services);
+      const bookingId = resolveBookingId(form.id);
 
       // build payload explicitly to avoid carrying over read-only properties
       const payload = {
-        id: form.id,
+        id: bookingId,
         cnp: form.cnp,
         license: form.license,
         bookingNumber: form.bookingNumber,
@@ -374,10 +390,7 @@ const BookingContractForm: React.FC<BookingContractFormProps> = ({ open, onClose
       };
       const cleanPayload = JSON.parse(JSON.stringify(payload)) as typeof payload;
 
-      const response =
-        form.name.trim().length > 0 && form.email.trim().length > 0
-          ? await apiClient.generateContract(cleanPayload)
-          : await apiClient.generateContract(cleanPayload, form.id);
+      const response = await apiClient.generateContract(cleanPayload, bookingId);
 
       applyContractResponse(response);
     } catch (error) {

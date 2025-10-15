@@ -2018,7 +2018,17 @@ export class ApiClient {
     }
 
     async generateContract(payload: Record<string, unknown>, id?: number | string): Promise<ApiItemResult<BookingContractResponse> | Blob> {
-        return this.request<ApiItemResult<BookingContractResponse> | Blob>(`/bookings/contract/${id}`, {
+        let path = '/bookings/contract';
+        if (typeof id === 'number' && Number.isFinite(id)) {
+            path = `${path}/${id}`;
+        } else if (typeof id === 'string') {
+            const trimmed = id.trim();
+            if (trimmed.length > 0) {
+                path = `${path}/${trimmed}`;
+            }
+        }
+
+        return this.request<ApiItemResult<BookingContractResponse> | Blob>(path, {
             method: 'POST',
             body: JSON.stringify(payload),
             headers: {
