@@ -1195,7 +1195,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         normalizedCouponType === "percentage"
             ? { min: 0, max: 100, step: 0.1 }
             : {};
-    const couponValueInputType = normalizedCouponType === "code" ? "text" : "number";
+    const couponValueInputType = normalizedCouponType === "code" ? "text" : "text";
     const couponValueInputDisabled = !hasManualCoupon;
     const couponValue =
         normalizedCouponType === "code"
