@@ -124,7 +124,7 @@ export interface ReservationPayload extends ReservationFormData {
   coupon_total_discount?: number;
   coupon_total_discount_details?: CouponTotalDiscountDetails | null;
   offers_discount?: number;
-  deposit_waived?: boolean;
+  deposit_waived?: boolean | string | number | null;
   total?: number;
   sub_total?: number;
   reservationId?: string;
@@ -185,29 +185,48 @@ export interface QuotePricePayload {
   coupon_code?: string | null;
   service_ids?: Array<number | string>;
   total_services?: number | string;
+  advance_payment?: number | string;
   wheel_prize_discount?: number | string;
   wheel_of_fortune_prize_id?: number | string | null;
   wheel_prize?: ReservationWheelPrizePayload | null;
   total_before_wheel_prize?: number | string;
   offers_discount?: number | string;
   offer_fixed_discount?: number | string;
-  deposit_waived?: boolean;
+  deposit_waived?: boolean | string | number | null;
   applied_offers?: ReservationAppliedOffer[];
   [key: string]: unknown;
 }
 
+export interface QuotePriceDiscountBreakdown {
+  discount?: number;
+  subtotal?: number;
+  total?: number;
+  [key: string]: unknown;
+}
+
 export interface QuotePriceResponse {
-  price_per_day: number;
-  base_price: number;
+  price_per_day?: number;
+  base_price?: number;
   base_price_casco?: number;
-  sub_total: number;
+  price_per_day_casco?: number;
+  sub_total?: number;
   sub_total_casco?: number;
+  subtotal?: number;
+  subtotal_casco?: number;
   total: number;
   total_casco?: number;
   days?: number;
   rental_rate?: number;
   rental_rate_casco?: number;
-  discount?: number;
+  discount?: number | QuotePriceDiscountBreakdown | null;
+  discount_amount?: number;
+  discount_subtotal?: number;
+  discount_total?: number;
+  discount_breakdown?: QuotePriceDiscountBreakdown | null;
+  discount_casco?: number;
+  discount_amount_casco?: number;
+  discount_subtotal_casco?: number;
+  discount_total_casco?: number;
   coupon_amount?: number;
   coupon_code?: string | null;
   coupon_type?: string | null;
@@ -215,13 +234,15 @@ export interface QuotePriceResponse {
   coupon_total_discount_details?: CouponTotalDiscountDetails | null;
   offers_discount?: number;
   offer_fixed_discount?: number;
-  deposit_waived?: boolean;
+  deposit_waived?: boolean | string | number | null;
   total_services?: number;
+  advance_payment?: number | string | null;
   service_ids?: number[];
   total_before_wheel_prize?: number;
   wheel_prize_discount?: number;
   applied_offers?: ReservationAppliedOffer[];
   wheel_prize?: ReservationWheelPrizeSummary | null;
+  with_deposit?: boolean | string | number | null;
   [key: string]: unknown;
 }
 
