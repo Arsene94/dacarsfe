@@ -981,6 +981,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         typeof manualCouponAmount === "number" &&
                         Number.isFinite(manualCouponAmount) &&
                         manualCouponAmount > 0;
+                    const manualOverrideRate = hasFixedPerDayOverride
+                        ? Math.round(manualCouponAmount * 100) / 100
+                        : null;
                     const depositRateCandidate = pickFirstNumber([
                         normalizedData.rental_rate,
                         normalizedData.base_price,
