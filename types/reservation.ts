@@ -124,7 +124,7 @@ export interface ReservationPayload extends ReservationFormData {
   coupon_total_discount?: number;
   coupon_total_discount_details?: CouponTotalDiscountDetails | null;
   offers_discount?: number;
-  deposit_waived?: boolean;
+  deposit_waived?: boolean | string | number | null;
   total?: number;
   sub_total?: number;
   reservationId?: string;
@@ -192,7 +192,7 @@ export interface QuotePricePayload {
   total_before_wheel_prize?: number | string;
   offers_discount?: number | string;
   offer_fixed_discount?: number | string;
-  deposit_waived?: boolean;
+  deposit_waived?: boolean | string | number | null;
   applied_offers?: ReservationAppliedOffer[];
   [key: string]: unknown;
 }
@@ -234,14 +234,14 @@ export interface QuotePriceResponse {
   coupon_total_discount_details?: CouponTotalDiscountDetails | null;
   offers_discount?: number;
   offer_fixed_discount?: number;
-  deposit_waived?: boolean;
+  deposit_waived?: boolean | string | number | null;
   total_services?: number;
   service_ids?: number[];
   total_before_wheel_prize?: number;
   wheel_prize_discount?: number;
   applied_offers?: ReservationAppliedOffer[];
   wheel_prize?: ReservationWheelPrizeSummary | null;
-  with_deposit?: boolean;
+  with_deposit?: boolean | string | number | null;
   [key: string]: unknown;
 }
 
