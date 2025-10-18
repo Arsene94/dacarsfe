@@ -1578,7 +1578,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             const serviceIds = resolveServiceSelection(bookingInfo);
             const payload = buildBookingUpdatePayload(bookingInfo, serviceIds);
             if (isNewBooking) {
-                await apiClient.createBooking(payload);
+                await apiClient.createAdminBooking(payload);
             } else {
                 const bookingId = bookingInfo.id;
 
@@ -1845,7 +1845,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             placeholder="Selectează"
                         >
                             <option value="none">Fără discount</option>
-                            {/*<option value="fixed_per_day">Pret fix pe zi</option>*/}
+                            <option value="fixed_per_day">Pret fix pe zi</option>
                             <option value="per_day">Reducere pret pe zi</option>
                             <option value="days">Zile</option>
                             <option value="from_total">Din total</option>

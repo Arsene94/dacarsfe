@@ -1997,6 +1997,18 @@ export class ApiClient {
         });
     }
 
+    async createAdminBooking(payload: ReservationPayload | Record<string, unknown>): Promise<ApiItemResult<UnknownRecord>> {
+        return this.request<ApiItemResult<UnknownRecord>>(`/admin/bookings`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${this.token}`
+            },
+        });
+    }
+
     async createBooking(payload: ReservationPayload | Record<string, unknown>): Promise<ApiItemResult<UnknownRecord>> {
         return this.request<ApiItemResult<UnknownRecord>>(`/bookings`, {
             method: 'POST',
