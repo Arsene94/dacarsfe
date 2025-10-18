@@ -1528,6 +1528,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const basePriceLeiDisplay = formatLeiAmount(basePriceEuro);
     const subtotalLeiDisplay = formatLeiAmount(subtotalEuro);
     const totalLeiDisplay = formatLeiAmount(totalEuro);
+    const rentalRateLeiDisplay = formatLeiAmount(rentalRateEuro);
+    const discountSubtotalLeiDisplay = formatLeiAmount(discountSubtotalEuro);
+    const discountTotalLeiDisplay = formatLeiAmount(discountTotalEuro);
 
     const basePriceEuroDisplay = formatEuroAmount(basePriceEuro);
     const subtotalEuroDisplay = formatEuroAmount(subtotalEuro);
@@ -1556,6 +1559,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             ? Math.round((totalEuro - discountTotalEuro) * 100) / 100
             : null;
     const discountAppliedEuroDisplay = formatEuroAmount(discountAppliedEuro);
+    const discountAppliedLeiDisplay = formatLeiAmount(discountAppliedEuro);
 
     const showDiscountDetails =
         discountSubtotalEuro != null &&
@@ -2136,6 +2140,29 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                             <span>{remainingBalanceLeiDisplay ?? "—"}</span>
                                         </div>
                                     </>
+                                )}
+                                {showDiscountDetails && (
+                                    <div className="font-dm-sans text-sm mt-3">
+                                        Detalii discount:
+                                        <ul className="list-disc">
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Preț per zi:</span>
+                                                <span>{rentalRateLeiDisplay ?? "—"}</span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Discount total aplicat:</span>
+                                                <span>{discountAppliedLeiDisplay ?? "—"}</span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Subtotal:</span>
+                                                <span>{discountSubtotalLeiDisplay ?? "—"}</span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Total:</span>
+                                                <span>{discountTotalLeiDisplay ?? "—"}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 )}
                             </div>
                             <div className="pt-4 border-t border-gray-300">
