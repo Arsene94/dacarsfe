@@ -196,18 +196,36 @@ export interface QuotePricePayload {
   [key: string]: unknown;
 }
 
+export interface QuotePriceDiscountBreakdown {
+  discount?: number;
+  subtotal?: number;
+  total?: number;
+  [key: string]: unknown;
+}
+
 export interface QuotePriceResponse {
-  price_per_day: number;
-  base_price: number;
+  price_per_day?: number;
+  base_price?: number;
   base_price_casco?: number;
-  sub_total: number;
+  price_per_day_casco?: number;
+  sub_total?: number;
   sub_total_casco?: number;
+  subtotal?: number;
+  subtotal_casco?: number;
   total: number;
   total_casco?: number;
   days?: number;
   rental_rate?: number;
   rental_rate_casco?: number;
-  discount?: number;
+  discount?: number | QuotePriceDiscountBreakdown | null;
+  discount_amount?: number;
+  discount_subtotal?: number;
+  discount_total?: number;
+  discount_breakdown?: QuotePriceDiscountBreakdown | null;
+  discount_casco?: number;
+  discount_amount_casco?: number;
+  discount_subtotal_casco?: number;
+  discount_total_casco?: number;
   coupon_amount?: number;
   coupon_code?: string | null;
   coupon_type?: string | null;
@@ -222,6 +240,7 @@ export interface QuotePriceResponse {
   wheel_prize_discount?: number;
   applied_offers?: ReservationAppliedOffer[];
   wheel_prize?: ReservationWheelPrizeSummary | null;
+  with_deposit?: boolean;
   [key: string]: unknown;
 }
 
