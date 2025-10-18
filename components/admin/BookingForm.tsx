@@ -227,6 +227,65 @@ const normalizeQuoteResponse = (
     applyNumeric("discount_subtotal", (raw as { discount_subtotal?: unknown }).discount_subtotal);
     applyNumeric("discount_total", (raw as { discount_total?: unknown }).discount_total);
 
+    if (
+        !(typeof normalized.price_per_day === "number" && Number.isFinite(normalized.price_per_day))
+    ) {
+        const rentalRateNumeric = toOptionalNumber(raw.rental_rate);
+        if (typeof rentalRateNumeric === "number") {
+            normalized.price_per_day = rentalRateNumeric;
+        }
+    }
+
+    if (
+        !(typeof normalized.price_per_day_casco === "number" &&
+            Number.isFinite(normalized.price_per_day_casco))
+    ) {
+        const rentalRateCascoNumeric = toOptionalNumber(
+            (raw as { rental_rate_casco?: unknown }).rental_rate_casco ?? raw.rental_rate,
+        );
+        if (typeof rentalRateCascoNumeric === "number") {
+            normalized.price_per_day_casco = rentalRateCascoNumeric;
+        }
+    }
+
+    if (!(typeof normalized.sub_total === "number" && Number.isFinite(normalized.sub_total))) {
+        const subtotalNumeric = toOptionalNumber((raw as { subtotal?: unknown }).subtotal);
+        if (typeof subtotalNumeric === "number") {
+            normalized.sub_total = subtotalNumeric;
+        }
+    }
+
+    if (
+        !(typeof normalized.sub_total_casco === "number" &&
+            Number.isFinite(normalized.sub_total_casco))
+    ) {
+        const subtotalCascoNumeric = toOptionalNumber(
+            (raw as { subtotal_casco?: unknown }).subtotal_casco ?? (raw as { subtotal?: unknown }).subtotal,
+        );
+        if (typeof subtotalCascoNumeric === "number") {
+            normalized.sub_total_casco = subtotalCascoNumeric;
+        }
+    }
+
+    if (!(typeof normalized.total === "number" && Number.isFinite(normalized.total))) {
+        const totalNumeric = toOptionalNumber((raw as { total?: unknown }).total);
+        if (typeof totalNumeric === "number") {
+            normalized.total = totalNumeric;
+        }
+    }
+
+    if (
+        !(typeof normalized.total_casco === "number" &&
+            Number.isFinite(normalized.total_casco))
+    ) {
+        const totalCascoNumeric = toOptionalNumber(
+            (raw as { total_casco?: unknown }).total_casco ?? (raw as { total?: unknown }).total,
+        );
+        if (typeof totalCascoNumeric === "number") {
+            normalized.total_casco = totalCascoNumeric;
+        }
+    }
+
     const discountRaw = raw.discount;
     if (discountRaw && typeof discountRaw === "object" && !Array.isArray(discountRaw)) {
         const discountObject = discountRaw as {
@@ -240,28 +299,36 @@ const normalizeQuoteResponse = (
             total: toOptionalNumber(discountObject.total) ?? undefined,
         };
         normalized.discount_breakdown = breakdown;
+        const subtotalBefore = pickFirstNumber([
+            normalized.subtotal,
+            normalized.sub_total,
+            (raw as { subtotal?: unknown }).subtotal,
+        ]);
+        if (breakdown.subtotal != null) {
+            normalized.discount_subtotal = breakdown.subtotal;
+        }
         if (breakdown.discount != null) {
             normalized.discount = breakdown.discount;
             normalized.discount_amount = breakdown.discount;
+            normalized.discount_total = breakdown.total ?? breakdown.discount;
         }
-        if (breakdown.subtotal != null) {
-            normalized.discount_subtotal = breakdown.subtotal;
-            if (
-                !(typeof normalized.sub_total === "number" && Number.isFinite(normalized.sub_total))
-            ) {
-                normalized.sub_total = breakdown.subtotal;
-            }
-            if (
-                !(typeof normalized.subtotal === "number" && Number.isFinite(normalized.subtotal))
-            ) {
-                normalized.subtotal = breakdown.subtotal;
+        if (
+            (breakdown.discount == null || breakdown.discount === 0) &&
+            subtotalBefore != null &&
+            breakdown.subtotal != null &&
+            subtotalBefore > breakdown.subtotal
+        ) {
+            const derivedDiscount = Math.round((subtotalBefore - breakdown.subtotal) * 100) / 100;
+            normalized.discount = derivedDiscount;
+            normalized.discount_amount = derivedDiscount;
+            normalized.discount_total = derivedDiscount;
+            breakdown.discount = derivedDiscount;
+            if (breakdown.total == null || breakdown.total === 0) {
+                breakdown.total = derivedDiscount;
             }
         }
-        if (breakdown.total != null) {
+        if (breakdown.total != null && (normalized.discount_total == null || normalized.discount_total === 0)) {
             normalized.discount_total = breakdown.total;
-            if (!(typeof normalized.total === "number" && Number.isFinite(normalized.total))) {
-                normalized.total = breakdown.total;
-            }
         }
     } else {
         const numericDiscount = toOptionalNumber(discountRaw);
@@ -285,6 +352,7 @@ const normalizeQuoteResponse = (
         normalized.subtotal_casco,
         normalized.sub_total_casco,
         (raw as { subtotal_casco?: unknown }).subtotal_casco,
+        subtotalNumeric,
     ]);
     if (subtotalCascoNumeric != null) {
         normalized.subtotal_casco = subtotalCascoNumeric;
@@ -299,6 +367,7 @@ const normalizeQuoteResponse = (
     const totalCascoNumeric = pickFirstNumber([
         normalized.total_casco,
         (raw as { total_casco?: unknown }).total_casco,
+        totalNumeric,
     ]);
     if (totalCascoNumeric != null) {
         normalized.total_casco = totalCascoNumeric;
@@ -312,35 +381,29 @@ const normalizeQuoteResponse = (
         normalized.total_services = totalServicesNumeric;
     }
 
-    const discountCascoNumeric = toOptionalNumber(
-        (raw as { discount_casco?: unknown }).discount_casco,
-    );
-    if (discountCascoNumeric != null) {
-        (normalized as { discount_casco?: number }).discount_casco = discountCascoNumeric;
-    }
+    const duplicateNumeric = (
+        sourceKey: keyof QuotePriceResponse,
+        targetKey: keyof QuotePriceResponse,
+    ) => {
+        const value = normalized[sourceKey];
+        if (typeof value === "number" && Number.isFinite(value)) {
+            const current = normalized[targetKey];
+            if (!(typeof current === "number" && Number.isFinite(current))) {
+                (normalized as Record<string, unknown>)[String(targetKey)] = value;
+            }
+        }
+    };
 
-    const discountSubtotalCasco = toOptionalNumber(
-        (raw as { discount_subtotal_casco?: unknown }).discount_subtotal_casco,
-    );
-    if (discountSubtotalCasco != null) {
-        (normalized as { discount_subtotal_casco?: number }).discount_subtotal_casco =
-            discountSubtotalCasco;
-    }
-
-    const discountTotalCasco = toOptionalNumber(
-        (raw as { discount_total_casco?: unknown }).discount_total_casco,
-    );
-    if (discountTotalCasco != null) {
-        (normalized as { discount_total_casco?: number }).discount_total_casco = discountTotalCasco;
-    }
-
-    const discountAmountCasco = toOptionalNumber(
-        (raw as { discount_amount_casco?: unknown }).discount_amount_casco,
-    );
-    if (discountAmountCasco != null) {
-        (normalized as { discount_amount_casco?: number }).discount_amount_casco =
-            discountAmountCasco;
-    }
+    duplicateNumeric("base_price", "base_price_casco");
+    duplicateNumeric("rental_rate", "rental_rate_casco");
+    duplicateNumeric("price_per_day", "price_per_day_casco");
+    duplicateNumeric("sub_total", "sub_total_casco");
+    duplicateNumeric("subtotal", "subtotal_casco");
+    duplicateNumeric("total", "total_casco");
+    duplicateNumeric("discount", "discount_casco");
+    duplicateNumeric("discount_amount", "discount_amount_casco");
+    duplicateNumeric("discount_subtotal", "discount_subtotal_casco");
+    duplicateNumeric("discount_total", "discount_total_casco");
 
     const depositWaivedRaw = raw.deposit_waived;
     if (typeof depositWaivedRaw === "boolean") {
@@ -1714,15 +1777,50 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         ? Math.round(manualCouponAmount * 100) / 100
                         : null;
 
+                    const breakdown = (normalizedData as {
+                        discount_breakdown?: {
+                            discount?: number | null | undefined;
+                            subtotal?: number | null | undefined;
+                            total?: number | null | undefined;
+                        };
+                    }).discount_breakdown;
+
+                    const totalServicesValue =
+                        toOptionalNumber(normalizedData.total_services) ??
+                        toOptionalNumber(prev.total_services) ??
+                        0;
+
+                    const normalizedSubtotalBefore = pickFirstNumber([
+                        normalizedData.subtotal,
+                        normalizedData.sub_total,
+                        (normalizedData as { subtotal?: unknown }).subtotal,
+                        prev.sub_total,
+                    ]);
+
+                    const normalizedDiscountSubtotal = pickFirstNumber([
+                        breakdown?.subtotal,
+                        normalizedData.discount_subtotal,
+                        (normalizedData as { discount_subtotal_casco?: unknown })?.discount_subtotal_casco,
+                    ]);
+
+                    const derivedDiscountFromSubtotal =
+                        normalizedSubtotalBefore != null &&
+                        normalizedDiscountSubtotal != null &&
+                        normalizedSubtotalBefore > normalizedDiscountSubtotal
+                            ? Math.round((normalizedSubtotalBefore - normalizedDiscountSubtotal) * 100) / 100
+                            : null;
+
                     const nextSubtotalValue =
                         resolvePlanAmount(
                             preferCasco,
                             [
+                                breakdown?.subtotal,
                                 normalizedData.discount_subtotal,
                                 normalizedData.sub_total,
                                 normalizedData.subtotal,
                             ],
                             [
+                                breakdown?.subtotal,
                                 (normalizedData as { discount_subtotal_casco?: unknown })
                                     .discount_subtotal_casco,
                                 normalizedData.sub_total_casco,
@@ -1732,10 +1830,22 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     const nextTotalValue =
                         resolvePlanAmount(
                             preferCasco,
-                            [normalizedData.discount_total, normalizedData.total],
                             [
-                                (normalizedData as { discount_total_casco?: unknown })
-                                    .discount_total_casco,
+                                normalizedData.total,
+                                breakdown?.subtotal != null && totalServicesValue
+                                    ? breakdown.subtotal + totalServicesValue
+                                    : null,
+                                normalizedData.discount_subtotal,
+                                normalizedData.discount_total,
+                            ],
+                            [
+                                (normalizedData as { total_casco?: unknown }).total_casco,
+                                breakdown?.subtotal != null && totalServicesValue
+                                    ? breakdown.subtotal + totalServicesValue
+                                    : null,
+                                (normalizedData as { discount_subtotal_casco?: unknown })
+                                    .discount_subtotal_casco,
+                                (normalizedData as { discount_total_casco?: unknown }).discount_total_casco,
                                 normalizedData.total_casco,
                             ],
                         ) ?? toOptionalNumber(prev.total);
@@ -1744,21 +1854,20 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         resolvePlanAmount(
                             preferCasco,
                             [
+                                derivedDiscountFromSubtotal,
+                                breakdown?.discount,
                                 normalizedData.discount,
                                 normalizedData.discount_amount,
                                 normalizedData.coupon_amount,
                             ],
                             [
+                                derivedDiscountFromSubtotal,
+                                breakdown?.discount,
                                 (normalizedData as { discount_casco?: unknown }).discount_casco,
                                 (normalizedData as { discount_amount_casco?: unknown })
                                     .discount_amount_casco,
                             ],
                         ) ?? prevDiscountApplied;
-
-                    const totalServicesValue =
-                        toOptionalNumber(normalizedData.total_services) ??
-                        toOptionalNumber(prev.total_services) ??
-                        0;
 
                     const normalizedDays =
                         toOptionalNumber(normalizedData.days) ?? toOptionalNumber(prev.days) ?? 0;
@@ -1785,6 +1894,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             toOptionalNumber((normalizedData as { base_price_casco?: unknown }).base_price_casco) ??
                             prev.base_price_casco ??
                             null,
+                        with_deposit:
+                            typeof normalizedData.with_deposit === "boolean"
+                                ? normalizedData.with_deposit
+                                : prev.with_deposit,
                         sub_total:
                             typeof nextSubtotalValue === "number" && Number.isFinite(nextSubtotalValue)
                                 ? nextSubtotalValue
@@ -2379,35 +2492,98 @@ const BookingForm: React.FC<BookingFormProps> = ({
             ? normalizedDepositRate ?? normalizedCascoRate ?? baseRate
             : normalizedCascoRate ?? normalizedDepositRate ?? baseRate) ??
         baseRate;
+    const subtotalBeforeDiscount = pickFirstNumber([
+        quote?.subtotal,
+        quote?.sub_total,
+        bookingInfo.sub_total,
+        originalTotals.current.subtotal,
+    ]);
+
+    const discountedSubtotalQuote = pickFirstNumber([
+        (quote as { discount_breakdown?: { subtotal?: unknown } })?.discount_breakdown?.subtotal,
+        quote?.discount_subtotal,
+        (quote as { discount_subtotal_casco?: unknown })?.discount_subtotal_casco,
+    ]);
+
+    const totalServicesValue =
+        toOptionalNumber(quote?.total_services) ?? toOptionalNumber(bookingInfo.total_services) ?? 0;
+
     const discountedSubtotal = resolvePlanAmount(
         preferCascoPlan,
         [
+            discountedSubtotalQuote,
             quote?.discount_subtotal,
-            (quote as { discount_breakdown?: { subtotal?: unknown } })?.discount_breakdown?.subtotal,
-            quote?.sub_total,
             quote?.subtotal,
+            quote?.sub_total,
             bookingInfo.sub_total,
         ],
         [
+            discountedSubtotalQuote,
             (quote as { discount_subtotal_casco?: unknown })?.discount_subtotal_casco,
-            quote?.sub_total_casco,
             (quote as { subtotal_casco?: unknown })?.subtotal_casco,
             bookingInfo.sub_total,
         ],
     );
+
+    const computedDiscountFromSubtotal =
+        subtotalBeforeDiscount != null &&
+        discountedSubtotalQuote != null &&
+        subtotalBeforeDiscount > discountedSubtotalQuote
+            ? Math.round((subtotalBeforeDiscount - discountedSubtotalQuote) * 100) / 100
+            : null;
+
+    const discountedTotalQuote = resolvePlanAmount(
+        preferCascoPlan,
+        [
+            quote?.total,
+            discountedSubtotalQuote != null && totalServicesValue
+                ? discountedSubtotalQuote + totalServicesValue
+                : null,
+            quote?.discount_subtotal,
+            quote?.sub_total,
+            bookingInfo.total,
+            originalTotals.current.total,
+        ],
+        [
+            (quote as { total_casco?: unknown })?.total_casco,
+            discountedSubtotalQuote != null && totalServicesValue
+                ? discountedSubtotalQuote + totalServicesValue
+                : null,
+            (quote as { discount_subtotal_casco?: unknown })?.discount_subtotal_casco,
+            (quote as { subtotal_casco?: unknown })?.subtotal_casco,
+            bookingInfo.total,
+            originalTotals.current.total,
+        ],
+    );
+
+    const computedDiscountFromTotal =
+        subtotalBeforeDiscount != null &&
+        typeof discountedTotalQuote === "number" &&
+        Number.isFinite(discountedTotalQuote) &&
+        subtotalBeforeDiscount > discountedTotalQuote
+            ? Math.round((subtotalBeforeDiscount - discountedTotalQuote) * 100) / 100
+            : null;
+
     const discount =
         resolvePlanAmount(
             preferCascoPlan,
             [
-                quote?.discount,
+                computedDiscountFromSubtotal,
+                computedDiscountFromTotal,
                 (quote as { discount_breakdown?: { discount?: unknown } })?.discount_breakdown?.discount,
+                quote?.discount,
+                quote?.discount_total,
                 (quote as { discount_amount?: unknown })?.discount_amount,
                 bookingInfo.discount_applied,
                 bookingInfo.offers_discount,
                 bookingInfo.offer_fixed_discount,
             ],
             [
+                computedDiscountFromSubtotal,
+                computedDiscountFromTotal,
+                (quote as { discount_breakdown?: { discount?: unknown } })?.discount_breakdown?.discount,
                 (quote as { discount_casco?: unknown })?.discount_casco,
+                (quote as { discount_total_casco?: unknown })?.discount_total_casco,
                 (quote as { discount_amount_casco?: unknown })?.discount_amount_casco,
                 bookingInfo.discount_applied,
                 bookingInfo.offers_discount,
@@ -2437,18 +2613,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
             : null;
     const hasWheelPrizeDiscount =
         typeof normalizedWheelPrizeDiscount === "number" && normalizedWheelPrizeDiscount !== 0;
-    const discountedTotalQuote = resolvePlanAmount(
-        preferCascoPlan,
-        [
-            (quote as { discount_breakdown?: { total?: unknown } })?.discount_breakdown?.total,
-            quote?.discount_total,
-            quote?.total,
-        ],
-        [
-            (quote as { discount_total_casco?: unknown })?.discount_total_casco,
-            quote?.total_casco,
-        ],
-    );
     const subtotalDisplay =
         typeof discountedSubtotal === "number"
             ? discountedSubtotal
@@ -2458,8 +2622,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
             ? discountedTotalQuote
             : toOptionalNumber(bookingInfo.total) ?? Number(originalTotals.current.total ?? 0);
     const advancePaymentValue = toOptionalNumber(bookingInfo.advance_payment) ?? 0;
-    const totalServicesValue =
-        toOptionalNumber(quote?.total_services) ?? toOptionalNumber(bookingInfo.total_services) ?? 0;
     const totalServicesDisplay = Math.round(totalServicesValue * 100) / 100;
     const restToPay = totalDisplay - advancePaymentValue;
     const restToPayEuroDisplay = Number.isFinite(restToPay)
