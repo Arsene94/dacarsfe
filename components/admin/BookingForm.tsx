@@ -59,6 +59,14 @@ const formatLeiAmount = (value: number | null | undefined): string | null => {
     return `${leiFormatter.format(converted)} lei`;
 };
 
+const formatEuroAmount = (value: number | null | undefined): string | null => {
+    if (typeof value !== "number" || Number.isNaN(value)) {
+        return null;
+    }
+    const rounded = Math.round(value * 100) / 100;
+    return leiFormatter.format(rounded);
+};
+
 const parsePrice = (raw: unknown): number => {
     if (raw == null) return 0;
     if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
@@ -2437,432 +2445,47 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     if (!bookingInfo) return null;
 
-    const days = quote?.days ?? bookingInfo.days ?? 0;
-    const pricePerDayValue = toOptionalNumber(bookingInfo.price_per_day);
-    const preferCascoPlan = bookingInfo.with_deposit === false;
-    const originalRateFromBooking = toOptionalNumber(bookingInfo.original_price_per_day);
-    const bookingBasePriceDeposit = toOptionalNumber(bookingInfo.base_price);
-    const bookingBasePriceCasco = toOptionalNumber(bookingInfo.base_price_casco);
-    const quotePricePerDayCascoRaw = (quote as { price_per_day_casco?: unknown })?.price_per_day_casco;
-    const quoteBasePriceCascoRaw = (quote as { base_price_casco?: unknown })?.base_price_casco;
-    const quotePricePerDayDeposit = toOptionalNumber(quote?.price_per_day);
-    const quotePricePerDayCasco = toOptionalNumber(quotePricePerDayCascoRaw);
-    const quoteBasePriceDeposit = toOptionalNumber(quote?.base_price);
-    const quoteBasePriceCasco = toOptionalNumber(quoteBasePriceCascoRaw);
-    const quoteRentalRateDeposit = toOptionalNumber(quote?.rental_rate);
-    const quoteRentalRateCasco = toOptionalNumber(quote?.rental_rate_casco);
+    const days =
+        toOptionalNumber(quote?.days) ?? toOptionalNumber(bookingInfo.days) ?? 0;
+    const basePriceEuro = toOptionalNumber(quote?.base_price);
+    const subtotalEuro =
+        toOptionalNumber(quote?.subtotal) ?? toOptionalNumber(quote?.sub_total);
+    const totalEuro = toOptionalNumber(quote?.total);
+    const rentalRateEuro = toOptionalNumber(quote?.rental_rate);
 
-    const normalizedDepositRate =
-        pickFirstNumber([
-            quotePricePerDayDeposit,
-            quoteRentalRateDeposit,
-            quoteBasePriceDeposit,
-            bookingBasePriceDeposit,
-            pricePerDayValue,
-            originalRateFromBooking,
-        ]) ?? null;
-    const normalizedCascoRate =
-        pickFirstNumber([
-            quotePricePerDayCasco,
-            quotePricePerDayDeposit,
-            quoteRentalRateCasco,
-            quoteBasePriceCasco,
-            bookingBasePriceCasco,
-            pricePerDayValue,
-            originalRateFromBooking,
-        ]) ?? null;
-    let baseRate =
-        (preferCascoPlan
-            ? normalizedCascoRate ?? normalizedDepositRate
-            : normalizedDepositRate ?? normalizedCascoRate) ?? 0;
-    let discountedRate =
-        (preferCascoPlan
-            ? pickFirstNumber([
-                  quotePricePerDayCasco,
-                  quotePricePerDayDeposit,
-                  quoteRentalRateCasco,
-                  normalizedCascoRate,
-              ])
-            : pickFirstNumber([
-                  quotePricePerDayDeposit,
-                  quoteRentalRateDeposit,
-                  normalizedDepositRate,
-              ])) ??
-        (preferCascoPlan
-            ? normalizedDepositRate ?? normalizedCascoRate ?? baseRate
-            : normalizedCascoRate ?? normalizedDepositRate ?? baseRate) ??
-        baseRate;
-    const subtotalBeforeDiscount = pickFirstNumber([
-        quote?.subtotal,
-        quote?.sub_total,
-        bookingInfo.sub_total,
-        originalTotals.current.subtotal,
-    ]);
+    const discountBreakdownRaw =
+        quote?.discount_breakdown ??
+        (quote?.discount && typeof quote.discount === "object" && !Array.isArray(quote.discount)
+            ? (quote.discount as { subtotal?: unknown; total?: unknown; discount?: unknown })
+            : null);
+    const discountSubtotalEuro = toOptionalNumber(discountBreakdownRaw?.subtotal);
+    const discountTotalEuro = toOptionalNumber(discountBreakdownRaw?.total);
 
-    const discountedSubtotalQuote = pickFirstNumber([
-        (quote as { discount_breakdown?: { subtotal?: unknown } })?.discount_breakdown?.subtotal,
-        quote?.discount_subtotal,
-        (quote as { discount_subtotal_casco?: unknown })?.discount_subtotal_casco,
-    ]);
+    const basePriceLeiDisplay = formatLeiAmount(basePriceEuro);
+    const subtotalLeiDisplay = formatLeiAmount(subtotalEuro);
+    const totalLeiDisplay = formatLeiAmount(totalEuro);
 
-    const totalServicesValue =
-        toOptionalNumber(quote?.total_services) ?? toOptionalNumber(bookingInfo.total_services) ?? 0;
+    const basePriceEuroDisplay = formatEuroAmount(basePriceEuro);
+    const subtotalEuroDisplay = formatEuroAmount(subtotalEuro);
+    const totalEuroDisplay = formatEuroAmount(totalEuro);
+    const rentalRateEuroDisplay = formatEuroAmount(rentalRateEuro);
+    const discountSubtotalEuroDisplay = formatEuroAmount(discountSubtotalEuro);
+    const discountTotalEuroDisplay = formatEuroAmount(discountTotalEuro);
 
-    const discountedSubtotal = resolvePlanAmount(
-        preferCascoPlan,
-        [
-            discountedSubtotalQuote,
-            quote?.discount_subtotal,
-            quote?.subtotal,
-            quote?.sub_total,
-            bookingInfo.sub_total,
-        ],
-        [
-            discountedSubtotalQuote,
-            (quote as { discount_subtotal_casco?: unknown })?.discount_subtotal_casco,
-            (quote as { subtotal_casco?: unknown })?.subtotal_casco,
-            bookingInfo.sub_total,
-        ],
-    );
-
-    const computedDiscountFromSubtotal =
-        subtotalBeforeDiscount != null &&
-        discountedSubtotalQuote != null &&
-        subtotalBeforeDiscount > discountedSubtotalQuote
-            ? Math.round((subtotalBeforeDiscount - discountedSubtotalQuote) * 100) / 100
+    const discountAppliedEuro =
+        typeof totalEuro === "number" &&
+        Number.isFinite(totalEuro) &&
+        typeof discountTotalEuro === "number" &&
+        Number.isFinite(discountTotalEuro)
+            ? Math.round((totalEuro - discountTotalEuro) * 100) / 100
             : null;
+    const discountAppliedEuroDisplay = formatEuroAmount(discountAppliedEuro);
 
-    const discountedTotalQuote = resolvePlanAmount(
-        preferCascoPlan,
-        [
-            quote?.total,
-            discountedSubtotalQuote != null && totalServicesValue
-                ? discountedSubtotalQuote + totalServicesValue
-                : null,
-            quote?.discount_subtotal,
-            quote?.sub_total,
-            bookingInfo.total,
-            originalTotals.current.total,
-        ],
-        [
-            (quote as { total_casco?: unknown })?.total_casco,
-            discountedSubtotalQuote != null && totalServicesValue
-                ? discountedSubtotalQuote + totalServicesValue
-                : null,
-            (quote as { discount_subtotal_casco?: unknown })?.discount_subtotal_casco,
-            (quote as { subtotal_casco?: unknown })?.subtotal_casco,
-            bookingInfo.total,
-            originalTotals.current.total,
-        ],
-    );
-
-    const computedDiscountFromTotal =
-        subtotalBeforeDiscount != null &&
-        typeof discountedTotalQuote === "number" &&
-        Number.isFinite(discountedTotalQuote) &&
-        subtotalBeforeDiscount > discountedTotalQuote
-            ? Math.round((subtotalBeforeDiscount - discountedTotalQuote) * 100) / 100
-            : null;
-
-    const discount =
-        resolvePlanAmount(
-            preferCascoPlan,
-            [
-                computedDiscountFromSubtotal,
-                computedDiscountFromTotal,
-                (quote as { discount_breakdown?: { discount?: unknown } })?.discount_breakdown?.discount,
-                quote?.discount,
-                quote?.discount_total,
-                (quote as { discount_amount?: unknown })?.discount_amount,
-                bookingInfo.discount_applied,
-                bookingInfo.offers_discount,
-                bookingInfo.offer_fixed_discount,
-            ],
-            [
-                computedDiscountFromSubtotal,
-                computedDiscountFromTotal,
-                (quote as { discount_breakdown?: { discount?: unknown } })?.discount_breakdown?.discount,
-                (quote as { discount_casco?: unknown })?.discount_casco,
-                (quote as { discount_total_casco?: unknown })?.discount_total_casco,
-                (quote as { discount_amount_casco?: unknown })?.discount_amount_casco,
-                bookingInfo.discount_applied,
-                bookingInfo.offers_discount,
-                bookingInfo.offer_fixed_discount,
-            ],
-        ) ?? 0;
-    const normalizedQuoteWheelPrize = normalizeWheelPrizeSummary(quote?.wheel_prize);
-    const activeWheelPrize = normalizedQuoteWheelPrize ?? bookingInfo.wheel_prize ?? null;
-    const wheelPrizeDiscountValue = resolvePlanAmount(
-        preferCascoPlan,
-        [
-            quote?.wheel_prize_discount,
-            activeWheelPrize?.discount_value_deposit,
-            bookingInfo.wheel_prize_discount,
-            activeWheelPrize?.discount_value,
-        ],
-        [
-            (quote as { wheel_prize_discount_casco?: unknown })?.wheel_prize_discount_casco,
-            activeWheelPrize?.discount_value_casco,
-            bookingInfo.wheel_prize_discount,
-            activeWheelPrize?.discount_value,
-        ],
-    );
-    const normalizedWheelPrizeDiscount =
-        typeof wheelPrizeDiscountValue === "number"
-            ? Math.round(wheelPrizeDiscountValue * 100) / 100
-            : null;
-    const hasWheelPrizeDiscount =
-        typeof normalizedWheelPrizeDiscount === "number" && normalizedWheelPrizeDiscount !== 0;
-    const subtotalDisplay =
-        typeof discountedSubtotal === "number"
-            ? discountedSubtotal
-            : toOptionalNumber(bookingInfo.sub_total) ?? Number(originalTotals.current.subtotal ?? 0);
-    const totalDisplay =
-        typeof discountedTotalQuote === "number"
-            ? discountedTotalQuote
-            : toOptionalNumber(bookingInfo.total) ?? Number(originalTotals.current.total ?? 0);
-    const advancePaymentValue = toOptionalNumber(bookingInfo.advance_payment) ?? 0;
-    const totalServicesDisplay = Math.round(totalServicesValue * 100) / 100;
-    const restToPay = totalDisplay - advancePaymentValue;
-    const restToPayEuroDisplay = Number.isFinite(restToPay)
-        ? Math.round(restToPay * 100) / 100
-        : null;
-
-    const normalizedSubtotalValue =
-        typeof subtotalDisplay === "number" && Number.isFinite(subtotalDisplay)
-            ? subtotalDisplay
-            : null;
-    const normalizedTotalValue =
-        typeof totalDisplay === "number" && Number.isFinite(totalDisplay)
-            ? totalDisplay
-            : null;
-    const normalizedServicesValue =
-        typeof totalServicesValue === "number" && Number.isFinite(totalServicesValue)
-            ? totalServicesValue
-            : 0;
-    const inferredCarSubtotal =
-        normalizedSubtotalValue ??
-        (normalizedTotalValue != null ? normalizedTotalValue - normalizedServicesValue : null);
-
-    const normalizedDaysForRates =
-        typeof days === "number" ? days : Number.isFinite(Number(days)) ? Number(days) : null;
-
-    if (
-        inferredCarSubtotal != null &&
-        inferredCarSubtotal > 0 &&
-        typeof normalizedDaysForRates === "number" &&
-        Number.isFinite(normalizedDaysForRates) &&
-        normalizedDaysForRates > 0
-    ) {
-        const inferredRateRaw = inferredCarSubtotal / normalizedDaysForRates;
-        if (Number.isFinite(inferredRateRaw) && inferredRateRaw > 0) {
-            const inferredRate = Math.round(inferredRateRaw * 100) / 100;
-            const mismatchThreshold = 0.5;
-            if (
-                !isFiniteNumber(baseRate) ||
-                Math.abs(baseRate * normalizedDaysForRates - inferredCarSubtotal) > mismatchThreshold
-            ) {
-                baseRate = inferredRate;
-            }
-            if (
-                !isFiniteNumber(discountedRate) ||
-                Math.abs(discountedRate * normalizedDaysForRates - inferredCarSubtotal) > mismatchThreshold
-            ) {
-                discountedRate = inferredRate;
-            }
-        }
-    }
-
-    const depositWaived = bookingInfo.deposit_waived === true;
-    const subtotalLei = formatLeiAmount(subtotalDisplay);
-    const totalLei = formatLeiAmount(totalDisplay);
-    const restToPayLei = formatLeiAmount(restToPay);
-    const roundedBaseRate = Math.round(baseRate * 100) / 100;
-    const baseRateLei = formatLeiAmount(baseRate);
-    const roundedDiscountedRate = Math.round(discountedRate * 100) / 100;
-    const roundedDiscountedRateLei = formatLeiAmount(roundedDiscountedRate);
-    const advancePaymentLei = formatLeiAmount(advancePaymentValue);
-    const bookingTotalBeforeWheelPrize = toOptionalNumber(bookingInfo.total_before_wheel_prize);
-    const normalizedWheelPrizeDiscountValue =
-        typeof normalizedWheelPrizeDiscount === "number"
-            ? Math.round(Math.abs(normalizedWheelPrizeDiscount) * 100) / 100
-            : 0;
-    const manualCouponType = normalizeManualCouponType(bookingInfo.coupon_type);
-    const manualCouponAmount = toOptionalNumber(bookingInfo.coupon_amount);
-    const bookingBaseRate = resolvePlanNumber(
-        preferCascoPlan,
-        bookingBasePriceDeposit,
-        bookingBasePriceCasco,
-    );
-    const normalizedDiscountedRate = isFiniteNumber(discountedRate) ? discountedRate : null;
-    let derivedOriginalDailyRate = isFiniteNumber(originalRateFromBooking)
-        ? originalRateFromBooking
-        : null;
-
-    if (
-        manualCouponType === "per_day" &&
-        normalizedDiscountedRate != null &&
-        isFiniteNumber(manualCouponAmount) &&
-        manualCouponAmount !== 0
-    ) {
-        const candidate = normalizedDiscountedRate + manualCouponAmount;
-        if (
-            Number.isFinite(candidate) &&
-            candidate > 0 &&
-            (derivedOriginalDailyRate == null ||
-                areApproximatelyEqual(derivedOriginalDailyRate, normalizedDiscountedRate) ||
-                areApproximatelyEqual(derivedOriginalDailyRate, candidate))
-        ) {
-            derivedOriginalDailyRate = candidate;
-        }
-    } else if (
-        manualCouponType === "fixed_per_day" &&
-        isFiniteNumber(bookingBaseRate) &&
-        bookingBaseRate > 0
-    ) {
-        if (
-            derivedOriginalDailyRate == null ||
-            areApproximatelyEqual(derivedOriginalDailyRate, normalizedDiscountedRate) ||
-            areApproximatelyEqual(derivedOriginalDailyRate, manualCouponAmount)
-        ) {
-            derivedOriginalDailyRate = bookingBaseRate;
-        }
-    }
-
-    if (
-        (derivedOriginalDailyRate == null || derivedOriginalDailyRate <= 0) &&
-        isFiniteNumber(bookingBaseRate) &&
-        bookingBaseRate > 0
-    ) {
-        derivedOriginalDailyRate = bookingBaseRate;
-    } else if (
-        (derivedOriginalDailyRate == null || derivedOriginalDailyRate <= 0) &&
-        isFiniteNumber(roundedBaseRate) &&
-        roundedBaseRate > 0
-    ) {
-        derivedOriginalDailyRate = roundedBaseRate;
-    }
-
-    const manualDiscountFromRates =
-        derivedOriginalDailyRate != null &&
-        normalizedDiscountedRate != null &&
-        derivedOriginalDailyRate > normalizedDiscountedRate &&
-        days > 0
-            ? (derivedOriginalDailyRate - normalizedDiscountedRate) * days
-            : 0;
-    const normalizedManualDiscountFromRates =
-        manualDiscountFromRates > 0 && Number.isFinite(manualDiscountFromRates)
-            ? Math.round(manualDiscountFromRates * 100) / 100
-            : 0;
-    const manualCouponTotalDiscount = resolvePlanAmount(
-        preferCascoPlan,
-        [
-            (
-                quote as {
-                    coupon_total_discount_details?: CouponTotalDiscountDetails<unknown>;
-                    coupon_total_discount?: unknown;
-                }
-            )?.coupon_total_discount_details?.deposit,
-            quote?.coupon_total_discount,
-            bookingInfo.coupon_total_discount_details?.deposit,
-            bookingInfo.coupon_total_discount,
-        ],
-        [
-            (
-                quote as {
-                    coupon_total_discount_details?: CouponTotalDiscountDetails<unknown>;
-                    coupon_total_discount?: unknown;
-                }
-            )?.coupon_total_discount_details?.casco,
-            quote?.coupon_total_discount,
-            bookingInfo.coupon_total_discount_details?.casco,
-            bookingInfo.coupon_total_discount,
-        ],
-    );
-    const normalizedManualCouponTotalDiscount =
-        typeof manualCouponTotalDiscount === "number" && Number.isFinite(manualCouponTotalDiscount)
-            ? Math.round(Math.abs(manualCouponTotalDiscount) * 100) / 100
-            : 0;
-    const normalizedDiscountValue =
-        typeof discount === "number" && Number.isFinite(discount)
-            ? Math.round(Math.abs(discount) * 100) / 100
-            : 0;
-    const normalizedCouponDiscount =
-        Math.round(
-            Math.abs(toOptionalNumber(bookingInfo.coupon_total_discount) ?? 0) * 100,
-        ) / 100;
-    const effectiveDiscountValue = Math.max(
-        normalizedDiscountValue,
-        normalizedCouponDiscount,
-        normalizedManualCouponTotalDiscount,
-        normalizedManualDiscountFromRates,
-    );
-    const discountAmountForDisplay =
-        effectiveDiscountValue > 0 ? effectiveDiscountValue : null;
-    const discountLei = formatLeiAmount(discountAmountForDisplay);
-    const wheelPrizeDiscountLei = formatLeiAmount(normalizedWheelPrizeDiscount);
-    const totalDiscountContribution =
-        (discountAmountForDisplay ?? 0) +
-        (normalizedWheelPrizeDiscountValue > 0 ? normalizedWheelPrizeDiscountValue : 0);
-    const derivedOriginalSubtotalCandidate =
-        derivedOriginalDailyRate != null &&
-        Number.isFinite(derivedOriginalDailyRate) &&
-        derivedOriginalDailyRate > 0 &&
-        days > 0
-            ? derivedOriginalDailyRate * days
-            : null;
-    const derivedOriginalTotalCandidate =
-        derivedOriginalSubtotalCandidate != null
-            ? derivedOriginalSubtotalCandidate + totalServicesDisplay
-            : null;
-    const totalBeforeWheelWithManual =
-        typeof bookingTotalBeforeWheelPrize === "number" &&
-        Number.isFinite(bookingTotalBeforeWheelPrize) &&
-        bookingTotalBeforeWheelPrize > 0
-            ? bookingTotalBeforeWheelPrize + (discountAmountForDisplay ?? 0)
-            : null;
-    const reconstructedTotalFromDisplay =
-        Number.isFinite(totalDisplay) &&
-        totalDisplay > 0 &&
-        totalDiscountContribution > 0
-            ? totalDisplay + totalDiscountContribution
-            : null;
-    const totalBeforeDiscountsCandidates = [
-        derivedOriginalTotalCandidate,
-        totalBeforeWheelWithManual,
-        reconstructedTotalFromDisplay,
-    ].filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0);
-    const totalBeforeDiscounts =
-        totalBeforeDiscountsCandidates.length > 0
-            ? Math.max(...totalBeforeDiscountsCandidates)
-            : null;
-    const hasManualRateDifference = normalizedManualDiscountFromRates > 0;
-    const hasDiscountDetails =
-        Number.isFinite(totalDisplay) &&
-        totalDisplay > 0 &&
-        (totalDiscountContribution > 0 || hasManualRateDifference);
-    const originalTotalRounded =
-        typeof totalBeforeDiscounts === "number" && Number.isFinite(totalBeforeDiscounts)
-            ? Math.round(totalBeforeDiscounts * 100) / 100
-            : Math.round(totalDisplay * 100) / 100;
-    const originalTotalLei = formatLeiAmount(originalTotalRounded);
-    const discountedTotalLei = formatLeiAmount(totalDisplay);
-
-    if (
-        (derivedOriginalDailyRate == null || derivedOriginalDailyRate <= 0) &&
-        typeof totalBeforeDiscounts === "number" &&
-        Number.isFinite(totalBeforeDiscounts) &&
-        totalBeforeDiscounts > 0 &&
-        days > 0
-    ) {
-        derivedOriginalDailyRate = totalBeforeDiscounts / days;
-    }
-
-    const roundedOriginalRate =
-        derivedOriginalDailyRate != null && Number.isFinite(derivedOriginalDailyRate)
-            ? Math.round(derivedOriginalDailyRate * 100) / 100
-            : roundedBaseRate;
-    const originalRateLei = formatLeiAmount(derivedOriginalDailyRate);
+    const showDiscountDetails =
+        discountSubtotalEuro != null &&
+        discountSubtotalEuro !== 0 &&
+        discountTotalEuro != null &&
+        discountTotalEuro !== 0;
 
     const isNewBooking = bookingInfo?.id == null;
 
@@ -3467,165 +3090,74 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Preț per zi:</span>
                                     <span>
-                                        {baseRateLei ? `${baseRateLei} x ${days} zile` : "—"}
+                                        {basePriceLeiDisplay ? `${basePriceLeiDisplay} x ${days} zile` : "—"}
                                     </span>
                                 </div>
-                                {totalServicesDisplay > 0 && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Total Servicii:</span>
-                                        <span>{formatLeiAmount(totalServicesDisplay) ?? "—"}</span>
-                                    </div>
-                                )}
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Subtotal:</span>
-                                    <span>{subtotalLei ?? "—"}</span>
+                                    <span>{subtotalLeiDisplay ?? "—"}</span>
                                 </div>
-                                {discountAmountForDisplay != null && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Discount:</span>
-                                        <span>{discountLei ?? "—"}</span>
-                                    </div>
-                                )}
-                                {hasWheelPrizeDiscount && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Reducere roata norocului:</span>
-                                        <span>{wheelPrizeDiscountLei ?? "—"}</span>
-                                    </div>
-                                )}
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Total:</span>
-                                    <span>{totalLei ?? "—"}</span>
+                                    <span>{totalLeiDisplay ?? "—"}</span>
                                 </div>
-                                {depositWaived && (
-                                    <div className="font-dm-sans text-xs text-jade flex justify-between border-b border-b-1 mb-1">
-                                        <span>Garanție:</span>
-                                        <span>Eliminată prin promoție</span>
-                                    </div>
-                                )}
-                                {advancePaymentValue > 0 && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Avans:</span>
-                                        <span>{advancePaymentLei ?? "—"}</span>
-                                    </div>
-                                )}
-                                {advancePaymentValue !== 0 && (
-                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
-                                        <span>Rest de plată:</span>
-                                        <span>{restToPayLei ?? "—"}</span>
-                                    </div>
-                                )}
-                                {hasDiscountDetails && (
-                                    <div className="font-dm-sans text-sm">
-                                        Detalii discount:
-                                        <ul className="list-disc">
-                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Preț inițial pe zi:</span>
-                                                <span>
-                                                    {originalRateLei
-                                                        ? `${originalRateLei} x ${days} zile`
-                                                        : "—"}
-                                                </span>
-                                            </li>
-                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Preț cu discount pe zi:</span>
-                                                <span>
-                                                    {roundedDiscountedRateLei
-                                                        ? `${roundedDiscountedRateLei} x ${days} zile`
-                                                        : "—"}
-                                                </span>
-                                            </li>
-                                            {discountAmountForDisplay != null && (
-                                                <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                    <span>Discount aplicat:</span>
-                                                    <span>{discountLei ?? "—"}</span>
-                                                </li>
-                                            )}
-                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Total inițial:</span>
-                                                <span>{originalTotalLei ?? "—"}</span>
-                                            </li>
-                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Total cu discount:</span>
-                                                <span>{discountedTotalLei ?? "—"}</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                )}
                             </div>
                             <div className="pt-4 border-t border-gray-300">
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Preț per zi:</span>
-                                    <span>{baseRate}€ x {days} zile</span>
+                                    <span>
+                                        {basePriceEuroDisplay != null
+                                            ? `${basePriceEuroDisplay}€ x ${days} zile`
+                                            : "—"}
+                                    </span>
                                 </div>
-                                {totalServicesDisplay > 0 && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Total Servicii:</span> <span>{totalServicesDisplay}€</span>
-                                    </div>
-                                )}
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Subtotal:</span>
-                                    <span>{subtotalDisplay}€</span>
+                                    <span>
+                                        {subtotalEuroDisplay != null ? `${subtotalEuroDisplay}€` : "—"}
+                                    </span>
                                 </div>
-                                {discountAmountForDisplay != null && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Discount:</span>
-                                        <span>{discountAmountForDisplay}€</span>
-                                    </div>
-                                )}
-                                {hasWheelPrizeDiscount && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Reducere roata norocului:</span>
-                                        <span>{normalizedWheelPrizeDiscount}€</span>
-                                    </div>
-                                )}
-                                {depositWaived && (
-                                    <div className="font-dm-sans text-xs text-jade flex justify-between border-b border-b-1 mb-1">
-                                        <span>Garanție:</span>
-                                        <span>Eliminată prin promoție</span>
-                                    </div>
-                                )}
-                                {advancePaymentValue > 0 && (
-                                    <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
-                                        <span>Avans:</span> <span>{advancePaymentValue}€</span>
-                                    </div>
-                                )}
-                                {advancePaymentValue !== 0 && (
-                                    <div className="font-dm-sans text-sm font-semibold flex justify-between border-b border-b-1 mb-1">
-                                        <span>Rest de plată:</span>
-                                        <span>
-                                            {restToPayEuroDisplay != null ? `${restToPayEuroDisplay}€` : "—"}
-                                        </span>
-                                    </div>
-                                )}
-                                <div className="font-dm-sans text-sm font-semibold flex justify-between">
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Total:</span>
-                                    <span>{totalDisplay}€</span>
+                                    <span>
+                                        {totalEuroDisplay != null ? `${totalEuroDisplay}€` : "—"}
+                                    </span>
                                 </div>
-                                {hasDiscountDetails && (
+                                {showDiscountDetails && (
                                     <div className="font-dm-sans text-sm mt-3">
                                         Detalii discount:
                                         <ul className="list-disc">
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Preț inițial pe zi:</span>
-                                                <span>{roundedOriginalRate}€ x {days} zile</span>
+                                                <span>Preț per zi:</span>
+                                                <span>
+                                                    {rentalRateEuroDisplay != null
+                                                        ? `${rentalRateEuroDisplay}€`
+                                                        : "—"}
+                                                </span>
                                             </li>
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Preț cu discount pe zi:</span>
-                                                <span>{roundedDiscountedRate}€ x {days} zile</span>
-                                            </li>
-                                            {discountAmountForDisplay != null && (
-                                                <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                    <span>Discount aplicat:</span>
-                                                    <span>{discountAmountForDisplay}€</span>
-                                                </li>
-                                            )}
-                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Total inițial:</span>
-                                                <span>{originalTotalRounded}€</span>
+                                                <span>Discount total aplicat:</span>
+                                                <span>
+                                                    {discountAppliedEuroDisplay != null
+                                                        ? `${discountAppliedEuroDisplay}€`
+                                                        : "—"}
+                                                </span>
                                             </li>
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
-                                                <span>Total cu discount:</span>
-                                                <span>{totalDisplay}€</span>
+                                                <span>Subtotal:</span>
+                                                <span>
+                                                    {discountSubtotalEuroDisplay != null
+                                                        ? `${discountSubtotalEuroDisplay}€`
+                                                        : "—"}
+                                                </span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Total:</span>
+                                                <span>
+                                                    {discountTotalEuroDisplay != null
+                                                        ? `${discountTotalEuroDisplay}€`
+                                                        : "—"}
+                                                </span>
                                             </li>
                                         </ul>
                                     </div>
