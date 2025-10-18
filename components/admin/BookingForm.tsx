@@ -386,16 +386,6 @@ const normalizeQuoteResponse = (
     duplicateNumeric("discount_subtotal", "discount_subtotal_casco");
     duplicateNumeric("discount_total", "discount_total_casco");
 
-    const depositWaivedRaw = raw.deposit_waived;
-    if (typeof depositWaivedRaw === "boolean") {
-        normalized.deposit_waived = depositWaivedRaw;
-    } else if (typeof depositWaivedRaw === "string") {
-        const trimmed = depositWaivedRaw.trim().toLowerCase();
-        normalized.deposit_waived = ["1", "true", "da", "yes"].includes(trimmed);
-    } else if (typeof depositWaivedRaw === "number") {
-        normalized.deposit_waived = depositWaivedRaw !== 0;
-    }
-
     const withDepositRaw = raw.with_deposit;
     if (typeof withDepositRaw === "boolean") {
         normalized.with_deposit = withDepositRaw;
@@ -651,10 +641,6 @@ const buildQuotePayload = (
         payload.advance_payment = advancePayment;
     }
 
-    if (values.deposit_waived === true) {
-        payload.deposit_waived = true;
-    }
-
     return payload;
 };
 
@@ -667,7 +653,6 @@ const buildBookingUpdatePayload = (
         with_deposit: values.with_deposit !== false,
         keep_old_price: values.keep_old_price !== false,
         send_email: values.send_email !== false,
-        deposit_waived: values.deposit_waived === true,
     };
 
     const bookingIdentifier = resolveBookingIdentifier(values);
@@ -1148,7 +1133,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                 ? normalizedDiscountApplied
                                 : prevDiscountApplied ?? null,
                         total_services: totalServicesValue,
-                        deposit_waived: normalizedDepositWaived,
                     };
                 });
             } catch (error) {
@@ -1179,7 +1163,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo?.service_ids,
         bookingInfo?.with_deposit,
         bookingInfo?.keep_old_price,
-        bookingInfo?.deposit_waived,
         bookingInfo?.advance_payment,
     ]);
 
