@@ -1145,6 +1145,11 @@ const buildQuotePayload = (
         payload.wheel_prize = wheelPrizePayload;
     }
 
+    const advancePayment = toOptionalNumber(values.advance_payment);
+    if (advancePayment != null) {
+        payload.advance_payment = advancePayment;
+    }
+
     const totalBeforeWheelPrize = toOptionalNumber(values.total_before_wheel_prize);
     if (totalBeforeWheelPrize != null) {
         payload.total_before_wheel_prize = totalBeforeWheelPrize;
@@ -1965,6 +1970,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         appliedOffersQuoteKey,
         bookingInfo?.deposit_waived,
         bookingInfo?.total_before_wheel_prize,
+        bookingInfo?.advance_payment,
     ]);
 
 

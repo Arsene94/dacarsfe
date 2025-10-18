@@ -185,6 +185,7 @@ export interface QuotePricePayload {
   coupon_code?: string | null;
   service_ids?: Array<number | string>;
   total_services?: number | string;
+  advance_payment?: number | string;
   wheel_prize_discount?: number | string;
   wheel_of_fortune_prize_id?: number | string | null;
   wheel_prize?: ReservationWheelPrizePayload | null;
