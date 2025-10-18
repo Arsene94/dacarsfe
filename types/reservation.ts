@@ -236,6 +236,7 @@ export interface QuotePriceResponse {
   offer_fixed_discount?: number;
   deposit_waived?: boolean | string | number | null;
   total_services?: number;
+  advance_payment?: number | string | null;
   service_ids?: number[];
   total_before_wheel_prize?: number;
   wheel_prize_discount?: number;

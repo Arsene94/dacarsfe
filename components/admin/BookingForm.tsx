@@ -198,6 +198,7 @@ const normalizeQuoteResponse = (
     applyNumeric("total", raw.total);
     applyNumeric("total_casco", raw.total_casco);
     applyNumeric("days", raw.days);
+    applyNumeric("advance_payment", raw.advance_payment);
     applyNumeric("rental_rate", raw.rental_rate);
     applyNumeric("rental_rate_casco", raw.rental_rate_casco);
     applyNumeric("coupon_amount", raw.coupon_amount);
@@ -1528,6 +1529,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         toOptionalNumber(quote?.subtotal) ?? toOptionalNumber(quote?.sub_total);
     const totalEuro = toOptionalNumber(quote?.total);
     const rentalRateEuro = toOptionalNumber(quote?.rental_rate);
+    const advancePaymentEuro = toOptionalNumber(quote?.advance_payment);
 
     const discountBreakdownRaw =
         quote?.discount_breakdown ??
@@ -1547,6 +1549,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const rentalRateEuroDisplay = formatEuroAmount(rentalRateEuro);
     const discountSubtotalEuroDisplay = formatEuroAmount(discountSubtotalEuro);
     const discountTotalEuroDisplay = formatEuroAmount(discountTotalEuro);
+    const showAdvancePayment =
+        typeof advancePaymentEuro === "number" &&
+        Number.isFinite(advancePaymentEuro) &&
+        advancePaymentEuro !== 0;
+    const remainingBalanceEuro =
+        showAdvancePayment && typeof totalEuro === "number" && Number.isFinite(totalEuro)
+            ? Math.round((totalEuro - (advancePaymentEuro as number)) * 100) / 100
+            : null;
+    const advancePaymentLeiDisplay = formatLeiAmount(advancePaymentEuro);
+    const remainingBalanceLeiDisplay = formatLeiAmount(remainingBalanceEuro);
+    const advancePaymentEuroDisplay = formatEuroAmount(advancePaymentEuro);
+    const remainingBalanceEuroDisplay = formatEuroAmount(remainingBalanceEuro);
 
     const discountAppliedEuro =
         typeof totalEuro === "number" &&
@@ -2125,6 +2139,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <span>Total:</span>
                                     <span>{totalLeiDisplay ?? "—"}</span>
                                 </div>
+                                {showAdvancePayment && (
+                                    <>
+                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                            <span>Avans:</span>
+                                            <span>{advancePaymentLeiDisplay ?? "—"}</span>
+                                        </div>
+                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                            <span>Rest de plată:</span>
+                                            <span>{remainingBalanceLeiDisplay ?? "—"}</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                             <div className="pt-4 border-t border-gray-300">
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
@@ -2147,6 +2173,26 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         {totalEuroDisplay != null ? `${totalEuroDisplay}€` : "—"}
                                     </span>
                                 </div>
+                                {showAdvancePayment && (
+                                    <>
+                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                            <span>Avans:</span>
+                                            <span>
+                                                {advancePaymentEuroDisplay != null
+                                                    ? `${advancePaymentEuroDisplay}€`
+                                                    : "—"}
+                                            </span>
+                                        </div>
+                                        <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                            <span>Rest de plată:</span>
+                                            <span>
+                                                {remainingBalanceEuroDisplay != null
+                                                    ? `${remainingBalanceEuroDisplay}€`
+                                                    : "—"}
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
                                 {showDiscountDetails && (
                                     <div className="font-dm-sans text-sm mt-3">
                                         Detalii discount:
