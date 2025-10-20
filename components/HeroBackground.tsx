@@ -1,5 +1,6 @@
 import Image from "next/image";
 
+import heroBackgroundMobileWebpMin from "@/public/images/bg-hero-mobile-378x284.webp";
 import heroBackgroundMobileWebp from "@/public/images/bg-hero-mobile-480x879.webp";
 import heroBackgroundMobileLargeWebp from "@/public/images/bg-hero-mobile-960x1759.webp";
 import heroBackgroundTabletWebp from "@/public/images/bg-hero-820x380.webp";
@@ -10,6 +11,12 @@ import heroBackgroundDesktop2xWebp from "@/public/images/bg-hero-1920x1080.webp"
 export const HeroBackground = () => {
     return (
         <picture className="absolute inset-0 block">
+            <source
+                media="(max-width: 467px)"
+                type="image/webp"
+                srcSet={`${heroBackgroundMobileWebpMin.src} ${heroBackgroundMobileWebpMin.width}w, ${heroBackgroundMobileWebpMin.src} ${heroBackgroundMobileWebpMin.width}w`}
+                sizes="100vw"
+            />
             <source
                 media="(max-width: 767px)"
                 type="image/webp"
