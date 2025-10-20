@@ -192,6 +192,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
           onKeyDown={handleKeyDown}
           required={required}
           placeholder={placeholder}
+          minLength={8}
           className={cn(
             'flex-1 px-4 py-3 w-full border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-jade focus:border-transparent transition-all duration-300',
             !isValid && 'border-red-500 focus:ring-red-500',
