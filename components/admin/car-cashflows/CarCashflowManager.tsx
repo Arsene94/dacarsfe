@@ -74,7 +74,7 @@ interface MonthlySummary {
   netAmount: number;
   cashPortion: number;
   cardPortion: number;
-  byPaymentMethod: Record<CarCashflowPaymentMethod, { count: number; amount: number }>;
+  byPaymentMethod: Record<SinglePaymentMethod, { count: number; amount: number }>;
 }
 
 const directionLabels: Record<CarCashflowDirection, string> = {
@@ -85,8 +85,12 @@ const directionLabels: Record<CarCashflowDirection, string> = {
 const paymentMethodLabels: Record<CarCashflowPaymentMethod, string> = {
   cash: "Numerar",
   card: "Card",
-  cash_card: "Numerar + card",
+  cash_card: "Card și numerar",
 };
+
+type SinglePaymentMethod = Exclude<CarCashflowPaymentMethod, "cash_card">;
+
+const paymentMethodSummaryOrder: readonly SinglePaymentMethod[] = ["cash", "card"];
 
 const currencyFormatter = new Intl.NumberFormat("ro-RO", {
   style: "currency",
@@ -471,17 +475,28 @@ const CarCashflowManager = () => {
         }
         acc.netAmount = acc.incomeAmount - acc.expenseAmount;
 
-        const methodStats = acc.byPaymentMethod[entry.paymentMethod];
-        methodStats.count += 1;
-        methodStats.amount += entry.totalAmount;
+        const normalizedCashAmount =
+          entry.paymentMethod === "cash"
+            ? entry.cashAmount ?? entry.totalAmount
+            : entry.paymentMethod === "cash_card"
+              ? entry.cashAmount ?? 0
+              : 0;
+        if (normalizedCashAmount > 0) {
+          acc.byPaymentMethod.cash.count += 1;
+          acc.byPaymentMethod.cash.amount += normalizedCashAmount;
+          acc.cashPortion += normalizedCashAmount;
+        }
 
-        if (entry.paymentMethod === "cash") {
-          acc.cashPortion += entry.totalAmount;
-        } else if (entry.paymentMethod === "card") {
-          acc.cardPortion += entry.totalAmount;
-        } else {
-          acc.cashPortion += entry.cashAmount ?? 0;
-          acc.cardPortion += entry.cardAmount ?? 0;
+        const normalizedCardAmount =
+          entry.paymentMethod === "card"
+            ? entry.cardAmount ?? entry.totalAmount
+            : entry.paymentMethod === "cash_card"
+              ? entry.cardAmount ?? 0
+              : 0;
+        if (normalizedCardAmount > 0) {
+          acc.byPaymentMethod.card.count += 1;
+          acc.byPaymentMethod.card.amount += normalizedCardAmount;
+          acc.cardPortion += normalizedCardAmount;
         }
 
         return acc;
@@ -498,7 +513,6 @@ const CarCashflowManager = () => {
         byPaymentMethod: {
           cash: { count: 0, amount: 0 },
           card: { count: 0, amount: 0 },
-          cash_card: { count: 0, amount: 0 },
         },
       },
     );
@@ -565,10 +579,6 @@ const CarCashflowManager = () => {
         per_page: 100,
         include: "car,createdBy",
         car_id: selectedCar?.id,
-        payment_method:
-          paymentMethodFilter !== "all"
-            ? (paymentMethodFilter as CarCashflowPaymentMethod)
-            : undefined,
         direction:
           directionFilter !== "all"
             ? (directionFilter as CarCashflowDirection)
@@ -597,7 +607,22 @@ const CarCashflowManager = () => {
         });
       }
 
-      const normalized = records.map((record) => normalizeCashflow(record, carLookup, userLookup));
+      let normalized = records.map((record) => normalizeCashflow(record, carLookup, userLookup));
+      if (paymentMethodFilter === "cash") {
+        normalized = normalized.filter(
+          (entry) =>
+            entry.paymentMethod === "cash"
+            || (entry.paymentMethod === "cash_card" && (entry.cashAmount ?? 0) > 0),
+        );
+      } else if (paymentMethodFilter === "card") {
+        normalized = normalized.filter(
+          (entry) =>
+            entry.paymentMethod === "card"
+            || (entry.paymentMethod === "cash_card" && (entry.cardAmount ?? 0) > 0),
+        );
+      } else if (paymentMethodFilter === "cash_card") {
+        normalized = normalized.filter((entry) => entry.paymentMethod === "cash_card");
+      }
       setEntries(normalized);
     } catch (error) {
       console.error("Nu s-au putut încărca fluxurile financiare", error);
@@ -815,6 +840,15 @@ const CarCashflowManager = () => {
         header: "Metodă plată",
         accessor: (row) => row.paymentMethodLabel,
         sortable: true,
+        cell: (row) =>
+          row.paymentMethod === "cash_card" ? (
+            <div className="space-y-0.5 text-gray-700">
+              {(row.cardAmount ?? 0) > 0 && <span>Card</span>}
+              {(row.cashAmount ?? 0) > 0 && <span>Numerar</span>}
+            </div>
+          ) : (
+            <span className="text-gray-700">{row.paymentMethodLabel}</span>
+          ),
       },
       {
         id: "total_amount",
@@ -972,7 +1006,6 @@ const CarCashflowManager = () => {
               <option value="all">Toate</option>
               <option value="cash">Numerar</option>
               <option value="card">Card</option>
-              <option value="cash_card">Numerar + card</option>
             </Select>
           </div>
           <div className="space-y-1">
@@ -1101,7 +1134,7 @@ const CarCashflowManager = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
-              {(Object.keys(paymentMethodLabels) as CarCashflowPaymentMethod[]).map((method) => {
+              {paymentMethodSummaryOrder.map((method) => {
                 const stats = monthlySummary.byPaymentMethod[method];
                 return (
                   <tr key={method}>
