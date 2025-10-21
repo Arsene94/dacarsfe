@@ -2097,6 +2097,18 @@ export class ApiClient {
             body: JSON.stringify(payload),
         });
     }
+
+    async cancelBooking(id: number | string): Promise<ApiItemResult<AdminBookingResource>> {
+        return this.request<ApiItemResult<AdminBookingResource>>(`/bookings/${id}/cancel`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${this.token}`
+            },
+            cache: 'no-cache',
+        });
+    }
     async getBookingInfo(
         id: number | string,
         params: { include?: string | readonly string[] } = {},
