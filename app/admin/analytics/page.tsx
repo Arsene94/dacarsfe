@@ -134,11 +134,84 @@ const buildScrollLabel = (event: AdminAnalyticsEvent): string => {
   return "—";
 };
 
+const toFiniteNumber = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+};
+
 const formatDuration = (durationMs: number | null | undefined): string => {
-  if (typeof durationMs !== "number" || Number.isNaN(durationMs) || durationMs <= 0) {
+  const value = toFiniteNumber(durationMs);
+  if (value == null) {
     return "—";
   }
-  return `${(durationMs / 1000).toFixed(1)} s`;
+  const safeValue = Math.max(0, value);
+  return `${(safeValue / 1000).toFixed(1)} s`;
+};
+
+type MetadataContainer = {
+  [key: string]: unknown;
+  additional?: unknown;
+};
+
+const extractMetadataNumber = (
+  metadata: MetadataContainer | null | undefined,
+  key: string,
+): number | null => {
+  if (!metadata) {
+    return null;
+  }
+
+  const direct = toFiniteNumber(metadata[key]);
+  if (direct != null) {
+    return direct;
+  }
+
+  const additional = metadata.additional;
+  if (additional && typeof additional === "object") {
+    return extractMetadataNumber(additional as MetadataContainer, key);
+  }
+
+  return null;
+};
+
+const getEventComponentDuration = (event: AdminAnalyticsEvent): number | null => {
+  if (!event.metadata) {
+    return null;
+  }
+  return extractMetadataNumber(event.metadata as MetadataContainer, "component_visible_ms");
+};
+
+const getEventPageDuration = (event: AdminAnalyticsEvent): number | null => {
+  if (!event.metadata) {
+    return null;
+  }
+  return extractMetadataNumber(event.metadata as MetadataContainer, "page_time_ms");
+};
+
+const getEventDuration = (event: AdminAnalyticsEvent): number | null => {
+  const direct = toFiniteNumber(event.duration_ms);
+  if (direct != null) {
+    return direct;
+  }
+  if (event.metadata) {
+    const fromMetadata = extractMetadataNumber(event.metadata as MetadataContainer, "duration_ms");
+    if (fromMetadata != null) {
+      return fromMetadata;
+    }
+  }
+  const component = getEventComponentDuration(event);
+  if (component != null) {
+    return component;
+  }
+  return getEventPageDuration(event);
 };
 
 type EventFilterState = {
@@ -472,10 +545,26 @@ export default function AdminAnalyticsPage() {
       {
         id: "duration",
         header: "Durată",
-        accessor: (event) => event.duration_ms ?? 0,
-        cell: (event) => (
-          <span className="text-sm text-slate-700">{formatDuration(event.duration_ms)}</span>
-        ),
+        accessor: (event) => getEventDuration(event) ?? 0,
+        cell: (event) => {
+          const duration = getEventDuration(event);
+          const componentDuration = getEventComponentDuration(event);
+          const pageDuration = getEventPageDuration(event);
+
+          const primary = duration ?? componentDuration ?? pageDuration;
+
+          return (
+            <div className="flex flex-col text-xs text-slate-500">
+              <span className="text-sm text-slate-700">{formatDuration(primary)}</span>
+              {componentDuration != null ? (
+                <span>Componentă: {formatDuration(componentDuration)}</span>
+              ) : null}
+              {pageDuration != null ? (
+                <span>Pagină: {formatDuration(pageDuration)}</span>
+              ) : null}
+            </div>
+          );
+        },
       },
     ],
     [],
@@ -590,27 +679,35 @@ export default function AdminAnalyticsPage() {
     setVisitorDetailError(null);
   };
 
-  const renderEventTypeCard = (item: AdminAnalyticsEventTypeStat) => (
-    <div
-      key={item.type}
-      className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-    >
-      <div className="flex items-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-jade/10 text-jade">
-          <Target className="h-4 w-4" />
+  const renderEventTypeCard = (item: AdminAnalyticsEventTypeStat) => {
+    const shareValue = toFiniteNumber(item.share);
+    const uniqueVisitors = toFiniteNumber(item.unique_visitors);
+
+    return (
+      <div
+        key={item.type}
+        className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      >
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-jade/10 text-jade">
+            <Target className="h-4 w-4" />
+          </div>
+          <p className="text-sm font-semibold text-slate-700">{item.type}</p>
         </div>
-        <p className="text-sm font-semibold text-slate-700">{item.type}</p>
-      </div>
-      <p className="mt-3 text-2xl font-semibold text-slate-900">
-        {numberFormatter.format(item.total_events)}
-      </p>
-      {typeof item.share === "number" ? (
-        <p className="text-xs text-slate-500">
-          {shareFormatter.format(item.share * 100)}% din totalul evenimentelor
+        <p className="mt-3 text-2xl font-semibold text-slate-900">
+          {numberFormatter.format(item.total_events)}
         </p>
-      ) : null}
-    </div>
-  );
+        <div className="mt-1 space-y-1 text-xs text-slate-500">
+          <p>
+            Pondere: {shareValue != null ? `${shareFormatter.format(shareValue * 100)}%` : "—"}
+          </p>
+          {uniqueVisitors != null ? (
+            <p>{numberFormatter.format(uniqueVisitors)} vizitatori unici</p>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
 
   const renderTopPageRow = (page: AdminAnalyticsTopPage) => (
     <tr key={page.page_url} className="border-b border-slate-100">
@@ -1115,27 +1212,39 @@ export default function AdminAnalyticsPage() {
                     <p className="text-sm text-slate-500">Nu există evenimente recente în interval.</p>
                   ) : (
                     <ul className="space-y-2">
-                      {visitorDetail.recent_events.map((event) => (
-                        <li
-                          key={`${event.id}-${event.occurred_at}`}
-                          className="rounded-lg border border-slate-200 bg-white p-3 text-sm"
-                        >
-                          <div className="flex flex-wrap items-center gap-2 text-slate-700">
-                            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold uppercase text-slate-600">
-                              {event.event_type}
-                            </span>
-                            <span>{formatShortDateTime(event.occurred_at)}</span>
-                            <span className="text-slate-500">•</span>
-                            <span className="break-all text-slate-700">{event.page_url}</span>
-                          </div>
-                          <div className="mt-2 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
-                            <div>Scroll: {buildScrollLabel(event)}</div>
-                            <div>Durată: {formatDuration(event.duration_ms)}</div>
-                            <div>Referrer: {event.referrer_url ?? "—"}</div>
-                            <div>Target: {event.metadata?.interaction_target ?? "—"}</div>
-                          </div>
-                        </li>
-                      ))}
+                      {visitorDetail.recent_events.map((event) => {
+                        const duration = getEventDuration(event);
+                        const componentDuration = getEventComponentDuration(event);
+                        const pageDuration = getEventPageDuration(event);
+
+                        return (
+                          <li
+                            key={`${event.id}-${event.occurred_at}`}
+                            className="rounded-lg border border-slate-200 bg-white p-3 text-sm"
+                          >
+                            <div className="flex flex-wrap items-center gap-2 text-slate-700">
+                              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold uppercase text-slate-600">
+                                {event.event_type}
+                              </span>
+                              <span>{formatShortDateTime(event.occurred_at)}</span>
+                              <span className="text-slate-500">•</span>
+                              <span className="break-all text-slate-700">{event.page_url}</span>
+                            </div>
+                            <div className="mt-2 grid gap-2 text-xs text-slate-600 sm:grid-cols-3">
+                              <div>Scroll: {buildScrollLabel(event)}</div>
+                              <div>Durată: {formatDuration(duration)}</div>
+                              {componentDuration != null ? (
+                                <div>Componentă: {formatDuration(componentDuration)}</div>
+                              ) : null}
+                              {pageDuration != null ? (
+                                <div>Pagină: {formatDuration(pageDuration)}</div>
+                              ) : null}
+                              <div>Referrer: {event.referrer_url ?? "—"}</div>
+                              <div>Target: {event.metadata?.interaction_target ?? "—"}</div>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </section>

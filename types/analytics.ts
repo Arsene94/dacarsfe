@@ -12,6 +12,8 @@ export type AnalyticsMetadata = {
   scroll_percentage?: number;
   scroll_pixels?: number;
   duration_ms?: number;
+  page_time_ms?: number;
+  component_visible_ms?: number;
   interaction_target?: string;
   interaction_label?: string;
   additional?: Record<string, unknown> | null;
