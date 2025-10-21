@@ -12,11 +12,13 @@ import {
   Phone,
   Mail,
   Calendar,
+  CalendarPlus,
   Car,
   MapPin,
   X,
   Newspaper,
   Plus,
+  Loader2,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/table";
@@ -31,8 +33,10 @@ import { createEmptyBookingForm } from "@/types/admin";
 import type {
   ReservationAppliedOffer,
   ReservationWheelPrizeSummary,
+  BookingExtendPayload,
 } from "@/types/reservation";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import DateRangePicker from "@/components/ui/date-range-picker";
 import { Popup } from "@/components/ui/popup";
 import BookingForm from "@/components/admin/BookingForm";
@@ -811,6 +815,15 @@ const ReservationsPage = () => {
   const editingReservationIdRef = useRef<string | null>(null);
   const fallbackBookingRef = useRef<AdminBookingFormValues | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [extendPopupOpen, setExtendPopupOpen] = useState(false);
+  const [extendReservation, setExtendReservation] =
+    useState<AdminReservation | null>(null);
+  const [extendDate, setExtendDate] = useState("");
+  const [extendTime, setExtendTime] = useState("");
+  const [extendPrice, setExtendPrice] = useState("");
+  const [extendPaid, setExtendPaid] = useState(false);
+  const [extendLoading, setExtendLoading] = useState(false);
+  const [extendError, setExtendError] = useState<string | null>(null);
 
   const formatEuro = (value: number | string | null | undefined) => {
     if (typeof value === "string") {
@@ -823,6 +836,173 @@ const ReservationsPage = () => {
     if (typeof value !== "number" || !Number.isFinite(value)) return "—";
     return `${euroFormatter.format(value)}€`;
   };
+
+  const handleCloseExtendPopup = useCallback(() => {
+    if (extendLoading) {
+      return;
+    }
+    setExtendPopupOpen(false);
+    setExtendReservation(null);
+    setExtendDate("");
+    setExtendTime("");
+    setExtendPrice("");
+    setExtendPaid(false);
+    setExtendError(null);
+  }, [extendLoading]);
+
+  const handleOpenExtendReservation = useCallback(
+    (reservation: AdminReservation) => {
+      const extension = reservation.extension ?? null;
+      const baseDateTime =
+        toLocalDateTimeInput(extension?.to ?? reservation.endDate) ??
+        toLocalDateTimeInput(reservation.endDate);
+
+      let datePart = "";
+      let timePart = "";
+      if (baseDateTime) {
+        const [dateValue, timeValue = ""] = baseDateTime.split("T");
+        datePart = dateValue;
+        timePart = timeValue;
+      }
+
+      if (!timePart) {
+        timePart =
+          formatTimeLabel(extension?.to ?? reservation.endDate) ??
+          reservation.dropoffTime ??
+          "";
+      }
+
+      const priceSource =
+        parseOptionalNumber(extension?.pricePerDay) ??
+        parseOptionalNumber(reservation.pricePerDay);
+
+      setExtendReservation(reservation);
+      setExtendDate(datePart);
+      setExtendTime(timePart ?? "");
+      setExtendPrice(
+        typeof priceSource === "number" && Number.isFinite(priceSource)
+          ? String(priceSource)
+          : "",
+      );
+      setExtendPaid(extension?.paid ?? false);
+      setExtendError(null);
+      setExtendLoading(false);
+      setExtendPopupOpen(true);
+    },
+    [],
+  );
+
+  const handleSubmitExtend = useCallback(async () => {
+    if (!extendReservation) {
+      return;
+    }
+
+    const normalizedDate = extendDate.trim();
+    if (!normalizedDate) {
+      setExtendError("Selectează data de retur pentru prelungire.");
+      return;
+    }
+
+    const normalizedId = extendReservation.id.trim();
+    const normalizedBookingNumber =
+      typeof extendReservation.bookingNumber === "string"
+        ? extendReservation.bookingNumber.trim()
+        : typeof extendReservation.bookingNumber === "number"
+          ? String(extendReservation.bookingNumber)
+          : null;
+    const lookupId =
+      normalizedId.length > 0
+        ? normalizedId
+        : normalizedBookingNumber
+          ? normalizedBookingNumber
+          : "";
+
+    if (!lookupId) {
+      setExtendError("Nu am putut identifica rezervarea pentru prelungire.");
+      return;
+    }
+
+    const payload: BookingExtendPayload = {
+      paid: extendPaid,
+    };
+
+    payload.extended_until_date = normalizedDate;
+    if (extendTime.trim()) {
+      payload.extended_until_time = extendTime.trim();
+    }
+
+    const priceValue = parseOptionalNumber(extendPrice);
+    if (typeof priceValue === "number") {
+      payload.price_per_day = priceValue;
+    }
+
+    setExtendLoading(true);
+    setExtendError(null);
+
+    try {
+      const requestId = /^(?:\d+)$/.test(lookupId) ? Number(lookupId) : lookupId;
+      await apiClient.extendBooking(requestId, payload);
+
+      const updatedList = await fetchBookings();
+      const targetReservation = extendReservation;
+      const updatedReservation =
+        updatedList.find((entry) => entry.id === targetReservation.id.trim()) ??
+        (normalizedBookingNumber
+          ? updatedList.find(
+              (entry) =>
+                (entry.bookingNumber &&
+                  String(entry.bookingNumber).trim() === normalizedBookingNumber) ||
+                entry.id === normalizedBookingNumber,
+            )
+          : undefined);
+
+      if (updatedReservation) {
+        setSelectedReservation((prev) => {
+          if (!prev) {
+            return prev;
+          }
+          const prevId = prev.id.trim();
+          const prevBookingNumber =
+            typeof prev.bookingNumber === "string"
+              ? prev.bookingNumber.trim()
+              : typeof prev.bookingNumber === "number"
+                ? String(prev.bookingNumber)
+                : null;
+          const matchesId = prevId && prevId === updatedReservation.id;
+          const matchesBookingNumber =
+            prevBookingNumber &&
+            (prevBookingNumber === normalizedBookingNumber ||
+              prevBookingNumber === updatedReservation.bookingNumber);
+          return matchesId || matchesBookingNumber ? updatedReservation : prev;
+        });
+      }
+
+      setExtendPopupOpen(false);
+      setExtendReservation(null);
+      setExtendDate("");
+      setExtendTime("");
+      setExtendPrice("");
+      setExtendPaid(false);
+      setExtendError(null);
+    } catch (error) {
+      console.error("Nu am putut prelungi rezervarea", error);
+      if (error instanceof Error && error.message.trim().length > 0) {
+        setExtendError(error.message);
+      } else {
+        setExtendError("Nu am putut prelungi rezervarea. Încearcă din nou.");
+      }
+    } finally {
+      setExtendLoading(false);
+    }
+  }, [
+    extendReservation,
+    extendDate,
+    extendTime,
+    extendPrice,
+    extendPaid,
+    fetchBookings,
+    setSelectedReservation,
+  ]);
 
   const selectedWheelPrizeDetails = selectedReservation
     ? extractWheelPrizeDisplay(
@@ -859,7 +1039,7 @@ const ReservationsPage = () => {
     }
   };
 
-  const fetchBookings = useCallback(async () => {
+  const fetchBookings = useCallback(async (): Promise<AdminReservation[]> => {
     try {
       const params: {
         page: number;
@@ -1000,8 +1180,10 @@ const ReservationsPage = () => {
           : 1);
       setLastPage(resolvedLastPage > 0 ? resolvedLastPage : 1);
       setTotalReservations(total);
+      return mapped;
     } catch (e) {
       console.error(e);
+      return [];
     }
   }, [currentPage, perPage, searchTerm, statusFilter, startDateFilter, endDateFilter]);
 
@@ -1333,6 +1515,8 @@ const ReservationsPage = () => {
         cell: (r) => {
           const normalizedId = r.id.trim();
           const isDeleting = deletingId === normalizedId;
+          const isExtending =
+            extendReservation?.id === normalizedId && extendLoading;
 
           return (
             <div className="flex items-center space-x-2">
@@ -1351,6 +1535,14 @@ const ReservationsPage = () => {
                 <Edit className="h-4 w-4" />
               </button>
               <button
+                onClick={() => handleOpenExtendReservation(r)}
+                className="p-2 text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Prelungește"
+                disabled={isExtending}
+              >
+                <CalendarPlus className="h-4 w-4" />
+              </button>
+              <button
                 onClick={() => handleDeleteReservation(r)}
                 className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Șterge"
@@ -1363,7 +1555,15 @@ const ReservationsPage = () => {
         },
       },
     ],
-    [handleViewReservation, handleEditReservation, handleDeleteReservation, deletingId],
+    [
+      handleViewReservation,
+      handleEditReservation,
+      handleDeleteReservation,
+      handleOpenExtendReservation,
+      deletingId,
+      extendReservation,
+      extendLoading,
+    ],
   );
 
   const renderReservationDetails = (r: AdminReservation) => {
@@ -2114,6 +2314,14 @@ const ReservationsPage = () => {
                   Confirmă Rezervarea
                 </button>
                 <button
+                  onClick={() => handleOpenExtendReservation(r)}
+                  className="flex-1 border-2 border-amber-300 text-amber-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-amber-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Prelungește rezervarea"
+                  disabled={extendLoading && extendReservation?.id === r.id}
+                >
+                  Prelungește
+                </button>
+                <button
                   onClick={() => handleEditReservation(selectedReservation.id)}
                   className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-gray-50 transition-colors"
                   aria-label="Editează rezervarea"
@@ -2131,6 +2339,167 @@ const ReservationsPage = () => {
           </div>
         )}
         </div>
+        {extendReservation && (
+          <Popup
+            open={extendPopupOpen}
+            onClose={handleCloseExtendPopup}
+            className="max-w-xl"
+          >
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-poppins font-semibold text-berkeley">
+                  Prelungește rezervarea {extendReservation.bookingNumber ?? extendReservation.id}
+                </h3>
+                <p className="mt-1 text-sm font-dm-sans text-gray-600">
+                  Returnare curentă:{" "}
+                  <span className="font-semibold text-gray-900">
+                    {formatDateTime(extendReservation.endDate) ?? "—"}
+                  </span>
+                </p>
+                {extendReservation.extension && (
+                  <div
+                    className={`mt-4 rounded-lg border px-3 py-2 ${
+                      extendReservation.extension.paid
+                        ? "border-emerald-200 bg-emerald-50"
+                        : "border-amber-200 bg-amber-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-dm-sans font-semibold text-gray-800">
+                        Prelungire existentă
+                        {typeof extendReservation.extension.days === "number"
+                          ? ` (+${extendReservation.extension.days} zile)`
+                          : ""}
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          extendReservation.extension.paid
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {extendReservation.extension.paid ? "Achitată" : "Neachitată"}
+                      </span>
+                    </div>
+                    <div className="mt-2 space-y-1 text-sm text-gray-700">
+                      <div>
+                        Interval:{" "}
+                        <span className="font-medium text-gray-900">
+                          {formatDateTime(extendReservation.extension.from) ?? "—"}
+                        </span>{" "}→{" "}
+                        <span className="font-medium text-gray-900">
+                          {formatDateTime(extendReservation.extension.to) ?? "—"}
+                        </span>
+                      </div>
+                      <div>
+                        Tarif extindere:{" "}
+                        <span className="font-medium text-gray-900">
+                          {formatEuro(extendReservation.extension.pricePerDay)}
+                        </span>
+                      </div>
+                      <div>
+                        Total extindere:{" "}
+                        <span className="font-medium text-gray-900">
+                          {formatEuro(extendReservation.extension.total)}
+                        </span>
+                      </div>
+                      {!extendReservation.extension.paid &&
+                        typeof extendReservation.extension.remainingPayment === "number" &&
+                        extendReservation.extension.remainingPayment > 0 && (
+                          <div className="font-dm-sans font-semibold text-amber-700">
+                            Sold extindere:{" "}
+                            {formatEuro(extendReservation.extension.remainingPayment)}
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-4">
+                <div>
+                  <Label htmlFor={`extend-date-${extendReservation.id}`}>
+                    Dată retur extinsă
+                  </Label>
+                  <Input
+                    id={`extend-date-${extendReservation.id}`}
+                    type="date"
+                    value={extendDate}
+                    onChange={(event) => setExtendDate(event.target.value)}
+                    disabled={extendLoading}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`extend-time-${extendReservation.id}`}>
+                    Oră retur extinsă
+                  </Label>
+                  <Input
+                    id={`extend-time-${extendReservation.id}`}
+                    type="time"
+                    value={extendTime}
+                    onChange={(event) => setExtendTime(event.target.value)}
+                    disabled={extendLoading}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`extend-price-${extendReservation.id}`}>
+                    Tarif extindere (€/zi)
+                  </Label>
+                  <Input
+                    id={`extend-price-${extendReservation.id}`}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={extendPrice}
+                    onChange={(event) => setExtendPrice(event.target.value)}
+                    placeholder="Lasă gol pentru tariful curent"
+                    disabled={extendLoading}
+                  />
+                  <p className="mt-1 text-xs font-dm-sans text-gray-500">
+                    Dacă nu introduci un tarif nou, folosim prețul standard al rezervării.
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 text-sm font-dm-sans text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={extendPaid}
+                    onChange={(event) => setExtendPaid(event.target.checked)}
+                    disabled={extendLoading}
+                  />
+                  Marchează prelungirea ca achitată
+                </label>
+              </div>
+
+              {extendError && (
+                <p className="text-sm font-dm-sans text-red-600">{extendError}</p>
+              )}
+
+              <div className="flex items-center justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleCloseExtendPopup}
+                  disabled={extendLoading}
+                >
+                  Renunță
+                </Button>
+                <Button onClick={handleSubmitExtend} disabled={extendLoading}>
+                  {extendLoading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Salvăm...
+                    </span>
+                  ) : (
+                    "Salvează prelungirea"
+                  )}
+                </Button>
+              </div>
+
+              <p className="text-xs font-dm-sans text-gray-500">
+                Prelungirile marcate ca neachitate sunt incluse automat în soldul rezervării din listă și dashboard.
+              </p>
+            </div>
+          </Popup>
+        )}
         {bookingInfo && (
           <BookingForm
             open={editPopupOpen}
