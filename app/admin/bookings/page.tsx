@@ -1585,7 +1585,7 @@ const ReservationsPage = () => {
           : typeof r.remainingBalance === "number"
             ? r.remainingBalance
             : null;
-      if (typeof outstanding === "number") {
+      if (typeof outstanding === "number" && outstanding > 0) {
         extensionRemainingLabel = formatEuro(outstanding);
       }
     }
