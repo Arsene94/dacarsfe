@@ -47,6 +47,11 @@ const shareFormatter = new Intl.NumberFormat("ro-RO", {
   maximumFractionDigits: 1,
 });
 
+const formatCount = (value: unknown): string => {
+  const numeric = toFiniteNumber(value);
+  return numeric != null ? numberFormatter.format(numeric) : "—";
+};
+
 const toIsoString = (value: string): string | null => {
   if (!value) return null;
   const parsed = new Date(value);
@@ -123,14 +128,16 @@ const formatShortDateTime = (value: string | null | undefined, fallback = "—")
 };
 
 const buildScrollLabel = (event: AdminAnalyticsEvent): string => {
-  const percentage = event.scroll?.percentage;
-  const pixels = event.scroll?.pixels;
-  if (typeof percentage === "number" && Number.isFinite(percentage)) {
+  const percentage = toFiniteNumber(event.scroll?.percentage);
+  if (percentage != null) {
     return `${percentage.toFixed(1)}%`;
   }
-  if (typeof pixels === "number" && Number.isFinite(pixels)) {
+
+  const pixels = toFiniteNumber(event.scroll?.pixels);
+  if (pixels != null) {
     return `${Math.round(pixels)} px`;
   }
+
   return "—";
 };
 
@@ -156,61 +163,138 @@ const formatDuration = (durationMs: number | null | undefined): string => {
   return `${(safeValue / 1000).toFixed(1)} s`;
 };
 
-type MetadataContainer = {
-  [key: string]: unknown;
-  additional?: unknown;
-};
+type MetadataContainer = Record<string, unknown>;
 
-const extractMetadataNumber = (
-  metadata: MetadataContainer | null | undefined,
-  key: string,
-): number | null => {
-  if (!metadata) {
+const tryParseMetadataJson = (value: string): unknown => {
+  const trimmed = value.trim();
+  if (!trimmed || (trimmed[0] !== "{" && trimmed[0] !== "[")) {
     return null;
   }
 
-  const direct = toFiniteNumber(metadata[key]);
-  if (direct != null) {
-    return direct;
+  try {
+    return JSON.parse(trimmed);
+  } catch (error) {
+    console.warn("Nu am putut parsa metadata analytics", error);
+    return null;
+  }
+};
+
+const findMetadataValue = (
+  metadata: AdminAnalyticsEvent["metadata"],
+  key: string,
+): unknown => {
+  if (!metadata) {
+    return undefined;
   }
 
-  const additional = metadata.additional;
-  if (additional && typeof additional === "object") {
-    return extractMetadataNumber(additional as MetadataContainer, key);
-  }
+  const visited = new WeakSet<object>();
 
+  const visit = (value: unknown): unknown => {
+    if (value == null) {
+      return undefined;
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed.length === 0) {
+        return undefined;
+      }
+      const parsed = tryParseMetadataJson(trimmed);
+      if (parsed != null) {
+        return visit(parsed);
+      }
+      return undefined;
+    }
+
+    if (typeof value !== "object") {
+      return undefined;
+    }
+
+    if (visited.has(value as object)) {
+      return undefined;
+    }
+
+    visited.add(value as object);
+
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        const result = visit(entry);
+        if (result !== undefined) {
+          return result;
+        }
+      }
+      return undefined;
+    }
+
+    const record = value as MetadataContainer;
+
+    if (record[key] != null) {
+      return record[key];
+    }
+
+    for (const nested of Object.values(record)) {
+      const result = visit(nested);
+      if (result !== undefined) {
+        return result;
+      }
+    }
+
+    return undefined;
+  };
+
+  return visit(metadata);
+};
+
+const getMetadataNumber = (
+  metadata: AdminAnalyticsEvent["metadata"],
+  key: string,
+): number | null => {
+  const value = findMetadataValue(metadata, key);
+  return toFiniteNumber(value);
+};
+
+const getMetadataText = (
+  metadata: AdminAnalyticsEvent["metadata"],
+  key: string,
+): string | null => {
+  const value = findMetadataValue(metadata, key);
+  if (value == null) {
+    return null;
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
   return null;
 };
 
-const getEventComponentDuration = (event: AdminAnalyticsEvent): number | null => {
-  if (!event.metadata) {
-    return null;
-  }
-  return extractMetadataNumber(event.metadata as MetadataContainer, "component_visible_ms");
-};
+const getEventComponentDuration = (event: AdminAnalyticsEvent): number | null =>
+  getMetadataNumber(event.metadata, "component_visible_ms");
 
-const getEventPageDuration = (event: AdminAnalyticsEvent): number | null => {
-  if (!event.metadata) {
-    return null;
-  }
-  return extractMetadataNumber(event.metadata as MetadataContainer, "page_time_ms");
-};
+const getEventPageDuration = (event: AdminAnalyticsEvent): number | null =>
+  getMetadataNumber(event.metadata, "page_time_ms");
 
 const getEventDuration = (event: AdminAnalyticsEvent): number | null => {
   const direct = toFiniteNumber(event.duration_ms);
   if (direct != null) {
     return direct;
   }
-  if (event.metadata) {
-    const fromMetadata = extractMetadataNumber(event.metadata as MetadataContainer, "duration_ms");
-    if (fromMetadata != null) {
-      return fromMetadata;
-    }
+
+  const metadataDuration = getMetadataNumber(event.metadata, "duration_ms");
+  if (metadataDuration != null) {
+    return metadataDuration;
   }
+
   const component = getEventComponentDuration(event);
   if (component != null) {
     return component;
   }
+
   return getEventPageDuration(event);
 };
 
@@ -223,16 +307,76 @@ type EventFilterState = {
 
 const emptyMetadataFallback = "{ }";
 
-const serializeMetadata = (metadata: Record<string, unknown> | null | undefined) => {
-  if (!metadata || Object.keys(metadata).length === 0) {
-    return emptyMetadataFallback;
+const hasMetadataKeys = (metadata: MetadataContainer | null): boolean => {
+  if (!metadata) {
+    return false;
   }
   try {
-    return JSON.stringify(metadata, null, 2);
+    return Object.keys(metadata).length > 0;
+  } catch (error) {
+    console.warn("Nu am putut inspecta cheile metadata", error);
+    return false;
+  }
+};
+
+const safeStringifyMetadata = (value: unknown): string | null => {
+  try {
+    return JSON.stringify(value, null, 2);
   } catch (error) {
     console.warn("Nu am putut serializa metadata analytics", error);
+    return null;
+  }
+};
+
+const serializeMetadata = (metadata: AdminAnalyticsEvent["metadata"]) => {
+  if (metadata == null) {
     return emptyMetadataFallback;
   }
+
+  if (typeof metadata === "string") {
+    const trimmed = metadata.trim();
+    if (trimmed.length === 0) {
+      return emptyMetadataFallback;
+    }
+
+    const parsed = tryParseMetadataJson(trimmed);
+    if (parsed && typeof parsed === "object") {
+      const serializedParsed = safeStringifyMetadata(parsed);
+      if (serializedParsed) {
+        return serializedParsed;
+      }
+    }
+
+    return trimmed;
+  }
+
+  if (typeof metadata !== "object") {
+    return emptyMetadataFallback;
+  }
+
+  const container = metadata as MetadataContainer;
+  if (!hasMetadataKeys(container)) {
+    return emptyMetadataFallback;
+  }
+
+  const serialized = safeStringifyMetadata(container);
+  if (serialized) {
+    return serialized;
+  }
+
+  try {
+    const plain = JSON.parse(JSON.stringify(container)) as MetadataContainer;
+    if (hasMetadataKeys(plain)) {
+      const fallback = safeStringifyMetadata(plain);
+      if (fallback) {
+        return fallback;
+      }
+    }
+  } catch (error) {
+    console.warn("Nu am putut normaliza metadata analytics", error);
+  }
+
+  return emptyMetadataFallback;
 };
 
 const describeDevice = (device: Record<string, unknown> | null | undefined): string => {
@@ -539,7 +683,17 @@ export default function AdminAnalyticsPage() {
       {
         id: "scroll",
         header: "Scroll",
-        accessor: (event) => event.scroll?.percentage ?? event.scroll?.pixels ?? 0,
+        accessor: (event) => {
+          const percentage = toFiniteNumber(event.scroll?.percentage);
+          if (percentage != null) {
+            return percentage;
+          }
+          const pixels = toFiniteNumber(event.scroll?.pixels);
+          if (pixels != null) {
+            return pixels;
+          }
+          return 0;
+        },
         cell: (event) => <span className="text-sm text-slate-700">{buildScrollLabel(event)}</span>,
       },
       {
@@ -588,7 +742,7 @@ export default function AdminAnalyticsPage() {
         accessor: (visitor) => visitor.total_events,
         cell: (visitor) => (
           <span className="text-sm font-semibold text-slate-700">
-            {numberFormatter.format(visitor.total_events)}
+            {formatCount(visitor.total_events)}
           </span>
         ),
         sortable: true,
@@ -599,7 +753,7 @@ export default function AdminAnalyticsPage() {
         accessor: (visitor) => visitor.total_sessions,
         cell: (visitor) => (
           <span className="text-sm text-slate-700">
-            {numberFormatter.format(visitor.total_sessions)}
+            {formatCount(visitor.total_sessions)}
           </span>
         ),
       },
@@ -680,8 +834,23 @@ export default function AdminAnalyticsPage() {
   };
 
   const renderEventTypeCard = (item: AdminAnalyticsEventTypeStat) => {
+    const totalEvents = toFiniteNumber(item.total_events);
     const shareValue = toFiniteNumber(item.share);
+    const summaryTotalEvents = toFiniteNumber(summary?.totals?.events);
     const uniqueVisitors = toFiniteNumber(item.unique_visitors);
+
+    const resolvedShare = (() => {
+      if (shareValue != null) {
+        return shareValue;
+      }
+      if (totalEvents != null && summaryTotalEvents && summaryTotalEvents > 0) {
+        return Math.min(Math.max(totalEvents / summaryTotalEvents, 0), 1);
+      }
+      return null;
+    })();
+
+    const shareLabel =
+      resolvedShare != null ? `${shareFormatter.format(resolvedShare * 100)}%` : "—";
 
     return (
       <div
@@ -695,12 +864,10 @@ export default function AdminAnalyticsPage() {
           <p className="text-sm font-semibold text-slate-700">{item.type}</p>
         </div>
         <p className="mt-3 text-2xl font-semibold text-slate-900">
-          {numberFormatter.format(item.total_events)}
+          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
         </p>
         <div className="mt-1 space-y-1 text-xs text-slate-500">
-          <p>
-            Pondere: {shareValue != null ? `${shareFormatter.format(shareValue * 100)}%` : "—"}
-          </p>
+          <p>Pondere: {shareLabel}</p>
           {uniqueVisitors != null ? (
             <p>{numberFormatter.format(uniqueVisitors)} vizitatori unici</p>
           ) : null}
@@ -709,22 +876,36 @@ export default function AdminAnalyticsPage() {
     );
   };
 
-  const renderTopPageRow = (page: AdminAnalyticsTopPage) => (
-    <tr key={page.page_url} className="border-b border-slate-100">
-      <td className="px-4 py-3 text-sm text-slate-700">{page.page_url}</td>
-      <td className="px-4 py-3 text-sm text-right text-slate-700">
-        {numberFormatter.format(page.total_events)}
-      </td>
-      <td className="px-4 py-3 text-sm text-right text-slate-700">
-        {page.unique_visitors != null ? numberFormatter.format(page.unique_visitors) : "—"}
-      </td>
-      <td className="px-4 py-3 text-sm text-right text-slate-700">
-        {page.share != null ? `${shareFormatter.format(page.share * 100)}%` : "—"}
-      </td>
-    </tr>
-  );
+  const renderTopPageRow = (page: AdminAnalyticsTopPage) => {
+    const totalEvents = toFiniteNumber(page.total_events);
+    const uniqueVisitors = toFiniteNumber(page.unique_visitors);
+    const shareValue = toFiniteNumber(page.share);
 
-  const dailyActivity = summary?.daily_activity ?? [];
+    return (
+      <tr key={page.page_url} className="border-b border-slate-100">
+        <td className="px-4 py-3 text-sm text-slate-700">{page.page_url}</td>
+        <td className="px-4 py-3 text-sm text-right text-slate-700">
+          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
+        </td>
+        <td className="px-4 py-3 text-sm text-right text-slate-700">
+          {uniqueVisitors != null ? numberFormatter.format(uniqueVisitors) : "—"}
+        </td>
+        <td className="px-4 py-3 text-sm text-right text-slate-700">
+          {shareValue != null ? `${shareFormatter.format(shareValue * 100)}%` : "—"}
+        </td>
+      </tr>
+    );
+  };
+
+  const dailyActivity = useMemo(
+    () =>
+      (summary?.daily_activity ?? []).map((item) => ({
+        date: item.date,
+        events: toFiniteNumber(item.events) ?? 0,
+        visitors: toFiniteNumber(item.visitors) ?? 0,
+      })),
+    [summary?.daily_activity],
+  );
   const maxDailyEvents = dailyActivity.reduce(
     (max, item) => (item.events > max ? item.events : max),
     0,
@@ -805,11 +986,11 @@ export default function AdminAnalyticsPage() {
         </form>
         <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-2 text-sm text-slate-600">
-            <Users className="h-4 w-4 text-slate-500" />
-            <span>
-              Vizitatori unici în interval: {summary ? numberFormatter.format(summary.totals.unique_visitors) : "—"}
-            </span>
-          </div>
+          <Users className="h-4 w-4 text-slate-500" />
+          <span>
+            Vizitatori unici în interval: {summary ? formatCount(summary.totals.unique_visitors) : "—"}
+          </span>
+        </div>
           <div className="flex flex-wrap items-center gap-3">
             <label className="text-sm font-medium text-slate-600">Top pagini filtrate după tip</label>
             <Select
@@ -868,7 +1049,7 @@ export default function AdminAnalyticsPage() {
                     <div className="flex items-center justify-between text-xs text-slate-500">
                       <span>{entry.date}</span>
                       <span>
-                        {numberFormatter.format(entry.events)} evenimente / {numberFormatter.format(entry.visitors)} vizitatori
+                        {formatCount(entry.events)} evenimente / {formatCount(entry.visitors)} vizitatori
                       </span>
                     </div>
                     <div className="h-2 rounded bg-slate-100">
@@ -1101,13 +1282,13 @@ export default function AdminAnalyticsPage() {
                     <div>
                       <dt className="text-xs uppercase tracking-wide text-slate-500">Evenimente</dt>
                       <dd className="text-base font-semibold text-slate-800">
-                        {numberFormatter.format(visitorDetail.totals.events)}
+                        {formatCount(visitorDetail.totals.events)}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-xs uppercase tracking-wide text-slate-500">Pagini</dt>
                       <dd className="text-base font-semibold text-slate-800">
-                        {numberFormatter.format(visitorDetail.totals.pages)}
+                        {formatCount(visitorDetail.totals.pages)}
                       </dd>
                     </div>
                     <div>
@@ -1134,7 +1315,7 @@ export default function AdminAnalyticsPage() {
                         >
                           <span className="font-medium text-slate-600">{item.type}</span>
                           <span className="text-slate-700">
-                            {numberFormatter.format(item.total_events)} evenimente
+                            {formatCount(item.total_events)} evenimente
                           </span>
                         </li>
                       ))}
@@ -1160,7 +1341,7 @@ export default function AdminAnalyticsPage() {
                             <tr key={`${page.page_url}-${page.total_events}`} className="border-t border-slate-100">
                               <td className="px-4 py-2 text-slate-700">{page.page_url}</td>
                               <td className="px-4 py-2 text-right text-slate-700">
-                                {numberFormatter.format(page.total_events)}
+                                {formatCount(page.total_events)}
                               </td>
                             </tr>
                           ))}
@@ -1196,7 +1377,7 @@ export default function AdminAnalyticsPage() {
                                 {formatShortDateTime(session.first_seen)} – {formatShortDateTime(session.last_seen)}
                               </td>
                               <td className="px-4 py-2 text-right text-slate-700">
-                                {numberFormatter.format(session.events)}
+                                {formatCount(session.events)}
                               </td>
                             </tr>
                           ))}
@@ -1240,7 +1421,7 @@ export default function AdminAnalyticsPage() {
                                 <div>Pagină: {formatDuration(pageDuration)}</div>
                               ) : null}
                               <div>Referrer: {event.referrer_url ?? "—"}</div>
-                              <div>Target: {event.metadata?.interaction_target ?? "—"}</div>
+                              <div>Target: {getMetadataText(event.metadata, "interaction_target") ?? "—"}</div>
                             </div>
                           </li>
                         );

@@ -29,9 +29,14 @@ Această documentație descrie capabilitățile introduse pentru monitorizarea a
 | `scroll_percentage`       | `number`   | Procentul maxim de scroll atins în cadrul evenimentului curent (0-100). |
 | `scroll_pixels`           | `number`   | Numărul absolut de pixeli scrollați. |
 | `duration_ms`             | `integer`  | Durata, în milisecunde, asociată evenimentului (ex: timpul petrecut pe pagină). |
+| `page_time_ms`            | `integer`  | Timpul cumulat petrecut pe pagină până la momentul evenimentului curent. |
+| `component_visible_ms`    | `integer`  | Durata vizibilității pentru secțiunea activă (în special pentru evenimente de scroll). |
 | `interaction_target`      | `string`   | Selectorul sau identificatorul elementului cu care s-a interacționat (pentru click-uri). |
 | `interaction_label`       | `string`   | Eticheta UX sau textul asociat acțiunii (ex: „Rezervă acum”). |
 | `additional`              | `object`   | Spațiu liber pentru orice alt set de date contextual pe care frontend-ul îl consideră util. |
+
+> Frontend-ul trimite duratele atât la nivel de pagină, cât și pentru componentele expuse. Backend-ul trebuie să persiste aceste
+> valori ca numere întregi și să le expună în rapoarte chiar dacă vin înrădăcinate în `metadata.additional`.
 
 ### Structura `device`
 
@@ -122,6 +127,10 @@ Parametri de query:
 | `per_page`     | `integer` | Dimensiunea paginii (1-100, implicit 50). |
 
 Răspunsul este paginat conform convențiilor Laravel și folosește `AnalyticsEventResource`, care expune câmpurile evenimentului, plus un obiect `scroll` (procent/pixeli) și `duration_ms` derivat din metadata.
+
+> `AnalyticsEventResource` trebuie să normalizeze numeric câmpurile `duration_ms`, `page_time_ms` și `component_visible_ms`
+> (inclusiv atunci când sunt prezente doar în `metadata.additional`) și să întoarcă `null` atunci când informația lipsește,
+> nu valori `NaN` sau stringuri.
 
 ```
 GET /api/admin/analytics/events/{id}
@@ -214,6 +223,7 @@ Sugestii de valori standard:
 |----------------|------|
 | `page_view`    | Vizualizare de pagină. Folosit pentru numărul de vizite și pagini de top. |
 | `scroll`       | Progresul de scroll; se așteaptă valori în `metadata.scroll_percentage` / `scroll_pixels`. |
+| `page_duration`| Finalizarea vizitei unei pagini; `metadata.duration_ms` / `page_time_ms` includ timpul vizibil cumulat. |
 | `cta_click`    | Click pe un buton/CTA. Se recomandă completarea câmpurilor `metadata.interaction_target` și `interaction_label`. |
 | `form_start` / `form_submit` | Interacțiuni cu formulare (inițiere, trimitere, validare). |
 | `video_play` / `video_complete` | Evenimente media. |
@@ -229,6 +239,9 @@ Front-end-ul poate defini și alte valori, cu condiția să păstreze un naming 
 * `average_events_per_session` – raportul `total_events / unique_sessions` (0 dacă nu există sesiuni).
 * `share` pentru top pagini – procentul din totalul evenimentelor din interval. |
 * Statistica de scroll – se calculează doar din evenimentele cu `event_type = 'scroll'` și valori numerice valide în metadata.
+* Valorile lipsă se normalizează la `0` (sau `null` acolo unde este cazul) astfel încât răspunsurile să nu conțină `NaN` sau șiruri
+  textuale în loc de numere. Atât `events_by_type.total_events` cât și `unique_visitors` trebuie livrate ca întregi, iar `share`
+  trebuie să fie un număr zecimal în intervalul `[0, 1]` (0 dacă nu există evenimente în total).
 
 ## Considerații de integrare frontend
 

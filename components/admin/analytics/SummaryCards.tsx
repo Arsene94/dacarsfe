@@ -47,26 +47,43 @@ const formatRange = (range?: AnalyticsDateRange | null): string | null => {
   return `${formatter.format(from)} – ${formatter.format(to)}`;
 };
 
-const buildMetricValue = (value: number | null | undefined, isAverage = false): string => {
-  if (value == null || Number.isNaN(value)) {
+const toFiniteNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
+
+const buildMetricValue = (value: unknown, isAverage = false): string => {
+  const numeric = toFiniteNumber(value);
+  if (numeric == null) {
     return '—';
   }
 
   if (isAverage) {
-    return averageFormatter.format(value);
+    return averageFormatter.format(numeric);
   }
 
-  return integerFormatter.format(value);
+  return integerFormatter.format(numeric);
 };
 
-const buildScrollValue = (value: number | null | undefined, isPercentage = false): string => {
-  if (value == null || Number.isNaN(value)) {
+const buildScrollValue = (value: unknown, isPercentage = false): string => {
+  const numeric = toFiniteNumber(value);
+  if (numeric == null) {
     return '—';
   }
 
   return isPercentage
-    ? `${percentageFormatter.format(value)}%`
-    : `${integerFormatter.format(Math.round(value))} px`;
+    ? `${percentageFormatter.format(numeric)}%`
+    : `${integerFormatter.format(Math.round(numeric))} px`;
 };
 
 export default function SummaryCards({ totals, scroll, range, loading }: SummaryCardsProps) {
