@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import type { Column } from "@/types/ui";
 import { useAuth } from "@/context/AuthContext";
 import {
+    AdminBookingExtension,
     AdminBookingFormValues,
     AdminReservation,
     type AdminBookingResource,
@@ -38,6 +39,7 @@ import type {
 } from "@/types/reservation";
 import type { ActivityReservation } from "@/types/activity";
 import { apiClient } from "@/lib/api";
+import { normalizeReservationExtension } from "@/lib/adminBookingHelpers";
 import {getStatusText} from "@/lib/utils";
 import { extractItem, extractList } from "@/lib/apiResponse";
 import { derivePercentageCouponInputValue, normalizeManualCouponType } from "@/lib/bookingDiscounts";
@@ -92,6 +94,49 @@ const parseOptionalNumber = (value: unknown): number | null => {
         return Number.isFinite(parsed) ? parsed : null;
     }
     return null;
+};
+
+const euroFormatter = new Intl.NumberFormat("ro-RO", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+});
+
+const defaultDateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
+    dateStyle: "medium",
+    timeStyle: "short",
+});
+
+const shortDateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+});
+
+type AdminReservationRow = AdminReservation & {
+    remainingBalance?: number | null;
+    extension?: AdminBookingExtension | null;
+};
+
+const formatDateTime = (
+    value: string | null | undefined,
+    formatter: Intl.DateTimeFormat = defaultDateTimeFormatter,
+): string | null => {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const parsed = new Date(trimmed);
+    if (Number.isNaN(parsed.getTime())) {
+        return trimmed;
+    }
+
+    return formatter.format(parsed);
 };
 
 const sanitizeCouponTotalDiscountDetails = (
@@ -286,7 +331,7 @@ const mapActivityStatus = (status: string): AdminReservation["status"] => {
 
 const mapActivityReservationToAdmin = (
     reservation: ActivityReservation,
-): AdminReservation => ({
+): AdminReservationRow => ({
     id: String(reservation.id) || reservation.booking_number,
     bookingNumber: reservation.booking_number,
     customerName: reservation.customer_name ?? "",
@@ -316,6 +361,12 @@ const mapActivityReservationToAdmin = (
     couponAmount: reservation.coupon_amount ?? 0,
     subTotal: reservation.sub_total ?? 0,
     taxAmount: 0,
+    remainingBalance:
+        parseOptionalNumber(
+            reservation.remaining_balance ??
+                (reservation as { remainingBalance?: unknown }).remainingBalance,
+        ) ?? null,
+    extension: normalizeReservationExtension(reservation.extension),
 });
 
 const getStatusColor = (status: string) => {
@@ -621,6 +672,8 @@ const AdminDashboard = () => {
         arrivalTime: string;
         returnDate: string;
         returnTime: string;
+        remainingBalance: number | null;
+        extension: AdminBookingExtension | null;
     } | null>(null);
     const [editPopupOpen, setEditPopupOpen] = useState(false);
     const [bookingInfo, setBookingInfo] = useState<AdminBookingFormValues | null>(
@@ -628,7 +681,7 @@ const AdminDashboard = () => {
     );
     const [contractOpen, setContractOpen] = useState(false);
     const [contractReservation, setContractReservation] = useState<
-        AdminReservation | null
+        AdminReservationRow | null
     >(null);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
     const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);
@@ -653,6 +706,8 @@ const AdminDashboard = () => {
         arrivalTime: string;
         returnDate: string;
         returnTime: string;
+        remainingBalance: number | null;
+        extension: AdminBookingExtension | null;
     }) => {
         setActivityDetails(details);
         setPopupOpen(true);
@@ -1213,6 +1268,23 @@ const AdminDashboard = () => {
                                                 const depositBadgeClass = hasDeposit
                                                     ? 'bg-emerald-100 text-emerald-800'
                                                     : 'bg-amber-100 text-amber-800';
+                                                const extensionDetails = normalizeReservationExtension(r.extension);
+                                                const extensionLabel = extensionDetails
+                                                    ? formatDateTime(extensionDetails.to, shortDateTimeFormatter)
+                                                    : null;
+                                                const remainingBalanceValue = parseOptionalNumber(
+                                                    r.remaining_balance ??
+                                                        (r as { remainingBalance?: unknown }).remainingBalance,
+                                                );
+                                                const extensionRemainingPayment =
+                                                    typeof extensionDetails?.remainingPayment === "number"
+                                                        ? extensionDetails.remainingPayment
+                                                        : null;
+                                                const hasUnpaidExtension =
+                                                    extensionDetails != null && extensionDetails.paid === false;
+                                                const outstandingExtensionBalance = hasUnpaidExtension
+                                                    ? extensionRemainingPayment ?? remainingBalanceValue ?? null
+                                                    : null;
                                                 return (
                                                     <div
                                                         key={r.id + (isDeparture ? 'start' : 'end')}
@@ -1251,6 +1323,24 @@ const AdminDashboard = () => {
                                                                             {depositLabel}
                                                                         </span>
                                                                     )}
+                                                                    {extensionDetails && (
+                                                                        <span
+                                                                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                                                extensionDetails.paid
+                                                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                                                    : 'bg-amber-100 text-amber-800'
+                                                                            }`}
+                                                                        >
+                                                                            Extins până la {extensionLabel ?? '—'}
+                                                                        </span>
+                                                                    )}
+                                                                    {hasUnpaidExtension &&
+                                                                        typeof outstandingExtensionBalance === 'number' &&
+                                                                        outstandingExtensionBalance > 0 && (
+                                                                            <span className="text-xs font-semibold text-amber-700">
+                                                                                Rest de plată: {euroFormatter.format(outstandingExtensionBalance)}€
+                                                                            </span>
+                                                                        )}
                                                                     {r.child_seat_service_name && (
                                                                         <span className="text-sm text-red-500 font-bold">
                                                                             - {r.child_seat_service_name}
@@ -1303,6 +1393,11 @@ const AdminDashboard = () => {
                                                                             arrivalTime: r.start_hour_group.slice(0, 5),
                                                                             returnDate: r.rental_end_date.slice(0, 10),
                                                                             returnTime: r.end_hour_group.slice(0, 5),
+                                                                            remainingBalance:
+                                                                                outstandingExtensionBalance ??
+                                                                                remainingBalanceValue ??
+                                                                                null,
+                                                                            extension: extensionDetails,
                                                                         })
                                                                     }
                                                                     className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
@@ -1417,6 +1512,74 @@ const AdminDashboard = () => {
                         {activityDetails.services.length > 0 && (<div className="text-sm font-dm-sans"><span className="font-semibold">Preț servicii:</span> {activityDetails.total_services}€</div>)}
                         {activityDetails.coupon_amount > 0 && (<div className="text-sm font-dm-sans"><span className="font-semibold">Discount:</span> {activityDetails.coupon_amount}€</div>)}
                         <div className="text-sm font-dm-sans"><span className="font-semibold">Total:</span> {activityDetails.total}€</div>
+                        {typeof activityDetails.remainingBalance === 'number' && activityDetails.remainingBalance > 0 && (
+                            <div className="text-sm font-dm-sans text-amber-700">
+                                <span className="font-semibold">Sold rămas:</span> {euroFormatter.format(activityDetails.remainingBalance)}€
+                            </div>
+                        )}
+                        {activityDetails.extension && (
+                            <div
+                                className={`mt-3 rounded-lg border px-3 py-2 ${
+                                    activityDetails.extension.paid
+                                        ? 'border-emerald-200 bg-emerald-50'
+                                        : 'border-amber-200 bg-amber-50'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="font-semibold text-gray-800">
+                                        Prelungire
+                                        {typeof activityDetails.extension.days === 'number'
+                                            ? ` (+${activityDetails.extension.days} zile)`
+                                            : ''}
+                                    </span>
+                                    <span
+                                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                            activityDetails.extension.paid
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : 'bg-amber-100 text-amber-700'
+                                        }`}
+                                    >
+                                        {activityDetails.extension.paid ? 'Achitată' : 'Neachitată'}
+                                    </span>
+                                </div>
+                                <div className="mt-2 space-y-1 text-sm text-gray-700">
+                                    <div>
+                                        Interval:{' '}
+                                        <span className="font-medium text-gray-900">
+                                            {formatDateTime(activityDetails.extension.from) ?? '—'}
+                                        </span>{' '}
+                                        →{' '}
+                                        <span className="font-medium text-gray-900">
+                                            {formatDateTime(activityDetails.extension.to) ?? '—'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        Tarif extindere:{' '}
+                                        <span className="font-medium text-gray-900">
+                                            {activityDetails.extension.pricePerDay != null
+                                                ? euroFormatter.format(activityDetails.extension.pricePerDay) + '€'
+                                                : '—'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        Total extindere:{' '}
+                                        <span className="font-medium text-gray-900">
+                                            {activityDetails.extension.total != null
+                                                ? euroFormatter.format(activityDetails.extension.total) + '€'
+                                                : '—'}
+                                        </span>
+                                    </div>
+                                    {!activityDetails.extension.paid &&
+                                        typeof activityDetails.extension.remainingPayment === 'number' &&
+                                        activityDetails.extension.remainingPayment > 0 && (
+                                            <div className="font-semibold text-amber-700">
+                                                Sold extindere:{' '}
+                                                {euroFormatter.format(activityDetails.extension.remainingPayment)}€
+                                            </div>
+                                        )}
+                                </div>
+                            </div>
+                        )}
                         {activityDetails.note && (<div className="text-sm font-dm-sans"><span className="font-semibold">Notițe:</span> {activityDetails.note}</div>)}
 
                     </div>

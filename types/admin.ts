@@ -3,9 +3,20 @@ import type { Offer, OfferIcon, OfferStatus } from "@/types/offer";
 import type {
   CouponTotalDiscountDetails,
   ReservationAppliedOffer,
+  ReservationExtension,
   ReservationWheelPrizeSummary,
   ServiceStatus,
 } from "@/types/reservation";
+
+export interface AdminBookingExtension {
+  from: string | null;
+  to: string | null;
+  days: number | null;
+  pricePerDay: number | null;
+  total: number | null;
+  paid: boolean;
+  remainingPayment: number | null;
+}
 
 export interface AdminReservation {
   id: string;
@@ -35,6 +46,8 @@ export interface AdminReservation {
   wheelPrize?: ReservationWheelPrizeSummary | null;
   appliedOffers?: ReservationAppliedOffer[] | null;
   depositWaived?: boolean | null;
+  remainingBalance?: number | null;
+  extension?: AdminBookingExtension | null;
   email?: string;
   days?: number;
   pickupTime?: string;
@@ -274,6 +287,9 @@ export interface AdminBookingResource {
   offers_discount?: number | string | null;
   deposit_waived?: boolean | number | string | null;
   applied_offers?: ReservationAppliedOffer[] | null;
+  remaining_balance?: number | string | null;
+  remainingBalance?: number | string | null;
+  extension?: ReservationExtension | null;
   discount?: number | string | null;
   discount_type?: string | null;
   location?: string | null;

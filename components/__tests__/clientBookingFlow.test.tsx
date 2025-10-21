@@ -72,8 +72,13 @@ vi.mock('@/lib/wheelStorage', () => {
   return mock;
 });
 
-const apiClientMock = (globalThis as { __apiClientMock: ApiClientMock }).__apiClientMock;
-const wheelStorageMock = (globalThis as { __wheelStorageMock: WheelStorageMock }).__wheelStorageMock;
+const globalWithClientMocks = globalThis as typeof globalThis & {
+  __apiClientMock: ApiClientMock;
+  __wheelStorageMock: WheelStorageMock;
+};
+
+const apiClientMock = globalWithClientMocks.__apiClientMock;
+const wheelStorageMock = globalWithClientMocks.__wheelStorageMock;
 
 const mockApiCar: ApiCar = {
   id: 101,

@@ -9,6 +9,7 @@ These endpoints extend the public bookings controller with admin-only abilities 
 | POST | `/api/bookings/contract/{booking?}` | Render a contract PDF from an existing booking or from ad-hoc payload data. | `bookings.generate_contract` |
 | PUT | `/api/bookings/{booking}` | Update pricing, dates, customer details, services, coupon metadata, etc. | `bookings.update` |
 | PUT | `/api/bookings/{booking}/update-date` | Quick helper to adjust rental start/end based on arrival/return times. | `bookings.update_date` |
+| POST | `/api/bookings/{booking}/extend` | Extend the booking end date, storing extension pricing and payment status. | `bookings.extend` |
 | POST | `/api/customers/get/byphone` | Search past bookings and customer records by phone fragment. | `customers.search_by_phone` |
 
 All routes live inside the main `/api` prefix and inherit `auth:sanctum` middleware.
@@ -99,10 +100,67 @@ This convenience endpoint combines booking creation with PDF contract generation
       "discount_value": 20,
       "discount_value_deposit": 20,
       "discount_value_casco": 20
-    }
+    },
+    "remaining_balance": 197.0,
+    "extension": null
   },
   "message": "Booking created",
   "contract_url": "https://api.dacars.test/storage/contracts/generated/4d5fbd48-0e0a-4207-8f0b-b0fa5d5e6c6d.pdf"
+}
+```
+
+---
+
+## POST `/api/bookings/{booking}/extend`
+
+Admin-only helper pentru prelungirea rapidă a unei rezervări existente. Endpoint-ul păstrează data de final originală pentru calcule, verifică disponibilitatea în intervalul extins și actualizează `remaining_balance` în funcție de statusul de plată al extinderii.
+
+### Request body
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `extended_until` | string | Yes* | ISO datetime pentru noua dată/ora de returnare. |
+| `extended_until_date` | string | No | Dată (`YYYY-MM-DD`) folosită împreună cu `extended_until_time`. |
+| `extended_until_time` | string | No | Oră (`HH:mm` sau `HH:mm:ss`) folosită împreună cu `extended_until_date`. |
+| `price_per_day` | number | No | Tarif personalizat aplicat pe toată perioada de extindere. |
+| `paid` | boolean | Yes | Marchează extinderea ca achitată (`true`) sau în așteptare (`false`). |
+
+`extended_until` este obligatoriu dacă nu trimiteți perechea `extended_until_date` + `extended_until_time`. Se resping valorile înainte de `rental_end_date` curentă sau intervalele indisponibile.
+
+### Example
+
+```http
+POST /api/bookings/412/extend
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+
+{
+  "extended_until": "2025-02-22T10:00:00+02:00",
+  "price_per_day": 45,
+  "paid": false
+}
+```
+
+### Response (excerpt)
+
+```json
+{
+  "data": {
+    "id": 412,
+    "booking_number": "#1058821",
+    "rental_end_date": "2025-02-22T10:00:00+02:00",
+    "remaining_balance": 170,
+    "extension": {
+      "from": "2025-02-20T09:00:00+02:00",
+      "to": "2025-02-22T10:00:00+02:00",
+      "days": 2,
+      "price_per_day": 45,
+      "total": 90,
+      "paid": false,
+      "remaining_payment": 90
+    }
+  },
+  "message": "Booking extended"
 }
 ```
 

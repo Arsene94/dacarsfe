@@ -254,6 +254,50 @@ describe('ApiClient bookings management', () => {
     expect(result).toEqual(apiResponse);
   });
 
+  it('extends a booking with custom pricing and payment flag', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('super-admin');
+
+    const payload = {
+      extended_until: '2025-02-22T10:00:00+02:00',
+      price_per_day: 45,
+      paid: false,
+    };
+
+    const apiResponse = {
+      data: {
+        id: 412,
+      },
+      message: 'Booking extended',
+    };
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.extendBooking(412, payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseURL}/bookings/412/extend`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+        cache: 'no-cache',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: 'Bearer super-admin',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+      }),
+    );
+
+    expect(result).toEqual(apiResponse);
+  });
+
   it('retrieves booking info without include parameters when none are provided', async () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');

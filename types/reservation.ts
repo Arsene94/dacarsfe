@@ -108,6 +108,17 @@ export interface ReservationAppliedOffer {
   discount_amount?: number | null;
 }
 
+export interface ReservationExtension {
+  from?: string | null;
+  to?: string | null;
+  days?: number | string | null;
+  price_per_day?: number | string | null;
+  total?: number | string | null;
+  paid?: boolean | number | string | null;
+  remaining_payment?: number | string | null;
+  [key: string]: unknown;
+}
+
 export type CouponTotalDiscountDetails<T = number> = {
   deposit?: T | null;
   casco?: T | null;
@@ -194,6 +205,15 @@ export interface QuotePricePayload {
   offer_fixed_discount?: number | string;
   deposit_waived?: boolean | string | number | null;
   applied_offers?: ReservationAppliedOffer[];
+  [key: string]: unknown;
+}
+
+export interface BookingExtendPayload {
+  extended_until?: string | null;
+  extended_until_date?: string | null;
+  extended_until_time?: string | null;
+  price_per_day?: number | string | null;
+  paid: boolean | number | string;
   [key: string]: unknown;
 }
 
