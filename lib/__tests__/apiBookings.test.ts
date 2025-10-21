@@ -58,6 +58,54 @@ describe('ApiClient bookings management', () => {
     expect(result).toEqual(apiResponse);
   });
 
+  it('creates an admin booking using the secured endpoint and admin headers', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('admin-token');
+
+    const payload = {
+      customer_name: 'Maria Enache',
+      customer_email: 'maria.enache@example.com',
+      car_id: 17,
+      start: '2025-03-12 09:00',
+      end: '2025-03-18 09:00',
+      pricePerDay: 36,
+      services: 12,
+      advancePayment: 100,
+      withDeposit: true,
+    } satisfies Record<string, unknown>;
+
+    const apiResponse: ApiItemResult<UnknownRecord> = {
+      data: { id: 888 },
+      message: 'Booking stored',
+    };
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.createAdminBooking(payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseURL}/admin/bookings`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: 'Bearer admin-token',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+        credentials: 'omit',
+      }),
+    );
+
+    expect(result).toEqual(apiResponse);
+  });
+
   it('updates an existing booking using the admin token and JSON headers', async () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');
@@ -298,6 +346,41 @@ describe('ApiClient bookings management', () => {
     expect(result).toEqual(apiResponse);
   });
 
+  it('cancels a booking on behalf of the authenticated customer', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('customer-token');
+
+    const apiResponse = {
+      data: { id: 777, status: 'cancelled' },
+      message: 'Rezervarea a fost anulata',
+    } satisfies ApiItemResult<UnknownRecord>;
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.cancelBooking(777);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseURL}/bookings/777/cancel`,
+      expect.objectContaining({
+        method: 'PATCH',
+        cache: 'no-cache',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: 'Bearer customer-token',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+      }),
+    );
+
+    expect(result).toEqual(apiResponse);
+  });
+
   it('retrieves booking info without include parameters when none are provided', async () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');
@@ -522,6 +605,16 @@ describe('ApiClient bookings management', () => {
 
     const payload = {
       booking_id: 913,
+      customer_name: 'Maria Enache',
+      customer_email: 'maria.enache@example.com',
+      customer_phone: '+40 723 555 111',
+      start: '2025-03-12 09:00',
+      end: '2025-03-18 09:00',
+      pricePerDay: 36,
+      services: 12,
+      advance: 100,
+      advancePayment: 100,
+      withDeposit: true,
       with_signature: false,
     };
 
@@ -552,6 +645,13 @@ describe('ApiClient bookings management', () => {
         }),
       }),
     );
+
+    const [, options] = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
+    const parsedPayload = JSON.parse(options.body as string);
+    expect(parsedPayload.start).toBe('2025-03-12 09:00');
+    expect(parsedPayload.end).toBe('2025-03-18 09:00');
+    expect(parsedPayload.pricePerDay).toBe(36);
+    expect(parsedPayload.withDeposit).toBe(true);
 
     expect(result).toEqual(apiResponse);
   });
