@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import {
@@ -13,6 +13,29 @@ import {
 } from "@/lib/analytics";
 import type { AnalyticsMetadata } from "@/types/analytics";
 
+const getTimestamp = (): number => {
+    if (typeof performance !== "undefined" && typeof performance.now === "function") {
+        return performance.now();
+    }
+    return Date.now();
+};
+
+type PageTimingState = {
+    totalVisible: number;
+    visibleSince: number;
+    isVisible: boolean;
+};
+
+const createPageTimingState = (): PageTimingState => {
+    const current = getTimestamp();
+    const isVisible = typeof document !== "undefined" ? document.visibilityState !== "hidden" : true;
+    return {
+        totalVisible: 0,
+        visibleSince: current,
+        isVisible,
+    };
+};
+
 const SCROLL_THRESHOLDS = [10, 25, 50, 75, 90, 100];
 const SCROLL_SECTION_SELECTOR = "[data-analytics-scroll-section]" as const;
 
@@ -21,6 +44,11 @@ type ScrollTargetKey = "window" | HTMLElement;
 type ScrollContextState = {
     thresholds: Set<number>;
     lastPercentage: number;
+};
+
+type SectionTimingState = {
+    section: HTMLElement | null;
+    since: number;
 };
 
 const isPublicPath = (pathname: string | null): boolean => {
@@ -299,16 +327,23 @@ const buildScrollEventMetadata = (
     return metadata;
 };
 
-const useScrollTracking = (enabled: boolean, resetKey?: string) => {
+const useScrollTracking = (
+    enabled: boolean,
+    resetKey: string | undefined,
+    getPageElapsedMs: () => number,
+) => {
     const contextsRef = useRef<Map<ScrollTargetKey, ScrollContextState>>(new Map());
     const pendingTargetsRef = useRef<Set<ScrollTargetKey>>(new Set());
+    const sectionTimingRef = useRef<Map<ScrollTargetKey, SectionTimingState>>(new Map());
     const rafRef = useRef<number | null>(null);
 
     useEffect(() => {
         const contexts = contextsRef.current;
         const pendingTargets = pendingTargetsRef.current;
+        const sectionTimings = sectionTimingRef.current;
         contexts.clear();
         pendingTargets.clear();
+        sectionTimings.clear();
 
         if (rafRef.current != null) {
             cancelAnimationFrame(rafRef.current);
@@ -336,10 +371,13 @@ const useScrollTracking = (enabled: boolean, resetKey?: string) => {
 
             if (target !== "window" && !document.contains(target)) {
                 contexts.delete(target);
+                sectionTimings.delete(target);
                 return;
             }
 
             const state = getOrCreateContextState(contexts, target);
+            const now = getTimestamp();
+            const timingState = sectionTimings.get(target);
 
             let scrollTop = 0;
             let viewportHeight = 0;
@@ -379,10 +417,40 @@ const useScrollTracking = (enabled: boolean, resetKey?: string) => {
 
             state.lastPercentage = roundedPercentage;
 
+            const activeSection = getActiveScrollSection(target);
+            let sectionDurationMs: number | undefined;
+
+            if (activeSection) {
+                if (!timingState || timingState.section !== activeSection) {
+                    sectionTimings.set(target, { section: activeSection, since: now });
+                    sectionDurationMs = 0;
+                } else {
+                    sectionDurationMs = Math.max(0, now - timingState.since);
+                }
+            } else if (!timingState) {
+                sectionTimings.set(target, { section: null, since: now });
+            } else if (timingState.section) {
+                sectionTimings.set(target, { section: null, since: now });
+            }
+
             SCROLL_THRESHOLDS.forEach((threshold) => {
                 if (roundedPercentage >= threshold && !state.thresholds.has(threshold)) {
                     state.thresholds.add(threshold);
                     const metadata = buildScrollEventMetadata(target, threshold, roundedPercentage, pixels);
+                    const pageElapsed = Math.max(0, Math.round(getPageElapsedMs()));
+                    const additional: Record<string, unknown> =
+                        metadata.additional && typeof metadata.additional === "object"
+                            ? (metadata.additional as Record<string, unknown>)
+                            : {};
+                    additional.page_time_ms = pageElapsed;
+
+                    if (sectionDurationMs != null) {
+                        const componentDuration = Math.max(0, Math.round(sectionDurationMs));
+                        metadata.duration_ms = componentDuration;
+                        additional.component_visible_ms = componentDuration;
+                    }
+
+                    metadata.additional = additional;
                     trackAnalyticsEvent({ type: "scroll", metadata });
                 }
             });
@@ -436,15 +504,16 @@ const useScrollTracking = (enabled: boolean, resetKey?: string) => {
             document.removeEventListener("scroll", handleElementScroll, true);
             contexts.clear();
             pendingTargets.clear();
+            sectionTimings.clear();
             if (rafRef.current != null) {
                 cancelAnimationFrame(rafRef.current);
                 rafRef.current = null;
             }
         };
-    }, [enabled, resetKey]);
+    }, [enabled, getPageElapsedMs, resetKey]);
 };
 
-const useCtaTracking = (enabled: boolean) => {
+const useCtaTracking = (enabled: boolean, getPageElapsedMs: () => number) => {
     useEffect(() => {
         if (!enabled) {
             return;
@@ -506,6 +575,15 @@ const useCtaTracking = (enabled: boolean) => {
                 };
             }
 
+            const pageElapsed = Math.max(0, Math.round(getPageElapsedMs()));
+            const additional: Record<string, unknown> =
+                metadata.additional && typeof metadata.additional === "object"
+                    ? (metadata.additional as Record<string, unknown>)
+                    : {};
+            additional.page_time_ms = pageElapsed;
+            metadata.additional = additional;
+            metadata.duration_ms = pageElapsed;
+
             trackAnalyticsEvent({ type, metadata });
         };
 
@@ -513,18 +591,18 @@ const useCtaTracking = (enabled: boolean) => {
         return () => {
             window.removeEventListener("click", handleClick);
         };
-    }, [enabled]);
+    }, [enabled, getPageElapsedMs]);
 };
 
-const useFormTracking = (enabled: boolean) => {
-    const startedFormsRef = useRef<WeakSet<HTMLFormElement>>();
+const useFormTracking = (enabled: boolean, getPageElapsedMs: () => number) => {
+    const startedFormsRef = useRef<WeakMap<HTMLFormElement, number>>();
 
     useEffect(() => {
         if (!enabled) {
             return;
         }
 
-        startedFormsRef.current = new WeakSet<HTMLFormElement>();
+        startedFormsRef.current = new WeakMap<HTMLFormElement, number>();
 
         const handleFocusIn = (event: FocusEvent) => {
             if (!isAnalyticsTrackingEnabled()) {
@@ -538,11 +616,12 @@ const useFormTracking = (enabled: boolean) => {
             }
 
             const startedForms = startedFormsRef.current;
+            const now = getTimestamp();
             if (startedForms?.has(form)) {
                 return;
             }
 
-            startedForms?.add(form);
+            startedForms?.set(form, now);
 
             const metadata: AnalyticsMetadata = {
                 interaction_target: form.dataset.analyticsTarget || buildElementSelector(form),
@@ -556,8 +635,11 @@ const useFormTracking = (enabled: boolean) => {
                     form_id: form.id || null,
                     form_name: form.getAttribute("name") || null,
                     method: form.method || "get",
+                    page_time_ms: Math.max(0, Math.round(getPageElapsedMs())),
                 },
             };
+
+            metadata.duration_ms = metadata.additional?.page_time_ms as number | undefined;
 
             trackAnalyticsEvent({ type: "form_start", metadata });
         };
@@ -586,8 +668,20 @@ const useFormTracking = (enabled: boolean) => {
                     method: form.method || "get",
                     action: form.getAttribute("action") || null,
                     started: startedFormsRef.current?.has(form) ?? false,
+                    page_time_ms: Math.max(0, Math.round(getPageElapsedMs())),
                 },
             };
+
+            const startedAt = startedFormsRef.current?.get(form);
+            if (typeof startedAt === "number") {
+                const duration = Math.max(0, Math.round(getTimestamp() - startedAt));
+                metadata.duration_ms = duration;
+                if (metadata.additional && typeof metadata.additional === "object") {
+                    (metadata.additional as Record<string, unknown>).form_completion_ms = duration;
+                }
+            } else {
+                metadata.duration_ms = metadata.additional?.page_time_ms as number | undefined;
+            }
 
             trackAnalyticsEvent({ type: "form_submit", metadata });
         };
@@ -599,10 +693,10 @@ const useFormTracking = (enabled: boolean) => {
             document.removeEventListener("focusin", handleFocusIn);
             document.removeEventListener("submit", handleSubmit);
         };
-    }, [enabled]);
+    }, [enabled, getPageElapsedMs]);
 };
 
-const useUnloadFlush = (enabled: boolean) => {
+const useUnloadFlush = (enabled: boolean, onBeforeUnload?: () => void) => {
     useEffect(() => {
         if (!enabled) {
             return;
@@ -615,6 +709,7 @@ const useUnloadFlush = (enabled: boolean) => {
         };
 
         const handleBeforeUnload = () => {
+            onBeforeUnload?.();
             void flushAnalyticsQueue({ useBeacon: true });
         };
 
@@ -625,7 +720,7 @@ const useUnloadFlush = (enabled: boolean) => {
             document.removeEventListener("visibilitychange", handleVisibilityChange);
             window.removeEventListener("beforeunload", handleBeforeUnload);
         };
-    }, [enabled]);
+    }, [enabled, onBeforeUnload]);
 };
 
 const AnalyticsTracker = () => {
@@ -639,6 +734,108 @@ const AnalyticsTracker = () => {
         return searchString ? `${path}?${searchString}` : path;
     }, [pathname, searchString]);
     const lastTrackedUrlRef = useRef<string | null>(null);
+    const pageTimingRef = useRef<PageTimingState | null>(null);
+    const pageDurationSentRef = useRef(false);
+
+    const getPageElapsedMs = useCallback(() => {
+        const state = pageTimingRef.current;
+        if (!state) {
+            return 0;
+        }
+        const current = getTimestamp();
+        if (state.isVisible) {
+            return Math.max(0, Math.round(state.totalVisible + (current - state.visibleSince)));
+        }
+        return Math.max(0, Math.round(state.totalVisible));
+    }, []);
+
+    const resetPageTiming = useCallback(() => {
+        pageTimingRef.current = createPageTimingState();
+        pageDurationSentRef.current = false;
+    }, []);
+
+    const finalizePageDuration = useCallback((): number | null => {
+        const state = pageTimingRef.current;
+        if (!state) {
+            return null;
+        }
+        const current = getTimestamp();
+        if (state.isVisible) {
+            state.totalVisible += current - state.visibleSince;
+            state.visibleSince = current;
+            state.isVisible = false;
+        }
+        return Math.max(0, Math.round(state.totalVisible));
+    }, []);
+
+    const emitPageDuration = useCallback(
+        (reason: "route_change" | "before_unload") => {
+            const pageUrl = lastTrackedUrlRef.current;
+            if (!pageUrl) {
+                return;
+            }
+            if (reason === "before_unload" && pageDurationSentRef.current) {
+                return;
+            }
+
+            const duration = finalizePageDuration();
+            if (duration == null) {
+                return;
+            }
+
+            const metadata: AnalyticsMetadata = {
+                duration_ms: duration,
+                additional: {
+                    reason,
+                    page_time_ms: duration,
+                },
+            };
+
+            trackAnalyticsEvent({
+                type: "page_duration",
+                metadata,
+                pageUrl,
+                includeDevice: false,
+            });
+
+            if (reason === "before_unload") {
+                pageDurationSentRef.current = true;
+            }
+        },
+        [finalizePageDuration],
+    );
+
+    useEffect(() => {
+        if (!publicRoute) {
+            return;
+        }
+        if (typeof document === "undefined") {
+            return;
+        }
+
+        const handleVisibilityChange = () => {
+            const state = pageTimingRef.current ?? createPageTimingState();
+            if (!pageTimingRef.current) {
+                pageTimingRef.current = state;
+            }
+            const current = getTimestamp();
+            if (document.visibilityState === "hidden") {
+                if (state.isVisible) {
+                    state.totalVisible += current - state.visibleSince;
+                    state.visibleSince = current;
+                    state.isVisible = false;
+                }
+            } else {
+                state.visibleSince = current;
+                state.isVisible = true;
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+        };
+    }, [publicRoute]);
 
     useEffect(() => {
         if (publicRoute) {
@@ -656,23 +853,40 @@ const AnalyticsTracker = () => {
 
     useEffect(() => {
         if (!publicRoute) {
+            if (lastTrackedUrlRef.current) {
+                emitPageDuration("route_change");
+            }
             lastTrackedUrlRef.current = null;
+            pageTimingRef.current = null;
+            pageDurationSentRef.current = false;
             return;
         }
 
         const url = buildUrlFromParts(pathname ?? "", searchString);
+        if (lastTrackedUrlRef.current && lastTrackedUrlRef.current !== url) {
+            emitPageDuration("route_change");
+            resetPageTiming();
+        } else if (!pageTimingRef.current) {
+            resetPageTiming();
+        }
+
         if (lastTrackedUrlRef.current === url) {
             return;
         }
 
         lastTrackedUrlRef.current = url;
+        pageDurationSentRef.current = false;
         trackPageView(url);
-    }, [pathname, publicRoute, searchString]);
+    }, [emitPageDuration, pathname, publicRoute, resetPageTiming, searchString]);
 
-    useScrollTracking(publicRoute, scrollResetKey);
-    useCtaTracking(publicRoute);
-    useFormTracking(publicRoute);
-    useUnloadFlush(publicRoute);
+    const handleBeforeUnload = useCallback(() => {
+        emitPageDuration("before_unload");
+    }, [emitPageDuration]);
+
+    useScrollTracking(publicRoute, scrollResetKey, getPageElapsedMs);
+    useCtaTracking(publicRoute, getPageElapsedMs);
+    useFormTracking(publicRoute, getPageElapsedMs);
+    useUnloadFlush(publicRoute, handleBeforeUnload);
 
     return null;
 };
