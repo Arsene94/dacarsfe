@@ -1276,6 +1276,15 @@ const AdminDashboard = () => {
                                                     r.remaining_balance ??
                                                         (r as { remainingBalance?: unknown }).remainingBalance,
                                                 );
+                                                const extensionRemainingPayment =
+                                                    typeof extensionDetails?.remainingPayment === "number"
+                                                        ? extensionDetails.remainingPayment
+                                                        : null;
+                                                const hasUnpaidExtension =
+                                                    extensionDetails != null && extensionDetails.paid === false;
+                                                const outstandingExtensionBalance = hasUnpaidExtension
+                                                    ? extensionRemainingPayment ?? remainingBalanceValue ?? null
+                                                    : null;
                                                 return (
                                                     <div
                                                         key={r.id + (isDeparture ? 'start' : 'end')}
@@ -1325,11 +1334,11 @@ const AdminDashboard = () => {
                                                                             Extins până la {extensionLabel ?? '—'}
                                                                         </span>
                                                                     )}
-                                                                    {!extensionDetails?.paid &&
-                                                                        typeof remainingBalanceValue === 'number' &&
-                                                                        remainingBalanceValue > 0 && (
+                                                                    {hasUnpaidExtension &&
+                                                                        typeof outstandingExtensionBalance === 'number' &&
+                                                                        outstandingExtensionBalance > 0 && (
                                                                             <span className="text-xs font-semibold text-amber-700">
-                                                                                Sold: {euroFormatter.format(remainingBalanceValue)}€
+                                                                                Rest de plată: {euroFormatter.format(outstandingExtensionBalance)}€
                                                                             </span>
                                                                         )}
                                                                     {r.child_seat_service_name && (
@@ -1384,7 +1393,10 @@ const AdminDashboard = () => {
                                                                             arrivalTime: r.start_hour_group.slice(0, 5),
                                                                             returnDate: r.rental_end_date.slice(0, 10),
                                                                             returnTime: r.end_hour_group.slice(0, 5),
-                                                                            remainingBalance: remainingBalanceValue ?? null,
+                                                                            remainingBalance:
+                                                                                outstandingExtensionBalance ??
+                                                                                remainingBalanceValue ??
+                                                                                null,
                                                                             extension: extensionDetails,
                                                                         })
                                                                     }
