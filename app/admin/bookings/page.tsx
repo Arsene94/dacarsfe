@@ -829,18 +829,9 @@ const buildBookingFormFromReservation = (
         ? reservation.pricePerDay
         : base.base_price_casco,
     total_services: servicesTotal,
-    sub_total:
-      typeof reservation.subTotal === "number"
-        ? reservation.subTotal
-        : base.sub_total,
-    total:
-      typeof reservation.total === "number"
-        ? reservation.total
-        : base.total,
-    tax_amount:
-      typeof reservation.taxAmount === "number"
-        ? reservation.taxAmount
-        : base.tax_amount,
+    sub_total: reservation.subTotal,
+    total: reservation.total,
+    tax_amount: reservation.taxAmount,
     coupon_amount: couponAmount,
     coupon_code: reservation.discountCode || base.coupon_code,
     discount_applied:
