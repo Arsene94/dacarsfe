@@ -97,6 +97,33 @@ type AdminReservationRow = AdminReservation & {
   extension?: AdminBookingExtension | null;
 };
 
+const resolveOutstandingExtensionAmount = (
+  extension: AdminBookingExtension | null | undefined,
+  reservationRemaining: number | null | undefined,
+): number | null => {
+  if (!extension || extension.paid) {
+    return null;
+  }
+
+  if (
+    typeof extension.remainingPayment === "number" &&
+    Number.isFinite(extension.remainingPayment) &&
+    extension.remainingPayment > 0
+  ) {
+    return extension.remainingPayment;
+  }
+
+  if (
+    typeof reservationRemaining === "number" &&
+    Number.isFinite(reservationRemaining) &&
+    reservationRemaining > 0
+  ) {
+    return reservationRemaining;
+  }
+
+  return null;
+};
+
 const formatDateTime = (
   value: string | null | undefined,
   formatter: Intl.DateTimeFormat = defaultDateTimeFormatter,
@@ -1194,42 +1221,31 @@ const ReservationsPage = () => {
     eligible: selectedWheelPrizeEligible,
   } = selectedWheelPrizeDetails;
 
-  const selectedRemainingBalanceLabel =
-    selectedReservation &&
-    typeof selectedReservation.remainingBalance === "number" &&
-    selectedReservation.remainingBalance > 0
-      ? formatEuro(selectedReservation.remainingBalance)
+  const selectedExtension = selectedReservation?.extension ?? null;
+  const selectedOutstandingExtensionAmount = resolveOutstandingExtensionAmount(
+    selectedExtension,
+    selectedReservation?.remainingBalance ?? null,
+  );
+  const selectedOutstandingExtensionLabel =
+    selectedOutstandingExtensionAmount != null
+      ? formatEuro(selectedOutstandingExtensionAmount)
       : null;
 
-  const selectedRemainingBalanceRow = selectedRemainingBalanceLabel ? (
+  const selectedRemainingBalanceRow = selectedOutstandingExtensionLabel ? (
     <div className="flex items-center justify-between">
-      <span className="font-dm-sans text-gray-600">Sold rămas:</span>
+      <span className="font-dm-sans text-gray-600">Rest de plată:</span>
       <span className="font-dm-sans font-semibold text-amber-600">
-        {selectedRemainingBalanceLabel}
+        {selectedOutstandingExtensionLabel}
       </span>
     </div>
   ) : null;
 
-  const selectedExtension = selectedReservation?.extension ?? null;
   const selectedExtensionStartLabel = selectedExtension
     ? formatDateTime(selectedExtension.from)
     : null;
   const selectedExtensionEndLabel = selectedExtension
     ? formatDateTime(selectedExtension.to)
     : null;
-
-  let selectedExtensionRemainingLabel: string | null = null;
-  if (selectedReservation && selectedExtension && !selectedExtension.paid) {
-    const outstanding =
-      typeof selectedExtension.remainingPayment === "number"
-        ? selectedExtension.remainingPayment
-        : typeof selectedReservation.remainingBalance === "number"
-          ? selectedReservation.remainingBalance
-          : null;
-    if (typeof outstanding === "number" && outstanding > 0) {
-      selectedExtensionRemainingLabel = formatEuro(outstanding);
-    }
-  }
 
   const selectedExtensionSummary = selectedExtension ? (
     <div
@@ -1279,14 +1295,25 @@ const ReservationsPage = () => {
             {formatEuro(selectedExtension.total)}
           </span>
         </div>
-        {!selectedExtension.paid && selectedExtensionRemainingLabel && (
+        {!selectedExtension.paid && selectedOutstandingExtensionLabel && (
           <div className="font-dm-sans font-semibold text-amber-700">
-            Sold extindere: {selectedExtensionRemainingLabel}
+            Rest de plată extindere: {selectedOutstandingExtensionLabel}
           </div>
         )}
       </div>
     </div>
   ) : null;
+
+  const extendOutstandingExtensionAmount = extendReservation
+    ? resolveOutstandingExtensionAmount(
+        extendReservation.extension ?? null,
+        extendReservation.remainingBalance ?? null,
+      )
+    : null;
+  const extendOutstandingExtensionLabel =
+    extendOutstandingExtensionAmount != null
+      ? formatEuro(extendOutstandingExtensionAmount)
+      : null;
 
   useEffect(() => {
     fetchBookings();
@@ -1580,9 +1607,13 @@ const ReservationsPage = () => {
         headerClassName: "hidden sm:table-cell",
         cellClassName: "hidden sm:table-cell",
         cell: (r) => {
-          const remainingLabel =
-            typeof r.remainingBalance === "number" && r.remainingBalance > 0
-              ? formatEuro(r.remainingBalance)
+          const outstandingExtensionAmount = resolveOutstandingExtensionAmount(
+            r.extension ?? null,
+            r.remainingBalance ?? null,
+          );
+          const outstandingExtensionLabel =
+            outstandingExtensionAmount != null
+              ? formatEuro(outstandingExtensionAmount)
               : null;
           const extensionLabel = r.extension
             ? formatDateTime(r.extension.to, shortDateTimeFormatter)
@@ -1594,8 +1625,10 @@ const ReservationsPage = () => {
           return (
             <div className="font-dm-sans text-xs text-gray-900">
               <div className="font-semibold text-berkeley">{formatEuro(r.total)}</div>
-              {remainingLabel && (
-                <div className="text-amber-600 font-semibold">Sold: {remainingLabel}</div>
+              {outstandingExtensionLabel && (
+                <div className="text-amber-600 font-semibold">
+                  Rest de plată: {outstandingExtensionLabel}
+                </div>
               )}
               {extensionLabel && (
                 <div className={`text-xs font-medium ${extensionClass}`}>
@@ -1671,34 +1704,17 @@ const ReservationsPage = () => {
     const { prize, amountLabel, expiryLabel, discountValue, totalBefore } =
       extractWheelPrizeDisplay(r.wheelPrize, r.wheelPrizeDiscount, r.totalBeforeWheelPrize);
 
-    const remainingBalanceLabel =
-      typeof r.remainingBalance === "number" && r.remainingBalance > 0
-        ? formatEuro(r.remainingBalance)
-        : null;
     const extension = r.extension ?? null;
     const extensionStartLabel = extension ? formatDateTime(extension.from) : null;
     const extensionEndLabel = extension ? formatDateTime(extension.to) : null;
-    let extensionRemainingLabel: string | null = null;
-    if (extension && !extension.paid) {
-      const outstanding =
-        typeof extension.remainingPayment === "number"
-          ? extension.remainingPayment
-          : typeof r.remainingBalance === "number"
-            ? r.remainingBalance
-            : null;
-      if (typeof outstanding === "number" && outstanding > 0) {
-        extensionRemainingLabel = formatEuro(outstanding);
-      }
-    }
-    const remainingBalanceRow =
-      remainingBalanceLabel && (
-        <div className="flex items-center justify-between">
-          <span className="font-dm-sans text-gray-600">Sold rămas:</span>
-          <span className="font-dm-sans font-semibold text-amber-600">
-            {remainingBalanceLabel}
-          </span>
-        </div>
-      );
+    const outstandingExtensionAmount = resolveOutstandingExtensionAmount(
+      extension,
+      r.remainingBalance ?? null,
+    );
+    const outstandingExtensionLabel =
+      outstandingExtensionAmount != null
+        ? formatEuro(outstandingExtensionAmount)
+        : null;
     const extensionSummary = extension ? (
       <div
         className={`rounded-lg px-3 py-2 ${
@@ -1734,9 +1750,9 @@ const ReservationsPage = () => {
             Total extindere: {" "}
             <span className="font-medium text-gray-900">{formatEuro(extension.total)}</span>
           </div>
-          {!extension.paid && extensionRemainingLabel && (
+          {!extension.paid && outstandingExtensionLabel && (
             <div className="font-dm-sans font-semibold text-amber-700">
-              Sold extindere: {extensionRemainingLabel}
+              Rest de plată extindere: {outstandingExtensionLabel}
             </div>
           )}
         </div>
@@ -1779,9 +1795,9 @@ const ReservationsPage = () => {
             <span className="px-3 py-1 rounded-full bg-berkeley/10 text-berkeley font-semibold">
               {formatEuro(r.total)}
             </span>
-            {remainingBalanceLabel && (
+            {outstandingExtensionLabel && (
               <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold">
-                Sold: {remainingBalanceLabel}
+                Rest de plată: {outstandingExtensionLabel}
               </span>
             )}
           </div>
@@ -2509,14 +2525,11 @@ const ReservationsPage = () => {
                           {formatEuro(extendReservation.extension.total)}
                         </span>
                       </div>
-                      {!extendReservation.extension.paid &&
-                        typeof extendReservation.extension.remainingPayment === "number" &&
-                        extendReservation.extension.remainingPayment > 0 && (
-                          <div className="font-dm-sans font-semibold text-amber-700">
-                            Sold extindere:{" "}
-                            {formatEuro(extendReservation.extension.remainingPayment)}
-                          </div>
-                        )}
+                      {extendOutstandingExtensionLabel && (
+                        <div className="font-dm-sans font-semibold text-amber-700">
+                          Rest de plată extindere: {extendOutstandingExtensionLabel}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
