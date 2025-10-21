@@ -892,135 +892,6 @@ const ReservationsPage = () => {
     [],
   );
 
-  const handleSubmitExtend = useCallback(async () => {
-    if (!extendReservation) {
-      return;
-    }
-
-    const normalizedDate = extendDate.trim();
-    if (!normalizedDate) {
-      setExtendError("Selectează data de retur pentru prelungire.");
-      return;
-    }
-
-    const normalizedId = extendReservation.id.trim();
-    const normalizedBookingNumber =
-      typeof extendReservation.bookingNumber === "string"
-        ? extendReservation.bookingNumber.trim()
-        : typeof extendReservation.bookingNumber === "number"
-          ? String(extendReservation.bookingNumber)
-          : null;
-    const lookupId =
-      normalizedId.length > 0
-        ? normalizedId
-        : normalizedBookingNumber
-          ? normalizedBookingNumber
-          : "";
-
-    if (!lookupId) {
-      setExtendError("Nu am putut identifica rezervarea pentru prelungire.");
-      return;
-    }
-
-    const payload: BookingExtendPayload = {
-      paid: extendPaid,
-    };
-
-    payload.extended_until_date = normalizedDate;
-    if (extendTime.trim()) {
-      payload.extended_until_time = extendTime.trim();
-    }
-
-    const priceValue = parseOptionalNumber(extendPrice);
-    if (typeof priceValue === "number") {
-      payload.price_per_day = priceValue;
-    }
-
-    setExtendLoading(true);
-    setExtendError(null);
-
-    try {
-      const requestId = /^(?:\d+)$/.test(lookupId) ? Number(lookupId) : lookupId;
-      await apiClient.extendBooking(requestId, payload);
-
-      const updatedList = await fetchBookings();
-      const targetReservation = extendReservation;
-      const updatedReservation =
-        updatedList.find((entry) => entry.id === targetReservation.id.trim()) ??
-        (normalizedBookingNumber
-          ? updatedList.find(
-              (entry) =>
-                (entry.bookingNumber &&
-                  String(entry.bookingNumber).trim() === normalizedBookingNumber) ||
-                entry.id === normalizedBookingNumber,
-            )
-          : undefined);
-
-      if (updatedReservation) {
-        setSelectedReservation((prev) => {
-          if (!prev) {
-            return prev;
-          }
-          const prevId = prev.id.trim();
-          const prevBookingNumber =
-            typeof prev.bookingNumber === "string"
-              ? prev.bookingNumber.trim()
-              : typeof prev.bookingNumber === "number"
-                ? String(prev.bookingNumber)
-                : null;
-          const matchesId = prevId && prevId === updatedReservation.id;
-          const matchesBookingNumber =
-            prevBookingNumber &&
-            (prevBookingNumber === normalizedBookingNumber ||
-              prevBookingNumber === updatedReservation.bookingNumber);
-          return matchesId || matchesBookingNumber ? updatedReservation : prev;
-        });
-      }
-
-      setExtendPopupOpen(false);
-      setExtendReservation(null);
-      setExtendDate("");
-      setExtendTime("");
-      setExtendPrice("");
-      setExtendPaid(false);
-      setExtendError(null);
-    } catch (error) {
-      console.error("Nu am putut prelungi rezervarea", error);
-      if (error instanceof Error && error.message.trim().length > 0) {
-        setExtendError(error.message);
-      } else {
-        setExtendError("Nu am putut prelungi rezervarea. Încearcă din nou.");
-      }
-    } finally {
-      setExtendLoading(false);
-    }
-  }, [
-    extendReservation,
-    extendDate,
-    extendTime,
-    extendPrice,
-    extendPaid,
-    fetchBookings,
-    setSelectedReservation,
-  ]);
-
-  const selectedWheelPrizeDetails = selectedReservation
-    ? extractWheelPrizeDisplay(
-        selectedReservation.wheelPrize,
-        selectedReservation.wheelPrizeDiscount,
-        selectedReservation.totalBeforeWheelPrize,
-      )
-    : EMPTY_WHEEL_PRIZE_DETAILS;
-
-  const {
-    prize: selectedWheelPrize,
-    amountLabel: selectedWheelPrizeAmountLabel,
-    expiryLabel: selectedWheelPrizeExpiry,
-    discountValue: selectedWheelPrizeDiscount,
-    totalBefore: selectedTotalBeforeWheelPrize,
-    eligible: selectedWheelPrizeEligible,
-  } = selectedWheelPrizeDetails;
-
   const mapStatus = (status: string): AdminReservation["status"] => {
     switch (status) {
       case "no_answer":
@@ -1186,6 +1057,135 @@ const ReservationsPage = () => {
       return [];
     }
   }, [currentPage, perPage, searchTerm, statusFilter, startDateFilter, endDateFilter]);
+
+  const handleSubmitExtend = useCallback(async () => {
+    if (!extendReservation) {
+      return;
+    }
+
+    const normalizedDate = extendDate.trim();
+    if (!normalizedDate) {
+      setExtendError("Selectează data de retur pentru prelungire.");
+      return;
+    }
+
+    const normalizedId = extendReservation.id.trim();
+    const normalizedBookingNumber =
+      typeof extendReservation.bookingNumber === "string"
+        ? extendReservation.bookingNumber.trim()
+        : typeof extendReservation.bookingNumber === "number"
+          ? String(extendReservation.bookingNumber)
+          : null;
+    const lookupId =
+      normalizedId.length > 0
+        ? normalizedId
+        : normalizedBookingNumber
+          ? normalizedBookingNumber
+          : "";
+
+    if (!lookupId) {
+      setExtendError("Nu am putut identifica rezervarea pentru prelungire.");
+      return;
+    }
+
+    const payload: BookingExtendPayload = {
+      paid: extendPaid,
+    };
+
+    payload.extended_until_date = normalizedDate;
+    if (extendTime.trim()) {
+      payload.extended_until_time = extendTime.trim();
+    }
+
+    const priceValue = parseOptionalNumber(extendPrice);
+    if (typeof priceValue === "number") {
+      payload.price_per_day = priceValue;
+    }
+
+    setExtendLoading(true);
+    setExtendError(null);
+
+    try {
+      const requestId = /^(?:\d+)$/.test(lookupId) ? Number(lookupId) : lookupId;
+      await apiClient.extendBooking(requestId, payload);
+
+      const updatedList = await fetchBookings();
+      const targetReservation = extendReservation;
+      const updatedReservation =
+        updatedList.find((entry) => entry.id === targetReservation.id.trim()) ??
+        (normalizedBookingNumber
+          ? updatedList.find(
+              (entry) =>
+                (entry.bookingNumber &&
+                  String(entry.bookingNumber).trim() === normalizedBookingNumber) ||
+                entry.id === normalizedBookingNumber,
+            )
+          : undefined);
+
+      if (updatedReservation) {
+        setSelectedReservation((prev) => {
+          if (!prev) {
+            return prev;
+          }
+          const prevId = prev.id.trim();
+          const prevBookingNumber =
+            typeof prev.bookingNumber === "string"
+              ? prev.bookingNumber.trim()
+              : typeof prev.bookingNumber === "number"
+                ? String(prev.bookingNumber)
+                : null;
+          const matchesId = prevId && prevId === updatedReservation.id;
+          const matchesBookingNumber =
+            prevBookingNumber &&
+            (prevBookingNumber === normalizedBookingNumber ||
+              prevBookingNumber === updatedReservation.bookingNumber);
+          return matchesId || matchesBookingNumber ? updatedReservation : prev;
+        });
+      }
+
+      setExtendPopupOpen(false);
+      setExtendReservation(null);
+      setExtendDate("");
+      setExtendTime("");
+      setExtendPrice("");
+      setExtendPaid(false);
+      setExtendError(null);
+    } catch (error) {
+      console.error("Nu am putut prelungi rezervarea", error);
+      if (error instanceof Error && error.message.trim().length > 0) {
+        setExtendError(error.message);
+      } else {
+        setExtendError("Nu am putut prelungi rezervarea. Încearcă din nou.");
+      }
+    } finally {
+      setExtendLoading(false);
+    }
+  }, [
+    extendReservation,
+    extendDate,
+    extendTime,
+    extendPrice,
+    extendPaid,
+    fetchBookings,
+    setSelectedReservation,
+  ]);
+
+  const selectedWheelPrizeDetails = selectedReservation
+    ? extractWheelPrizeDisplay(
+        selectedReservation.wheelPrize,
+        selectedReservation.wheelPrizeDiscount,
+        selectedReservation.totalBeforeWheelPrize,
+      )
+    : EMPTY_WHEEL_PRIZE_DETAILS;
+
+  const {
+    prize: selectedWheelPrize,
+    amountLabel: selectedWheelPrizeAmountLabel,
+    expiryLabel: selectedWheelPrizeExpiry,
+    discountValue: selectedWheelPrizeDiscount,
+    totalBefore: selectedTotalBeforeWheelPrize,
+    eligible: selectedWheelPrizeEligible,
+  } = selectedWheelPrizeDetails;
 
   useEffect(() => {
     fetchBookings();
