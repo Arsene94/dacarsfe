@@ -96,9 +96,9 @@ vi.mock('@/components/checkout/SelectedCarGallery', () => ({
 }));
 
 const wheelStorageMocks = vi.hoisted(() => {
-  const getStoredWheelPrizeMock = vi.fn<[], StoredWheelPrizeEntry | null>();
+  const getStoredWheelPrizeMock = vi.fn<() => StoredWheelPrizeEntry | null>();
   const clearStoredWheelPrizeMock = vi.fn();
-  const isStoredWheelPrizeActiveMock = vi.fn<[], boolean>();
+  const isStoredWheelPrizeActiveMock = vi.fn<() => boolean>();
 
   return {
     getStoredWheelPrizeMock,

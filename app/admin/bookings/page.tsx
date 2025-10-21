@@ -1187,6 +1187,100 @@ const ReservationsPage = () => {
     eligible: selectedWheelPrizeEligible,
   } = selectedWheelPrizeDetails;
 
+  const selectedRemainingBalanceLabel =
+    selectedReservation &&
+    typeof selectedReservation.remainingBalance === "number" &&
+    selectedReservation.remainingBalance > 0
+      ? formatEuro(selectedReservation.remainingBalance)
+      : null;
+
+  const selectedRemainingBalanceRow = selectedRemainingBalanceLabel ? (
+    <div className="flex items-center justify-between">
+      <span className="font-dm-sans text-gray-600">Sold rămas:</span>
+      <span className="font-dm-sans font-semibold text-amber-600">
+        {selectedRemainingBalanceLabel}
+      </span>
+    </div>
+  ) : null;
+
+  const selectedExtension = selectedReservation?.extension ?? null;
+  const selectedExtensionStartLabel = selectedExtension
+    ? formatDateTime(selectedExtension.from)
+    : null;
+  const selectedExtensionEndLabel = selectedExtension
+    ? formatDateTime(selectedExtension.to)
+    : null;
+
+  let selectedExtensionRemainingLabel: string | null = null;
+  if (selectedReservation && selectedExtension && !selectedExtension.paid) {
+    const outstanding =
+      typeof selectedExtension.remainingPayment === "number"
+        ? selectedExtension.remainingPayment
+        : typeof selectedReservation.remainingBalance === "number"
+          ? selectedReservation.remainingBalance
+          : null;
+    if (typeof outstanding === "number" && outstanding > 0) {
+      selectedExtensionRemainingLabel = formatEuro(outstanding);
+    }
+  }
+
+  const selectedExtensionSummary = selectedExtension ? (
+    <div
+      className={`rounded-lg px-3 py-2 ${
+        selectedExtension.paid
+          ? "border border-emerald-200 bg-emerald-50"
+          : "border border-amber-200 bg-amber-50"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-dm-sans font-semibold text-gray-800">
+          Prelungire
+          {typeof selectedExtension.days === "number"
+            ? ` (+${selectedExtension.days} zile)`
+            : ""}
+        </span>
+        <span
+          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+            selectedExtension.paid
+              ? "bg-emerald-100 text-emerald-700"
+              : "bg-amber-100 text-amber-700"
+          }`}
+        >
+          {selectedExtension.paid ? "Achitată" : "Neachitată"}
+        </span>
+      </div>
+      <div className="mt-2 space-y-1 text-sm text-gray-700">
+        <div>
+          Interval: {" "}
+          <span className="font-medium text-gray-900">
+            {selectedExtensionStartLabel ?? "—"}
+          </span>{" "}
+          → {" "}
+          <span className="font-medium text-gray-900">
+            {selectedExtensionEndLabel ?? "—"}
+          </span>
+        </div>
+        <div>
+          Tarif extindere: {" "}
+          <span className="font-medium text-gray-900">
+            {formatEuro(selectedExtension.pricePerDay)}
+          </span>
+        </div>
+        <div>
+          Total extindere: {" "}
+          <span className="font-medium text-gray-900">
+            {formatEuro(selectedExtension.total)}
+          </span>
+        </div>
+        {!selectedExtension.paid && selectedExtensionRemainingLabel && (
+          <div className="font-dm-sans font-semibold text-amber-700">
+            Sold extindere: {selectedExtensionRemainingLabel}
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null;
+
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
@@ -2261,7 +2355,7 @@ const ReservationsPage = () => {
                             </span>
                           </div>
                         )}
-                      {remainingBalanceRow}
+                      {selectedRemainingBalanceRow}
                       <div className="flex items-center justify-between">
                         <span className="font-dm-sans text-gray-600">
                           Total:
@@ -2289,7 +2383,9 @@ const ReservationsPage = () => {
                           </div>
                       )}
                   </div>
-                  {extensionSummary && <div className="mt-4">{extensionSummary}</div>}
+                  {selectedExtensionSummary && (
+                    <div className="mt-4">{selectedExtensionSummary}</div>
+                  )}
                 </div>
 
                 {selectedReservation.notes && (
@@ -2314,10 +2410,13 @@ const ReservationsPage = () => {
                   Confirmă Rezervarea
                 </button>
                 <button
-                  onClick={() => handleOpenExtendReservation(r)}
+                  onClick={() => handleOpenExtendReservation(selectedReservation)}
                   className="flex-1 border-2 border-amber-300 text-amber-700 py-3 rounded-lg font-semibold font-dm-sans hover:bg-amber-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Prelungește rezervarea"
-                  disabled={extendLoading && extendReservation?.id === r.id}
+                  disabled={
+                    extendLoading &&
+                    extendReservation?.id === selectedReservation.id
+                  }
                 >
                   Prelungește
                 </button>

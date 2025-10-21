@@ -72,7 +72,9 @@ vi.mock('@/components/LazyMap', () => ({
   default: () => <div data-testid="lazy-map">Harta locației</div>,
 }));
 
-const apiClientMock = (globalThis as { __clientApiMock: ClientApiMock }).__clientApiMock;
+const { __clientApiMock: apiClientMock } = globalThis as typeof globalThis & {
+  __clientApiMock: ClientApiMock;
+};
 
 const baseCar: ApiCar = {
   id: 101,
