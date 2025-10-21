@@ -25,6 +25,7 @@ import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
 import { extractList } from "@/lib/apiResponse";
 import type {
+  AdminBookingExtension,
   AdminBookingFormValues,
   AdminBookingResource,
   AdminReservation,
@@ -90,6 +91,11 @@ const shortDateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
   hour: "2-digit",
   minute: "2-digit",
 });
+
+type AdminReservationRow = AdminReservation & {
+  remainingBalance?: number | null;
+  extension?: AdminBookingExtension | null;
+};
 
 const formatDateTime = (
   value: string | null | undefined,
@@ -682,7 +688,7 @@ const normalizeBoolean = (value: unknown, defaultValue = false) => {
 };
 
 const buildBookingFormFromReservation = (
-  reservation: AdminReservation,
+  reservation: AdminReservationRow,
 ): AdminBookingFormValues => {
   const base = createEmptyBookingForm();
   const rentalStart = toLocalDateTimeInput(reservation.startDate);
@@ -784,7 +790,7 @@ const buildBookingFormFromReservation = (
 };
 
 const ReservationsPage = () => {
-  const [reservations, setReservations] = useState<AdminReservation[]>([]);
+  const [reservations, setReservations] = useState<AdminReservationRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [startDateFilter, setStartDateFilter] = useState("");
@@ -795,7 +801,7 @@ const ReservationsPage = () => {
   });
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedReservation, setSelectedReservation] =
-    useState<AdminReservation | null>(null);
+    useState<AdminReservationRow | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
@@ -807,7 +813,7 @@ const ReservationsPage = () => {
   const [totalReservations, setTotalReservations] = useState(0);
   const [contractOpen, setContractOpen] = useState(false);
   const [contractReservation, setContractReservation] =
-    useState<AdminReservation | null>(null);
+    useState<AdminReservationRow | null>(null);
   const [editPopupOpen, setEditPopupOpen] = useState(false);
   const [bookingInfo, setBookingInfo] = useState<AdminBookingFormValues | null>(
     null,
@@ -817,7 +823,7 @@ const ReservationsPage = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [extendPopupOpen, setExtendPopupOpen] = useState(false);
   const [extendReservation, setExtendReservation] =
-    useState<AdminReservation | null>(null);
+    useState<AdminReservationRow | null>(null);
   const [extendDate, setExtendDate] = useState("");
   const [extendTime, setExtendTime] = useState("");
   const [extendPrice, setExtendPrice] = useState("");
@@ -851,7 +857,7 @@ const ReservationsPage = () => {
   }, [extendLoading]);
 
   const handleOpenExtendReservation = useCallback(
-    (reservation: AdminReservation) => {
+    (reservation: AdminReservationRow) => {
       const extension = reservation.extension ?? null;
       const baseDateTime =
         toLocalDateTimeInput(extension?.to ?? reservation.endDate) ??
@@ -910,7 +916,8 @@ const ReservationsPage = () => {
     }
   };
 
-  const fetchBookings = useCallback(async (): Promise<AdminReservation[]> => {
+  const fetchBookings = useCallback(
+    async (): Promise<AdminReservationRow[]> => {
     try {
       const params: {
         page: number;
@@ -926,7 +933,7 @@ const ReservationsPage = () => {
       if (endDateFilter) params.end_date = endDateFilter;
       const response = await apiClient.getBookings(params);
       const bookings = extractList<AdminBookingResource>(response);
-      const mapped = bookings.map<AdminReservation>((booking) => {
+      const mapped = bookings.map<AdminReservationRow>((booking) => {
         const wheelPrize = normalizeWheelPrizeSummary(booking.wheel_prize);
         const wheelPrizeDiscount =
           booking.wheel_prize_discount ?? wheelPrize?.discount_value ?? null;
@@ -1285,7 +1292,7 @@ const ReservationsPage = () => {
     fetchBookings();
   }, [fetchBookings]);
 
-  const handleViewReservation = useCallback((reservation: AdminReservation) => {
+  const handleViewReservation = useCallback((reservation: AdminReservationRow) => {
     setSelectedReservation(reservation);
     setShowModal(true);
   }, []);
@@ -1343,7 +1350,7 @@ const ReservationsPage = () => {
   );
 
   const handleDeleteReservation = useCallback(
-    async (reservation: AdminReservation) => {
+    async (reservation: AdminReservationRow) => {
       if (deletingId) {
         return;
       }
@@ -1465,7 +1472,7 @@ const ReservationsPage = () => {
       }
     }
 
-  const reservationColumns = React.useMemo<Column<AdminReservation>[]>(
+  const reservationColumns = React.useMemo<Column<AdminReservationRow>[]>(
     () => [
       {
         id: "reservation",
@@ -1660,7 +1667,7 @@ const ReservationsPage = () => {
     ],
   );
 
-  const renderReservationDetails = (r: AdminReservation) => {
+  const renderReservationDetails = (r: AdminReservationRow) => {
     const { prize, amountLabel, expiryLabel, discountValue, totalBefore } =
       extractWheelPrizeDisplay(r.wheelPrize, r.wheelPrizeDiscount, r.totalBeforeWheelPrize);
 

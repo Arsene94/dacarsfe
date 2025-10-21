@@ -113,6 +113,11 @@ const shortDateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
     minute: "2-digit",
 });
 
+type AdminReservationRow = AdminReservation & {
+    remainingBalance?: number | null;
+    extension?: AdminBookingExtension | null;
+};
+
 const formatDateTime = (
     value: string | null | undefined,
     formatter: Intl.DateTimeFormat = defaultDateTimeFormatter,
@@ -326,7 +331,7 @@ const mapActivityStatus = (status: string): AdminReservation["status"] => {
 
 const mapActivityReservationToAdmin = (
     reservation: ActivityReservation,
-): AdminReservation => ({
+): AdminReservationRow => ({
     id: String(reservation.id) || reservation.booking_number,
     bookingNumber: reservation.booking_number,
     customerName: reservation.customer_name ?? "",
@@ -676,7 +681,7 @@ const AdminDashboard = () => {
     );
     const [contractOpen, setContractOpen] = useState(false);
     const [contractReservation, setContractReservation] = useState<
-        AdminReservation | null
+        AdminReservationRow | null
     >(null);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
     const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);

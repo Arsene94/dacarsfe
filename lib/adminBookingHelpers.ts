@@ -8,7 +8,6 @@ import type {
   CustomerPhoneSearchResult,
 } from "@/types/admin";
 import type { ApiCar, CarAvailabilityResponse } from "@/types/car";
-import type { ReservationExtension } from "@/types/reservation";
 
 const toTrimmedString = (value: unknown): string =>
   typeof value === "string" ? value.trim() : "";
@@ -58,7 +57,7 @@ const normalizeBooleanFlag = (value: unknown, defaultValue = false): boolean => 
 };
 
 export const normalizeReservationExtension = (
-  extension: ReservationExtension | Record<string, unknown> | null | undefined,
+  extension: unknown,
 ): AdminBookingExtension | null => {
   if (!extension || typeof extension !== "object") {
     return null;
