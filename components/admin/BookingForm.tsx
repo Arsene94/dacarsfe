@@ -418,6 +418,39 @@ const normalizeServiceIds = (values: unknown): number[] => {
     return parsed.filter((value, index) => index === 0 || value !== parsed[index - 1]);
 };
 
+const resolveLinkedServiceId = (
+    service: AdminBookingLinkedService | null | undefined,
+): number | null => {
+    if (!service) return null;
+
+    const directId = service.id;
+    if (typeof directId === "number") {
+        return Number.isFinite(directId) ? directId : null;
+    }
+    if (typeof directId === "string") {
+        return toOptionalNumber(directId);
+    }
+
+    const fallbackId = (service as { service_id?: number | string | null }).service_id;
+    if (typeof fallbackId === "number") {
+        return Number.isFinite(fallbackId) ? fallbackId : null;
+    }
+    if (typeof fallbackId === "string") {
+        return toOptionalNumber(fallbackId);
+    }
+
+    const pivotId = (service as { pivot?: { service_id?: number | string | null } | null }).pivot
+        ?.service_id;
+    if (typeof pivotId === "number") {
+        return Number.isFinite(pivotId) ? pivotId : null;
+    }
+    if (typeof pivotId === "string") {
+        return toOptionalNumber(pivotId);
+    }
+
+    return null;
+};
+
 const extractLinkedServiceIds = (
     services: AdminBookingLinkedService[] | null | undefined,
 ): number[] => {
@@ -426,18 +459,8 @@ const extractLinkedServiceIds = (
     }
 
     const rawIds = services
-        .map((service) => {
-            if (!service) return null;
-            if (typeof service.id === "number" || typeof service.id === "string") {
-                return service.id;
-            }
-            const fallback = (service as { service_id?: number | string | null }).service_id;
-            if (typeof fallback === "number" || typeof fallback === "string") {
-                return fallback;
-            }
-            return null;
-        })
-        .filter((value): value is number | string => value != null);
+        .map((service) => resolveLinkedServiceId(service))
+        .filter((value): value is number => value != null);
 
     return normalizeServiceIds(rawIds);
 };
@@ -449,6 +472,13 @@ const resolveServiceSelection = (
 
     const explicitIds = normalizeServiceIds(info.service_ids);
     const linkedIds = extractLinkedServiceIds(info.services ?? null);
+
+    if (Array.isArray(info.service_ids)) {
+        if (explicitIds.length === 0 && linkedIds.length > 0) {
+            return linkedIds;
+        }
+        return explicitIds;
+    }
 
     if (explicitIds.length === 0) {
         return linkedIds;
@@ -1421,9 +1451,37 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     return sum + (svc?.price ?? 0);
                 }, 0);
 
+                const retainedServices = Array.isArray(prev.services)
+                    ? prev.services.filter((service) => {
+                          const resolvedId = resolveLinkedServiceId(service);
+                          return resolvedId != null && nextIds.includes(resolvedId);
+                      })
+                    : [];
+
+                const missingServiceIds = nextIds.filter(
+                    (serviceId) =>
+                        !retainedServices.some(
+                            (service) => resolveLinkedServiceId(service) === serviceId,
+                        ),
+                );
+
+                const appendedServices = missingServiceIds
+                    .map((serviceId) => {
+                        const meta = services.find((service) => service.id === serviceId);
+                        if (!meta) {
+                            return { id: serviceId } satisfies AdminBookingLinkedService;
+                        }
+                        return {
+                            id: serviceId,
+                            name: meta.name,
+                            price: meta.price,
+                        } satisfies AdminBookingLinkedService;
+                    });
+
                 return recalcTotals({
                     ...prev,
                     service_ids: nextIds,
+                    services: [...retainedServices, ...appendedServices],
                     total_services: total,
                 });
             });
@@ -2052,7 +2110,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             <Input
                                 type="checkbox"
                                 className="w-5 h-5"
-                                checked={bookingInfo.send_email ?? true}
+                                checked={bookingInfo.send_email ?? false}
                                 onChange={(e) =>
                                     setBookingInfo({
                                         ...bookingInfo,
