@@ -92,9 +92,69 @@ const shortDateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
   minute: "2-digit",
 });
 
+const parseDatePreserveLocalTime = (value: string): Date | null => {
+  const normalized = value.replace(" ", "T");
+  const trimmedFractions = normalized.replace(/\.\d+/, "");
+  const withoutTimezone = trimmedFractions.replace(/(?:Z|[+-]\d{2}:?\d{2})$/, "");
+  const match = withoutTimezone.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+  );
+
+  if (match) {
+    const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr] = match;
+    const year = Number(yearStr);
+    const monthIndex = Number(monthStr) - 1;
+    const day = Number(dayStr);
+    const hour = hourStr != null ? Number(hourStr) : 0;
+    const minute = minuteStr != null ? Number(minuteStr) : 0;
+    const second = secondStr != null ? Number(secondStr) : 0;
+
+    if (
+      Number.isFinite(year) &&
+      Number.isFinite(monthIndex) &&
+      Number.isFinite(day) &&
+      Number.isFinite(hour) &&
+      Number.isFinite(minute) &&
+      Number.isFinite(second)
+    ) {
+      const parsed = new Date(year, monthIndex, day, hour, minute, second);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+  }
+
+  const fallback = new Date(value);
+  if (Number.isNaN(fallback.getTime())) {
+    return null;
+  }
+
+  return fallback;
+};
+
+const formatDateOnly = (value: string | null | undefined): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = parseDatePreserveLocalTime(trimmed);
+  if (!parsed) {
+    return trimmed.split("T")[0] ?? trimmed;
+  }
+
+  return parsed.toLocaleDateString("ro-RO");
+};
+
 type AdminReservationRow = AdminReservation & {
   remainingBalance?: number | null;
   extension?: AdminBookingExtension | null;
+  originalEndDate?: string;
+  originalDropoffTime?: string;
 };
 
 const resolveOutstandingExtensionAmount = (
@@ -137,8 +197,8 @@ const formatDateTime = (
     return null;
   }
 
-  const parsed = new Date(trimmed);
-  if (Number.isNaN(parsed.getTime())) {
+  const parsed = parseDatePreserveLocalTime(trimmed);
+  if (!parsed) {
     return trimmed;
   }
 
@@ -1030,6 +1090,10 @@ const ReservationsPage = () => {
             (booking as { remainingBalance?: unknown }).remainingBalance,
         );
         const extension = normalizeReservationExtension(booking.extension);
+        const originalEndDate = extension?.from ?? endDate;
+        const originalDropoffTime = extension?.from
+          ? formatTimeLabel(extension.from) ?? dropoffTime
+          : dropoffTime;
 
         return {
           id,
@@ -1042,9 +1106,11 @@ const ReservationsPage = () => {
           carLicensePlate,
           startDate,
           endDate,
+          originalEndDate,
           plan: normalizeBoolean(booking.with_deposit, true) ? 1 : 0,
           pickupTime,
           dropoffTime,
+          originalDropoffTime: originalDropoffTime ?? undefined,
           days: days ?? undefined,
           couponAmount,
           subTotal,
@@ -1554,18 +1620,45 @@ const ReservationsPage = () => {
         accessor: (r) => new Date(r.startDate).getTime(),
         headerClassName: "hidden sm:table-cell",
         cellClassName: "hidden sm:table-cell",
-        cell: (r) => (
-          <div>
-            <div className="font-dm-sans text-gray-900 text-xs">
-              {new Date(r.startDate).toLocaleDateString("ro-RO")} -
-              {" "}
-              {new Date(r.endDate).toLocaleDateString("ro-RO")}
+        cell: (r) => {
+          const extension = r.extension ?? null;
+          const baseEndDateRaw =
+            (typeof r.originalEndDate === "string" && r.originalEndDate.trim().length > 0
+              ? r.originalEndDate
+              : undefined) ??
+            (extension?.from && typeof extension.from === "string"
+              ? extension.from
+              : undefined) ??
+            r.endDate;
+          const startDateLabel = formatDateOnly(r.startDate) ?? "—";
+          const baseEndDateLabel = formatDateOnly(baseEndDateRaw) ?? "—";
+          const pickupTimeLabel = r.pickupTime ?? formatTimeLabel(r.startDate) ?? "—";
+          const dropoffTimeLabel =
+            r.originalDropoffTime ??
+            r.dropoffTime ??
+            formatTimeLabel(baseEndDateRaw) ??
+            "—";
+          const extensionLabel = extension?.to
+            ? formatDateTime(extension.to, shortDateTimeFormatter)
+            : null;
+          const extensionClass = extension?.paid ? "text-emerald-600" : "text-amber-600";
+
+          return (
+            <div>
+              <div className="font-dm-sans text-gray-900 text-xs">
+                {startDateLabel} - {baseEndDateLabel}
+              </div>
+              <div className="text-gray-500 font-dm-sans text-xs">
+                {pickupTimeLabel} - {dropoffTimeLabel}
+              </div>
+              {extensionLabel && (
+                <div className={`text-xs font-medium ${extensionClass}`}>
+                  Extins până la {extensionLabel}
+                </div>
+              )}
             </div>
-            <div className="text-gray-500 font-dm-sans text-xs">
-              {r.pickupTime} - {r.dropoffTime}
-            </div>
-          </div>
-        ),
+          );
+        },
       },
       {
           id: "plan",
@@ -1615,12 +1708,6 @@ const ReservationsPage = () => {
             outstandingExtensionAmount != null
               ? formatEuro(outstandingExtensionAmount)
               : null;
-          const extensionLabel = r.extension
-            ? formatDateTime(r.extension.to, shortDateTimeFormatter)
-            : null;
-          const extensionClass = r.extension?.paid
-            ? "text-emerald-600"
-            : "text-amber-600";
 
           return (
             <div className="font-dm-sans text-xs text-gray-900">
@@ -1628,11 +1715,6 @@ const ReservationsPage = () => {
               {outstandingExtensionLabel && (
                 <div className="text-amber-600 font-semibold">
                   Rest de plată: {outstandingExtensionLabel}
-                </div>
-              )}
-              {extensionLabel && (
-                <div className={`text-xs font-medium ${extensionClass}`}>
-                  Extins până la {extensionLabel}
                 </div>
               )}
               {r.discountCode && (
