@@ -109,6 +109,7 @@ import type {
     QuotePricePayload,
     QuotePriceResponse,
     ReservationPayload,
+    BookingExtendPayload,
     Service,
     ServiceListParams,
     ServicePayload,
@@ -2079,6 +2080,22 @@ export class ApiClient {
             cache: 'no-cache',
             body: JSON.stringify(params),
         })
+    }
+
+    async extendBooking(
+        id: number | string,
+        payload: BookingExtendPayload,
+    ): Promise<ApiItemResult<AdminBookingResource>> {
+        return this.request<ApiItemResult<AdminBookingResource>>(`/bookings/${id}/extend`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${this.token}`
+            },
+            cache: 'no-cache',
+            body: JSON.stringify(payload),
+        });
     }
     async getBookingInfo(
         id: number | string,

@@ -1,3 +1,5 @@
+import type { ReservationExtension } from "@/types/reservation";
+
 export interface ActivityCar {
   id: number;
   name: string;
@@ -17,6 +19,7 @@ export interface ActivityReservation {
   price_per_day: number;
   sub_total: number;
   total: number;
+  remaining_balance?: number | string | null;
   total_services: number;
   coupon_amount: number;
   coupon_type: string;
@@ -29,6 +32,7 @@ export interface ActivityReservation {
   child_seat_service_name: string | null;
   car: ActivityCar;
   services: { id: number; name: string }[];
+  extension?: ReservationExtension | null;
 }
 
 export interface WidgetActivityResponse {

@@ -10,6 +10,7 @@ The bookings controller powers public availability checks, quotes, and booking c
 | POST | `/api/bookings/quote` | Compute pricing (rates, totals, discounts, wheel prize impact). | None | Validation mirrors the booking form. |
 | POST | `/api/bookings/availability/check` | Check if a car is free between two dates. | None | Returns `{ "available": true|false }`. |
 | POST | `/api/bookings` | Create a booking and compute totals. | None | Automatically links the authenticated customer if a token is provided. |
+| POST | `/api/bookings/{booking}/extend` | Extend the reservation end date, storing extension pricing and payment status. | Admin token (`bookings.extend`) | Updates `remaining_balance` and exposes the `extension` summary. |
 | PATCH | `/api/bookings/{id}/cancel` | Mark a booking as cancelled. | Bearer token (`customer` guard) | Returns the updated `BookingResource` and a message. |
 
 > **Caching:** GET endpoints are cached for 10 minutes per filter combination. Mutations automatically flush the cache.
@@ -99,6 +100,16 @@ Returns a Laravel paginator plus nested resources defined in `BookingResource`.
       "discount_value_casco": 20,
       "eligible": true
       },
+      "remaining_balance": 287.0,
+      "extension": {
+        "from": "2025-03-18T09:00:00+02:00",
+        "to": "2025-03-20T09:00:00+02:00",
+        "days": 2,
+        "price_per_day": 45.0,
+        "total": 90.0,
+        "paid": false,
+        "remaining_payment": 90.0
+      },
       "services": [
         { "id": 1, "name": "Scaun copil" },
         { "id": 3, "name": "Asigurare CASCO extinsă" }
@@ -157,11 +168,70 @@ Returns a Laravel paginator plus nested resources defined in `BookingResource`.
 }
 ```
 
+`remaining_balance` însumează diferența dintre `total` și `advance_payment`, iar dacă rezervarea are o prelungire neachitată adaugă automat suma din `extension.total`. Obiectul `extension` este prezent doar când data de final a fost extinsă și include data inițială (`from`), noua dată (`to`), numărul de zile suplimentare, tariful folosit, totalul și statusul de plată.
+
 `wheel_prize.eligible` indică dacă reducerea aferentă premiului poate fi aplicată pentru intervalul de rezervare curent. Atunci
 când este `false`, câmpurile `wheel_prize_discount` și `wheel_prize.discount_value` vor rămâne la `0` chiar dacă premiul există,
 deoarece perioada configurată (`active_months`) nu se suprapune cu datele selectate. Pentru transparență expunem și `discount_value_deposit`/`discount_value_casco`, astfel încât clientul să poată afișa exact reducerea calculată pentru planul curent.
 
 Structura `applied_offers` normalizează atât reducerile procentuale, cât și pe cele fixe. Fiecare intrare include valorile brute configurate în ofertă (`percent_discount_*`, `fixed_discount_*`), suma efectiv aplicată după scalare (`*_applied`) și totalurile per plan (`discount_amount_*`) plus valoarea finală (`discount_amount`) raportată în funcție de `with_deposit`.
+
+---
+
+## POST `/api/bookings/{booking}/extend`
+
+Extinde perioada unei rezervări existente plecând de la data de sfârșit inițială. Serviciul verifică disponibilitatea pentru intervalul extins, calculează numărul de zile suplimentare și stochează tariful aplicat împreună cu statusul de plată. Dacă prelungirea rămâne neachitată, `remaining_balance` și `extension.remaining_payment` evidențiază suma datorată în dashboard și în payload-ul rezervării.
+
+### Request body
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `extended_until` | string | Yes* | ISO datetime pentru noua dată/ora de returnare. |
+| `extended_until_date` | string | No | Dată (`YYYY-MM-DD`) folosită împreună cu `extended_until_time`. |
+| `extended_until_time` | string | No | Oră (`HH:mm` sau `HH:mm:ss`) folosită împreună cu `extended_until_date`. |
+| `price_per_day` | number | No | Tarif personalizat pentru zilele de prelungire. Dacă lipsește se reutilizează `price_per_day` din rezervare. |
+| `paid` | boolean | Yes | Marchează extinderea ca achitată (`true`) sau în așteptare (`false`). |
+
+`extended_until` trebuie trimis dacă nu folosiți perechea `extended_until_date` + `extended_until_time`. Valorile înainte de data curentă de finalizare sunt respinse.
+
+### Example
+
+```http
+POST /api/bookings/412/extend
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "extended_until": "2025-02-22T10:00:00+02:00",
+  "price_per_day": 45,
+  "paid": false
+}
+```
+
+### Response (excerpt)
+
+```json
+{
+  "data": {
+    "id": 412,
+    "booking_number": "#1058821",
+    "rental_end_date": "2025-02-22T10:00:00+02:00",
+    "remaining_balance": 170,
+    "extension": {
+      "from": "2025-02-20T09:00:00+02:00",
+      "to": "2025-02-22T10:00:00+02:00",
+      "days": 2,
+      "price_per_day": 45,
+      "total": 90,
+      "paid": false,
+      "remaining_payment": 90
+    }
+  },
+  "message": "Booking extended"
+}
+```
+
+Apelurile ulterioare cu același `extended_until` permit actualizarea tarifului sau a indicatorului de plată fără a reseta data de bază a rezervării.
 
 ---
 

@@ -39,6 +39,7 @@ import BookingForm from "@/components/admin/BookingForm";
 import BookingContractForm from "@/components/admin/BookingContractForm";
 import { Button } from "@/components/ui/button";
 import apiClient from "@/lib/api";
+import { normalizeReservationExtension } from "@/lib/adminBookingHelpers";
 import {
   describeWheelPrizeSummaryAmount,
   formatWheelPrizeExpiry,
@@ -72,6 +73,39 @@ const toIdString = (value: unknown): string | null => {
     return Number.isFinite(value) ? String(value) : null;
   }
   return null;
+};
+
+const defaultDateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+const shortDateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
+  day: "2-digit",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const formatDateTime = (
+  value: string | null | undefined,
+  formatter: Intl.DateTimeFormat = defaultDateTimeFormatter,
+): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) {
+    return trimmed;
+  }
+
+  return formatter.format(parsed);
 };
 
 const mergeBookingRecord = (
@@ -906,6 +940,11 @@ const ReservationsPage = () => {
           null;
         const appliedOffers = normalizeAppliedOffersList(booking.applied_offers);
         const depositWaived = normalizeBoolean(booking.deposit_waived, false);
+        const remainingBalance = parseOptionalNumber(
+          booking.remaining_balance ??
+            (booking as { remainingBalance?: unknown }).remainingBalance,
+        );
+        const extension = normalizeReservationExtension(booking.extension);
 
         return {
           id,
@@ -939,6 +978,8 @@ const ReservationsPage = () => {
           offersDiscount,
           appliedOffers,
           depositWaived,
+          remainingBalance: typeof remainingBalance === "number" ? remainingBalance : null,
+          extension,
         };
       });
       const listMeta = !Array.isArray(response)
@@ -1255,16 +1296,35 @@ const ReservationsPage = () => {
         sortable: true,
         headerClassName: "hidden sm:table-cell",
         cellClassName: "hidden sm:table-cell",
-        cell: (r) => (
-          <div className="font-dm-sans font-semibold text-berkeley text-xs">
-            {r.total}€
-            {r.discountCode && (
-              <div className="text-jade font-dm-sans text-xs">
-                Cod: {r.discountCode}
-              </div>
-            )}
-          </div>
-        ),
+        cell: (r) => {
+          const remainingLabel =
+            typeof r.remainingBalance === "number" && r.remainingBalance > 0
+              ? formatEuro(r.remainingBalance)
+              : null;
+          const extensionLabel = r.extension
+            ? formatDateTime(r.extension.to, shortDateTimeFormatter)
+            : null;
+          const extensionClass = r.extension?.paid
+            ? "text-emerald-600"
+            : "text-amber-600";
+
+          return (
+            <div className="font-dm-sans text-xs text-gray-900">
+              <div className="font-semibold text-berkeley">{formatEuro(r.total)}</div>
+              {remainingLabel && (
+                <div className="text-amber-600 font-semibold">Sold: {remainingLabel}</div>
+              )}
+              {extensionLabel && (
+                <div className={`text-xs font-medium ${extensionClass}`}>
+                  Extins până la {extensionLabel}
+                </div>
+              )}
+              {r.discountCode && (
+                <div className="text-jade font-dm-sans text-xs">Cod: {r.discountCode}</div>
+              )}
+            </div>
+          );
+        },
       },
       {
         id: "actions",
@@ -1310,6 +1370,78 @@ const ReservationsPage = () => {
     const { prize, amountLabel, expiryLabel, discountValue, totalBefore } =
       extractWheelPrizeDisplay(r.wheelPrize, r.wheelPrizeDiscount, r.totalBeforeWheelPrize);
 
+    const remainingBalanceLabel =
+      typeof r.remainingBalance === "number" && r.remainingBalance > 0
+        ? formatEuro(r.remainingBalance)
+        : null;
+    const extension = r.extension ?? null;
+    const extensionStartLabel = extension ? formatDateTime(extension.from) : null;
+    const extensionEndLabel = extension ? formatDateTime(extension.to) : null;
+    let extensionRemainingLabel: string | null = null;
+    if (extension && !extension.paid) {
+      const outstanding =
+        typeof extension.remainingPayment === "number"
+          ? extension.remainingPayment
+          : typeof r.remainingBalance === "number"
+            ? r.remainingBalance
+            : null;
+      if (typeof outstanding === "number") {
+        extensionRemainingLabel = formatEuro(outstanding);
+      }
+    }
+    const remainingBalanceRow =
+      remainingBalanceLabel && (
+        <div className="flex items-center justify-between">
+          <span className="font-dm-sans text-gray-600">Sold rămas:</span>
+          <span className="font-dm-sans font-semibold text-amber-600">
+            {remainingBalanceLabel}
+          </span>
+        </div>
+      );
+    const extensionSummary = extension ? (
+      <div
+        className={`rounded-lg px-3 py-2 ${
+          extension.paid
+            ? "border border-emerald-200 bg-emerald-50"
+            : "border border-amber-200 bg-amber-50"
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <span className="font-dm-sans font-semibold text-gray-800">
+            Prelungire
+            {typeof extension.days === "number" ? ` (+${extension.days} zile)` : ""}
+          </span>
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              extension.paid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+            }`}
+          >
+            {extension.paid ? "Achitată" : "Neachitată"}
+          </span>
+        </div>
+        <div className="mt-2 space-y-1 text-sm text-gray-700">
+          <div>
+            Interval: {" "}
+            <span className="font-medium text-gray-900">{extensionStartLabel ?? "—"}</span> → {" "}
+            <span className="font-medium text-gray-900">{extensionEndLabel ?? "—"}</span>
+          </div>
+          <div>
+            Tarif extindere: {" "}
+            <span className="font-medium text-gray-900">{formatEuro(extension.pricePerDay)}</span>
+          </div>
+          <div>
+            Total extindere: {" "}
+            <span className="font-medium text-gray-900">{formatEuro(extension.total)}</span>
+          </div>
+          {!extension.paid && extensionRemainingLabel && (
+            <div className="font-dm-sans font-semibold text-amber-700">
+              Sold extindere: {extensionRemainingLabel}
+            </div>
+          )}
+        </div>
+      </div>
+    ) : null;
+
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-4 text-sm text-gray-700 font-dm-sans sm:hidden">
@@ -1346,6 +1478,11 @@ const ReservationsPage = () => {
             <span className="px-3 py-1 rounded-full bg-berkeley/10 text-berkeley font-semibold">
               {formatEuro(r.total)}
             </span>
+            {remainingBalanceLabel && (
+              <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold">
+                Sold: {remainingBalanceLabel}
+              </span>
+            )}
           </div>
         </div>
 
@@ -1924,6 +2061,7 @@ const ReservationsPage = () => {
                             </span>
                           </div>
                         )}
+                      {remainingBalanceRow}
                       <div className="flex items-center justify-between">
                         <span className="font-dm-sans text-gray-600">
                           Total:
@@ -1949,12 +2087,13 @@ const ReservationsPage = () => {
                               ))}
                             </ul>
                           </div>
-                        )}
-                    </div>
+                      )}
                   </div>
+                  {extensionSummary && <div className="mt-4">{extensionSummary}</div>}
+                </div>
 
-                  {selectedReservation.notes && (
-                    <div>
+                {selectedReservation.notes && (
+                  <div>
                       <h4 className="font-poppins font-semibold text-berkeley mb-3">
                         Notițe
                       </h4>
