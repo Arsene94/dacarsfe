@@ -2110,7 +2110,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             <Input
                                 type="checkbox"
                                 className="w-5 h-5"
-                                checked={bookingInfo.send_email ?? true}
+                                checked={bookingInfo.send_email ?? false}
                                 onChange={(e) =>
                                     setBookingInfo({
                                         ...bookingInfo,
