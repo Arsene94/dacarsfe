@@ -38,6 +38,7 @@ const createPageTimingState = (): PageTimingState => {
 
 const SCROLL_THRESHOLDS = [10, 25, 50, 75, 90, 100];
 const SCROLL_SECTION_SELECTOR = "[data-analytics-scroll-section]" as const;
+const MIN_SECTION_VIEW_MS = 400;
 
 type ScrollTargetKey = "window" | HTMLElement;
 
@@ -49,6 +50,136 @@ type ScrollContextState = {
 type SectionTimingState = {
     section: HTMLElement | null;
     since: number;
+};
+
+const collectScrollDataset = (element: HTMLElement): Record<string, string> => {
+    const dataset: Record<string, string> = {};
+    Object.entries(element.dataset ?? {}).forEach(([key, value]) => {
+        if (!value) {
+            return;
+        }
+        if (
+            key === "analyticsScrollSection" ||
+            key === "analyticsScrollTarget" ||
+            key === "analyticsScrollLabel" ||
+            key === "analyticsScrollMetadata"
+        ) {
+            return;
+        }
+        if (key.startsWith("analyticsScroll")) {
+            dataset[key] = value;
+        }
+    });
+    return dataset;
+};
+
+type SectionContext = {
+    selector: string;
+    target?: string;
+    label?: string;
+    additional: Record<string, unknown>;
+};
+
+const collectSectionContext = (section: HTMLElement): SectionContext => {
+    const selector = buildElementSelector(section);
+    const target = section.dataset.analyticsScrollTarget || section.dataset.analyticsTarget || undefined;
+    const label = section.dataset.analyticsScrollLabel || resolveElementLabel(section) || undefined;
+
+    const additional: Record<string, unknown> = {
+        section_selector: selector,
+    };
+
+    if (target) {
+        additional.section_target = target;
+    }
+    if (section.id) {
+        additional.section_id = section.id;
+    }
+
+    const rawAdditional = parseAdditionalMetadata(section.dataset.analyticsScrollMetadata);
+    if (rawAdditional) {
+        additional.section_additional = rawAdditional;
+    }
+
+    const datasetAdditional = collectScrollDataset(section);
+    if (Object.keys(datasetAdditional).length > 0) {
+        additional.section_dataset = datasetAdditional;
+    }
+
+    return {
+        selector,
+        target,
+        label,
+        additional,
+    };
+};
+
+const collectScrollContainerContext = (target: HTMLElement): SectionContext => {
+    const selector = buildElementSelector(target);
+    const label = resolveElementLabel(target) || undefined;
+    const explicitTarget = target.dataset?.analyticsScrollTarget || target.dataset?.analyticsTarget || undefined;
+
+    const additional: Record<string, unknown> = {
+        scroll_container_selector: selector,
+    };
+
+    if (target.id) {
+        additional.scroll_container_id = target.id;
+    }
+    if (explicitTarget) {
+        additional.scroll_container = explicitTarget;
+    }
+
+    const rawAdditional = parseAdditionalMetadata(target.dataset?.analyticsScrollMetadata);
+    if (rawAdditional) {
+        additional.scroll_container_additional = rawAdditional;
+    }
+
+    const datasetAdditional = collectScrollDataset(target);
+    if (Object.keys(datasetAdditional).length > 0) {
+        additional.scroll_container_dataset = datasetAdditional;
+    }
+
+    return {
+        selector,
+        target: explicitTarget,
+        label,
+        additional,
+    };
+};
+
+const emitSectionViewEvent = (
+    section: HTMLElement,
+    durationMs: number,
+    pageElapsedMs: number,
+) => {
+    if (!isAnalyticsTrackingEnabled()) {
+        return;
+    }
+
+    const duration = Math.max(0, Math.round(durationMs));
+    if (duration < MIN_SECTION_VIEW_MS) {
+        return;
+    }
+
+    const pageTime = Math.max(0, Math.round(pageElapsedMs));
+    const sectionContext = collectSectionContext(section);
+
+    const metadata: AnalyticsMetadata = {
+        duration_ms: duration,
+        component_visible_ms: duration,
+        page_time_ms: pageTime,
+        interaction_target: sectionContext.target ?? sectionContext.selector,
+        interaction_label: sectionContext.label,
+        additional: {
+            component_visible_ms: duration,
+            page_time_ms: pageTime,
+            visibility: "section",
+            ...sectionContext.additional,
+        },
+    };
+
+    trackAnalyticsEvent({ type: "component_view", metadata });
 };
 
 const isPublicPath = (pathname: string | null): boolean => {
@@ -200,11 +331,18 @@ const getActiveScrollSection = (target: ScrollTargetKey): HTMLElement | null => 
     );
 };
 
+type ScrollEventOptions = {
+    section?: HTMLElement | null;
+    pageTimeMs?: number;
+    sectionDurationMs?: number;
+};
+
 const buildScrollEventMetadata = (
     target: ScrollTargetKey,
     threshold: number,
     percentage: number,
     pixels: number,
+    options?: ScrollEventOptions,
 ): AnalyticsMetadata => {
     const metadata: AnalyticsMetadata = {
         scroll_percentage: percentage,
@@ -216,56 +354,41 @@ const buildScrollEventMetadata = (
         scroll_context: target === "window" ? "window" : "element",
     };
 
+    if (options?.pageTimeMs != null && Number.isFinite(options.pageTimeMs)) {
+        const pageTime = Math.max(0, Math.round(options.pageTimeMs));
+        metadata.page_time_ms = pageTime;
+        additional.page_time_ms = pageTime;
+    }
+
+    if (options?.sectionDurationMs != null && Number.isFinite(options.sectionDurationMs)) {
+        const componentDuration = Math.max(0, Math.round(options.sectionDurationMs));
+        metadata.duration_ms = componentDuration;
+        metadata.component_visible_ms = componentDuration;
+        additional.component_visible_ms = componentDuration;
+    }
+
     if (typeof document !== "undefined") {
         if (target === "window") {
             additional.scroll_container_selector = buildElementSelector(document.body);
-        } else {
-            additional.scroll_container_selector = buildElementSelector(target);
-            if (target.id) {
-                additional.scroll_container_id = target.id;
+        } else if (document.contains(target)) {
+            const containerContext = collectScrollContainerContext(target);
+            Object.assign(additional, containerContext.additional);
+            if (!metadata.interaction_label && containerContext.label) {
+                metadata.interaction_label = containerContext.label;
             }
-            const containerTarget =
-                target.dataset?.analyticsScrollTarget || target.dataset?.analyticsTarget;
-            if (containerTarget) {
-                additional.scroll_container = containerTarget;
-                if (!metadata.interaction_target) {
-                    metadata.interaction_target = containerTarget;
-                }
+            if (!metadata.interaction_target && containerContext.target) {
+                metadata.interaction_target = containerContext.target;
             }
+        }
+    }
 
-            const containerLabel = resolveElementLabel(target);
-            if (containerLabel && !metadata.interaction_label) {
-                metadata.interaction_label = containerLabel;
-            }
-
-            const containerAdditional = parseAdditionalMetadata(
-                target.dataset?.analyticsScrollMetadata,
-            );
-            if (containerAdditional) {
-                additional.scroll_container_additional = containerAdditional;
-            }
-
-            const containerDataset: Record<string, string> = {};
-            Object.entries(target.dataset ?? {}).forEach(([key, value]) => {
-                if (!value) {
-                    return;
-                }
-                if (
-                    key === "analyticsScrollSection" ||
-                    key === "analyticsScrollTarget" ||
-                    key === "analyticsScrollLabel" ||
-                    key === "analyticsScrollMetadata"
-                ) {
-                    return;
-                }
-                if (key.startsWith("analyticsScroll")) {
-                    containerDataset[key] = value;
-                }
-            });
-
-            if (Object.keys(containerDataset).length > 0) {
-                additional.scroll_container_dataset = containerDataset;
-            }
+    const sectionElement = options?.section ?? getActiveScrollSection(target);
+    if (sectionElement) {
+        const sectionContext = collectSectionContext(sectionElement);
+        Object.assign(additional, sectionContext.additional);
+        metadata.interaction_target = sectionContext.target ?? sectionContext.selector;
+        if (sectionContext.label) {
+            metadata.interaction_label = sectionContext.label;
         }
     }
 
@@ -274,53 +397,6 @@ const buildScrollEventMetadata = (
     }
     if (!metadata.interaction_label) {
         metadata.interaction_label = target === "window" ? "window" : resolveElementLabel(target) ?? undefined;
-    }
-
-    const section = getActiveScrollSection(target);
-    if (section) {
-        const sectionSelector = buildElementSelector(section);
-        const sectionTarget = section.dataset.analyticsScrollTarget || section.dataset.analyticsTarget;
-        const sectionLabel = resolveElementLabel(section);
-
-        additional.section_selector = sectionSelector;
-        if (sectionTarget) {
-            additional.section_target = sectionTarget;
-        }
-        if (section.id) {
-            additional.section_id = section.id;
-        }
-
-        const rawAdditional = parseAdditionalMetadata(section.dataset.analyticsScrollMetadata);
-        if (rawAdditional) {
-            additional.section_additional = rawAdditional;
-        }
-
-        const datasetAdditional: Record<string, string> = {};
-        Object.entries(section.dataset).forEach(([key, value]) => {
-            if (!value) {
-                return;
-            }
-            if (
-                key === "analyticsScrollSection" ||
-                key === "analyticsScrollTarget" ||
-                key === "analyticsScrollLabel" ||
-                key === "analyticsScrollMetadata"
-            ) {
-                return;
-            }
-            if (key.startsWith("analyticsScroll")) {
-                datasetAdditional[key] = value;
-            }
-        });
-
-        if (Object.keys(datasetAdditional).length > 0) {
-            additional.section_dataset = datasetAdditional;
-        }
-
-        metadata.interaction_target = sectionTarget || sectionSelector;
-        if (sectionLabel) {
-            metadata.interaction_label = sectionLabel;
-        }
     }
 
     metadata.additional = additional;
@@ -336,6 +412,39 @@ const useScrollTracking = (
     const pendingTargetsRef = useRef<Set<ScrollTargetKey>>(new Set());
     const sectionTimingRef = useRef<Map<ScrollTargetKey, SectionTimingState>>(new Map());
     const rafRef = useRef<number | null>(null);
+
+    const finalizeTimingState = useCallback(
+        (state: SectionTimingState | undefined, now: number) => {
+            if (!state || !state.section) {
+                if (state) {
+                    state.since = now;
+                }
+                return;
+            }
+
+            const duration = Math.max(0, now - state.since);
+            if (duration > 0) {
+                emitSectionViewEvent(state.section, duration, getPageElapsedMs());
+            }
+
+            state.section = null;
+            state.since = now;
+        },
+        [getPageElapsedMs],
+    );
+
+    const finalizeAllSections = useCallback(() => {
+        const sectionTimings = sectionTimingRef.current;
+        if (sectionTimings.size === 0) {
+            return;
+        }
+
+        const now = getTimestamp();
+        sectionTimings.forEach((state) => {
+            finalizeTimingState(state, now);
+        });
+        sectionTimings.clear();
+    }, [finalizeTimingState]);
 
     useEffect(() => {
         const contexts = contextsRef.current;
@@ -369,15 +478,23 @@ const useScrollTracking = (
                 return;
             }
 
+            const now = getTimestamp();
             if (target !== "window" && !document.contains(target)) {
+                const existingTiming = sectionTimings.get(target);
+                if (existingTiming) {
+                    finalizeTimingState(existingTiming, now);
+                }
                 contexts.delete(target);
                 sectionTimings.delete(target);
                 return;
             }
 
             const state = getOrCreateContextState(contexts, target);
-            const now = getTimestamp();
-            const timingState = sectionTimings.get(target);
+            let timingState = sectionTimings.get(target);
+            if (!timingState) {
+                timingState = { section: null, since: now };
+                sectionTimings.set(target, timingState);
+            }
 
             let scrollTop = 0;
             let viewportHeight = 0;
@@ -420,37 +537,26 @@ const useScrollTracking = (
             const activeSection = getActiveScrollSection(target);
             let sectionDurationMs: number | undefined;
 
-            if (activeSection) {
-                if (!timingState || timingState.section !== activeSection) {
-                    sectionTimings.set(target, { section: activeSection, since: now });
-                    sectionDurationMs = 0;
-                } else {
-                    sectionDurationMs = Math.max(0, now - timingState.since);
-                }
-            } else if (!timingState) {
-                sectionTimings.set(target, { section: null, since: now });
-            } else if (timingState.section) {
-                sectionTimings.set(target, { section: null, since: now });
+            if (timingState.section !== activeSection) {
+                finalizeTimingState(timingState, now);
+                timingState.section = activeSection;
+                timingState.since = now;
             }
+
+            if (timingState.section) {
+                sectionDurationMs = Math.max(0, now - timingState.since);
+            }
+
+            const pageElapsed = getPageElapsedMs();
 
             SCROLL_THRESHOLDS.forEach((threshold) => {
                 if (roundedPercentage >= threshold && !state.thresholds.has(threshold)) {
                     state.thresholds.add(threshold);
-                    const metadata = buildScrollEventMetadata(target, threshold, roundedPercentage, pixels);
-                    const pageElapsed = Math.max(0, Math.round(getPageElapsedMs()));
-                    const additional: Record<string, unknown> =
-                        metadata.additional && typeof metadata.additional === "object"
-                            ? (metadata.additional as Record<string, unknown>)
-                            : {};
-                    additional.page_time_ms = pageElapsed;
-
-                    if (sectionDurationMs != null) {
-                        const componentDuration = Math.max(0, Math.round(sectionDurationMs));
-                        metadata.duration_ms = componentDuration;
-                        additional.component_visible_ms = componentDuration;
-                    }
-
-                    metadata.additional = additional;
+                    const metadata = buildScrollEventMetadata(target, threshold, roundedPercentage, pixels, {
+                        section: timingState.section,
+                        pageTimeMs: pageElapsed,
+                        sectionDurationMs,
+                    });
                     trackAnalyticsEvent({ type: "scroll", metadata });
                 }
             });
@@ -499,6 +605,7 @@ const useScrollTracking = (
 
         return () => {
             destroyed = true;
+            finalizeAllSections();
             window.removeEventListener("scroll", handleWindowScroll);
             window.removeEventListener("resize", handleWindowResize);
             document.removeEventListener("scroll", handleElementScroll, true);
@@ -510,7 +617,9 @@ const useScrollTracking = (
                 rafRef.current = null;
             }
         };
-    }, [enabled, getPageElapsedMs, resetKey]);
+    }, [enabled, finalizeAllSections, finalizeTimingState, getPageElapsedMs, resetKey]);
+
+    return finalizeAllSections;
 };
 
 const useCtaTracking = (enabled: boolean, getPageElapsedMs: () => number) => {
@@ -582,6 +691,7 @@ const useCtaTracking = (enabled: boolean, getPageElapsedMs: () => number) => {
                     : {};
             additional.page_time_ms = pageElapsed;
             metadata.additional = additional;
+            metadata.page_time_ms = pageElapsed;
             metadata.duration_ms = pageElapsed;
 
             trackAnalyticsEvent({ type, metadata });
@@ -623,6 +733,7 @@ const useFormTracking = (enabled: boolean, getPageElapsedMs: () => number) => {
 
             startedForms?.set(form, now);
 
+            const pageElapsed = Math.max(0, Math.round(getPageElapsedMs()));
             const metadata: AnalyticsMetadata = {
                 interaction_target: form.dataset.analyticsTarget || buildElementSelector(form),
                 interaction_label:
@@ -635,11 +746,12 @@ const useFormTracking = (enabled: boolean, getPageElapsedMs: () => number) => {
                     form_id: form.id || null,
                     form_name: form.getAttribute("name") || null,
                     method: form.method || "get",
-                    page_time_ms: Math.max(0, Math.round(getPageElapsedMs())),
+                    page_time_ms: pageElapsed,
                 },
             };
 
-            metadata.duration_ms = metadata.additional?.page_time_ms as number | undefined;
+            metadata.page_time_ms = pageElapsed;
+            metadata.duration_ms = pageElapsed;
 
             trackAnalyticsEvent({ type: "form_start", metadata });
         };
@@ -654,6 +766,7 @@ const useFormTracking = (enabled: boolean, getPageElapsedMs: () => number) => {
                 return;
             }
 
+            const pageElapsed = Math.max(0, Math.round(getPageElapsedMs()));
             const metadata: AnalyticsMetadata = {
                 interaction_target: form.dataset.analyticsTarget || buildElementSelector(form),
                 interaction_label:
@@ -668,10 +781,11 @@ const useFormTracking = (enabled: boolean, getPageElapsedMs: () => number) => {
                     method: form.method || "get",
                     action: form.getAttribute("action") || null,
                     started: startedFormsRef.current?.has(form) ?? false,
-                    page_time_ms: Math.max(0, Math.round(getPageElapsedMs())),
+                    page_time_ms: pageElapsed,
                 },
             };
 
+            metadata.page_time_ms = pageElapsed;
             const startedAt = startedFormsRef.current?.get(form);
             if (typeof startedAt === "number") {
                 const duration = Math.max(0, Math.round(getTimestamp() - startedAt));
@@ -680,7 +794,7 @@ const useFormTracking = (enabled: boolean, getPageElapsedMs: () => number) => {
                     (metadata.additional as Record<string, unknown>).form_completion_ms = duration;
                 }
             } else {
-                metadata.duration_ms = metadata.additional?.page_time_ms as number | undefined;
+                metadata.duration_ms = pageElapsed;
             }
 
             trackAnalyticsEvent({ type: "form_submit", metadata });
@@ -805,6 +919,8 @@ const AnalyticsTracker = () => {
         [finalizePageDuration],
     );
 
+    const finalizeSectionViews = useScrollTracking(publicRoute, scrollResetKey, getPageElapsedMs);
+
     useEffect(() => {
         if (!publicRoute) {
             return;
@@ -825,6 +941,7 @@ const AnalyticsTracker = () => {
                     state.visibleSince = current;
                     state.isVisible = false;
                 }
+                finalizeSectionViews();
             } else {
                 state.visibleSince = current;
                 state.isVisible = true;
@@ -835,7 +952,7 @@ const AnalyticsTracker = () => {
         return () => {
             document.removeEventListener("visibilitychange", handleVisibilityChange);
         };
-    }, [publicRoute]);
+    }, [finalizeSectionViews, publicRoute]);
 
     useEffect(() => {
         if (publicRoute) {
@@ -853,6 +970,7 @@ const AnalyticsTracker = () => {
 
     useEffect(() => {
         if (!publicRoute) {
+            finalizeSectionViews();
             if (lastTrackedUrlRef.current) {
                 emitPageDuration("route_change");
             }
@@ -864,6 +982,7 @@ const AnalyticsTracker = () => {
 
         const url = buildUrlFromParts(pathname ?? "", searchString);
         if (lastTrackedUrlRef.current && lastTrackedUrlRef.current !== url) {
+            finalizeSectionViews();
             emitPageDuration("route_change");
             resetPageTiming();
         } else if (!pageTimingRef.current) {
@@ -877,13 +996,13 @@ const AnalyticsTracker = () => {
         lastTrackedUrlRef.current = url;
         pageDurationSentRef.current = false;
         trackPageView(url);
-    }, [emitPageDuration, pathname, publicRoute, resetPageTiming, searchString]);
+    }, [emitPageDuration, finalizeSectionViews, pathname, publicRoute, resetPageTiming, searchString]);
 
     const handleBeforeUnload = useCallback(() => {
+        finalizeSectionViews();
         emitPageDuration("before_unload");
-    }, [emitPageDuration]);
+    }, [emitPageDuration, finalizeSectionViews]);
 
-    useScrollTracking(publicRoute, scrollResetKey, getPageElapsedMs);
     useCtaTracking(publicRoute, getPageElapsedMs);
     useFormTracking(publicRoute, getPageElapsedMs);
     useUnloadFlush(publicRoute, handleBeforeUnload);

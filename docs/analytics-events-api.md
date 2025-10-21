@@ -38,6 +38,18 @@ Această documentație descrie capabilitățile introduse pentru monitorizarea a
 > Frontend-ul trimite duratele atât la nivel de pagină, cât și pentru componentele expuse. Backend-ul trebuie să persiste aceste
 > valori ca numere întregi și să le expună în rapoarte chiar dacă vin înrădăcinate în `metadata.additional`.
 
+### Evenimente de vizibilitate a componentelor (`component_view`)
+
+Atunci când vizitatorul părăsește vizibilitatea unei secțiuni marcate cu `data-analytics-scroll-section="true"`, frontend-ul trimite un eveniment suplimentar `component_view`. Payload-ul include:
+
+* `interaction_target` / `interaction_label` – identitatea componentei (ex: `car-card:123`) și eticheta UX extrasă din conținut.
+* `duration_ms` și `component_visible_ms` – durata totală (în milisecunde) în care secțiunea a rămas în zona activă a viewport-ului.
+* `page_time_ms` – timpul cumulat petrecut pe pagină până la finalizarea vizibilității.
+* `additional.section_additional` – metadata serializată din atributul `data-analytics-scroll-metadata` (ex: `car_id`, `car_name`, filtre active) pentru a reconstrui contextul expunerii.
+
+Evenimentele sunt emise atât la schimbarea secțiunii active, cât și înainte de `beforeunload` sau la schimbarea rutei, astfel încât ultima componentă vizualizată să fie raportată corect.
+
+
 ### Structura `device`
 
 | Cheie       | Tip       | Descriere |
