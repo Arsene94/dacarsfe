@@ -51,6 +51,7 @@ import type {
 const DEFAULT_DAYS = 7;
 const EVENTS_PER_PAGE = 25;
 const VISITORS_PER_PAGE = 10;
+const TOP_CARS_PER_PAGE = 10;
 
 const dateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
   dateStyle: "medium",
@@ -388,6 +389,31 @@ const resolveEventTypeTotal = (value: unknown): number | null => {
   return null;
 };
 
+const resolveEventTypeVisitorTotal = (value: unknown): number | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const container = value as Record<string, unknown>;
+  const candidates = [
+    container.total_unique_visitors,
+    container.totalUniqueVisitors,
+    container.unique_visitors,
+    container.uniqueVisitors,
+    container.total_visitors,
+    container.visitors,
+  ];
+
+  for (const candidate of candidates) {
+    const numeric = toFiniteNumber(candidate);
+    if (numeric != null) {
+      return numeric;
+    }
+  }
+
+  return null;
+};
+
 const normalizeCountryStat = (value: unknown, fallbackCountry?: string | null): AdminAnalyticsCountryStat | null => {
   if (!value) {
     return null;
@@ -680,8 +706,13 @@ const buildCarKey = (context: ResolvedCarContext): string | null => {
   return null;
 };
 
+type CarAggregation = {
+  stat: AdminAnalyticsCarStat;
+  visitors: Set<string>;
+};
+
 const aggregateCarStats = (events: AdminAnalyticsEvent[]): AdminAnalyticsCarStat[] => {
-  const map = new Map<string, AdminAnalyticsCarStat>();
+  const map = new Map<string, CarAggregation>();
 
   events.forEach((event) => {
     const car = resolveCarContext(event);
@@ -694,34 +725,75 @@ const aggregateCarStats = (events: AdminAnalyticsEvent[]): AdminAnalyticsCarStat
       return;
     }
 
+    const visitorUuid =
+      typeof event.visitor_uuid === "string" && event.visitor_uuid.trim().length > 0
+        ? event.visitor_uuid.trim()
+        : null;
+
     const existing = map.get(key);
-    const normalized: AdminAnalyticsCarStat = existing
-      ? {
-          car_id: existing.car_id ?? car.id ?? null,
-          car_name: existing.car_name ?? car.name ?? car.licensePlate ?? null,
-          car_type: existing.car_type ?? car.type ?? null,
-          car_license_plate: existing.car_license_plate ?? car.licensePlate ?? null,
-          total_events: existing.total_events + 1,
-        }
-      : {
+    if (existing) {
+      if (existing.stat.car_id == null && car.id != null) {
+        existing.stat.car_id = car.id;
+      }
+      if (!existing.stat.car_name && (car.name || car.licensePlate)) {
+        existing.stat.car_name = car.name ?? car.licensePlate ?? existing.stat.car_name;
+      }
+      if (!existing.stat.car_type && car.type) {
+        existing.stat.car_type = car.type;
+      }
+      if (!existing.stat.car_license_plate && car.licensePlate) {
+        existing.stat.car_license_plate = car.licensePlate;
+      }
+      existing.stat.total_events += 1;
+      if (visitorUuid) {
+        existing.visitors.add(visitorUuid);
+      }
+    } else {
+      const visitors = new Set<string>();
+      if (visitorUuid) {
+        visitors.add(visitorUuid);
+      }
+
+      map.set(key, {
+        stat: {
           car_id: car.id ?? null,
           car_name: car.name ?? car.licensePlate ?? null,
           car_type: car.type ?? null,
           car_license_plate: car.licensePlate ?? null,
           total_events: 1,
-        };
-
-    map.set(key, normalized);
+        },
+        visitors,
+      });
+    }
   });
 
-  const totalEvents = Array.from(map.values()).reduce((sum, stat) => sum + stat.total_events, 0);
+  const aggregated = Array.from(map.values()).map(({ stat, visitors }) => ({
+    ...stat,
+    unique_visitors: visitors.size,
+  }));
 
-  return Array.from(map.values())
+  const totalVisitors = aggregated.reduce(
+    (sum, stat) => sum + (stat.unique_visitors != null ? stat.unique_visitors : 0),
+    0,
+  );
+
+  return aggregated
     .map((stat) => ({
       ...stat,
-      share: totalEvents > 0 ? stat.total_events / totalEvents : undefined,
+      share:
+        totalVisitors > 0 && stat.unique_visitors != null
+          ? stat.unique_visitors / totalVisitors
+          : undefined,
     }))
-    .sort((a, b) => b.total_events - a.total_events);
+    .sort((a, b) => {
+      const visitorsDiff =
+        (b.unique_visitors != null ? b.unique_visitors : 0) -
+        (a.unique_visitors != null ? a.unique_visitors : 0);
+      if (visitorsDiff !== 0) {
+        return visitorsDiff;
+      }
+      return b.total_events - a.total_events;
+    });
 };
 
 type EventFilterState = {
@@ -847,7 +919,7 @@ export default function AdminAnalyticsPage() {
     useState<AdminAnalyticsCountriesResponse | null>(null);
   const [countriesLoading, setCountriesLoading] = useState(false);
   const [countriesError, setCountriesError] = useState<string | null>(null);
-  const [countrySortField, setCountrySortField] = useState<CountrySortField>("events");
+  const [countrySortField, setCountrySortField] = useState<CountrySortField>("visitors");
   const [countrySortOrder, setCountrySortOrder] = useState<"asc" | "desc">("desc");
 
   const applyCountrySortField = useCallback(
@@ -869,6 +941,7 @@ export default function AdminAnalyticsPage() {
   const [topCars, setTopCars] = useState<AdminAnalyticsCarStat[]>([]);
   const [topCarsLoading, setTopCarsLoading] = useState(false);
   const [topCarsError, setTopCarsError] = useState<string | null>(null);
+  const [topCarsPage, setTopCarsPage] = useState(1);
 
   const [events, setEvents] = useState<AdminAnalyticsEvent[]>([]);
   const [eventsMeta, setEventsMeta] = useState<ApiMeta | undefined>(undefined);
@@ -1031,6 +1104,7 @@ export default function AdminAnalyticsPage() {
       });
       const { data } = extractListAndMeta(response);
       setTopCars(aggregateCarStats(data));
+      setTopCarsPage(1);
     } catch (error) {
       const message =
         error instanceof Error
@@ -1038,6 +1112,7 @@ export default function AdminAnalyticsPage() {
           : "Nu am putut încărca cele mai vizualizate mașini.";
       setTopCarsError(message);
       setTopCars([]);
+      setTopCarsPage(1);
     } finally {
       setTopCarsLoading(false);
     }
@@ -1090,29 +1165,86 @@ export default function AdminAnalyticsPage() {
     void loadTopCars();
   }, [loadTopCars]);
 
+  useEffect(() => {
+    setTopCarsPage((prev) => {
+      if (topCars.length === 0) {
+        return 1;
+      }
+      const maxPage = Math.max(1, Math.ceil(topCars.length / TOP_CARS_PER_PAGE));
+      return Math.min(prev, maxPage);
+    });
+  }, [topCars]);
+
   const summaryEventTypeStats = useMemo(
     () => normalizeEventTypeStats(summary?.events_by_type as unknown),
     [summary?.events_by_type],
   );
 
-  const summaryEventTypeTotal = useMemo(
+  const summaryEventTypeEventTotal = useMemo(
     () => toFiniteNumber(resolveEventTypeTotal(summary?.events_by_type as unknown)),
     [summary?.events_by_type],
   );
 
+  const summaryEventTypeVisitorTotal = useMemo(() => {
+    let runningTotal = 0;
+    let hasValue = false;
+
+    summaryEventTypeStats.forEach((item) => {
+      const visitorsValue = toFiniteNumber(item.unique_visitors);
+      if (visitorsValue != null) {
+        runningTotal += visitorsValue;
+        hasValue = true;
+      }
+    });
+
+    if (hasValue) {
+      return runningTotal;
+    }
+
+    return toFiniteNumber(
+      resolveEventTypeVisitorTotal(summary?.events_by_type as unknown),
+    );
+  }, [summary?.events_by_type, summaryEventTypeStats]);
+
   const eventTypeChartData = useMemo<DataRecord[]>(
     () =>
       summaryEventTypeStats.map((item) => {
-        const total = toFiniteNumber(item.total_events) ?? 0;
+        const visitorsValue = toFiniteNumber(item.unique_visitors);
+        const eventsValue = toFiniteNumber(item.total_events);
         let shareRatio = toFiniteNumber(item.share);
-        if (shareRatio == null && summaryEventTypeTotal && summaryEventTypeTotal > 0) {
-          shareRatio = Math.min(Math.max(total / summaryEventTypeTotal, 0), 1);
+
+        if (
+          shareRatio == null &&
+          visitorsValue != null &&
+          summaryEventTypeVisitorTotal &&
+          summaryEventTypeVisitorTotal > 0
+        ) {
+          shareRatio = Math.min(
+            Math.max(visitorsValue / summaryEventTypeVisitorTotal, 0),
+            1,
+          );
+        }
+
+        if (
+          shareRatio == null &&
+          eventsValue != null &&
+          summaryEventTypeEventTotal &&
+          summaryEventTypeEventTotal > 0
+        ) {
+          shareRatio = Math.min(
+            Math.max(eventsValue / summaryEventTypeEventTotal, 0),
+            1,
+          );
         }
 
         const record: DataRecord = {
           label: item.type ?? "necunoscut",
-          events: total,
+          visitors: visitorsValue ?? 0,
         };
+
+        if (eventsValue != null) {
+          record.events = eventsValue;
+        }
 
         if (shareRatio != null) {
           record.sharePercentage = shareRatio * 100;
@@ -1120,14 +1252,18 @@ export default function AdminAnalyticsPage() {
 
         return record;
       }),
-    [summaryEventTypeStats, summaryEventTypeTotal],
+    [
+      summaryEventTypeEventTotal,
+      summaryEventTypeStats,
+      summaryEventTypeVisitorTotal,
+    ],
   );
 
   const eventTypeBarSeries = useMemo<BarSeries[]>(
     () => [
       {
-        dataKey: "events",
-        name: "Evenimente",
+        dataKey: "visitors",
+        name: "Utilizatori",
         color: getColor("accent"),
       },
     ],
@@ -1137,11 +1273,18 @@ export default function AdminAnalyticsPage() {
   const eventTypeValueFormatter = useCallback(
     (value: number, name: string, payload?: Record<string, unknown>) => {
       const share = toFiniteNumber(payload?.sharePercentage);
-      const base = `${name}: ${numberFormatter.format(value)}`;
-      if (share != null) {
-        return `${base} (${shareFormatter.format(share)}%)`;
+      const events = toFiniteNumber(payload?.events);
+      const parts = [`${name}: ${numberFormatter.format(value)}`];
+
+      if (events != null) {
+        parts.push(`Evenimente: ${numberFormatter.format(events)}`);
       }
-      return base;
+
+      if (share != null) {
+        parts.push(`Pondere: ${shareFormatter.format(share)}%`);
+      }
+
+      return parts.join(" • ");
     },
     [],
   );
@@ -1163,9 +1306,27 @@ export default function AdminAnalyticsPage() {
     return summaryCountryStats;
   }, [reportCountryStats, summaryCountryStats]);
 
+  const totalCountryVisitors = useMemo(
+    () =>
+      combinedCountryStats.reduce((sum, stat) => {
+        const visitors = toFiniteNumber(stat.unique_visitors);
+        return visitors != null ? sum + visitors : sum;
+      }, 0),
+    [combinedCountryStats],
+  );
+
   const sortedCountryStats = useMemo(() => {
     const base = [...combinedCountryStats];
     const missingValue = countrySortOrder === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+
+    const resolveShare = (stat: AdminAnalyticsCountryStat): number | null => {
+      const visitorsValue = toFiniteNumber(stat.unique_visitors);
+      if (visitorsValue != null && totalCountryVisitors > 0) {
+        return visitorsValue / totalCountryVisitors;
+      }
+      const fallbackShare = toFiniteNumber(stat.share);
+      return fallbackShare != null ? fallbackShare : null;
+    };
 
     const getNumericValue = (stat: AdminAnalyticsCountryStat): number => {
       if (countrySortField === "events") {
@@ -1175,7 +1336,8 @@ export default function AdminAnalyticsPage() {
         return toFiniteNumber(stat.unique_visitors) ?? missingValue;
       }
       if (countrySortField === "share") {
-        return toFiniteNumber(stat.share) ?? missingValue;
+        const shareValue = resolveShare(stat);
+        return shareValue != null ? shareValue : missingValue;
       }
       return 0;
     };
@@ -1188,12 +1350,12 @@ export default function AdminAnalyticsPage() {
         if (compare !== 0) {
           return countrySortOrder === "asc" ? compare : -compare;
         }
-        const eventsA = toFiniteNumber(a.total_events) ?? 0;
-        const eventsB = toFiniteNumber(b.total_events) ?? 0;
-        if (eventsA === eventsB) {
+        const visitorsA = toFiniteNumber(a.unique_visitors) ?? 0;
+        const visitorsB = toFiniteNumber(b.unique_visitors) ?? 0;
+        if (visitorsA === visitorsB) {
           return 0;
         }
-        const diff = eventsA - eventsB;
+        const diff = visitorsA - visitorsB;
         return countrySortOrder === "asc" ? diff : -diff;
       }
 
@@ -1211,22 +1373,25 @@ export default function AdminAnalyticsPage() {
     });
 
     return base;
-  }, [combinedCountryStats, countrySortField, countrySortOrder]);
+  }, [combinedCountryStats, countrySortField, countrySortOrder, totalCountryVisitors]);
 
   const countryChartData = useMemo<DataRecord[]>(
     () =>
       sortedCountryStats.slice(0, 10).map((stat) => {
-        const eventsValue = toFiniteNumber(stat.total_events) ?? 0;
+        const eventsValue = toFiniteNumber(stat.total_events);
         const visitorsValue = toFiniteNumber(stat.unique_visitors);
-        const shareRatio = toFiniteNumber(stat.share);
+        const shareRatio =
+          totalCountryVisitors > 0 && visitorsValue != null
+            ? visitorsValue / totalCountryVisitors
+            : toFiniteNumber(stat.share);
 
         const record: DataRecord = {
           label: trimOrNull(stat.country) ?? "Țară necunoscută",
-          events: eventsValue,
+          visitors: visitorsValue ?? 0,
         };
 
-        if (visitorsValue != null) {
-          record.visitors = visitorsValue;
+        if (eventsValue != null) {
+          record.events = eventsValue;
         }
 
         if (shareRatio != null) {
@@ -1235,14 +1400,14 @@ export default function AdminAnalyticsPage() {
 
         return record;
       }),
-    [sortedCountryStats],
+    [sortedCountryStats, totalCountryVisitors],
   );
 
   const countryBarSeries = useMemo<BarSeries[]>(
     () => [
       {
-        dataKey: "events",
-        name: "Evenimente",
+        dataKey: "visitors",
+        name: "Utilizatori",
         color: getColor("primary"),
       },
     ],
@@ -1252,10 +1417,10 @@ export default function AdminAnalyticsPage() {
   const countryValueFormatter = useCallback(
     (value: number, name: string, payload?: Record<string, unknown>) => {
       const share = toFiniteNumber(payload?.sharePercentage);
-      const visitors = toFiniteNumber(payload?.visitors);
+      const events = toFiniteNumber(payload?.events);
       const parts = [`${name}: ${numberFormatter.format(value)}`];
-      if (visitors != null) {
-        parts.push(`Vizitatori: ${numberFormatter.format(visitors)}`);
+      if (events != null) {
+        parts.push(`Evenimente: ${numberFormatter.format(events)}`);
       }
       if (share != null) {
         parts.push(`Pondere: ${shareFormatter.format(share)}%`);
@@ -1296,19 +1461,19 @@ export default function AdminAnalyticsPage() {
   const topPagesChartData = useMemo<DataRecord[]>(
     () =>
       topPagesData.slice(0, 8).map((page) => {
-        const eventsValue = toFiniteNumber(page.total_events) ?? 0;
+        const eventsValue = toFiniteNumber(page.total_events);
         const visitorsValue = toFiniteNumber(page.unique_visitors);
         const shareRatio = toFiniteNumber(page.share);
         const pageUrl = trimOrNull(page.page_url) ?? "";
 
         const record: DataRecord = {
           label: formatPageLabelForChart(page.page_url),
-          events: eventsValue,
+          visitors: visitorsValue ?? 0,
           pageUrl,
         };
 
-        if (visitorsValue != null) {
-          record.visitors = visitorsValue;
+        if (eventsValue != null) {
+          record.events = eventsValue;
         }
 
         if (shareRatio != null) {
@@ -1323,8 +1488,8 @@ export default function AdminAnalyticsPage() {
   const topPagesBarSeries = useMemo<BarSeries[]>(
     () => [
       {
-        dataKey: "events",
-        name: "Evenimente",
+        dataKey: "visitors",
+        name: "Utilizatori",
         color: getColor("primaryLight"),
       },
     ],
@@ -1334,12 +1499,12 @@ export default function AdminAnalyticsPage() {
   const topPagesValueFormatter = useCallback(
     (value: number, name: string, payload?: Record<string, unknown>) => {
       const share = toFiniteNumber(payload?.sharePercentage);
-      const visitors = toFiniteNumber(payload?.visitors);
+      const events = toFiniteNumber(payload?.events);
       const pageUrl =
         typeof payload?.pageUrl === "string" ? trimOrNull(payload.pageUrl) : null;
       const parts = [`${name}: ${numberFormatter.format(value)}`];
-      if (visitors != null) {
-        parts.push(`Vizitatori: ${numberFormatter.format(visitors)}`);
+      if (events != null) {
+        parts.push(`Evenimente: ${numberFormatter.format(events)}`);
       }
       if (share != null) {
         parts.push(`Pondere: ${shareFormatter.format(share)}%`);
@@ -1355,6 +1520,7 @@ export default function AdminAnalyticsPage() {
   const topCarsChartData = useMemo<DataRecord[]>(
     () =>
       topCars.slice(0, 8).map((car) => {
+        const visitorValue = toFiniteNumber(car.unique_visitors) ?? 0;
         const eventsValue = toFiniteNumber(car.total_events) ?? 0;
         const shareRatio = toFiniteNumber(car.share);
         const label =
@@ -1367,6 +1533,7 @@ export default function AdminAnalyticsPage() {
 
         const record: DataRecord = {
           label,
+          visitors: visitorValue,
           events: eventsValue,
           plate: plateValue,
           carType: carTypeValue,
@@ -1385,8 +1552,8 @@ export default function AdminAnalyticsPage() {
   const topCarsBarSeries = useMemo<BarSeries[]>(
     () => [
       {
-        dataKey: "events",
-        name: "Evenimente",
+        dataKey: "visitors",
+        name: "Utilizatori",
         color: getColor("accentLight"),
       },
     ],
@@ -1396,6 +1563,7 @@ export default function AdminAnalyticsPage() {
   const topCarsValueFormatter = useCallback(
     (value: number, name: string, payload?: Record<string, unknown>) => {
       const share = toFiniteNumber(payload?.sharePercentage);
+      const eventsValue = toFiniteNumber(payload?.events);
       const plateValue =
         typeof payload?.plate === "string" ? trimOrNull(payload.plate) : null;
       const typeValue =
@@ -1403,6 +1571,9 @@ export default function AdminAnalyticsPage() {
       const carNameValue =
         typeof payload?.carName === "string" ? trimOrNull(payload.carName) : null;
       const parts = [`${name}: ${numberFormatter.format(value)}`];
+      if (eventsValue != null) {
+        parts.push(`Evenimente: ${numberFormatter.format(eventsValue)}`);
+      }
       if (plateValue) {
         parts.push(`Număr: ${plateValue}`);
       }
@@ -1419,6 +1590,29 @@ export default function AdminAnalyticsPage() {
     },
     [],
   );
+
+  const topCarsPageCount = useMemo(
+    () => (topCars.length === 0 ? 0 : Math.ceil(topCars.length / TOP_CARS_PER_PAGE)),
+    [topCars.length],
+  );
+
+  const paginatedTopCars = useMemo(() => {
+    if (topCars.length === 0) {
+      return { items: [] as AdminAnalyticsCarStat[], startIndex: 0 };
+    }
+    const startIndex = Math.max(0, (topCarsPage - 1) * TOP_CARS_PER_PAGE);
+    return {
+      items: topCars.slice(startIndex, startIndex + TOP_CARS_PER_PAGE),
+      startIndex,
+    };
+  }, [topCars, topCarsPage]);
+
+  const currentTopCarsPage = useMemo(() => {
+    if (topCarsPageCount === 0) {
+      return 1;
+    }
+    return Math.min(topCarsPage, topCarsPageCount);
+  }, [topCarsPage, topCarsPageCount]);
 
   const handleRangeSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
@@ -1807,12 +2001,23 @@ export default function AdminAnalyticsPage() {
   const renderEventTypeCard = (item: AdminAnalyticsEventTypeStat) => {
     const totalEvents = toFiniteNumber(item.total_events);
     const shareValue = toFiniteNumber(item.share);
-    const summaryTotalEvents = summaryEventTypeTotal ?? toFiniteNumber(summary?.totals?.events);
     const uniqueVisitors = toFiniteNumber(item.unique_visitors);
+    const summaryTotalEvents =
+      summaryEventTypeEventTotal ?? toFiniteNumber(summary?.totals?.events);
+    const summaryTotalVisitors =
+      summaryEventTypeVisitorTotal ??
+      toFiniteNumber(summary?.totals?.unique_visitors);
 
     const resolvedShare = (() => {
       if (shareValue != null) {
         return shareValue;
+      }
+      if (
+        uniqueVisitors != null &&
+        summaryTotalVisitors &&
+        summaryTotalVisitors > 0
+      ) {
+        return Math.min(Math.max(uniqueVisitors / summaryTotalVisitors, 0), 1);
       }
       if (totalEvents != null && summaryTotalEvents && summaryTotalEvents > 0) {
         return Math.min(Math.max(totalEvents / summaryTotalEvents, 0), 1);
@@ -1822,6 +2027,16 @@ export default function AdminAnalyticsPage() {
 
     const shareLabel =
       resolvedShare != null ? `${shareFormatter.format(resolvedShare * 100)}%` : "—";
+
+    const primaryValue = (() => {
+      if (uniqueVisitors != null) {
+        return numberFormatter.format(uniqueVisitors);
+      }
+      if (totalEvents != null) {
+        return numberFormatter.format(totalEvents);
+      }
+      return "—";
+    })();
 
     return (
       <div
@@ -1835,12 +2050,13 @@ export default function AdminAnalyticsPage() {
           <p className="text-sm font-semibold text-slate-700">{item.type}</p>
         </div>
         <p className="mt-3 text-2xl font-semibold text-slate-900">
-          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
+          {primaryValue}
         </p>
         <div className="mt-1 space-y-1 text-xs text-slate-500">
+          <p>{uniqueVisitors != null ? "Utilizatori unici" : "Evenimente"}</p>
           <p>Pondere: {shareLabel}</p>
-          {uniqueVisitors != null ? (
-            <p>{numberFormatter.format(uniqueVisitors)} vizitatori unici</p>
+          {uniqueVisitors != null && totalEvents != null ? (
+            <p>{`${numberFormatter.format(totalEvents)} evenimente colectate`}</p>
           ) : null}
         </div>
       </div>
@@ -1871,10 +2087,10 @@ export default function AdminAnalyticsPage() {
           )}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
-          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
+          {uniqueVisitors != null ? numberFormatter.format(uniqueVisitors) : "—"}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
-          {uniqueVisitors != null ? numberFormatter.format(uniqueVisitors) : "—"}
+          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
           {shareValue != null ? `${shareFormatter.format(shareValue * 100)}%` : "—"}
@@ -1886,17 +2102,21 @@ export default function AdminAnalyticsPage() {
   const renderCountryRow = (stat: AdminAnalyticsCountryStat) => {
     const totalEvents = toFiniteNumber(stat.total_events);
     const uniqueVisitors = toFiniteNumber(stat.unique_visitors);
-    const shareValue = toFiniteNumber(stat.share);
+    const shareValue =
+      totalCountryVisitors > 0 && uniqueVisitors != null
+        ? uniqueVisitors / totalCountryVisitors
+        : toFiniteNumber(stat.share);
     const label = trimOrNull(stat.country) ?? "Țară necunoscută";
+    const keyValue = uniqueVisitors ?? totalEvents ?? 0;
 
     return (
-      <tr key={`${label}-${totalEvents ?? 0}`} className="border-b border-slate-100">
+      <tr key={`${label}-${keyValue}`} className="border-b border-slate-100">
         <td className="px-4 py-3 text-sm text-slate-700">{label}</td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
-          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
+          {uniqueVisitors != null ? numberFormatter.format(uniqueVisitors) : "—"}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
-          {uniqueVisitors != null ? numberFormatter.format(uniqueVisitors) : "—"}
+          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
           {shareValue != null ? `${shareFormatter.format(shareValue * 100)}%` : "—"}
@@ -1906,6 +2126,7 @@ export default function AdminAnalyticsPage() {
   };
 
   const renderTopCarRow = (car: AdminAnalyticsCarStat, index: number) => {
+    const visitorsValue = toFiniteNumber(car.unique_visitors);
     const eventsValue = toFiniteNumber(car.total_events);
     const shareValue = toFiniteNumber(car.share);
     const plateLabel =
@@ -1927,8 +2148,15 @@ export default function AdminAnalyticsPage() {
           </div>
         </td>
         <td className="px-4 py-3 text-sm text-slate-700">{modelLabel ?? "—"}</td>
-        <td className="px-4 py-3 text-sm text-right text-slate-700">
-          {eventsValue != null ? numberFormatter.format(eventsValue) : "—"}
+        <td
+          className="px-4 py-3 text-sm text-right text-slate-700"
+          title={
+            eventsValue != null
+              ? `${numberFormatter.format(eventsValue)} evenimente în total`
+              : undefined
+          }
+        >
+          {visitorsValue != null ? numberFormatter.format(visitorsValue) : "—"}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
           {shareValue != null ? `${shareFormatter.format(shareValue * 100)}%` : "—"}
@@ -1959,14 +2187,8 @@ export default function AdminAnalyticsPage() {
   const dailyActivitySeries = useMemo<LineSeries[]>(
     () => [
       {
-        dataKey: "events",
-        name: "Evenimente",
-        color: getColor("primary"),
-        strokeWidth: 2,
-      },
-      {
         dataKey: "visitors",
-        name: "Vizitatori",
+        name: "Utilizatori",
         color: getColor("accent"),
         strokeWidth: 2,
       },
@@ -1975,7 +2197,14 @@ export default function AdminAnalyticsPage() {
   );
 
   const dailyActivityValueFormatter = useCallback(
-    (value: number, name: string) => `${name}: ${numberFormatter.format(value)}`,
+    (value: number, name: string, payload?: Record<string, unknown>) => {
+      const eventsValue = toFiniteNumber(payload?.events);
+      const parts = [`${name}: ${numberFormatter.format(value)}`];
+      if (eventsValue != null) {
+        parts.push(`Evenimente: ${numberFormatter.format(eventsValue)}`);
+      }
+      return parts.join(" • ");
+    },
     [],
   );
 
@@ -2109,25 +2338,25 @@ export default function AdminAnalyticsPage() {
 
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <header className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <h2 className="text-xl font-semibold text-berkeley">Distribuția evenimentelor</h2>
+          <h2 className="text-xl font-semibold text-berkeley">Distribuția utilizatorilor</h2>
           <p className="text-sm text-slate-600">
-            Evenimentele sunt grupate pe tip pentru a evidenția interacțiunile importante și acoperirea paginilor.
+            Utilizatorii sunt grupați pe tip de eveniment pentru a evidenția interacțiunile importante și acoperirea paginilor.
           </p>
         </header>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {summaryLoading ? (
-            <p className="text-sm text-slate-500">Se încarcă distribuția evenimentelor...</p>
+            <p className="text-sm text-slate-500">Se încarcă distribuția utilizatorilor...</p>
           ) : summaryEventTypeStats.length ? (
             summaryEventTypeStats.map((item) => renderEventTypeCard(item))
           ) : (
-            <p className="text-sm text-slate-500">Nu există evenimente în intervalul selectat.</p>
+            <p className="text-sm text-slate-500">Nu există utilizatori în intervalul selectat.</p>
           )}
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-slate-600">Grafic tipuri de evenimente</h3>
+            <h3 className="text-sm font-semibold text-slate-600">Grafic utilizatori pe tip de eveniment</h3>
             {summaryLoading ? (
-              <p className="text-sm text-slate-500">Se încarcă graficul de evenimente...</p>
+              <p className="text-sm text-slate-500">Se încarcă graficul de utilizatori...</p>
             ) : eventTypeChartData.length ? (
               <ChartContainer>
                 <SimpleBarChart
@@ -2140,7 +2369,7 @@ export default function AdminAnalyticsPage() {
                 />
               </ChartContainer>
             ) : (
-              <p className="text-sm text-slate-500">Nu există evenimente în intervalul selectat.</p>
+              <p className="text-sm text-slate-500">Nu există utilizatori în intervalul selectat.</p>
             )}
           </div>
           <div className="space-y-2">
@@ -2174,7 +2403,7 @@ export default function AdminAnalyticsPage() {
         </header>
         {topPagesChartData.length ? (
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-slate-600">Top 8 pagini (după evenimente)</h3>
+            <h3 className="text-sm font-semibold text-slate-600">Top 8 pagini (după utilizatori)</h3>
             <ChartContainer>
               <SimpleBarChart
                 data={topPagesChartData}
@@ -2193,8 +2422,8 @@ export default function AdminAnalyticsPage() {
               <thead className="bg-slate-100 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Pagină</th>
+                  <th className="px-4 py-3 text-right">Utilizatori</th>
                   <th className="px-4 py-3 text-right">Evenimente</th>
-                  <th className="px-4 py-3 text-right">Vizitatori</th>
                   <th className="px-4 py-3 text-right">Pondere</th>
                 </tr>
               </thead>
@@ -2227,7 +2456,7 @@ export default function AdminAnalyticsPage() {
           <div className="space-y-4">
             {topCarsChartData.length ? (
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-slate-600">Top 8 mașini după impresii</h3>
+                <h3 className="text-sm font-semibold text-slate-600">Top 8 mașini după utilizatori</h3>
                 <ChartContainer>
                   <SimpleBarChart
                     data={topCarsChartData}
@@ -2246,14 +2475,48 @@ export default function AdminAnalyticsPage() {
                   <tr>
                     <th className="px-4 py-3">Nr. înmatriculare</th>
                     <th className="px-4 py-3">Model</th>
-                    <th className="px-4 py-3 text-right">Evenimente</th>
+                    <th className="px-4 py-3 text-right">Utilizatori</th>
                     <th className="px-4 py-3 text-right">Pondere</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {topCars.map((car, index) => renderTopCarRow(car, index))}
+                  {paginatedTopCars.items.map((car, index) =>
+                    renderTopCarRow(car, paginatedTopCars.startIndex + index),
+                  )}
                 </tbody>
               </table>
+            </div>
+            <div className="flex items-center justify-between border-t border-slate-200 pt-4 text-sm text-slate-600">
+              <span>
+                Pagina {currentTopCarsPage}
+                {topCarsPageCount ? ` din ${topCarsPageCount}` : ""}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentTopCarsPage <= 1}
+                  onClick={() =>
+                    setTopCarsPage((prev) => Math.max(1, prev - 1))
+                  }
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    topCarsPageCount === 0 || currentTopCarsPage >= topCarsPageCount
+                  }
+                  onClick={() =>
+                    setTopCarsPage((prev) =>
+                      topCarsPageCount === 0 ? prev : Math.min(prev + 1, topCarsPageCount),
+                    )
+                  }
+                >
+                  Următor
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
@@ -2272,7 +2535,7 @@ export default function AdminAnalyticsPage() {
             <div>
               <h2 className="text-xl font-semibold text-berkeley">Distribuție pe țări</h2>
               <p className="text-sm text-slate-600">
-                Evenimentele agregate pe țări pentru a înțelege sursele traficului anonim.
+                Vizitatorii unici agregați pe țări pentru a înțelege sursele traficului anonim.
               </p>
             </div>
           </div>
@@ -2292,8 +2555,8 @@ export default function AdminAnalyticsPage() {
               }}
               className="w-full sm:w-auto sm:min-w-[160px]"
             >
+              <option value="visitors">Utilizatori</option>
               <option value="events">Evenimente</option>
-              <option value="visitors">Vizitatori</option>
               <option value="share">Pondere</option>
               <option value="name">Nume țară</option>
             </Select>
@@ -2320,7 +2583,7 @@ export default function AdminAnalyticsPage() {
           <div className="space-y-4">
             {countryChartData.length ? (
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-slate-600">Top 10 țări după evenimente</h3>
+                <h3 className="text-sm font-semibold text-slate-600">Top 10 țări după utilizatori</h3>
                 <ChartContainer>
                   <SimpleBarChart
                     data={countryChartData}
@@ -2341,10 +2604,10 @@ export default function AdminAnalyticsPage() {
                       {renderCountryHeaderButton("name", "Țară", "left")}
                     </th>
                     <th className="px-4 py-3 text-right">
-                      {renderCountryHeaderButton("events", "Evenimente", "right")}
+                      {renderCountryHeaderButton("visitors", "Utilizatori", "right")}
                     </th>
                     <th className="px-4 py-3 text-right">
-                      {renderCountryHeaderButton("visitors", "Vizitatori", "right")}
+                      {renderCountryHeaderButton("events", "Evenimente", "right")}
                     </th>
                     <th className="px-4 py-3 text-right">
                       {renderCountryHeaderButton("share", "Pondere", "right")}
@@ -2740,8 +3003,8 @@ export default function AdminAnalyticsPage() {
                         <thead className="bg-slate-100 text-xs uppercase text-slate-500">
                           <tr>
                             <th className="px-4 py-2">Țară</th>
+                            <th className="px-4 py-2 text-right">Utilizatori</th>
                             <th className="px-4 py-2 text-right">Evenimente</th>
-                            <th className="px-4 py-2 text-right">Vizitatori</th>
                             <th className="px-4 py-2 text-right">Pondere</th>
                           </tr>
                         </thead>

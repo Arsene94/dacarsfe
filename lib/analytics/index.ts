@@ -720,21 +720,91 @@ const scheduleFlush = (force = false) => {
     }, FLUSH_INTERVAL_MS);
 };
 
-const buildPageUrl = (pageUrl?: string): string => {
-    if (pageUrl && pageUrl.trim().length > 0) {
-        return pageUrl;
+type PageDetails = {
+    url: string;
+    queryString?: string;
+    queryParams?: Record<string, string | string[]>;
+};
+
+const extractSearchMetadata = (search?: string | null): {
+    queryString?: string;
+    queryParams?: Record<string, string | string[]>;
+} => {
+    if (!search) {
+        return {};
+    }
+
+    const trimmed = search.startsWith("?") ? search.slice(1) : search;
+    if (trimmed.length === 0) {
+        return {};
+    }
+
+    const params = new URLSearchParams(trimmed);
+    const queryParams: Record<string, string | string[]> = {};
+
+    params.forEach((value, key) => {
+        const existing = queryParams[key];
+        if (existing === undefined) {
+            queryParams[key] = value;
+            return;
+        }
+
+        if (Array.isArray(existing)) {
+            existing.push(value);
+            return;
+        }
+
+        queryParams[key] = [existing, value];
+    });
+
+    return {
+        queryString: trimmed,
+        ...(Object.keys(queryParams).length > 0 ? { queryParams } : {}),
+    };
+};
+
+const buildFallbackPageDetails = (rawValue: string): PageDetails => {
+    const trimmed = rawValue.trim();
+    const hashIndex = trimmed.indexOf("#");
+    const withoutHash = hashIndex >= 0 ? trimmed.slice(0, hashIndex) : trimmed;
+    const [path, queryPart] = withoutHash.split("?", 2);
+    const metadata = extractSearchMetadata(queryPart);
+
+    return {
+        url: path,
+        ...metadata,
+    };
+};
+
+const resolvePageDetails = (pageUrl?: string): PageDetails => {
+    const trimmed = pageUrl?.trim();
+    if (trimmed && trimmed.length > 0) {
+        try {
+            const base = isBrowser() ? window.location.origin : "https://dacars.ro";
+            const parsed = new URL(trimmed, base);
+            return {
+                url: `${parsed.origin}${parsed.pathname}`,
+                ...extractSearchMetadata(parsed.search),
+            };
+        } catch (error) {
+            console.warn("Nu am putut compune page_url", error);
+            return buildFallbackPageDetails(trimmed);
+        }
     }
 
     if (!isBrowser()) {
-        return "";
+        return { url: "" };
     }
 
     try {
         const { origin, pathname, search } = window.location;
-        return `${origin}${pathname}${search}`;
+        return {
+            url: `${origin}${pathname}`,
+            ...extractSearchMetadata(search),
+        };
     } catch (error) {
         console.warn("Nu am putut compune page_url", error);
-        return "";
+        return { url: "" };
     }
 };
 
@@ -765,10 +835,12 @@ const enqueueEvent = (payload: AnalyticsEventInput) => {
         return;
     }
 
+    const pageDetails = resolvePageDetails(payload.pageUrl);
+
     const event: AnalyticsQueuedEvent = {
         type: payload.type,
         occurred_at: toIsoString(payload.occurredAt),
-        page_url: buildPageUrl(payload.pageUrl),
+        page_url: pageDetails.url,
     };
 
     const eventCountry = getVisitorCountry(payload.country ?? null);
@@ -781,7 +853,22 @@ const enqueueEvent = (payload: AnalyticsEventInput) => {
         event.referrer_url = referrer;
     }
 
-    const metadata = sanitizeMetadata(payload.metadata ?? undefined);
+    let metadataInput: AnalyticsMetadata | undefined;
+    if (payload.metadata) {
+        metadataInput = { ...payload.metadata };
+    }
+
+    if (pageDetails.queryString) {
+        metadataInput = metadataInput ? { ...metadataInput } : {};
+        metadataInput.page_query = pageDetails.queryString;
+    }
+
+    if (pageDetails.queryParams) {
+        metadataInput = metadataInput ? { ...metadataInput } : {};
+        metadataInput.page_query_params = pageDetails.queryParams;
+    }
+
+    const metadata = sanitizeMetadata(metadataInput ?? undefined);
     if (metadata) {
         event.metadata = metadata;
     }
@@ -936,13 +1023,13 @@ export const trackPageView = (pageUrl?: string) => {
         return;
     }
 
-    const resolvedUrl = buildPageUrl(pageUrl);
+    const pageDetails = resolvePageDetails(pageUrl);
     enqueueEvent({
         type: "page_view",
-        pageUrl: resolvedUrl,
+        pageUrl,
         referrerUrl: resolveReferrer(undefined),
     });
-    lastTrackedPageUrl = resolvedUrl;
+    lastTrackedPageUrl = pageDetails.url;
 };
 
 export const resetAnalyticsReferrer = () => {
