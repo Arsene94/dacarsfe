@@ -389,6 +389,31 @@ const resolveEventTypeTotal = (value: unknown): number | null => {
   return null;
 };
 
+const resolveEventTypeVisitorTotal = (value: unknown): number | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const container = value as Record<string, unknown>;
+  const candidates = [
+    container.total_unique_visitors,
+    container.totalUniqueVisitors,
+    container.unique_visitors,
+    container.uniqueVisitors,
+    container.total_visitors,
+    container.visitors,
+  ];
+
+  for (const candidate of candidates) {
+    const numeric = toFiniteNumber(candidate);
+    if (numeric != null) {
+      return numeric;
+    }
+  }
+
+  return null;
+};
+
 const normalizeCountryStat = (value: unknown, fallbackCountry?: string | null): AdminAnalyticsCountryStat | null => {
   if (!value) {
     return null;
@@ -1155,24 +1180,71 @@ export default function AdminAnalyticsPage() {
     [summary?.events_by_type],
   );
 
-  const summaryEventTypeTotal = useMemo(
+  const summaryEventTypeEventTotal = useMemo(
     () => toFiniteNumber(resolveEventTypeTotal(summary?.events_by_type as unknown)),
     [summary?.events_by_type],
   );
 
+  const summaryEventTypeVisitorTotal = useMemo(() => {
+    let runningTotal = 0;
+    let hasValue = false;
+
+    summaryEventTypeStats.forEach((item) => {
+      const visitorsValue = toFiniteNumber(item.unique_visitors);
+      if (visitorsValue != null) {
+        runningTotal += visitorsValue;
+        hasValue = true;
+      }
+    });
+
+    if (hasValue) {
+      return runningTotal;
+    }
+
+    return toFiniteNumber(
+      resolveEventTypeVisitorTotal(summary?.events_by_type as unknown),
+    );
+  }, [summary?.events_by_type, summaryEventTypeStats]);
+
   const eventTypeChartData = useMemo<DataRecord[]>(
     () =>
       summaryEventTypeStats.map((item) => {
-        const total = toFiniteNumber(item.total_events) ?? 0;
+        const visitorsValue = toFiniteNumber(item.unique_visitors);
+        const eventsValue = toFiniteNumber(item.total_events);
         let shareRatio = toFiniteNumber(item.share);
-        if (shareRatio == null && summaryEventTypeTotal && summaryEventTypeTotal > 0) {
-          shareRatio = Math.min(Math.max(total / summaryEventTypeTotal, 0), 1);
+
+        if (
+          shareRatio == null &&
+          visitorsValue != null &&
+          summaryEventTypeVisitorTotal &&
+          summaryEventTypeVisitorTotal > 0
+        ) {
+          shareRatio = Math.min(
+            Math.max(visitorsValue / summaryEventTypeVisitorTotal, 0),
+            1,
+          );
+        }
+
+        if (
+          shareRatio == null &&
+          eventsValue != null &&
+          summaryEventTypeEventTotal &&
+          summaryEventTypeEventTotal > 0
+        ) {
+          shareRatio = Math.min(
+            Math.max(eventsValue / summaryEventTypeEventTotal, 0),
+            1,
+          );
         }
 
         const record: DataRecord = {
           label: item.type ?? "necunoscut",
-          events: total,
+          visitors: visitorsValue ?? 0,
         };
+
+        if (eventsValue != null) {
+          record.events = eventsValue;
+        }
 
         if (shareRatio != null) {
           record.sharePercentage = shareRatio * 100;
@@ -1180,14 +1252,18 @@ export default function AdminAnalyticsPage() {
 
         return record;
       }),
-    [summaryEventTypeStats, summaryEventTypeTotal],
+    [
+      summaryEventTypeEventTotal,
+      summaryEventTypeStats,
+      summaryEventTypeVisitorTotal,
+    ],
   );
 
   const eventTypeBarSeries = useMemo<BarSeries[]>(
     () => [
       {
-        dataKey: "events",
-        name: "Evenimente",
+        dataKey: "visitors",
+        name: "Utilizatori",
         color: getColor("accent"),
       },
     ],
@@ -1197,11 +1273,18 @@ export default function AdminAnalyticsPage() {
   const eventTypeValueFormatter = useCallback(
     (value: number, name: string, payload?: Record<string, unknown>) => {
       const share = toFiniteNumber(payload?.sharePercentage);
-      const base = `${name}: ${numberFormatter.format(value)}`;
-      if (share != null) {
-        return `${base} (${shareFormatter.format(share)}%)`;
+      const events = toFiniteNumber(payload?.events);
+      const parts = [`${name}: ${numberFormatter.format(value)}`];
+
+      if (events != null) {
+        parts.push(`Evenimente: ${numberFormatter.format(events)}`);
       }
-      return base;
+
+      if (share != null) {
+        parts.push(`Pondere: ${shareFormatter.format(share)}%`);
+      }
+
+      return parts.join(" • ");
     },
     [],
   );
@@ -1378,19 +1461,19 @@ export default function AdminAnalyticsPage() {
   const topPagesChartData = useMemo<DataRecord[]>(
     () =>
       topPagesData.slice(0, 8).map((page) => {
-        const eventsValue = toFiniteNumber(page.total_events) ?? 0;
+        const eventsValue = toFiniteNumber(page.total_events);
         const visitorsValue = toFiniteNumber(page.unique_visitors);
         const shareRatio = toFiniteNumber(page.share);
         const pageUrl = trimOrNull(page.page_url) ?? "";
 
         const record: DataRecord = {
           label: formatPageLabelForChart(page.page_url),
-          events: eventsValue,
+          visitors: visitorsValue ?? 0,
           pageUrl,
         };
 
-        if (visitorsValue != null) {
-          record.visitors = visitorsValue;
+        if (eventsValue != null) {
+          record.events = eventsValue;
         }
 
         if (shareRatio != null) {
@@ -1405,8 +1488,8 @@ export default function AdminAnalyticsPage() {
   const topPagesBarSeries = useMemo<BarSeries[]>(
     () => [
       {
-        dataKey: "events",
-        name: "Evenimente",
+        dataKey: "visitors",
+        name: "Utilizatori",
         color: getColor("primaryLight"),
       },
     ],
@@ -1416,12 +1499,12 @@ export default function AdminAnalyticsPage() {
   const topPagesValueFormatter = useCallback(
     (value: number, name: string, payload?: Record<string, unknown>) => {
       const share = toFiniteNumber(payload?.sharePercentage);
-      const visitors = toFiniteNumber(payload?.visitors);
+      const events = toFiniteNumber(payload?.events);
       const pageUrl =
         typeof payload?.pageUrl === "string" ? trimOrNull(payload.pageUrl) : null;
       const parts = [`${name}: ${numberFormatter.format(value)}`];
-      if (visitors != null) {
-        parts.push(`Vizitatori: ${numberFormatter.format(visitors)}`);
+      if (events != null) {
+        parts.push(`Evenimente: ${numberFormatter.format(events)}`);
       }
       if (share != null) {
         parts.push(`Pondere: ${shareFormatter.format(share)}%`);
@@ -1918,12 +2001,23 @@ export default function AdminAnalyticsPage() {
   const renderEventTypeCard = (item: AdminAnalyticsEventTypeStat) => {
     const totalEvents = toFiniteNumber(item.total_events);
     const shareValue = toFiniteNumber(item.share);
-    const summaryTotalEvents = summaryEventTypeTotal ?? toFiniteNumber(summary?.totals?.events);
     const uniqueVisitors = toFiniteNumber(item.unique_visitors);
+    const summaryTotalEvents =
+      summaryEventTypeEventTotal ?? toFiniteNumber(summary?.totals?.events);
+    const summaryTotalVisitors =
+      summaryEventTypeVisitorTotal ??
+      toFiniteNumber(summary?.totals?.unique_visitors);
 
     const resolvedShare = (() => {
       if (shareValue != null) {
         return shareValue;
+      }
+      if (
+        uniqueVisitors != null &&
+        summaryTotalVisitors &&
+        summaryTotalVisitors > 0
+      ) {
+        return Math.min(Math.max(uniqueVisitors / summaryTotalVisitors, 0), 1);
       }
       if (totalEvents != null && summaryTotalEvents && summaryTotalEvents > 0) {
         return Math.min(Math.max(totalEvents / summaryTotalEvents, 0), 1);
@@ -1933,6 +2027,16 @@ export default function AdminAnalyticsPage() {
 
     const shareLabel =
       resolvedShare != null ? `${shareFormatter.format(resolvedShare * 100)}%` : "—";
+
+    const primaryValue = (() => {
+      if (uniqueVisitors != null) {
+        return numberFormatter.format(uniqueVisitors);
+      }
+      if (totalEvents != null) {
+        return numberFormatter.format(totalEvents);
+      }
+      return "—";
+    })();
 
     return (
       <div
@@ -1946,12 +2050,13 @@ export default function AdminAnalyticsPage() {
           <p className="text-sm font-semibold text-slate-700">{item.type}</p>
         </div>
         <p className="mt-3 text-2xl font-semibold text-slate-900">
-          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
+          {primaryValue}
         </p>
         <div className="mt-1 space-y-1 text-xs text-slate-500">
+          <p>{uniqueVisitors != null ? "Utilizatori unici" : "Evenimente"}</p>
           <p>Pondere: {shareLabel}</p>
-          {uniqueVisitors != null ? (
-            <p>{numberFormatter.format(uniqueVisitors)} vizitatori unici</p>
+          {uniqueVisitors != null && totalEvents != null ? (
+            <p>{`${numberFormatter.format(totalEvents)} evenimente colectate`}</p>
           ) : null}
         </div>
       </div>
@@ -1982,10 +2087,10 @@ export default function AdminAnalyticsPage() {
           )}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
-          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
+          {uniqueVisitors != null ? numberFormatter.format(uniqueVisitors) : "—"}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
-          {uniqueVisitors != null ? numberFormatter.format(uniqueVisitors) : "—"}
+          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
           {shareValue != null ? `${shareFormatter.format(shareValue * 100)}%` : "—"}
@@ -2082,14 +2187,8 @@ export default function AdminAnalyticsPage() {
   const dailyActivitySeries = useMemo<LineSeries[]>(
     () => [
       {
-        dataKey: "events",
-        name: "Evenimente",
-        color: getColor("primary"),
-        strokeWidth: 2,
-      },
-      {
         dataKey: "visitors",
-        name: "Vizitatori",
+        name: "Utilizatori",
         color: getColor("accent"),
         strokeWidth: 2,
       },
@@ -2098,7 +2197,14 @@ export default function AdminAnalyticsPage() {
   );
 
   const dailyActivityValueFormatter = useCallback(
-    (value: number, name: string) => `${name}: ${numberFormatter.format(value)}`,
+    (value: number, name: string, payload?: Record<string, unknown>) => {
+      const eventsValue = toFiniteNumber(payload?.events);
+      const parts = [`${name}: ${numberFormatter.format(value)}`];
+      if (eventsValue != null) {
+        parts.push(`Evenimente: ${numberFormatter.format(eventsValue)}`);
+      }
+      return parts.join(" • ");
+    },
     [],
   );
 
@@ -2232,25 +2338,25 @@ export default function AdminAnalyticsPage() {
 
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <header className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <h2 className="text-xl font-semibold text-berkeley">Distribuția evenimentelor</h2>
+          <h2 className="text-xl font-semibold text-berkeley">Distribuția utilizatorilor</h2>
           <p className="text-sm text-slate-600">
-            Evenimentele sunt grupate pe tip pentru a evidenția interacțiunile importante și acoperirea paginilor.
+            Utilizatorii sunt grupați pe tip de eveniment pentru a evidenția interacțiunile importante și acoperirea paginilor.
           </p>
         </header>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {summaryLoading ? (
-            <p className="text-sm text-slate-500">Se încarcă distribuția evenimentelor...</p>
+            <p className="text-sm text-slate-500">Se încarcă distribuția utilizatorilor...</p>
           ) : summaryEventTypeStats.length ? (
             summaryEventTypeStats.map((item) => renderEventTypeCard(item))
           ) : (
-            <p className="text-sm text-slate-500">Nu există evenimente în intervalul selectat.</p>
+            <p className="text-sm text-slate-500">Nu există utilizatori în intervalul selectat.</p>
           )}
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-slate-600">Grafic tipuri de evenimente</h3>
+            <h3 className="text-sm font-semibold text-slate-600">Grafic utilizatori pe tip de eveniment</h3>
             {summaryLoading ? (
-              <p className="text-sm text-slate-500">Se încarcă graficul de evenimente...</p>
+              <p className="text-sm text-slate-500">Se încarcă graficul de utilizatori...</p>
             ) : eventTypeChartData.length ? (
               <ChartContainer>
                 <SimpleBarChart
@@ -2263,7 +2369,7 @@ export default function AdminAnalyticsPage() {
                 />
               </ChartContainer>
             ) : (
-              <p className="text-sm text-slate-500">Nu există evenimente în intervalul selectat.</p>
+              <p className="text-sm text-slate-500">Nu există utilizatori în intervalul selectat.</p>
             )}
           </div>
           <div className="space-y-2">
@@ -2297,7 +2403,7 @@ export default function AdminAnalyticsPage() {
         </header>
         {topPagesChartData.length ? (
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-slate-600">Top 8 pagini (după evenimente)</h3>
+            <h3 className="text-sm font-semibold text-slate-600">Top 8 pagini (după utilizatori)</h3>
             <ChartContainer>
               <SimpleBarChart
                 data={topPagesChartData}
@@ -2316,8 +2422,8 @@ export default function AdminAnalyticsPage() {
               <thead className="bg-slate-100 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Pagină</th>
+                  <th className="px-4 py-3 text-right">Utilizatori</th>
                   <th className="px-4 py-3 text-right">Evenimente</th>
-                  <th className="px-4 py-3 text-right">Vizitatori</th>
                   <th className="px-4 py-3 text-right">Pondere</th>
                 </tr>
               </thead>
