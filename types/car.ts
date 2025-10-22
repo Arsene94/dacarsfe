@@ -97,6 +97,7 @@ export type Car = {
   typeId: number | null;
   image: string;
   gallery: string[];
+  licensePlate: string | null;
   price: number;
   rental_rate: string;
   rental_rate_casco: string;

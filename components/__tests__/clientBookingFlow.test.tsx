@@ -97,6 +97,7 @@ const mockApiCar: ApiCar = {
   images: ['/images/test-car.jpg'],
   avg_review: 4.8,
   content: 'Autovehicul pentru test',
+  license_plate: 'B-00-TEST',
 };
 
 const mappedCar: Car = {
@@ -106,6 +107,7 @@ const mappedCar: Car = {
   typeId: mockApiCar.type?.id ?? null,
   image: '/images/test-car.jpg',
   gallery: ['/images/test-car.jpg'],
+  licensePlate: mockApiCar.license_plate ?? null,
   price: 55,
   rental_rate: String(mockApiCar.rental_rate ?? 55),
   rental_rate_casco: String(mockApiCar.rental_rate_casco ?? 70),

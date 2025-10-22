@@ -20,6 +20,7 @@ import TikTokPixelScript from "../components/TikTokPixelScript";
 import MetaPixel from "../components/MetaPixel";
 import MetaPixelServiceWorker from "../components/MetaPixelServiceWorker";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import AnalyticsTracker from "../components/AnalyticsTracker";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -109,6 +110,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <MixpanelInitializer/>
         <MetaPixel />
         <MetaPixelServiceWorker />
+        <AnalyticsTracker />
         </Suspense>
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`

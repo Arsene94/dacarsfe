@@ -22,6 +22,7 @@ import { useTranslations } from "@/lib/i18n/useTranslations";
 import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackMetaPixelViewContent } from "@/lib/metaPixel";
 import { trackTikTokSearch, trackTikTokViewContent } from "@/lib/tiktokPixel";
+import { isAnalyticsTrackingEnabled, trackAnalyticsEvent } from "@/lib/analytics";
 
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
@@ -57,6 +58,15 @@ const toNumberOrNull = (value: unknown): number | null => {
     return Number.isFinite(numeric) ? numeric : null;
 };
 
+const toAnalyticsMetadataString = (value: Record<string, unknown>): string | undefined => {
+    try {
+        return JSON.stringify(value);
+    } catch (error) {
+        console.warn("Nu am putut serializa metadata pentru CTA car", error);
+        return undefined;
+    }
+};
+
 type FiltersState = {
     car_type: string;
     type: string;
@@ -78,6 +88,15 @@ const FleetPage = () => {
         (value: string | number) => t("labels.passengers", { values: { count: value } }),
         [t],
     );
+
+    const parseLicensePlate = useCallback((value: unknown): string | null => {
+        if (typeof value !== "string") {
+            return null;
+        }
+
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }, []);
 
     const mapCar = useCallback(
         (c: ApiCar): Car => {
@@ -146,6 +165,11 @@ const FleetPage = () => {
 
             const passengersCount = Number(c.number_of_seats) || 0;
 
+            const licensePlate =
+                parseLicensePlate(c.license_plate) ??
+                parseLicensePlate(c.licensePlate) ??
+                parseLicensePlate(c.plate);
+
             return {
                 id: c.id,
                 name: resolvedName,
@@ -153,6 +177,7 @@ const FleetPage = () => {
                 typeId: c.type?.id ?? null,
                 image: primaryImage,
                 gallery,
+                licensePlate: licensePlate ?? null,
                 price: parsePrice(
                     Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco)),
                 ),
@@ -177,7 +202,7 @@ const FleetPage = () => {
                 specs: [],
             };
         },
-        [fallbackCarName, unknownValue],
+        [fallbackCarName, unknownValue, parseLicensePlate],
     );
 
     const searchParams = useSearchParams();
@@ -215,6 +240,7 @@ const FleetPage = () => {
     const loadingRef = useRef(false);
     const hasMoreRef = useRef(true);
     const hasTrackedViewRef = useRef(false);
+    const trackedCarImpressionsRef = useRef<Set<string>>(new Set());
 
     const [categories, setCategories] = useState<CarCategory[]>();
     const [availabilityFeedback, setAvailabilityFeedback] = useState<{
@@ -351,6 +377,7 @@ const FleetPage = () => {
         setCurrentPage(1);
         hasMoreRef.current = true;
         hasTrackedViewRef.current = false;
+        trackedCarImpressionsRef.current.clear();
     }, [filters, sortBy, searchTerm, startDate, endDate, carTypeParam, location]);
 
     // categories (reîncărcare la schimbarea localei pentru fallback-uri)
@@ -745,125 +772,285 @@ const FleetPage = () => {
         hasTrackedViewRef.current = true;
     }, [cars, currentPage, loading, totalCars, searchTerm, sortBy]);
 
-    const CarCard = ({ car, isListView = false }: { car: Car; isListView?: boolean; }) => (
-        <div className={`bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group border border-gray-100 ${isListView ? "flex flex-col md:flex-row" : ""}`}>
-            <div className={`relative overflow-hidden ${isListView ? "md:w-1/3 h-48 md:h-full" : "h-48"}`}>
-                <Image
-                    src={car.image}
-                    alt={car.name}
-                    fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-500"
-                    sizes={CAR_CARD_IMAGE_SIZES}
-                />
-                <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
-                    {car.type}
+    const registerCarImpression = useCallback(
+        (car: Car, index: number) => {
+            if (!isAnalyticsTrackingEnabled()) {
+                return;
+            }
+
+            const identifier =
+                typeof car.id === "number" && Number.isFinite(car.id)
+                    ? `car-${car.id}`
+                    : `car-${car.name}-${index}`;
+
+            if (trackedCarImpressionsRef.current.has(identifier)) {
+                return;
+            }
+
+            trackedCarImpressionsRef.current.add(identifier);
+
+            const activeFiltersSnapshot = Object.entries(filters).reduce<Record<string, string>>(
+                (accumulator, [key, value]) => {
+                    if (value && value !== "all") {
+                        accumulator[key] = value as string;
+                    }
+                    return accumulator;
+                },
+                {},
+            );
+
+            const metadata = {
+                interaction_target: `car-card:${typeof car.id === "number" ? car.id : index}`,
+                interaction_label: car.name,
+                additional: {
+                    car_id: car.id ?? null,
+                    car_name: car.name,
+                    car_type: car.type,
+                    car_license_plate: car.licensePlate ?? null,
+                    price_per_day: car.price ?? null,
+                    view_mode: viewMode,
+                    card_index: index + 1,
+                    total_results: totalCars,
+                    sort_by: sortBy,
+                    search_term: searchTerm || null,
+                    active_filters: activeFiltersSnapshot,
+                    has_dates: Boolean(startDate && endDate),
+                },
+            };
+
+            trackAnalyticsEvent({ type: "custom:car_view", metadata });
+        },
+        [filters, viewMode, totalCars, sortBy, searchTerm, startDate, endDate],
+    );
+
+    const CarCard = ({
+        car,
+        index,
+        isListView = false,
+        onView,
+        viewMode: cardViewMode,
+    }: {
+        car: Car;
+        index: number;
+        isListView?: boolean;
+        onView: (car: Car, index: number) => void;
+        viewMode: string;
+    }) => {
+        const cardRef = useRef<HTMLDivElement | null>(null);
+
+        useEffect(() => {
+            const element = cardRef.current;
+            if (!element) {
+                return;
+            }
+
+            if (typeof IntersectionObserver === "undefined") {
+                onView(car, index);
+                return;
+            }
+
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            onView(car, index);
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                },
+                { threshold: 0.5 },
+            );
+
+            observer.observe(element);
+
+            return () => {
+                observer.disconnect();
+            };
+        }, [car, index, onView]);
+
+        const scrollMetadata = toAnalyticsMetadataString({
+            context: "car_card",
+            car_id: car.id ?? null,
+            car_name: car.name,
+            car_type: car.type,
+            car_license_plate: car.licensePlate ?? null,
+            card_index: index + 1,
+            view_mode: cardViewMode,
+            price_per_day: car.price ?? null,
+        });
+
+        const noDepositMetadata = toAnalyticsMetadataString({
+            action: "reserve_no_deposit",
+            car_id: car.id ?? null,
+            car_name: car.name,
+            car_type: car.type,
+            car_license_plate: car.licensePlate ?? null,
+            with_deposit: false,
+            price_per_day: car.price ?? null,
+            view_mode: cardViewMode,
+        });
+
+        const withDepositMetadata = toAnalyticsMetadataString({
+            action: "reserve_with_deposit",
+            car_id: car.id ?? null,
+            car_name: car.name,
+            car_type: car.type,
+            car_license_plate: car.licensePlate ?? null,
+            with_deposit: true,
+            price_per_day: car.price ?? null,
+            view_mode: cardViewMode,
+        });
+
+        return (
+            <div
+                ref={cardRef}
+                data-analytics-scroll-section="true"
+                data-analytics-scroll-target={`car-card:${car.id ?? index}`}
+                data-analytics-scroll-label={car.name}
+                data-analytics-scroll-metadata={scrollMetadata}
+                data-analytics-scroll-car-id={car.id != null ? String(car.id) : undefined}
+                data-analytics-scroll-view-mode={cardViewMode}
+                data-analytics-scroll-card-index={String(index + 1)}
+                className={`bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group border border-gray-100 ${
+                    isListView ? "flex flex-col md:flex-row" : ""
+                }`}
+            >
+                <div className={`relative overflow-hidden ${isListView ? "md:w-1/3 h-48 md:h-full" : "h-48"}`}>
+                    <Image
+                        src={car.image}
+                        alt={car.name}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        sizes={CAR_CARD_IMAGE_SIZES}
+                    />
+                    <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
+                        {car.type}
+                    </div>
                 </div>
-            </div>
 
-            <div className={`p-6 ${isListView ? "md:w-2/3 flex flex-col justify-between" : ""}`}>
-                <div>
-                    <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">{car.name}</h3>
-                    {isListView && <p className="text-gray-600 font-dm-sans mb-4 leading-relaxed">{car.description}</p>}
+                <div className={`p-6 ${isListView ? "md:w-2/3 flex flex-col justify-between" : ""}`}>
+                    <div>
+                        <h3 className="text-xl font-poppins font-semibold text-berkeley mb-2">{car.name}</h3>
+                        {isListView && <p className="text-gray-600 font-dm-sans mb-4 leading-relaxed">{car.description}</p>}
 
-                    <div className={`${isListView ? "grid grid-cols-2 gap-4 mb-4" : "space-y-2 mb-6"}`}>
-                        <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
-                            <div className="flex items-center space-x-2">
-                                <Users className="h-4 w-4 text-jade" />
-                                <span>{formatPassengersLabel(car.features.passengers)}</span>
-                            </div>
-                            {!isListView && (
+                        <div className={`${isListView ? "grid grid-cols-2 gap-4 mb-4" : "space-y-2 mb-6"}`}>
+                            <div className="flex items-center justify-between text-sm text-gray-600 font-dm-sans">
                                 <div className="flex items-center space-x-2">
+                                    <Users className="h-4 w-4 text-jade" />
+                                    <span>{formatPassengersLabel(car.features.passengers)}</span>
+                                </div>
+                                {!isListView && (
+                                    <div className="flex items-center space-x-2">
+                                        <Settings className="h-4 w-4 text-jade" />
+                                        <span>{car.features.transmission}</span>
+                                    </div>
+                                )}
+                            </div>
+                            {isListView && (
+                                <div className="flex items-center space-x-2 text-sm text-gray-600 font-dm-sans">
                                     <Settings className="h-4 w-4 text-jade" />
                                     <span>{car.features.transmission}</span>
                                 </div>
                             )}
-                        </div>
-                        {isListView && (
                             <div className="flex items-center space-x-2 text-sm text-gray-600 font-dm-sans">
-                                <Settings className="h-4 w-4 text-jade" />
-                                <span>{car.features.transmission}</span>
+                                <Fuel className="h-4 w-4 text-jade" />
+                                <span>{car.features.fuel}</span>
                             </div>
-                        )}
-                        <div className="flex items-center space-x-2 text-sm text-gray-600 font-dm-sans">
-                            <Fuel className="h-4 w-4 text-jade" />
-                            <span>{car.features.fuel}</span>
                         </div>
                     </div>
-                </div>
 
-                <>
-                    <div className="flex items-center justify-between mb-5">
-                        {Boolean(startDate && endDate) && (
-                            <div className="me-1">
-                                <span className="text-jade font-bold font-dm-sans">{t("card.pricing.noDepositLabel")}</span>
-                                <span className="text-base font-poppins font-bold text-jade">{" "}{car.rental_rate_casco}€</span>
-                                <span className="text-jade font-bold font-dm-sans"> {t("card.pricing.perDay")}</span>
+                    <>
+                        <div className="flex items-center justify-between mb-5">
+                            {Boolean(startDate && endDate) && (
+                                <div className="me-1">
+                                    <span className="text-jade font-bold font-dm-sans">{t("card.pricing.noDepositLabel")}</span>
+                                    <span className="text-base font-poppins font-bold text-jade"> {" "}
+                                        {car.rental_rate_casco}€
+                                    </span>
+                                    <span className="text-jade font-bold font-dm-sans"> {t("card.pricing.perDay")}</span>
 
                                     <div>
                                         <span className="text-jade font-bold font-dm-sans">
                                             {t("card.pricing.daysTotal", { values: { days: car.days } })}
                                         </span>
-                                        <span className="text-base font-poppins font-bold text-jade">{" "}{car.total_without_deposit}€</span>
+                                        <span className="text-base font-poppins font-bold text-jade"> {" "}
+                                            {car.total_without_deposit}€
+                                        </span>
                                     </div>
-                            </div>
-                        )}
-                        <Button
-                            onClick={() => handleBooking(false, car)}
-                            disabled={checkingAvailabilityFor === car.id}
-                            aria-busy={checkingAvailabilityFor === car.id}
-                            className={`${!Boolean(startDate && endDate) ? 'w-full' : ''} !px-4 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg transition-colors duration-300 ${
-                                checkingAvailabilityFor === car.id
-                                    ? "opacity-75 cursor-not-allowed"
-                                    : "hover:bg-jade/90"
-                            }`}
-                            aria-label={t("card.actions.reserveAria")}
-                        >
-                            {checkingAvailabilityFor === car.id
-                                ? t("card.availability.checking", { fallback: "Se verifică..." })
-                                : t("card.actions.reserveNoDeposit")}
-                        </Button>
-                    </div>
+                                </div>
+                            )}
+                            <Button
+                                onClick={() => handleBooking(false, car)}
+                                disabled={checkingAvailabilityFor === car.id}
+                                aria-busy={checkingAvailabilityFor === car.id}
+                                className={`${!Boolean(startDate && endDate) ? 'w-full' : ''} !px-4 py-2 h-10 w-[140px] text-center text-xs bg-jade text-white font-dm-sans font-semibold rounded-lg transition-colors duration-300 ${
+                                    checkingAvailabilityFor === car.id
+                                        ? "opacity-75 cursor-not-allowed"
+                                        : "hover:bg-jade/90"
+                                }`}
+                                aria-label={t("card.actions.reserveAria")}
+                                data-analytics-event="cta_click"
+                                data-analytics-label={t("card.actions.reserveNoDeposit")}
+                                data-analytics-target={`car:${car.id ?? index}:reserve-no-deposit`}
+                                data-analytics-metadata={noDepositMetadata}
+                            >
+                                {checkingAvailabilityFor === car.id
+                                    ? t("card.availability.checking", { fallback: "Se verifică..." })
+                                    : t("card.actions.reserveNoDeposit")}
+                            </Button>
+                        </div>
 
-                    <div className="flex items-center justify-between">
-                        {Boolean(startDate && endDate) && (
-                            <div className="me-3">
-                                <span className="text-gray-600 font-dm-sans">{t("card.pricing.withDepositLabel")}</span>
-                                <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.rental_rate}€</span>
-                                <span className="text-gray-600 font-dm-sans"> {t("card.pricing.perDay")}</span>
+                        <div className="flex items-center justify-between">
+                            {Boolean(startDate && endDate) && (
+                                <div className="me-3">
+                                    <span className="text-gray-600 font-dm-sans">{t("card.pricing.withDepositLabel")}</span>
+                                    <span className="text-base font-poppins font-bold text-berkeley"> {" "}
+                                        {car.rental_rate}€
+                                    </span>
+                                    <span className="text-gray-600 font-dm-sans"> {t("card.pricing.perDay")}</span>
+
                                     <div>
                                         <span className="text-gray-600 font-bold font-dm-sans">
                                             {t("card.pricing.daysTotal", { values: { days: car.days } })}
                                         </span>
-                                        <span className="text-base font-poppins font-bold text-berkeley">{" "}{car.total_deposit}€</span>
+                                        <span className="text-base font-poppins font-bold text-berkeley"> {" "}
+                                            {car.total_deposit}€
+                                        </span>
                                     </div>
-                            </div>
-                        )}
-                        <Button
-                            onClick={() => handleBooking(true, car)}
-                            disabled={checkingAvailabilityFor === car.id}
-                            aria-busy={checkingAvailabilityFor === car.id}
-                            className={`${!Boolean(startDate && endDate) ? 'w-full' : ''} px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg transition-colors duration-300 ${
-                                checkingAvailabilityFor === car.id
-                                    ? "opacity-75 cursor-not-allowed"
-                                    : "hover:!bg-jade/90 hover:!text-white"
-                            }`}
-                            aria-label={t("card.actions.reserveAria")}
-                        >
-                            {checkingAvailabilityFor === car.id
-                                ? t("card.availability.checking", { fallback: "Se verifică..." })
-                                : t("card.actions.reserveWithDeposit")}
-                        </Button>
-                    </div>
+                                </div>
+                            )}
+                            <Button
+                                onClick={() => handleBooking(true, car)}
+                                disabled={checkingAvailabilityFor === car.id}
+                                aria-busy={checkingAvailabilityFor === car.id}
+                                className={`${!Boolean(startDate && endDate) ? 'w-full' : ''} px-4 py-2 h-10 w-[140px] !bg-transparent text-center text-xs border border-jade !text-jade font-dm-sans font-semibold rounded-lg transition-colors duration-300 ${
+                                    checkingAvailabilityFor === car.id
+                                        ? "opacity-75 cursor-not-allowed"
+                                        : "hover:!bg-jade/90 hover:!text-white"
+                                }`}
+                                aria-label={t("card.actions.reserveAria")}
+                                data-analytics-event="cta_click"
+                                data-analytics-label={t("card.actions.reserveWithDeposit")}
+                                data-analytics-target={`car:${car.id ?? index}:reserve-with-deposit`}
+                                data-analytics-metadata={withDepositMetadata}
+                            >
+                                {checkingAvailabilityFor === car.id
+                                    ? t("card.availability.checking", { fallback: "Se verifică..." })
+                                    : t("card.actions.reserveWithDeposit")}
+                            </Button>
+                        </div>
 
-                    {availabilityFeedback.carId === car.id && availabilityFeedback.message && (
-                        <p className="mt-4 text-sm text-red-600 font-dm-sans">
-                            {availabilityFeedback.message}
-                        </p>
-                    )}
-                </>
+                        {availabilityFeedback.carId === car.id && availabilityFeedback.message && (
+                            <p className="mt-4 text-sm text-red-600 font-dm-sans">
+                                {availabilityFeedback.message}
+                            </p>
+                        )}
+                    </>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
+
 
     const vehicleStructuredData = useMemo(() => {
         if (cars.length === 0) {
@@ -953,7 +1140,15 @@ const FleetPage = () => {
                     {/* Search & controls */}
                     <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
                         <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-                            <div className="relative flex-1 w-full">
+                            <div
+                                className="relative flex-1 w-full"
+                                data-analytics-scroll-section="true"
+                                data-analytics-scroll-target="cars:search:query"
+                                data-analytics-scroll-label={t("search.ariaLabel")}
+                                data-analytics-scroll-metadata={toAnalyticsMetadataString({
+                                    section: "search_input",
+                                })}
+                            >
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                                 <input
                                     type="text"
@@ -971,6 +1166,12 @@ const FleetPage = () => {
                                     value={sortBy}
                                     onValueChange={(v) => { setSortBy(v); setCurrentPage(1); }}
                                     aria-label={t("search.sortAria")}
+                                    data-analytics-scroll-section="true"
+                                    data-analytics-scroll-target="cars:search:sort"
+                                    data-analytics-scroll-label={t("search.sortAria")}
+                                    data-analytics-scroll-metadata={toAnalyticsMetadataString({
+                                        section: "sort_select",
+                                    })}
                                 >
                                     <option value="cheapest">{t("search.sortOptions.cheapest")}</option>
                                     <option value="most_expensive">{t("search.sortOptions.mostExpensive")}</option>
@@ -992,7 +1193,14 @@ const FleetPage = () => {
                         {showFilters && (
                             <div className="border-t border-gray-200 pt-6 animate-slide-up">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                                    <div>
+                                    <div
+                                        data-analytics-scroll-section="true"
+                                        data-analytics-scroll-target="cars:filters:category"
+                                        data-analytics-scroll-label={t("filters.labels.category")}
+                                        data-analytics-scroll-metadata={toAnalyticsMetadataString({
+                                            filter: "category",
+                                        })}
+                                    >
                                         <Label htmlFor="filter-car-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{t("filters.labels.category")}</Label>
                                         <Select
                                             id="filter-car-type"
@@ -1007,7 +1215,14 @@ const FleetPage = () => {
                                         </Select>
                                     </div>
 
-                                    <div>
+                                    <div
+                                        data-analytics-scroll-section="true"
+                                        data-analytics-scroll-target="cars:filters:type"
+                                        data-analytics-scroll-label={t("filters.labels.type")}
+                                        data-analytics-scroll-metadata={toAnalyticsMetadataString({
+                                            filter: "type",
+                                        })}
+                                    >
                                         <Label htmlFor="filter-type" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{t("filters.labels.type")}</Label>
                                         <Select id="filter-type" className="px-3 py-2" value={filters.type} onValueChange={(v) => handleFilterChange("type", v)}>
                                             <option value="all">{t("filters.allOption")}</option>
@@ -1015,7 +1230,14 @@ const FleetPage = () => {
                                         </Select>
                                     </div>
 
-                                    <div>
+                                    <div
+                                        data-analytics-scroll-section="true"
+                                        data-analytics-scroll-target="cars:filters:transmission"
+                                        data-analytics-scroll-label={t("filters.labels.transmission")}
+                                        data-analytics-scroll-metadata={toAnalyticsMetadataString({
+                                            filter: "transmission",
+                                        })}
+                                    >
                                         <Label htmlFor="filter-transmission" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{t("filters.labels.transmission")}</Label>
                                         <Select id="filter-transmission" className="px-3 py-2" value={filters.transmission} onValueChange={(v) => handleFilterChange("transmission", v)}>
                                             <option value="all">{t("filters.allOption")}</option>
@@ -1023,7 +1245,14 @@ const FleetPage = () => {
                                         </Select>
                                     </div>
 
-                                    <div>
+                                    <div
+                                        data-analytics-scroll-section="true"
+                                        data-analytics-scroll-target="cars:filters:fuel"
+                                        data-analytics-scroll-label={t("filters.labels.fuel")}
+                                        data-analytics-scroll-metadata={toAnalyticsMetadataString({
+                                            filter: "fuel",
+                                        })}
+                                    >
                                         <Label htmlFor="filter-fuel" className="block text-sm font-dm-sans font-semibold text-gray-700 mb-2">{t("filters.labels.fuel")}</Label>
                                         <Select id="filter-fuel" className="px-3 py-2" value={filters.fuel} onValueChange={(v) => handleFilterChange("fuel", v)}>
                                             <option value="all">{t("filters.allOption")}</option>
@@ -1058,7 +1287,13 @@ const FleetPage = () => {
                     </div>
 
                     {/* Results Count */}
-                    <div id="results-section" className="flex items-center mb-8">
+                    <div
+                        id="results-section"
+                        className="flex items-center mb-8"
+                        data-analytics-scroll-section="true"
+                        data-analytics-scroll-target="cars:results:summary"
+                        data-analytics-scroll-label={t("results.label")}
+                    >
                         <p className="text-gray-600 font-dm-sans">
                             <span className="font-semibold text-berkeley">{totalCars}</span> {t("results.label")}
                         </p>
@@ -1066,15 +1301,36 @@ const FleetPage = () => {
 
                     {/* Grid/List */}
                     {cars.length > 0 ? (
-                        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" : "space-y-6"}>
-                            {cars.map((car) => (
-                                <div key={car.id} className="animate-slide-up">
-                                    <CarCard car={car} isListView={viewMode === "list"} />
+                        <div
+                            className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" : "space-y-6"}
+                            data-analytics-scroll-section="true"
+                            data-analytics-scroll-target="cars:results:list"
+                            data-analytics-scroll-label={t("results.label")}
+                            data-analytics-scroll-metadata={toAnalyticsMetadataString({
+                                section: "results_list",
+                                view_mode: viewMode,
+                                total_results: totalCars,
+                            })}
+                        >
+                            {cars.map((car, index) => (
+                                <div key={car.id ?? index} className="animate-slide-up">
+                                    <CarCard
+                                        car={car}
+                                        index={index}
+                                        isListView={viewMode === "list"}
+                                        onView={registerCarImpression}
+                                        viewMode={viewMode}
+                                    />
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-16">
+                        <div
+                            className="text-center py-16"
+                            data-analytics-scroll-section="true"
+                            data-analytics-scroll-target="cars:results:empty"
+                            data-analytics-scroll-label={t("list.empty.title")}
+                        >
                             <div className="bg-gray-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <Filter className="h-12 w-12 text-gray-400" />
                             </div>
@@ -1106,19 +1362,60 @@ const FleetPage = () => {
                     <div ref={loadMoreRef} className="h-6" />
 
                     {/* CTA */}
-                    <div className="mt-16 bg-gradient-to-r from-berkeley/5 to-jade/5 rounded-3xl p-8 lg:p-12 text-center">
+                    <div
+                        className="mt-16 bg-gradient-to-r from-berkeley/5 to-jade/5 rounded-3xl p-8 lg:p-12 text-center"
+                        data-analytics-scroll-section="true"
+                        data-analytics-scroll-target="cars:cta:section"
+                        data-analytics-scroll-label={t("cta.title")}
+                        data-analytics-scroll-metadata={toAnalyticsMetadataString({
+                            section: "cta_block",
+                            search_term: searchTerm || null,
+                            sort_by: sortBy,
+                            view_mode: viewMode,
+                        })}
+                    >
                         <h3 className="text-3xl font-poppins font-bold text-berkeley mb-4">{t("cta.title")}</h3>
                         <p className="text-xl font-dm-sans text-gray-600 mb-8 max-w-2xl mx-auto">
                             {t("cta.description")}
                         </p>
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
                             <Link href="/form" aria-label={t("cta.primary")}>
-                                <Button className="transform hover:scale-105 shadow-lg" aria-label={t("cta.primary")}>
+                                <Button
+                                    className="transform hover:scale-105 shadow-lg"
+                                    aria-label={t("cta.primary")}
+                                    data-analytics-event="cta_click"
+                                    data-analytics-label={t("cta.primary")}
+                                    data-analytics-target="cars:cta:primary"
+                                    data-analytics-metadata={toAnalyticsMetadataString({
+                                        action: "cta_primary",
+                                        section: "fleet_bottom",
+                                        search_term: searchTerm || null,
+                                        sort_by: sortBy,
+                                        view_mode: viewMode,
+                                    })}
+                                >
                                     {t("cta.primary")}
                                 </Button>
                             </Link>
-                            <a href="#contact" aria-label={t("cta.secondary")}>
-                                <Button variant="outline" className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white" aria-label={t("cta.secondary")}>
+                            <a
+                                href="#contact"
+                                aria-label={t("cta.secondary")}
+                                data-analytics-event="cta_click"
+                                data-analytics-label={t("cta.secondary")}
+                                data-analytics-target="cars:cta:contact"
+                                data-analytics-metadata={toAnalyticsMetadataString({
+                                    action: "cta_secondary",
+                                    section: "fleet_bottom",
+                                    search_term: searchTerm || null,
+                                    sort_by: sortBy,
+                                    view_mode: viewMode,
+                                })}
+                            >
+                                <Button
+                                    variant="outline"
+                                    className="border-berkeley text-berkeley hover:bg-berkeley hover:text-white"
+                                    aria-label={t("cta.secondary")}
+                                >
                                     {t("cta.secondary")}
                                 </Button>
                             </a>

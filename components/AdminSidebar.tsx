@@ -371,6 +371,17 @@ const menuItems: readonly AdminSidebarItem[] = [
         ]),
       },
       {
+        name: "Analytics vizitatori",
+        href: "/admin/analytics",
+        icon: ScrollText,
+        requiredPermissions: buildPermissionList("analytics-reports", [
+          "analytics.reports",
+          "analytics_reports",
+          "analytics_reports.view",
+          "analytics_reports.view_summary",
+        ]),
+      },
+      {
         name: "Raport săptămânal",
         href: "/admin/reports/weekly",
         icon: CalendarDays,

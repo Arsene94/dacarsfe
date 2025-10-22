@@ -10,12 +10,12 @@
   },
   "header": {
     "title": {
-      "prefix": "Cererea de ezervarea este",
+      "prefix": "Cererea de rezervare este",
       "highlight": "efectuată cu succes!"
     },
     "thanks": "Mulțumim, {{name}}! Mașina ta te așteaptă la aeroport.",
     "tagline": "Ne vedem acasă!",
-    "reference": "Rezervarea {{id}}"
+    "reference": "Cererea de rezervare {{id}}"
   },
   "wheelPrize": {
     "title": "Premiu Roata Norocului",

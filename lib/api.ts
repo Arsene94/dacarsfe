@@ -152,7 +152,22 @@ import type {
     AdminReportQuarterlyResponse,
     AdminReportWeeklyParams,
     AdminReportWeeklyResponse,
-} from "@/types/reports";
+} from '@/types/reports';
+import type {
+    AdminAnalyticsCountriesParams,
+    AdminAnalyticsCountriesResponse,
+    AdminAnalyticsEvent,
+    AdminAnalyticsEventDetailResponse,
+    AdminAnalyticsEventsParams,
+    AdminAnalyticsSummaryParams,
+    AdminAnalyticsSummaryResponse,
+    AdminAnalyticsTopPagesParams,
+    AdminAnalyticsTopPagesResponse,
+    AdminAnalyticsVisitorDetailParams,
+    AdminAnalyticsVisitorDetailResponse,
+    AdminAnalyticsVisitorsParams,
+    AdminAnalyticsVisitorsResponse,
+} from '@/types/analytics';
 import type {
     WheelOfFortunePeriod,
     WheelOfFortunePrizePayload,
@@ -243,6 +258,52 @@ const appendOptionalLanguage = (basePath: string, language?: string | null): str
     }
 
     return `${basePath}/${encodeURIComponent(trimmed)}`;
+};
+
+const appendAnalyticsRangeParams = (
+    searchParams: URLSearchParams,
+    params: { from?: string; to?: string; days?: number },
+) => {
+    if (params.from) {
+        const normalized = params.from.trim();
+        if (normalized.length > 0) {
+            searchParams.append("from", normalized);
+        }
+    }
+
+    if (params.to) {
+        const normalized = params.to.trim();
+        if (normalized.length > 0) {
+            searchParams.append("to", normalized);
+        }
+    }
+
+    if (
+        typeof params.days === "number" &&
+        Number.isFinite(params.days) &&
+        params.days > 0
+    ) {
+        searchParams.append("days", String(Math.floor(params.days)));
+    }
+};
+
+const appendPositiveIntegerParam = (
+    searchParams: URLSearchParams,
+    key: string,
+    value: number | undefined,
+) => {
+    if (typeof value !== "number") {
+        return;
+    }
+
+    if (!Number.isFinite(value)) {
+        return;
+    }
+
+    const normalized = Math.floor(value);
+    if (normalized > 0) {
+        searchParams.append(key, String(normalized));
+    }
 };
 
 export class ApiClient {
@@ -3260,6 +3321,204 @@ export class ApiClient {
         const query = searchParams.toString();
         return this.request<AdminReportAnnualResponse>(
             `/admin/reports/annual${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminAnalyticsEvents(
+        params: AdminAnalyticsEventsParams = {},
+    ): Promise<ApiListResult<AdminAnalyticsEvent>> {
+        const searchParams = new URLSearchParams();
+
+        if (params.visitor_uuid) {
+            const normalized = params.visitor_uuid.trim();
+            if (normalized.length > 0) {
+                searchParams.append('visitor_uuid', normalized);
+            }
+        }
+
+        if (params.session_uuid) {
+            const normalized = params.session_uuid.trim();
+            if (normalized.length > 0) {
+                searchParams.append('session_uuid', normalized);
+            }
+        }
+
+        if (params.event_type) {
+            const normalized = params.event_type.trim();
+            if (normalized.length > 0) {
+                searchParams.append('event_type', normalized);
+            }
+        }
+
+        if (params.country) {
+            const normalized = params.country.trim();
+            if (normalized.length > 0) {
+                searchParams.append('country', normalized);
+            }
+        }
+
+        if (params.page_url) {
+            const normalized = params.page_url.trim();
+            if (normalized.length > 0) {
+                searchParams.append('page_url', normalized);
+            }
+        }
+
+        if (params.interaction_target) {
+            const normalized = params.interaction_target.trim();
+            if (normalized.length > 0) {
+                searchParams.append('interaction_target', normalized);
+            }
+        }
+
+        if (params.interaction_label) {
+            const normalized = params.interaction_label.trim();
+            if (normalized.length > 0) {
+                searchParams.append('interaction_label', normalized);
+            }
+        }
+
+        if (params.car_id) {
+            const normalized = params.car_id.trim();
+            if (normalized.length > 0) {
+                searchParams.append('car_id', normalized);
+            }
+        }
+
+        if (params.car_name) {
+            const normalized = params.car_name.trim();
+            if (normalized.length > 0) {
+                searchParams.append('car_name', normalized);
+            }
+        }
+
+        if (params.car_license_plate) {
+            const normalized = params.car_license_plate.trim();
+            if (normalized.length > 0) {
+                searchParams.append('car_license_plate', normalized);
+            }
+        }
+
+        appendAnalyticsRangeParams(searchParams, params);
+        appendPositiveIntegerParam(searchParams, 'per_page', params.per_page);
+        appendPositiveIntegerParam(searchParams, 'page', params.page);
+
+        const query = searchParams.toString();
+
+        return this.request<ApiListResult<AdminAnalyticsEvent>>(
+            `/admin/analytics/events${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminAnalyticsEvent(
+        id: number | string,
+    ): Promise<AdminAnalyticsEventDetailResponse> {
+        const identifier = String(id).trim();
+        if (!identifier) {
+            throw new Error('Id-ul evenimentului analytics este obligatoriu.');
+        }
+
+        const response = await this.request<
+            ApiItemResult<AdminAnalyticsEventDetailResponse>
+        >(`/admin/analytics/events/${encodeURIComponent(identifier)}`);
+
+        const event = extractItem(response);
+        if (!event) {
+            throw new Error('Evenimentul analytics nu a putut fi încărcat.');
+        }
+
+        return event;
+    }
+
+    async fetchAdminAnalyticsSummary(
+        params: AdminAnalyticsSummaryParams = {},
+    ): Promise<AdminAnalyticsSummaryResponse> {
+        const searchParams = new URLSearchParams();
+        appendAnalyticsRangeParams(searchParams, params);
+
+        const query = searchParams.toString();
+
+        return this.request<AdminAnalyticsSummaryResponse>(
+            `/admin/analytics/reports/summary${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminAnalyticsTopPages(
+        params: AdminAnalyticsTopPagesParams = {},
+    ): Promise<AdminAnalyticsTopPagesResponse> {
+        const searchParams = new URLSearchParams();
+        appendAnalyticsRangeParams(searchParams, params);
+        appendPositiveIntegerParam(searchParams, 'limit', params.limit);
+
+        if (params.event_type) {
+            const normalized = params.event_type.trim();
+            if (normalized.length > 0) {
+                searchParams.append('event_type', normalized);
+            }
+        }
+
+        const query = searchParams.toString();
+
+        return this.request<AdminAnalyticsTopPagesResponse>(
+            `/admin/analytics/reports/pages${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminAnalyticsCountries(
+        params: AdminAnalyticsCountriesParams = {},
+    ): Promise<AdminAnalyticsCountriesResponse> {
+        const searchParams = new URLSearchParams();
+        appendAnalyticsRangeParams(searchParams, params);
+        appendPositiveIntegerParam(searchParams, 'limit', params.limit);
+
+        const query = searchParams.toString();
+
+        return this.request<AdminAnalyticsCountriesResponse>(
+            `/admin/analytics/reports/countries${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminAnalyticsVisitors(
+        params: AdminAnalyticsVisitorsParams = {},
+    ): Promise<AdminAnalyticsVisitorsResponse> {
+        const searchParams = new URLSearchParams();
+        appendAnalyticsRangeParams(searchParams, params);
+        appendPositiveIntegerParam(searchParams, 'per_page', params.per_page);
+        appendPositiveIntegerParam(searchParams, 'page', params.page);
+
+        if (params.country) {
+            const normalized = params.country.trim();
+            if (normalized.length > 0) {
+                searchParams.append('country', normalized);
+            }
+        }
+
+        const query = searchParams.toString();
+
+        return this.request<AdminAnalyticsVisitorsResponse>(
+            `/admin/analytics/reports/visitors${query ? `?${query}` : ''}`,
+        );
+    }
+
+    async fetchAdminAnalyticsVisitorDetail(
+        visitorUuid: string,
+        params: AdminAnalyticsVisitorDetailParams = {},
+    ): Promise<AdminAnalyticsVisitorDetailResponse> {
+        const normalizedVisitor = visitorUuid.trim();
+        if (!normalizedVisitor) {
+            throw new Error('Identificatorul vizitatorului este obligatoriu.');
+        }
+
+        const searchParams = new URLSearchParams();
+        appendAnalyticsRangeParams(searchParams, params);
+        appendPositiveIntegerParam(searchParams, 'limit', params.limit);
+
+        const query = searchParams.toString();
+
+        return this.request<AdminAnalyticsVisitorDetailResponse>(
+            `/admin/analytics/reports/visitors/${encodeURIComponent(normalizedVisitor)}${
+                query ? `?${query}` : ''
+            }`,
         );
     }
 
