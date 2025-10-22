@@ -51,6 +51,7 @@ import type {
 const DEFAULT_DAYS = 7;
 const EVENTS_PER_PAGE = 25;
 const VISITORS_PER_PAGE = 10;
+const TOP_CARS_PER_PAGE = 10;
 
 const dateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
   dateStyle: "medium",
@@ -847,7 +848,7 @@ export default function AdminAnalyticsPage() {
     useState<AdminAnalyticsCountriesResponse | null>(null);
   const [countriesLoading, setCountriesLoading] = useState(false);
   const [countriesError, setCountriesError] = useState<string | null>(null);
-  const [countrySortField, setCountrySortField] = useState<CountrySortField>("events");
+  const [countrySortField, setCountrySortField] = useState<CountrySortField>("visitors");
   const [countrySortOrder, setCountrySortOrder] = useState<"asc" | "desc">("desc");
 
   const applyCountrySortField = useCallback(
@@ -869,6 +870,7 @@ export default function AdminAnalyticsPage() {
   const [topCars, setTopCars] = useState<AdminAnalyticsCarStat[]>([]);
   const [topCarsLoading, setTopCarsLoading] = useState(false);
   const [topCarsError, setTopCarsError] = useState<string | null>(null);
+  const [topCarsPage, setTopCarsPage] = useState(1);
 
   const [events, setEvents] = useState<AdminAnalyticsEvent[]>([]);
   const [eventsMeta, setEventsMeta] = useState<ApiMeta | undefined>(undefined);
@@ -1031,6 +1033,7 @@ export default function AdminAnalyticsPage() {
       });
       const { data } = extractListAndMeta(response);
       setTopCars(aggregateCarStats(data));
+      setTopCarsPage(1);
     } catch (error) {
       const message =
         error instanceof Error
@@ -1038,6 +1041,7 @@ export default function AdminAnalyticsPage() {
           : "Nu am putut încărca cele mai vizualizate mașini.";
       setTopCarsError(message);
       setTopCars([]);
+      setTopCarsPage(1);
     } finally {
       setTopCarsLoading(false);
     }
@@ -1089,6 +1093,16 @@ export default function AdminAnalyticsPage() {
   useEffect(() => {
     void loadTopCars();
   }, [loadTopCars]);
+
+  useEffect(() => {
+    setTopCarsPage((prev) => {
+      if (topCars.length === 0) {
+        return 1;
+      }
+      const maxPage = Math.max(1, Math.ceil(topCars.length / TOP_CARS_PER_PAGE));
+      return Math.min(prev, maxPage);
+    });
+  }, [topCars]);
 
   const summaryEventTypeStats = useMemo(
     () => normalizeEventTypeStats(summary?.events_by_type as unknown),
@@ -1163,9 +1177,27 @@ export default function AdminAnalyticsPage() {
     return summaryCountryStats;
   }, [reportCountryStats, summaryCountryStats]);
 
+  const totalCountryVisitors = useMemo(
+    () =>
+      combinedCountryStats.reduce((sum, stat) => {
+        const visitors = toFiniteNumber(stat.unique_visitors);
+        return visitors != null ? sum + visitors : sum;
+      }, 0),
+    [combinedCountryStats],
+  );
+
   const sortedCountryStats = useMemo(() => {
     const base = [...combinedCountryStats];
     const missingValue = countrySortOrder === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+
+    const resolveShare = (stat: AdminAnalyticsCountryStat): number | null => {
+      const visitorsValue = toFiniteNumber(stat.unique_visitors);
+      if (visitorsValue != null && totalCountryVisitors > 0) {
+        return visitorsValue / totalCountryVisitors;
+      }
+      const fallbackShare = toFiniteNumber(stat.share);
+      return fallbackShare != null ? fallbackShare : null;
+    };
 
     const getNumericValue = (stat: AdminAnalyticsCountryStat): number => {
       if (countrySortField === "events") {
@@ -1175,7 +1207,8 @@ export default function AdminAnalyticsPage() {
         return toFiniteNumber(stat.unique_visitors) ?? missingValue;
       }
       if (countrySortField === "share") {
-        return toFiniteNumber(stat.share) ?? missingValue;
+        const shareValue = resolveShare(stat);
+        return shareValue != null ? shareValue : missingValue;
       }
       return 0;
     };
@@ -1188,12 +1221,12 @@ export default function AdminAnalyticsPage() {
         if (compare !== 0) {
           return countrySortOrder === "asc" ? compare : -compare;
         }
-        const eventsA = toFiniteNumber(a.total_events) ?? 0;
-        const eventsB = toFiniteNumber(b.total_events) ?? 0;
-        if (eventsA === eventsB) {
+        const visitorsA = toFiniteNumber(a.unique_visitors) ?? 0;
+        const visitorsB = toFiniteNumber(b.unique_visitors) ?? 0;
+        if (visitorsA === visitorsB) {
           return 0;
         }
-        const diff = eventsA - eventsB;
+        const diff = visitorsA - visitorsB;
         return countrySortOrder === "asc" ? diff : -diff;
       }
 
@@ -1211,22 +1244,25 @@ export default function AdminAnalyticsPage() {
     });
 
     return base;
-  }, [combinedCountryStats, countrySortField, countrySortOrder]);
+  }, [combinedCountryStats, countrySortField, countrySortOrder, totalCountryVisitors]);
 
   const countryChartData = useMemo<DataRecord[]>(
     () =>
       sortedCountryStats.slice(0, 10).map((stat) => {
-        const eventsValue = toFiniteNumber(stat.total_events) ?? 0;
+        const eventsValue = toFiniteNumber(stat.total_events);
         const visitorsValue = toFiniteNumber(stat.unique_visitors);
-        const shareRatio = toFiniteNumber(stat.share);
+        const shareRatio =
+          totalCountryVisitors > 0 && visitorsValue != null
+            ? visitorsValue / totalCountryVisitors
+            : toFiniteNumber(stat.share);
 
         const record: DataRecord = {
           label: trimOrNull(stat.country) ?? "Țară necunoscută",
-          events: eventsValue,
+          visitors: visitorsValue ?? 0,
         };
 
-        if (visitorsValue != null) {
-          record.visitors = visitorsValue;
+        if (eventsValue != null) {
+          record.events = eventsValue;
         }
 
         if (shareRatio != null) {
@@ -1235,14 +1271,14 @@ export default function AdminAnalyticsPage() {
 
         return record;
       }),
-    [sortedCountryStats],
+    [sortedCountryStats, totalCountryVisitors],
   );
 
   const countryBarSeries = useMemo<BarSeries[]>(
     () => [
       {
-        dataKey: "events",
-        name: "Evenimente",
+        dataKey: "visitors",
+        name: "Utilizatori",
         color: getColor("primary"),
       },
     ],
@@ -1252,10 +1288,10 @@ export default function AdminAnalyticsPage() {
   const countryValueFormatter = useCallback(
     (value: number, name: string, payload?: Record<string, unknown>) => {
       const share = toFiniteNumber(payload?.sharePercentage);
-      const visitors = toFiniteNumber(payload?.visitors);
+      const events = toFiniteNumber(payload?.events);
       const parts = [`${name}: ${numberFormatter.format(value)}`];
-      if (visitors != null) {
-        parts.push(`Vizitatori: ${numberFormatter.format(visitors)}`);
+      if (events != null) {
+        parts.push(`Evenimente: ${numberFormatter.format(events)}`);
       }
       if (share != null) {
         parts.push(`Pondere: ${shareFormatter.format(share)}%`);
@@ -1419,6 +1455,29 @@ export default function AdminAnalyticsPage() {
     },
     [],
   );
+
+  const topCarsPageCount = useMemo(
+    () => (topCars.length === 0 ? 0 : Math.ceil(topCars.length / TOP_CARS_PER_PAGE)),
+    [topCars.length],
+  );
+
+  const paginatedTopCars = useMemo(() => {
+    if (topCars.length === 0) {
+      return { items: [] as AdminAnalyticsCarStat[], startIndex: 0 };
+    }
+    const startIndex = Math.max(0, (topCarsPage - 1) * TOP_CARS_PER_PAGE);
+    return {
+      items: topCars.slice(startIndex, startIndex + TOP_CARS_PER_PAGE),
+      startIndex,
+    };
+  }, [topCars, topCarsPage]);
+
+  const currentTopCarsPage = useMemo(() => {
+    if (topCarsPageCount === 0) {
+      return 1;
+    }
+    return Math.min(topCarsPage, topCarsPageCount);
+  }, [topCarsPage, topCarsPageCount]);
 
   const handleRangeSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
@@ -1886,17 +1945,21 @@ export default function AdminAnalyticsPage() {
   const renderCountryRow = (stat: AdminAnalyticsCountryStat) => {
     const totalEvents = toFiniteNumber(stat.total_events);
     const uniqueVisitors = toFiniteNumber(stat.unique_visitors);
-    const shareValue = toFiniteNumber(stat.share);
+    const shareValue =
+      totalCountryVisitors > 0 && uniqueVisitors != null
+        ? uniqueVisitors / totalCountryVisitors
+        : toFiniteNumber(stat.share);
     const label = trimOrNull(stat.country) ?? "Țară necunoscută";
+    const keyValue = uniqueVisitors ?? totalEvents ?? 0;
 
     return (
-      <tr key={`${label}-${totalEvents ?? 0}`} className="border-b border-slate-100">
+      <tr key={`${label}-${keyValue}`} className="border-b border-slate-100">
         <td className="px-4 py-3 text-sm text-slate-700">{label}</td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
-          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
+          {uniqueVisitors != null ? numberFormatter.format(uniqueVisitors) : "—"}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
-          {uniqueVisitors != null ? numberFormatter.format(uniqueVisitors) : "—"}
+          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
           {shareValue != null ? `${shareFormatter.format(shareValue * 100)}%` : "—"}
@@ -2251,9 +2314,43 @@ export default function AdminAnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {topCars.map((car, index) => renderTopCarRow(car, index))}
+                  {paginatedTopCars.items.map((car, index) =>
+                    renderTopCarRow(car, paginatedTopCars.startIndex + index),
+                  )}
                 </tbody>
               </table>
+            </div>
+            <div className="flex items-center justify-between border-t border-slate-200 pt-4 text-sm text-slate-600">
+              <span>
+                Pagina {currentTopCarsPage}
+                {topCarsPageCount ? ` din ${topCarsPageCount}` : ""}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentTopCarsPage <= 1}
+                  onClick={() =>
+                    setTopCarsPage((prev) => Math.max(1, prev - 1))
+                  }
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    topCarsPageCount === 0 || currentTopCarsPage >= topCarsPageCount
+                  }
+                  onClick={() =>
+                    setTopCarsPage((prev) =>
+                      topCarsPageCount === 0 ? prev : Math.min(prev + 1, topCarsPageCount),
+                    )
+                  }
+                >
+                  Următor
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
@@ -2272,7 +2369,7 @@ export default function AdminAnalyticsPage() {
             <div>
               <h2 className="text-xl font-semibold text-berkeley">Distribuție pe țări</h2>
               <p className="text-sm text-slate-600">
-                Evenimentele agregate pe țări pentru a înțelege sursele traficului anonim.
+                Vizitatorii unici agregați pe țări pentru a înțelege sursele traficului anonim.
               </p>
             </div>
           </div>
@@ -2292,8 +2389,8 @@ export default function AdminAnalyticsPage() {
               }}
               className="w-full sm:w-auto sm:min-w-[160px]"
             >
+              <option value="visitors">Utilizatori</option>
               <option value="events">Evenimente</option>
-              <option value="visitors">Vizitatori</option>
               <option value="share">Pondere</option>
               <option value="name">Nume țară</option>
             </Select>
@@ -2320,7 +2417,7 @@ export default function AdminAnalyticsPage() {
           <div className="space-y-4">
             {countryChartData.length ? (
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-slate-600">Top 10 țări după evenimente</h3>
+                <h3 className="text-sm font-semibold text-slate-600">Top 10 țări după utilizatori</h3>
                 <ChartContainer>
                   <SimpleBarChart
                     data={countryChartData}
@@ -2341,10 +2438,10 @@ export default function AdminAnalyticsPage() {
                       {renderCountryHeaderButton("name", "Țară", "left")}
                     </th>
                     <th className="px-4 py-3 text-right">
-                      {renderCountryHeaderButton("events", "Evenimente", "right")}
+                      {renderCountryHeaderButton("visitors", "Utilizatori", "right")}
                     </th>
                     <th className="px-4 py-3 text-right">
-                      {renderCountryHeaderButton("visitors", "Vizitatori", "right")}
+                      {renderCountryHeaderButton("events", "Evenimente", "right")}
                     </th>
                     <th className="px-4 py-3 text-right">
                       {renderCountryHeaderButton("share", "Pondere", "right")}
@@ -2740,8 +2837,8 @@ export default function AdminAnalyticsPage() {
                         <thead className="bg-slate-100 text-xs uppercase text-slate-500">
                           <tr>
                             <th className="px-4 py-2">Țară</th>
+                            <th className="px-4 py-2 text-right">Utilizatori</th>
                             <th className="px-4 py-2 text-right">Evenimente</th>
-                            <th className="px-4 py-2 text-right">Vizitatori</th>
                             <th className="px-4 py-2 text-right">Pondere</th>
                           </tr>
                         </thead>
