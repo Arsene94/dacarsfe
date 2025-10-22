@@ -165,6 +165,124 @@ const formatDuration = (durationMs: number | null | undefined): string => {
 
 type MetadataContainer = Record<string, unknown>;
 
+const normalizeShareValue = (value: unknown): number | undefined => {
+  const numeric = toFiniteNumber(value);
+  if (numeric == null) {
+    return undefined;
+  }
+  const ratio = numeric > 1 ? numeric / 100 : numeric;
+  if (!Number.isFinite(ratio)) {
+    return undefined;
+  }
+  return Math.min(Math.max(ratio, 0), 1);
+};
+
+const normalizeEventTypeStat = (
+  value: unknown,
+  fallbackType?: string,
+): AdminAnalyticsEventTypeStat | null => {
+  if (value && typeof value === "object") {
+    const container = value as Record<string, unknown>;
+    const typeCandidate =
+      typeof container.type === "string" && container.type.trim().length > 0
+        ? container.type.trim()
+        : fallbackType;
+    if (!typeCandidate) {
+      return null;
+    }
+
+    const totalEvents =
+      toFiniteNumber(container.total_events) ??
+      toFiniteNumber(container.totalEvents) ??
+      toFiniteNumber(container.events) ??
+      toFiniteNumber(container.count) ??
+      0;
+    const share =
+      normalizeShareValue(container.share) ??
+      normalizeShareValue(container.percentage) ??
+      normalizeShareValue(container.ratio);
+    const uniqueVisitors =
+      toFiniteNumber(container.unique_visitors) ??
+      toFiniteNumber(container.uniqueVisitors) ??
+      toFiniteNumber(container.visitors) ??
+      undefined;
+
+    return {
+      type: typeCandidate,
+      total_events: totalEvents,
+      share: share,
+      unique_visitors: uniqueVisitors ?? undefined,
+    };
+  }
+
+  if (fallbackType) {
+    const totalEvents = toFiniteNumber(value) ?? 0;
+    return {
+      type: fallbackType,
+      total_events: totalEvents,
+    };
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    return {
+      type: value.trim(),
+      total_events: 0,
+    };
+  }
+
+  return null;
+};
+
+const normalizeEventTypeStats = (
+  value: unknown,
+): AdminAnalyticsEventTypeStat[] => {
+  if (!value) {
+    return [];
+  }
+
+  const map = new Map<string, AdminAnalyticsEventTypeStat>();
+
+  const upsert = (stat: AdminAnalyticsEventTypeStat | null) => {
+    if (!stat || !stat.type) {
+      return;
+    }
+    const type = stat.type.trim();
+    if (!type) {
+      return;
+    }
+    const existing = map.get(type);
+    if (existing) {
+      map.set(type, {
+        type,
+        total_events: existing.total_events + stat.total_events,
+        share: stat.share ?? existing.share,
+        unique_visitors: stat.unique_visitors ?? existing.unique_visitors,
+      });
+    } else {
+      map.set(type, {
+        type,
+        total_events: stat.total_events,
+        share: stat.share,
+        unique_visitors: stat.unique_visitors,
+      });
+    }
+  };
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => {
+      upsert(normalizeEventTypeStat(item));
+    });
+  } else if (typeof value === "object") {
+    Object.entries(value as Record<string, unknown>).forEach(([key, item]) => {
+      upsert(normalizeEventTypeStat(item, key));
+    });
+  } else {
+    upsert(normalizeEventTypeStat(value));
+  }
+
+  return Array.from(map.values());
+};
+
 const tryParseMetadataJson = (value: string): unknown => {
   const trimmed = value.trim();
   if (!trimmed || (trimmed[0] !== "{" && trimmed[0] !== "[")) {
@@ -561,15 +679,25 @@ export default function AdminAnalyticsPage() {
     void loadVisitors();
   }, [loadVisitors]);
 
+  const summaryEventTypeStats = useMemo(
+    () => normalizeEventTypeStats(summary?.events_by_type as unknown),
+    [summary?.events_by_type],
+  );
+
+  const visitorEventTypeStats = useMemo(
+    () => normalizeEventTypeStats(visitorDetail?.events_by_type as unknown),
+    [visitorDetail?.events_by_type],
+  );
+
   const eventTypeOptions = useMemo(() => {
     const options = new Set<string>();
-    summary?.events_by_type?.forEach((item) => {
+    summaryEventTypeStats.forEach((item) => {
       if (item.type) options.add(item.type);
     });
     if (eventFilters.eventType) options.add(eventFilters.eventType);
     if (topPagesEventType) options.add(topPagesEventType);
     return Array.from(options).sort();
-  }, [eventFilters.eventType, summary?.events_by_type, topPagesEventType]);
+  }, [eventFilters.eventType, summaryEventTypeStats, topPagesEventType]);
 
   const handleRangeSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
@@ -986,11 +1114,11 @@ export default function AdminAnalyticsPage() {
         </form>
         <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-2 text-sm text-slate-600">
-          <Users className="h-4 w-4 text-slate-500" />
-          <span>
-            Vizitatori unici în interval: {summary ? formatCount(summary.totals.unique_visitors) : "—"}
-          </span>
-        </div>
+            <Users className="h-4 w-4 text-slate-500" />
+            <span>
+              Vizitatori unici în interval: {summary ? formatCount(summary.totals.unique_visitors) : "—"}
+            </span>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <label className="text-sm font-medium text-slate-600">Top pagini filtrate după tip</label>
             <Select
@@ -1030,8 +1158,10 @@ export default function AdminAnalyticsPage() {
           </p>
         </header>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {summary?.events_by_type?.length ? (
-            summary.events_by_type.map((item) => renderEventTypeCard(item))
+          {summaryLoading ? (
+            <p className="text-sm text-slate-500">Se încarcă distribuția evenimentelor...</p>
+          ) : summaryEventTypeStats.length ? (
+            summaryEventTypeStats.map((item) => renderEventTypeCard(item))
           ) : (
             <p className="text-sm text-slate-500">Nu există evenimente în intervalul selectat.</p>
           )}
@@ -1304,11 +1434,11 @@ export default function AdminAnalyticsPage() {
 
                 <section className="space-y-3">
                   <h3 className="text-sm font-semibold text-slate-600">Evenimente pe tip</h3>
-                  {visitorDetail.events_by_type.length === 0 ? (
+                  {visitorEventTypeStats.length === 0 ? (
                     <p className="text-sm text-slate-500">Nu există evenimente înregistrate.</p>
                   ) : (
                     <ul className="grid gap-2 sm:grid-cols-2">
-                      {visitorDetail.events_by_type.map((item) => (
+                      {visitorEventTypeStats.map((item) => (
                         <li
                           key={item.type}
                           className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
