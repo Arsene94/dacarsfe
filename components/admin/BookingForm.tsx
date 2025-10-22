@@ -1042,12 +1042,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         toOptionalNumber(prev.total_services) ??
                         0;
 
-                    const normalizedSubtotalBefore = pickFirstNumber([
-                        normalizedData.subtotal,
+                    const subtotalBeforeCandidates: unknown[] = [
                         normalizedData.sub_total,
+                        normalizedData.subtotal,
                         (normalizedData as { subtotal?: unknown }).subtotal,
-                        prev.sub_total,
-                    ]);
+                    ];
+                    const normalizedSubtotalBefore =
+                        pickFirstNumber(subtotalBeforeCandidates) ??
+                        toOptionalNumber(prev.sub_total);
 
                     const normalizedDiscountSubtotal = pickFirstNumber([
                         breakdown?.subtotal,
@@ -1062,23 +1064,30 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             ? Math.round((normalizedSubtotalBefore - normalizedDiscountSubtotal) * 100) / 100
                             : null;
 
+                    const subtotalPlanValue = resolvePlanAmount(
+                        preferCasco,
+                        [
+                            normalizedData.sub_total,
+                            normalizedData.subtotal,
+                            breakdown?.subtotal,
+                            normalizedData.discount_subtotal,
+                        ],
+                        [
+                            normalizedData.sub_total_casco,
+                            (normalizedData as { subtotal_casco?: unknown }).subtotal_casco,
+                            breakdown?.subtotal,
+                            (normalizedData as { discount_subtotal_casco?: unknown })
+                                .discount_subtotal_casco,
+                        ],
+                    );
                     const nextSubtotalValue =
-                        resolvePlanAmount(
-                            preferCasco,
-                            [
-                                breakdown?.subtotal,
-                                normalizedData.discount_subtotal,
-                                normalizedData.sub_total,
-                                normalizedData.subtotal,
-                            ],
-                            [
-                                breakdown?.subtotal,
-                                (normalizedData as { discount_subtotal_casco?: unknown })
-                                    .discount_subtotal_casco,
-                                normalizedData.sub_total_casco,
-                                (normalizedData as { subtotal_casco?: unknown }).subtotal_casco,
-                            ],
-                        ) ?? toOptionalNumber(prev.sub_total);
+                        typeof subtotalPlanValue === "number" && Number.isFinite(subtotalPlanValue)
+                            ? subtotalPlanValue === 0 &&
+                                normalizedSubtotalBefore != null &&
+                                normalizedSubtotalBefore > 0
+                                ? normalizedSubtotalBefore
+                                : subtotalPlanValue
+                            : normalizedSubtotalBefore;
                     const nextTotalValue =
                         resolvePlanAmount(
                             preferCasco,
