@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   ArrowUpDown,
   CalendarRange,
   Globe,
@@ -845,6 +847,22 @@ export default function AdminAnalyticsPage() {
   const [countrySortField, setCountrySortField] = useState<CountrySortField>("events");
   const [countrySortOrder, setCountrySortOrder] = useState<"asc" | "desc">("desc");
 
+  const applyCountrySortField = useCallback(
+    (field: CountrySortField, options?: { toggleIfSame?: boolean }) => {
+      setCountrySortField((current) => {
+        if (current === field) {
+          if (options?.toggleIfSame) {
+            setCountrySortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+          }
+          return current;
+        }
+        setCountrySortOrder("desc");
+        return field;
+      });
+    },
+    [],
+  );
+
   const [topCars, setTopCars] = useState<AdminAnalyticsCarStat[]>([]);
   const [topCarsLoading, setTopCarsLoading] = useState(false);
   const [topCarsError, setTopCarsError] = useState<string | null>(null);
@@ -1263,11 +1281,13 @@ export default function AdminAnalyticsPage() {
         const eventsValue = toFiniteNumber(page.total_events) ?? 0;
         const visitorsValue = toFiniteNumber(page.unique_visitors);
         const shareRatio = toFiniteNumber(page.share);
+        const pageUrl = trimOrNull(page.page_url);
         return {
           label: formatPageLabelForChart(page.page_url),
           events: eventsValue,
           visitors: visitorsValue ?? null,
           sharePercentage: shareRatio != null ? shareRatio * 100 : null,
+          pageUrl: pageUrl ?? "",
         };
       }),
     [topPagesData],
@@ -1288,12 +1308,17 @@ export default function AdminAnalyticsPage() {
     (value: number, name: string, payload?: Record<string, unknown>) => {
       const share = toFiniteNumber(payload?.sharePercentage);
       const visitors = toFiniteNumber(payload?.visitors);
+      const pageUrl =
+        typeof payload?.pageUrl === "string" ? trimOrNull(payload.pageUrl) : null;
       const parts = [`${name}: ${numberFormatter.format(value)}`];
       if (visitors != null) {
         parts.push(`Vizitatori: ${numberFormatter.format(visitors)}`);
       }
       if (share != null) {
         parts.push(`Pondere: ${shareFormatter.format(share)}%`);
+      }
+      if (pageUrl) {
+        parts.push(`URL: ${pageUrl}`);
       }
       return parts.join(" • ");
     },
@@ -1306,13 +1331,19 @@ export default function AdminAnalyticsPage() {
         const eventsValue = toFiniteNumber(car.total_events) ?? 0;
         const shareRatio = toFiniteNumber(car.share);
         const label =
-          trimOrNull(car.car_name) ?? trimOrNull(car.car_license_plate) ?? "Mașină necunoscută";
+          trimOrNull(car.car_license_plate) ??
+          trimOrNull(car.car_name) ??
+          "Mașină necunoscută";
+        const plateValue = trimOrNull(car.car_license_plate);
+        const carTypeValue = trimOrNull(car.car_type);
+        const carNameValue = trimOrNull(car.car_name);
         return {
           label,
           events: eventsValue,
           sharePercentage: shareRatio != null ? shareRatio * 100 : null,
-          plate: trimOrNull(car.car_license_plate),
-          carType: trimOrNull(car.car_type),
+          plate: plateValue ?? "",
+          carType: carTypeValue ?? "",
+          carName: carNameValue ?? "",
         };
       }),
     [topCars],
@@ -1336,9 +1367,14 @@ export default function AdminAnalyticsPage() {
         typeof payload?.plate === "string" ? trimOrNull(payload.plate) : null;
       const typeValue =
         typeof payload?.carType === "string" ? trimOrNull(payload.carType) : null;
+      const carNameValue =
+        typeof payload?.carName === "string" ? trimOrNull(payload.carName) : null;
       const parts = [`${name}: ${numberFormatter.format(value)}`];
       if (plateValue) {
         parts.push(`Număr: ${plateValue}`);
+      }
+      if (carNameValue) {
+        parts.push(`Model: ${carNameValue}`);
       }
       if (typeValue) {
         parts.push(`Tip: ${typeValue}`);
@@ -1412,6 +1448,51 @@ export default function AdminAnalyticsPage() {
     setVisitorCountryFilter("");
     setVisitorsPage(1);
   }, []);
+
+  const handleCountryHeaderSort = useCallback(
+    (field: CountrySortField) => {
+      applyCountrySortField(field, { toggleIfSame: true });
+    },
+    [applyCountrySortField],
+  );
+
+  const renderCountrySortIcon = useCallback(
+    (field: CountrySortField) => {
+      const isActive = countrySortField === field;
+      if (!isActive) {
+        return <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" aria-hidden />;
+      }
+      return countrySortOrder === "asc" ? (
+        <ArrowUp className="h-3.5 w-3.5 text-berkeley" aria-hidden />
+      ) : (
+        <ArrowDown className="h-3.5 w-3.5 text-berkeley" aria-hidden />
+      );
+    },
+    [countrySortField, countrySortOrder],
+  );
+
+  const renderCountryHeaderButton = useCallback(
+    (field: CountrySortField, label: string, alignment: "left" | "right" = "left") => {
+      const isActive = countrySortField === field;
+      const baseClasses =
+        "flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berkeley/60 focus-visible:ring-offset-2";
+      const alignClasses = alignment === "right" ? "justify-end text-right" : "justify-start text-left";
+      const toneClasses = isActive ? "text-berkeley" : "text-slate-500 hover:text-berkeley";
+
+      return (
+        <button
+          type="button"
+          onClick={() => handleCountryHeaderSort(field)}
+          className={`${baseClasses} ${alignClasses} ${toneClasses}`}
+          aria-pressed={isActive}
+        >
+          <span>{label}</span>
+          {renderCountrySortIcon(field)}
+        </button>
+      );
+    },
+    [countrySortField, handleCountryHeaderSort, renderCountrySortIcon],
+  );
 
   const handleToggleCountrySortOrder = useCallback(() => {
     setCountrySortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -1737,10 +1818,25 @@ export default function AdminAnalyticsPage() {
     const totalEvents = toFiniteNumber(page.total_events);
     const uniqueVisitors = toFiniteNumber(page.unique_visitors);
     const shareValue = toFiniteNumber(page.share);
+    const pageUrl = trimOrNull(page.page_url);
 
     return (
       <tr key={page.page_url} className="border-b border-slate-100">
-        <td className="px-4 py-3 text-sm text-slate-700">{page.page_url}</td>
+        <td className="px-4 py-3 text-sm text-slate-700">
+          {pageUrl ? (
+            <a
+              href={pageUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="break-all text-berkeley hover:underline"
+              title={pageUrl}
+            >
+              {pageUrl}
+            </a>
+          ) : (
+            <span className="break-all">—</span>
+          )}
+        </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
           {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
         </td>
@@ -1779,14 +1875,17 @@ export default function AdminAnalyticsPage() {
   const renderTopCarRow = (car: AdminAnalyticsCarStat, index: number) => {
     const eventsValue = toFiniteNumber(car.total_events);
     const shareValue = toFiniteNumber(car.share);
-    const label =
-      trimOrNull(car.car_name) ?? trimOrNull(car.car_license_plate) ?? `Mașină #${index + 1}`;
+    const plateLabel =
+      trimOrNull(car.car_license_plate) ??
+      trimOrNull(car.car_name) ??
+      `Mașină #${index + 1}`;
+    const modelLabel = trimOrNull(car.car_name);
 
     return (
-      <tr key={`${car.car_id ?? label}-${index}`} className="border-b border-slate-100">
+      <tr key={`${car.car_id ?? plateLabel}-${index}`} className="border-b border-slate-100">
         <td className="px-4 py-3 text-sm text-slate-700">
           <div className="flex flex-col">
-            <span className="font-semibold text-slate-800">{label}</span>
+            <span className="font-semibold text-slate-800">{plateLabel}</span>
             <span className="text-xs text-slate-500">
               {car.car_type ? `Tip: ${car.car_type}` : null}
               {car.car_type && car.car_id != null ? " • " : null}
@@ -1794,7 +1893,7 @@ export default function AdminAnalyticsPage() {
             </span>
           </div>
         </td>
-        <td className="px-4 py-3 text-sm text-slate-700">{car.car_license_plate ?? "—"}</td>
+        <td className="px-4 py-3 text-sm text-slate-700">{modelLabel ?? "—"}</td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
           {eventsValue != null ? numberFormatter.format(eventsValue) : "—"}
         </td>
@@ -1805,15 +1904,24 @@ export default function AdminAnalyticsPage() {
     );
   };
 
-  const dailyActivity = useMemo(
-    () =>
-      (summary?.daily_activity ?? []).map((item) => ({
+  const dailyActivity = useMemo(() => {
+    const rawPoints = summary?.daily_activity;
+    const points = Array.isArray(rawPoints) ? rawPoints : [];
+    return points.map((item) => {
+      const container = item as unknown as Record<string, unknown>;
+      const eventsValue =
+        toFiniteNumber(item.events) ?? toFiniteNumber(container["total_events"]);
+      const visitorsValue =
+        toFiniteNumber(item.visitors) ??
+        toFiniteNumber(container["unique_visitors"]) ??
+        toFiniteNumber(container["total_visitors"]);
+      return {
         date: item.date,
-        events: toFiniteNumber(item.events) ?? 0,
-        visitors: toFiniteNumber(item.visitors) ?? 0,
-      })),
-    [summary?.daily_activity],
-  );
+        events: eventsValue ?? 0,
+        visitors: visitorsValue ?? 0,
+      };
+    });
+  }, [summary?.daily_activity]);
 
   const dailyActivitySeries = useMemo<LineSeries[]>(
     () => [
@@ -2103,8 +2211,8 @@ export default function AdminAnalyticsPage() {
               <table className="min-w-full text-left">
                 <thead className="bg-slate-100 text-xs uppercase text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">Mașină</th>
                     <th className="px-4 py-3">Nr. înmatriculare</th>
+                    <th className="px-4 py-3">Model</th>
                     <th className="px-4 py-3 text-right">Evenimente</th>
                     <th className="px-4 py-3 text-right">Pondere</th>
                   </tr>
@@ -2146,7 +2254,7 @@ export default function AdminAnalyticsPage() {
                   value === "share" ||
                   value === "name"
                 ) {
-                  setCountrySortField(value);
+                  applyCountrySortField(value, { toggleIfSame: false });
                 }
               }}
               className="w-full sm:w-auto sm:min-w-[160px]"
@@ -2196,10 +2304,18 @@ export default function AdminAnalyticsPage() {
               <table className="min-w-full text-left">
                 <thead className="bg-slate-100 text-xs uppercase text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">Țară</th>
-                    <th className="px-4 py-3 text-right">Evenimente</th>
-                    <th className="px-4 py-3 text-right">Vizitatori</th>
-                    <th className="px-4 py-3 text-right">Pondere</th>
+                    <th className="px-4 py-3">
+                      {renderCountryHeaderButton("name", "Țară", "left")}
+                    </th>
+                    <th className="px-4 py-3 text-right">
+                      {renderCountryHeaderButton("events", "Evenimente", "right")}
+                    </th>
+                    <th className="px-4 py-3 text-right">
+                      {renderCountryHeaderButton("visitors", "Vizitatori", "right")}
+                    </th>
+                    <th className="px-4 py-3 text-right">
+                      {renderCountryHeaderButton("share", "Pondere", "right")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
