@@ -1050,7 +1050,7 @@ export default function AdminAnalyticsPage() {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <form className="grid gap-4 md:grid-cols-2 xl:grid-cols-5" onSubmit={handleRangeSubmit}>
-          <div className="md:col-span-1">
+          <div className="min-w-0 md:col-span-1">
             <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
               <CalendarRange className="h-4 w-4" /> Interval rapid
             </label>
@@ -1065,7 +1065,7 @@ export default function AdminAnalyticsPage() {
           </div>
           {rangePreset === "custom" ? (
             <>
-              <div>
+              <div className="min-w-0">
                 <label className="text-sm font-medium text-slate-600">De la</label>
                 <Input
                   type="datetime-local"
@@ -1074,7 +1074,7 @@ export default function AdminAnalyticsPage() {
                   onChange={(event) => setCustomFrom(event.target.value)}
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-sm font-medium text-slate-600">Până la</label>
                 <Input
                   type="datetime-local"
@@ -1092,16 +1092,27 @@ export default function AdminAnalyticsPage() {
               </div>
             </div>
           )}
-          <div className="flex items-end gap-3 md:col-span-2 xl:col-span-1">
-            <Button type="submit" className="flex-1" disabled={summaryLoading}>
+          <div className="flex flex-col gap-2 md:col-span-2 md:flex-row md:flex-wrap md:items-end xl:col-span-1">
+            <Button
+              type="submit"
+              className="w-full whitespace-nowrap md:flex-1"
+              disabled={summaryLoading}
+            >
               Aplică interval
             </Button>
-            <Button type="button" variant="outline" onClick={handleResetRange}>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full whitespace-nowrap md:w-auto"
+              onClick={handleResetRange}
+            >
               Resetează
             </Button>
             <Button
               type="button"
               variant="secondary"
+              className="w-full justify-center md:w-auto"
+              aria-label="Reîncarcă datele"
               onClick={() => {
                 void loadSummary();
                 void loadEvents();
@@ -1124,7 +1135,7 @@ export default function AdminAnalyticsPage() {
             <Select
               value={topPagesEventType}
               onValueChange={setTopPagesEventType}
-              className="min-w-[180px]"
+              className="w-full sm:min-w-[180px]"
             >
               <option value="">Toate evenimentele</option>
               {eventTypeOptions.map((option) => (
