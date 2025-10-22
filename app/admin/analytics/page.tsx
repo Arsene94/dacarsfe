@@ -1481,7 +1481,7 @@ export default function AdminAnalyticsPage() {
         totals={summary?.totals}
         scroll={summary?.scroll}
         range={summary?.range as AnalyticsDateRange | undefined}
-        countries={summary?.countries}
+        countries={summaryCountryStats}
         loading={summaryLoading}
       />
 

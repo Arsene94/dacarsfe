@@ -145,7 +145,7 @@ export default function SummaryCards({ totals, scroll, range, loading, countries
   ];
 
   const intervalLabel = formatRange(range);
-  const topCountries = (countries ?? []).slice(0, 3);
+  const topCountries = Array.isArray(countries) ? countries.slice(0, 3) : [];
 
   return (
     <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
