@@ -48,6 +48,7 @@ let analyticsEnabled = false;
 let inMemoryVisitorUuid: string | null = null;
 let inMemorySessionUuid: string | null = null;
 let lastTrackedPageUrl: string | null = null;
+let cachedVisitorCountry: string | null | undefined;
 
 const generateUuid = (): string => {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -102,6 +103,397 @@ const safeJsonStringify = (value: unknown): string | null => {
         console.warn("Nu am putut serializa metadata analytics", error);
         return null;
     }
+};
+
+const ISO_COUNTRY_CODES = new Set<string>([
+    "AD",
+    "AE",
+    "AF",
+    "AG",
+    "AI",
+    "AL",
+    "AM",
+    "AO",
+    "AQ",
+    "AR",
+    "AS",
+    "AT",
+    "AU",
+    "AW",
+    "AX",
+    "AZ",
+    "BA",
+    "BB",
+    "BD",
+    "BE",
+    "BF",
+    "BG",
+    "BH",
+    "BI",
+    "BJ",
+    "BL",
+    "BM",
+    "BN",
+    "BO",
+    "BQ",
+    "BR",
+    "BS",
+    "BT",
+    "BV",
+    "BW",
+    "BY",
+    "BZ",
+    "CA",
+    "CC",
+    "CD",
+    "CF",
+    "CG",
+    "CH",
+    "CI",
+    "CK",
+    "CL",
+    "CM",
+    "CN",
+    "CO",
+    "CR",
+    "CU",
+    "CV",
+    "CW",
+    "CX",
+    "CY",
+    "CZ",
+    "DE",
+    "DJ",
+    "DK",
+    "DM",
+    "DO",
+    "DZ",
+    "EC",
+    "EE",
+    "EG",
+    "EH",
+    "ER",
+    "ES",
+    "ET",
+    "FI",
+    "FJ",
+    "FK",
+    "FM",
+    "FO",
+    "FR",
+    "GA",
+    "GB",
+    "GD",
+    "GE",
+    "GF",
+    "GG",
+    "GH",
+    "GI",
+    "GL",
+    "GM",
+    "GN",
+    "GP",
+    "GQ",
+    "GR",
+    "GS",
+    "GT",
+    "GU",
+    "GW",
+    "GY",
+    "HK",
+    "HM",
+    "HN",
+    "HR",
+    "HT",
+    "HU",
+    "ID",
+    "IE",
+    "IL",
+    "IM",
+    "IN",
+    "IO",
+    "IQ",
+    "IR",
+    "IS",
+    "IT",
+    "JE",
+    "JM",
+    "JO",
+    "JP",
+    "KE",
+    "KG",
+    "KH",
+    "KI",
+    "KM",
+    "KN",
+    "KP",
+    "KR",
+    "KW",
+    "KY",
+    "KZ",
+    "LA",
+    "LB",
+    "LC",
+    "LI",
+    "LK",
+    "LR",
+    "LS",
+    "LT",
+    "LU",
+    "LV",
+    "LY",
+    "MA",
+    "MC",
+    "MD",
+    "ME",
+    "MF",
+    "MG",
+    "MH",
+    "MK",
+    "ML",
+    "MM",
+    "MN",
+    "MO",
+    "MP",
+    "MQ",
+    "MR",
+    "MS",
+    "MT",
+    "MU",
+    "MV",
+    "MW",
+    "MX",
+    "MY",
+    "MZ",
+    "NA",
+    "NC",
+    "NE",
+    "NF",
+    "NG",
+    "NI",
+    "NL",
+    "NO",
+    "NP",
+    "NR",
+    "NU",
+    "NZ",
+    "OM",
+    "PA",
+    "PE",
+    "PF",
+    "PG",
+    "PH",
+    "PK",
+    "PL",
+    "PM",
+    "PN",
+    "PR",
+    "PS",
+    "PT",
+    "PW",
+    "PY",
+    "QA",
+    "RE",
+    "RO",
+    "RS",
+    "RU",
+    "RW",
+    "SA",
+    "SB",
+    "SC",
+    "SD",
+    "SE",
+    "SG",
+    "SH",
+    "SI",
+    "SJ",
+    "SK",
+    "SL",
+    "SM",
+    "SN",
+    "SO",
+    "SR",
+    "SS",
+    "ST",
+    "SV",
+    "SX",
+    "SY",
+    "SZ",
+    "TC",
+    "TD",
+    "TF",
+    "TG",
+    "TH",
+    "TJ",
+    "TK",
+    "TL",
+    "TM",
+    "TN",
+    "TO",
+    "TR",
+    "TT",
+    "TV",
+    "TW",
+    "TZ",
+    "UA",
+    "UG",
+    "UM",
+    "US",
+    "UY",
+    "UZ",
+    "VA",
+    "VC",
+    "VE",
+    "VG",
+    "VI",
+    "VN",
+    "VU",
+    "WF",
+    "WS",
+    "YE",
+    "YT",
+    "ZA",
+    "ZM",
+    "ZW",
+    "XK",
+]);
+
+const extractCountryFromLocale = (locale: string): string | null => {
+    if (!locale || typeof locale !== "string") {
+        return null;
+    }
+
+    const trimmed = locale.trim();
+    if (trimmed.length === 0) {
+        return null;
+    }
+
+    try {
+        const LocaleCtor = (Intl as unknown as { Locale?: typeof Intl.Locale }).Locale;
+        if (typeof LocaleCtor === "function") {
+            const parsedLocale = new LocaleCtor(trimmed);
+            if (parsedLocale && parsedLocale.region) {
+                const region = String(parsedLocale.region).toUpperCase();
+                if (ISO_COUNTRY_CODES.has(region)) {
+                    return region;
+                }
+            }
+        }
+    } catch (error) {
+        // Ignorăm erorile provenite din locale invalide
+    }
+
+    const normalized = trimmed.replace(/_/g, "-");
+    const segments = normalized.split("-");
+    for (const segment of segments.slice(1)) {
+        if (/^[A-Za-z]{2}$/.test(segment)) {
+            const upper = segment.toUpperCase();
+            if (ISO_COUNTRY_CODES.has(upper)) {
+                return upper;
+            }
+        }
+        if (/^[0-9]{3}$/.test(segment)) {
+            return segment;
+        }
+    }
+
+    return null;
+};
+
+const normalizeCountryInput = (value?: string | null): string | null => {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+        return null;
+    }
+
+    const localeCandidate = extractCountryFromLocale(trimmed);
+    if (localeCandidate) {
+        return localeCandidate;
+    }
+
+    if (trimmed.length === 2) {
+        const upper = trimmed.toUpperCase();
+        if (ISO_COUNTRY_CODES.has(upper)) {
+            return upper;
+        }
+    }
+
+    if (trimmed.length === 3 && /^[0-9]{3}$/.test(trimmed)) {
+        return trimmed;
+    }
+
+    if (trimmed.length === 3 && /^[A-Za-z]{3}$/.test(trimmed)) {
+        return trimmed.toUpperCase();
+    }
+
+    return trimmed;
+};
+
+const detectBrowserCountry = (): string | null => {
+    if (!isBrowser() || typeof navigator === "undefined") {
+        return null;
+    }
+
+    const candidates = new Set<string>();
+    const pushCandidate = (candidate?: string | null) => {
+        if (typeof candidate !== "string") {
+            return;
+        }
+        const trimmed = candidate.trim();
+        if (trimmed.length > 0) {
+            candidates.add(trimmed);
+        }
+    };
+
+    try {
+        const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+        if (typeof locale === "string") {
+            pushCandidate(locale);
+        }
+    } catch (error) {
+        // Ignorăm erorile generate de browsere fără Intl complet
+    }
+
+    const nav = navigator as Navigator & {
+        language?: string;
+        languages?: string[];
+        userLanguage?: string;
+        browserLanguage?: string;
+    };
+
+    pushCandidate(nav.language);
+    if (Array.isArray(nav.languages)) {
+        nav.languages.forEach((lang) => pushCandidate(lang));
+    }
+    pushCandidate((nav as Record<string, unknown>).userLanguage as string | undefined);
+    pushCandidate((nav as Record<string, unknown>).browserLanguage as string | undefined);
+
+    for (const candidate of candidates) {
+        const normalized = normalizeCountryInput(candidate);
+        if (normalized) {
+            return normalized;
+        }
+    }
+
+    return null;
+};
+
+const getVisitorCountry = (candidate?: string | null): string | null => {
+    const explicit = normalizeCountryInput(candidate);
+    if (explicit) {
+        return explicit;
+    }
+
+    if (cachedVisitorCountry !== undefined) {
+        return cachedVisitorCountry;
+    }
+
+    cachedVisitorCountry = detectBrowserCountry();
+    return cachedVisitorCountry;
 };
 
 const readFromStorage = (
@@ -324,11 +716,9 @@ const enqueueEvent = (payload: AnalyticsEventInput) => {
         page_url: buildPageUrl(payload.pageUrl),
     };
 
-    if (payload.country && typeof payload.country === "string") {
-        const trimmedCountry = payload.country.trim();
-        if (trimmedCountry.length > 0) {
-            event.country = trimmedCountry;
-        }
+    const eventCountry = getVisitorCountry(payload.country ?? null);
+    if (eventCountry) {
+        event.country = eventCountry;
     }
 
     const referrer = resolveReferrer(payload.referrerUrl ?? undefined);
@@ -361,11 +751,21 @@ const sendBatch = async (events: AnalyticsQueuedEvent[], options?: FlushOptions)
     const visitorUuid = getVisitorUuid();
     const sessionUuid = getSessionUuid();
 
-    const payload = {
+    const payload: {
+        visitor_uuid: string;
+        session_uuid: string;
+        events: AnalyticsQueuedEvent[];
+        country?: string;
+    } = {
         visitor_uuid: visitorUuid,
         session_uuid: sessionUuid,
         events,
     };
+
+    const batchCountry = getVisitorCountry(null);
+    if (batchCountry) {
+        payload.country = batchCountry;
+    }
 
     const body = safeJsonStringify(payload);
     if (!body) {
@@ -463,6 +863,7 @@ export const enableAnalyticsTracking = () => {
     analyticsEnabled = true;
     getVisitorUuid();
     getSessionUuid();
+    getVisitorCountry(null);
 };
 
 export const disableAnalyticsTracking = () => {
