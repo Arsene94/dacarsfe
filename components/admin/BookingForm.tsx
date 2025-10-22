@@ -1575,13 +1575,32 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const rentalRateEuro = toOptionalNumber(quote?.rental_rate);
     const advancePaymentEuro = toOptionalNumber(quote?.advance_payment);
 
+    const quoteServicesEuro = toOptionalNumber(quote?.total_services);
     const discountBreakdownRaw =
         quote?.discount_breakdown ??
         (quote?.discount && typeof quote.discount === "object" && !Array.isArray(quote.discount)
             ? (quote.discount as { subtotal?: unknown; total?: unknown; discount?: unknown })
             : null);
-    const discountSubtotalEuro = toOptionalNumber(discountBreakdownRaw?.subtotal);
-    const discountTotalEuro = toOptionalNumber(discountBreakdownRaw?.total);
+    const discountSubtotalEuro = pickFirstNumber([
+        discountBreakdownRaw?.subtotal,
+        quote?.discount_subtotal,
+        (quote as { discount_subtotal_casco?: unknown })?.discount_subtotal_casco,
+    ]);
+    const discountTotalEuro = pickFirstNumber([
+        discountBreakdownRaw?.total,
+        quote?.discount_total,
+        (quote as { discount_total_casco?: unknown })?.discount_total_casco,
+        discountSubtotalEuro != null && quoteServicesEuro != null
+            ? discountSubtotalEuro + quoteServicesEuro
+            : null,
+    ]);
+    const discountAmountEuro = pickFirstNumber([
+        discountBreakdownRaw?.discount,
+        quote?.discount,
+        quote?.discount_amount,
+        quote?.coupon_amount,
+        bookingInfo.discount_applied,
+    ]);
 
     const basePriceLeiDisplay = formatLeiAmount(basePriceEuro);
     const subtotalLeiDisplay = formatLeiAmount(subtotalEuro);
@@ -1610,20 +1629,22 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const remainingBalanceEuroDisplay = formatEuroAmount(remainingBalanceEuro);
 
     const discountAppliedEuro =
-        typeof totalEuro === "number" &&
-        Number.isFinite(totalEuro) &&
-        typeof discountTotalEuro === "number" &&
-        Number.isFinite(discountTotalEuro)
-            ? Math.round((totalEuro - discountTotalEuro) * 100) / 100
-            : null;
+        typeof discountAmountEuro === "number" && Number.isFinite(discountAmountEuro)
+            ? Math.round(discountAmountEuro * 100) / 100
+            : typeof totalEuro === "number" &&
+                Number.isFinite(totalEuro) &&
+                typeof discountTotalEuro === "number" &&
+                Number.isFinite(discountTotalEuro)
+                ? Math.round((totalEuro - discountTotalEuro) * 100) / 100
+                : null;
     const discountAppliedEuroDisplay = formatEuroAmount(discountAppliedEuro);
     const discountAppliedLeiDisplay = formatLeiAmount(discountAppliedEuro);
 
-    const showDiscountDetails =
-        discountSubtotalEuro != null &&
-        discountSubtotalEuro !== 0 &&
-        discountTotalEuro != null &&
-        discountTotalEuro !== 0;
+    const showDiscountDetails = Boolean(
+        (discountSubtotalEuro != null && discountSubtotalEuro !== 0) ||
+            (discountTotalEuro != null && discountTotalEuro !== 0) ||
+            (discountAppliedEuro != null && discountAppliedEuro !== 0),
+    );
 
     const isNewBooking = bookingInfo?.id == null;
 
