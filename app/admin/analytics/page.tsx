@@ -21,6 +21,7 @@ import {
   LineChart,
   SimpleBarChart,
   type BarSeries,
+  type DataRecord,
   type LineSeries,
 } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
@@ -1099,7 +1100,7 @@ export default function AdminAnalyticsPage() {
     [summary?.events_by_type],
   );
 
-  const eventTypeChartData = useMemo(
+  const eventTypeChartData = useMemo<DataRecord[]>(
     () =>
       summaryEventTypeStats.map((item) => {
         const total = toFiniteNumber(item.total_events) ?? 0;
@@ -1107,11 +1108,17 @@ export default function AdminAnalyticsPage() {
         if (shareRatio == null && summaryEventTypeTotal && summaryEventTypeTotal > 0) {
           shareRatio = Math.min(Math.max(total / summaryEventTypeTotal, 0), 1);
         }
-        return {
-          label: item.type,
+
+        const record: DataRecord = {
+          label: item.type ?? "necunoscut",
           events: total,
-          sharePercentage: shareRatio != null ? shareRatio * 100 : null,
         };
+
+        if (shareRatio != null) {
+          record.sharePercentage = shareRatio * 100;
+        }
+
+        return record;
       }),
     [summaryEventTypeStats, summaryEventTypeTotal],
   );
@@ -1206,18 +1213,27 @@ export default function AdminAnalyticsPage() {
     return base;
   }, [combinedCountryStats, countrySortField, countrySortOrder]);
 
-  const countryChartData = useMemo(
+  const countryChartData = useMemo<DataRecord[]>(
     () =>
       sortedCountryStats.slice(0, 10).map((stat) => {
         const eventsValue = toFiniteNumber(stat.total_events) ?? 0;
         const visitorsValue = toFiniteNumber(stat.unique_visitors);
         const shareRatio = toFiniteNumber(stat.share);
-        return {
+
+        const record: DataRecord = {
           label: trimOrNull(stat.country) ?? "Țară necunoscută",
           events: eventsValue,
-          visitors: visitorsValue ?? null,
-          sharePercentage: shareRatio != null ? shareRatio * 100 : null,
         };
+
+        if (visitorsValue != null) {
+          record.visitors = visitorsValue;
+        }
+
+        if (shareRatio != null) {
+          record.sharePercentage = shareRatio * 100;
+        }
+
+        return record;
       }),
     [sortedCountryStats],
   );
@@ -1277,20 +1293,29 @@ export default function AdminAnalyticsPage() {
     [summary?.top_pages, topPages?.pages],
   );
 
-  const topPagesChartData = useMemo(
+  const topPagesChartData = useMemo<DataRecord[]>(
     () =>
       topPagesData.slice(0, 8).map((page) => {
         const eventsValue = toFiniteNumber(page.total_events) ?? 0;
         const visitorsValue = toFiniteNumber(page.unique_visitors);
         const shareRatio = toFiniteNumber(page.share);
-        const pageUrl = trimOrNull(page.page_url);
-        return {
+        const pageUrl = trimOrNull(page.page_url) ?? "";
+
+        const record: DataRecord = {
           label: formatPageLabelForChart(page.page_url),
           events: eventsValue,
-          visitors: visitorsValue ?? null,
-          sharePercentage: shareRatio != null ? shareRatio * 100 : null,
-          pageUrl: pageUrl ?? "",
+          pageUrl,
         };
+
+        if (visitorsValue != null) {
+          record.visitors = visitorsValue;
+        }
+
+        if (shareRatio != null) {
+          record.sharePercentage = shareRatio * 100;
+        }
+
+        return record;
       }),
     [topPagesData],
   );
@@ -1327,7 +1352,7 @@ export default function AdminAnalyticsPage() {
     [],
   );
 
-  const topCarsChartData = useMemo(
+  const topCarsChartData = useMemo<DataRecord[]>(
     () =>
       topCars.slice(0, 8).map((car) => {
         const eventsValue = toFiniteNumber(car.total_events) ?? 0;
@@ -1336,17 +1361,23 @@ export default function AdminAnalyticsPage() {
           trimOrNull(car.car_license_plate) ??
           trimOrNull(car.car_name) ??
           "Mașină necunoscută";
-        const plateValue = trimOrNull(car.car_license_plate);
-        const carTypeValue = trimOrNull(car.car_type);
-        const carNameValue = trimOrNull(car.car_name);
-        return {
+        const plateValue = trimOrNull(car.car_license_plate) ?? "";
+        const carTypeValue = trimOrNull(car.car_type) ?? "";
+        const carNameValue = trimOrNull(car.car_name) ?? "";
+
+        const record: DataRecord = {
           label,
           events: eventsValue,
-          sharePercentage: shareRatio != null ? shareRatio * 100 : null,
-          plate: plateValue ?? "",
-          carType: carTypeValue ?? "",
-          carName: carNameValue ?? "",
+          plate: plateValue,
+          carType: carTypeValue,
+          carName: carNameValue,
         };
+
+        if (shareRatio != null) {
+          record.sharePercentage = shareRatio * 100;
+        }
+
+        return record;
       }),
     [topCars],
   );

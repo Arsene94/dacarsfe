@@ -524,8 +524,8 @@ const detectBrowserCountry = (): string | null => {
     if (Array.isArray(nav.languages)) {
         nav.languages.forEach((lang) => pushCandidate(lang));
     }
-    pushCandidate((nav as Record<string, unknown>).userLanguage as string | undefined);
-    pushCandidate((nav as Record<string, unknown>).browserLanguage as string | undefined);
+    pushCandidate(nav.userLanguage);
+    pushCandidate(nav.browserLanguage);
 
     for (const candidate of candidates) {
         const normalized = normalizeCountryInput(candidate);
