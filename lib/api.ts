@@ -154,6 +154,8 @@ import type {
     AdminReportWeeklyResponse,
 } from '@/types/reports';
 import type {
+    AdminAnalyticsCountriesParams,
+    AdminAnalyticsCountriesResponse,
     AdminAnalyticsEvent,
     AdminAnalyticsEventDetailResponse,
     AdminAnalyticsEventsParams,
@@ -3348,10 +3350,52 @@ export class ApiClient {
             }
         }
 
+        if (params.country) {
+            const normalized = params.country.trim();
+            if (normalized.length > 0) {
+                searchParams.append('country', normalized);
+            }
+        }
+
         if (params.page_url) {
             const normalized = params.page_url.trim();
             if (normalized.length > 0) {
                 searchParams.append('page_url', normalized);
+            }
+        }
+
+        if (params.interaction_target) {
+            const normalized = params.interaction_target.trim();
+            if (normalized.length > 0) {
+                searchParams.append('interaction_target', normalized);
+            }
+        }
+
+        if (params.interaction_label) {
+            const normalized = params.interaction_label.trim();
+            if (normalized.length > 0) {
+                searchParams.append('interaction_label', normalized);
+            }
+        }
+
+        if (params.car_id) {
+            const normalized = params.car_id.trim();
+            if (normalized.length > 0) {
+                searchParams.append('car_id', normalized);
+            }
+        }
+
+        if (params.car_name) {
+            const normalized = params.car_name.trim();
+            if (normalized.length > 0) {
+                searchParams.append('car_name', normalized);
+            }
+        }
+
+        if (params.car_license_plate) {
+            const normalized = params.car_license_plate.trim();
+            if (normalized.length > 0) {
+                searchParams.append('car_license_plate', normalized);
             }
         }
 
@@ -3420,6 +3464,20 @@ export class ApiClient {
         );
     }
 
+    async fetchAdminAnalyticsCountries(
+        params: AdminAnalyticsCountriesParams = {},
+    ): Promise<AdminAnalyticsCountriesResponse> {
+        const searchParams = new URLSearchParams();
+        appendAnalyticsRangeParams(searchParams, params);
+        appendPositiveIntegerParam(searchParams, 'limit', params.limit);
+
+        const query = searchParams.toString();
+
+        return this.request<AdminAnalyticsCountriesResponse>(
+            `/admin/analytics/reports/countries${query ? `?${query}` : ''}`,
+        );
+    }
+
     async fetchAdminAnalyticsVisitors(
         params: AdminAnalyticsVisitorsParams = {},
     ): Promise<AdminAnalyticsVisitorsResponse> {
@@ -3427,6 +3485,13 @@ export class ApiClient {
         appendAnalyticsRangeParams(searchParams, params);
         appendPositiveIntegerParam(searchParams, 'per_page', params.per_page);
         appendPositiveIntegerParam(searchParams, 'page', params.page);
+
+        if (params.country) {
+            const normalized = params.country.trim();
+            if (normalized.length > 0) {
+                searchParams.append('country', normalized);
+            }
+        }
 
         const query = searchParams.toString();
 

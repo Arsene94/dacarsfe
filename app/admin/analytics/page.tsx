@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarRange, Loader2, RefreshCw, Search, Target, Users } from "lucide-react";
+import { CalendarRange, Globe, Loader2, RefreshCw, Search, Target, Users } from "lucide-react";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import SummaryCards from "@/components/admin/analytics/SummaryCards";
@@ -13,7 +13,9 @@ import { DataTable } from "@/components/ui/table";
 import type { Column } from "@/types/ui";
 import type { ApiListResult, ApiMeta } from "@/types/api";
 import type {
+  AdminAnalyticsCountryStat,
   AdminAnalyticsEvent,
+  AdminAnalyticsEventTypeDistribution,
   AdminAnalyticsEventTypeStat,
   AdminAnalyticsSummaryResponse,
   AdminAnalyticsTopPage,
@@ -154,6 +156,14 @@ const toFiniteNumber = (value: unknown): number | null => {
   return null;
 };
 
+const trimOrNull = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 const formatDuration = (durationMs: number | null | undefined): string => {
   const value = toFiniteNumber(durationMs);
   if (value == null) {
@@ -268,6 +278,18 @@ const normalizeEventTypeStats = (
     }
   };
 
+  if (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Array.isArray((value as AdminAnalyticsEventTypeDistribution).items)
+  ) {
+    (value as AdminAnalyticsEventTypeDistribution).items.forEach((item) => {
+      upsert(normalizeEventTypeStat(item));
+    });
+    return Array.from(map.values());
+  }
+
   if (Array.isArray(value)) {
     value.forEach((item) => {
       upsert(normalizeEventTypeStat(item));
@@ -281,6 +303,122 @@ const normalizeEventTypeStats = (
   }
 
   return Array.from(map.values());
+};
+
+const resolveEventTypeTotal = (value: unknown): number | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const container = value as Record<string, unknown>;
+  const candidates = [
+    container.total_events,
+    container.totalEvents,
+    container.events,
+    container.count,
+  ];
+
+  for (const candidate of candidates) {
+    const numeric = toFiniteNumber(candidate);
+    if (numeric != null) {
+      return numeric;
+    }
+  }
+
+  return null;
+};
+
+const normalizeCountryStat = (value: unknown, fallbackCountry?: string | null): AdminAnalyticsCountryStat | null => {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return {
+      country: trimmed || fallbackCountry || null,
+      total_events: 0,
+    };
+  }
+
+  if (typeof value !== "object") {
+    return null;
+  }
+
+  const container = value as Record<string, unknown>;
+
+  const countryCandidate = (() => {
+    if (typeof container.country === "string") {
+      const trimmed = container.country.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+    if (typeof container.code === "string") {
+      const trimmed = container.code.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+    return fallbackCountry ?? null;
+  })();
+
+  const totalEvents =
+    toFiniteNumber(container.total_events) ??
+    toFiniteNumber(container.totalEvents) ??
+    toFiniteNumber(container.events) ??
+    toFiniteNumber(container.count) ??
+    0;
+
+  const uniqueVisitors =
+    toFiniteNumber(container.unique_visitors) ??
+    toFiniteNumber(container.uniqueVisitors) ??
+    toFiniteNumber(container.visitors) ??
+    undefined;
+
+  const share =
+    normalizeShareValue(container.share) ??
+    normalizeShareValue(container.ratio) ??
+    normalizeShareValue(container.percentage);
+
+  return {
+    country: countryCandidate ?? null,
+    total_events: totalEvents,
+    unique_visitors: uniqueVisitors ?? undefined,
+    share: share,
+  };
+};
+
+const normalizeCountryStats = (value: unknown): AdminAnalyticsCountryStat[] => {
+  if (!value) {
+    return [];
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Array.isArray((value as { items?: unknown[] }).items)
+  ) {
+    return ((value as { items?: unknown[] }).items ?? [])
+      .map((item) => normalizeCountryStat(item))
+      .filter((item): item is AdminAnalyticsCountryStat => item != null);
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => normalizeCountryStat(item))
+      .filter((item): item is AdminAnalyticsCountryStat => item != null);
+  }
+
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([country, item]) => normalizeCountryStat(item, country))
+      .filter((item): item is AdminAnalyticsCountryStat => item != null);
+  }
+
+  const single = normalizeCountryStat(value);
+  return single ? [single] : [];
 };
 
 const tryParseMetadataJson = (value: string): unknown => {
@@ -391,11 +529,21 @@ const getMetadataText = (
   return null;
 };
 
-const getEventComponentDuration = (event: AdminAnalyticsEvent): number | null =>
-  getMetadataNumber(event.metadata, "component_visible_ms");
+const getEventComponentDuration = (event: AdminAnalyticsEvent): number | null => {
+  const direct = toFiniteNumber(event.component_visible_ms);
+  if (direct != null) {
+    return direct;
+  }
+  return getMetadataNumber(event.metadata, "component_visible_ms");
+};
 
-const getEventPageDuration = (event: AdminAnalyticsEvent): number | null =>
-  getMetadataNumber(event.metadata, "page_time_ms");
+const getEventPageDuration = (event: AdminAnalyticsEvent): number | null => {
+  const direct = toFiniteNumber(event.page_time_ms);
+  if (direct != null) {
+    return direct;
+  }
+  return getMetadataNumber(event.metadata, "page_time_ms");
+};
 
 const getEventDuration = (event: AdminAnalyticsEvent): number | null => {
   const direct = toFiniteNumber(event.duration_ms);
@@ -416,11 +564,60 @@ const getEventDuration = (event: AdminAnalyticsEvent): number | null => {
   return getEventPageDuration(event);
 };
 
+type ResolvedCarContext = {
+  id: number | null;
+  name: string | null;
+  type: string | null;
+  licensePlate: string | null;
+};
+
+const resolveCarContext = (event: AdminAnalyticsEvent): ResolvedCarContext => {
+  const direct = event.car ?? {};
+  const idDirect =
+    typeof direct.car_id === "number" && Number.isFinite(direct.car_id)
+      ? direct.car_id
+      : toFiniteNumber((direct.car_id as unknown) ?? null);
+
+  const metadata = event.metadata;
+
+  const id = idDirect ?? getMetadataNumber(metadata, "car_id") ?? null;
+  const name =
+    trimOrNull(direct.car_name) ??
+    trimOrNull(getMetadataText(metadata, "car_name")) ??
+    trimOrNull(getMetadataText(metadata, "carName"));
+  const type =
+    trimOrNull(direct.car_type) ??
+    trimOrNull(getMetadataText(metadata, "car_type")) ??
+    trimOrNull(getMetadataText(metadata, "carType"));
+  const licensePlate =
+    trimOrNull(direct.car_license_plate) ??
+    trimOrNull(getMetadataText(metadata, "car_license_plate")) ??
+    trimOrNull(getMetadataText(metadata, "license_plate")) ??
+    trimOrNull(getMetadataText(metadata, "carPlate"));
+
+  return {
+    id: id ?? null,
+    name: name ?? null,
+    type: type ?? null,
+    licensePlate: licensePlate ?? null,
+  };
+};
+
+const hasCarContext = (context: ResolvedCarContext): boolean => {
+  return Boolean(context.id != null || context.name || context.type || context.licensePlate);
+};
+
 type EventFilterState = {
   visitorUuid: string;
   sessionUuid: string;
   pageUrl: string;
   eventType: string;
+  country: string;
+  interactionTarget: string;
+  interactionLabel: string;
+  carId: string;
+  carName: string;
+  carLicensePlate: string;
 };
 
 const emptyMetadataFallback = "{ }";
@@ -538,6 +735,12 @@ export default function AdminAnalyticsPage() {
     sessionUuid: "",
     pageUrl: "",
     eventType: "",
+    country: "",
+    interactionTarget: "",
+    interactionLabel: "",
+    carId: "",
+    carName: "",
+    carLicensePlate: "",
   });
   const [eventFilters, setEventFilters] = useState<EventFilterState>(eventFilterForm);
 
@@ -546,6 +749,8 @@ export default function AdminAnalyticsPage() {
   const [visitorsLoading, setVisitorsLoading] = useState(false);
   const [visitorsError, setVisitorsError] = useState<string | null>(null);
   const [visitorsPage, setVisitorsPage] = useState(1);
+  const [visitorCountryFilter, setVisitorCountryFilter] = useState("");
+  const [visitorCountryInput, setVisitorCountryInput] = useState("");
 
   const [detailVisitorUuid, setDetailVisitorUuid] = useState<string | null>(null);
   const [visitorDetail, setVisitorDetail] =
@@ -607,6 +812,12 @@ export default function AdminAnalyticsPage() {
         session_uuid: eventFilters.sessionUuid || undefined,
         page_url: eventFilters.pageUrl || undefined,
         event_type: eventFilters.eventType || undefined,
+        country: eventFilters.country || undefined,
+        interaction_target: eventFilters.interactionTarget || undefined,
+        interaction_label: eventFilters.interactionLabel || undefined,
+        car_id: eventFilters.carId || undefined,
+        car_name: eventFilters.carName || undefined,
+        car_license_plate: eventFilters.carLicensePlate || undefined,
       });
       const { data, meta } = extractListAndMeta(response);
       setEvents(data);
@@ -629,6 +840,7 @@ export default function AdminAnalyticsPage() {
         ...params,
         per_page: VISITORS_PER_PAGE,
         page: visitorsPage,
+        country: visitorCountryFilter || undefined,
       });
       setVisitorsResponse(response);
     } catch (error) {
@@ -638,7 +850,7 @@ export default function AdminAnalyticsPage() {
     } finally {
       setVisitorsLoading(false);
     }
-  }, [buildRangeParams, visitorsPage]);
+  }, [buildRangeParams, visitorCountryFilter, visitorsPage]);
 
   const loadVisitorDetail = useCallback(
     async (visitorUuid: string) => {
@@ -684,9 +896,24 @@ export default function AdminAnalyticsPage() {
     [summary?.events_by_type],
   );
 
+  const summaryEventTypeTotal = useMemo(
+    () => toFiniteNumber(resolveEventTypeTotal(summary?.events_by_type as unknown)),
+    [summary?.events_by_type],
+  );
+
+  const summaryCountryStats = useMemo(
+    () => normalizeCountryStats(summary?.countries as unknown),
+    [summary?.countries],
+  );
+
   const visitorEventTypeStats = useMemo(
     () => normalizeEventTypeStats(visitorDetail?.events_by_type as unknown),
     [visitorDetail?.events_by_type],
+  );
+
+  const visitorCountryStats = useMemo(
+    () => normalizeCountryStats(visitorDetail?.countries as unknown),
+    [visitorDetail?.countries],
   );
 
   const eventTypeOptions = useMemo(() => {
@@ -732,10 +959,31 @@ export default function AdminAnalyticsPage() {
       sessionUuid: "",
       pageUrl: "",
       eventType: "",
+      country: "",
+      interactionTarget: "",
+      interactionLabel: "",
+      carId: "",
+      carName: "",
+      carLicensePlate: "",
     };
     setEventFilterForm(empty);
     setEventFilters(empty);
     setEventsPage(1);
+  }, []);
+
+  const handleApplyVisitorCountry = useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      setVisitorsPage(1);
+      setVisitorCountryFilter(visitorCountryInput.trim());
+    },
+    [visitorCountryInput],
+  );
+
+  const handleResetVisitorCountry = useCallback(() => {
+    setVisitorCountryInput("");
+    setVisitorCountryFilter("");
+    setVisitorsPage(1);
   }, []);
 
   const currentEventsPage = useMemo(() => {
@@ -754,6 +1002,23 @@ export default function AdminAnalyticsPage() {
     () => resolvePageCount(visitorsResponse?.meta),
     [visitorsResponse?.meta],
   );
+
+  const renderCarSummary = (event: AdminAnalyticsEvent) => {
+    const car = resolveCarContext(event);
+    if (!hasCarContext(car)) {
+      return <span className="text-xs text-slate-400">—</span>;
+    }
+    return (
+      <div className="flex flex-col text-xs text-slate-500">
+        <span className="text-sm font-semibold text-slate-700">
+          {car.name ?? car.licensePlate ?? "—"}
+        </span>
+        {car.licensePlate && car.name ? <span>Plăcuță: {car.licensePlate}</span> : null}
+        {car.id != null ? <span>ID: {numberFormatter.format(car.id)}</span> : null}
+        {car.type ? <span>Tip: {car.type}</span> : null}
+      </div>
+    );
+  };
 
   const eventColumns = useMemo<Column<AdminAnalyticsEvent>[]>(
     () => [
@@ -784,6 +1049,23 @@ export default function AdminAnalyticsPage() {
         cell: (event) => (
           <span className="break-words text-sm text-slate-700">{event.page_url}</span>
         ),
+      },
+      {
+        id: "country",
+        header: "Țară",
+        accessor: (event) => event.country ?? "",
+        cell: (event) => (
+          <span className="text-sm text-slate-700">{event.country ?? "—"}</span>
+        ),
+      },
+      {
+        id: "car",
+        header: "Context mașină",
+        accessor: (event) => {
+          const car = resolveCarContext(event);
+          return car.name ?? car.licensePlate ?? "";
+        },
+        cell: renderCarSummary,
       },
       {
         id: "visitor",
@@ -906,6 +1188,14 @@ export default function AdminAnalyticsPage() {
         ),
       },
       {
+        id: "last_country",
+        header: "Țară",
+        accessor: (visitor) => visitor.last_country ?? "",
+        cell: (visitor) => (
+          <span className="text-sm text-slate-700">{visitor.last_country ?? "—"}</span>
+        ),
+      },
+      {
         id: "actions",
         header: "",
         accessor: () => "",
@@ -941,8 +1231,16 @@ export default function AdminAnalyticsPage() {
           <p className="text-sm text-slate-700">{event.ip_address ?? "—"}</p>
         </div>
         <div>
+          <p className="text-xs font-semibold uppercase text-slate-500">Țară</p>
+          <p className="text-sm text-slate-700">{event.country ?? "—"}</p>
+        </div>
+        <div>
           <p className="text-xs font-semibold uppercase text-slate-500">Dispozitiv</p>
           <p className="text-sm text-slate-700">{describeDevice(event.device)}</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase text-slate-500">Context mașină</p>
+          {renderCarSummary(event)}
         </div>
       </div>
       <div>
@@ -964,7 +1262,7 @@ export default function AdminAnalyticsPage() {
   const renderEventTypeCard = (item: AdminAnalyticsEventTypeStat) => {
     const totalEvents = toFiniteNumber(item.total_events);
     const shareValue = toFiniteNumber(item.share);
-    const summaryTotalEvents = toFiniteNumber(summary?.totals?.events);
+    const summaryTotalEvents = summaryEventTypeTotal ?? toFiniteNumber(summary?.totals?.events);
     const uniqueVisitors = toFiniteNumber(item.unique_visitors);
 
     const resolvedShare = (() => {
@@ -1012,6 +1310,28 @@ export default function AdminAnalyticsPage() {
     return (
       <tr key={page.page_url} className="border-b border-slate-100">
         <td className="px-4 py-3 text-sm text-slate-700">{page.page_url}</td>
+        <td className="px-4 py-3 text-sm text-right text-slate-700">
+          {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
+        </td>
+        <td className="px-4 py-3 text-sm text-right text-slate-700">
+          {uniqueVisitors != null ? numberFormatter.format(uniqueVisitors) : "—"}
+        </td>
+        <td className="px-4 py-3 text-sm text-right text-slate-700">
+          {shareValue != null ? `${shareFormatter.format(shareValue * 100)}%` : "—"}
+        </td>
+      </tr>
+    );
+  };
+
+  const renderCountryRow = (stat: AdminAnalyticsCountryStat) => {
+    const totalEvents = toFiniteNumber(stat.total_events);
+    const uniqueVisitors = toFiniteNumber(stat.unique_visitors);
+    const shareValue = toFiniteNumber(stat.share);
+    const label = trimOrNull(stat.country) ?? "Țară necunoscută";
+
+    return (
+      <tr key={`${label}-${totalEvents ?? 0}`} className="border-b border-slate-100">
+        <td className="px-4 py-3 text-sm text-slate-700">{label}</td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
           {totalEvents != null ? numberFormatter.format(totalEvents) : "—"}
         </td>
@@ -1161,6 +1481,7 @@ export default function AdminAnalyticsPage() {
         totals={summary?.totals}
         scroll={summary?.scroll}
         range={summary?.range as AnalyticsDateRange | undefined}
+        countries={summary?.countries}
         loading={summaryLoading}
       />
 
@@ -1237,6 +1558,43 @@ export default function AdminAnalyticsPage() {
 
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <header className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2 text-berkeley">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-berkeley/10">
+              <Globe className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-berkeley">Distribuție pe țări</h2>
+              <p className="text-sm text-slate-600">
+                Evenimentele agregate pe țări pentru a înțelege sursele traficului anonim.
+              </p>
+            </div>
+          </div>
+        </header>
+        {summaryLoading ? (
+          <p className="text-sm text-slate-500">Se încarcă distribuția pe țări...</p>
+        ) : summaryCountryStats.length ? (
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="min-w-full text-left">
+              <thead className="bg-slate-100 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">Țară</th>
+                  <th className="px-4 py-3 text-right">Evenimente</th>
+                  <th className="px-4 py-3 text-right">Vizitatori</th>
+                  <th className="px-4 py-3 text-right">Pondere</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summaryCountryStats.map((country) => renderCountryRow(country))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">Nu există țări raportate pentru intervalul curent.</p>
+        )}
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <header className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-berkeley">Evenimente brute</h2>
             <p className="text-sm text-slate-600">
@@ -1244,7 +1602,7 @@ export default function AdminAnalyticsPage() {
             </p>
           </div>
           <form
-            className="grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-6"
+            className="grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-8"
             onSubmit={handleApplyEventFilters}
           >
             <div className="min-w-0">
@@ -1296,6 +1654,72 @@ export default function AdminAnalyticsPage() {
                   </option>
                 ))}
               </Select>
+            </div>
+            <div className="min-w-0">
+              <label className="text-xs font-medium text-slate-600">Țară</label>
+              <Input
+                value={eventFilterForm.country}
+                onChange={(event) =>
+                  setEventFilterForm((prev) => ({ ...prev, country: event.target.value }))
+                }
+                placeholder="RO"
+                className="mt-1"
+              />
+            </div>
+            <div className="min-w-0">
+              <label className="text-xs font-medium text-slate-600">Interaction target</label>
+              <Input
+                value={eventFilterForm.interactionTarget}
+                onChange={(event) =>
+                  setEventFilterForm((prev) => ({ ...prev, interactionTarget: event.target.value }))
+                }
+                placeholder="ex: car-card:12"
+                className="mt-1"
+              />
+            </div>
+            <div className="min-w-0">
+              <label className="text-xs font-medium text-slate-600">Interaction label</label>
+              <Input
+                value={eventFilterForm.interactionLabel}
+                onChange={(event) =>
+                  setEventFilterForm((prev) => ({ ...prev, interactionLabel: event.target.value }))
+                }
+                placeholder="Text buton"
+                className="mt-1"
+              />
+            </div>
+            <div className="min-w-0">
+              <label className="text-xs font-medium text-slate-600">ID mașină</label>
+              <Input
+                value={eventFilterForm.carId}
+                onChange={(event) =>
+                  setEventFilterForm((prev) => ({ ...prev, carId: event.target.value }))
+                }
+                placeholder="123"
+                className="mt-1"
+              />
+            </div>
+            <div className="min-w-0">
+              <label className="text-xs font-medium text-slate-600">Nume mașină</label>
+              <Input
+                value={eventFilterForm.carName}
+                onChange={(event) =>
+                  setEventFilterForm((prev) => ({ ...prev, carName: event.target.value }))
+                }
+                placeholder="Dacia Spring"
+                className="mt-1"
+              />
+            </div>
+            <div className="min-w-0">
+              <label className="text-xs font-medium text-slate-600">Număr înmatriculare</label>
+              <Input
+                value={eventFilterForm.carLicensePlate}
+                onChange={(event) =>
+                  setEventFilterForm((prev) => ({ ...prev, carLicensePlate: event.target.value }))
+                }
+                placeholder="B-00-XYZ"
+                className="mt-1"
+              />
             </div>
             <Button
               type="submit"
@@ -1362,6 +1786,36 @@ export default function AdminAnalyticsPage() {
             Vizualizează vizitatorii anonimi cu cea mai mare activitate și accesează traseul lor complet.
           </p>
         </header>
+
+        <form
+          className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+          onSubmit={handleApplyVisitorCountry}
+        >
+          <div className="min-w-0">
+            <label className="text-xs font-medium text-slate-600">Țară</label>
+            <Input
+              value={visitorCountryInput}
+              onChange={(event) => setVisitorCountryInput(event.target.value)}
+              placeholder="RO sau denumire"
+              className="mt-1"
+            />
+          </div>
+          <Button
+            type="submit"
+            variant="secondary"
+            className="whitespace-nowrap"
+          >
+            Aplică filtrul
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="whitespace-nowrap"
+            onClick={handleResetVisitorCountry}
+          >
+            Resetează
+          </Button>
+        </form>
 
         {visitorsError ? (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -1508,6 +1962,29 @@ export default function AdminAnalyticsPage() {
                 </section>
 
                 <section className="space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-600">Țări</h3>
+                  {visitorCountryStats.length === 0 ? (
+                    <p className="text-sm text-slate-500">Nu există țări înregistrate pentru acest vizitator.</p>
+                  ) : (
+                    <div className="rounded-lg border border-slate-200 bg-white">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-100 text-xs uppercase text-slate-500">
+                          <tr>
+                            <th className="px-4 py-2">Țară</th>
+                            <th className="px-4 py-2 text-right">Evenimente</th>
+                            <th className="px-4 py-2 text-right">Vizitatori</th>
+                            <th className="px-4 py-2 text-right">Pondere</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {visitorCountryStats.map((country) => renderCountryRow(country))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+
+                <section className="space-y-3">
                   <h3 className="text-sm font-semibold text-slate-600">Sesiuni</h3>
                   {visitorDetail.sessions.length === 0 ? (
                     <p className="text-sm text-slate-500">Nu există sesiuni disponibile.</p>
@@ -1576,6 +2053,7 @@ export default function AdminAnalyticsPage() {
                               {pageDuration != null ? (
                                 <div>Pagină: {formatDuration(pageDuration)}</div>
                               ) : null}
+                              <div>Țară: {event.country ?? "—"}</div>
                               <div>Referrer: {event.referrer_url ?? "—"}</div>
                               <div>Target: {getMetadataText(event.metadata, "interaction_target") ?? "—"}</div>
                             </div>

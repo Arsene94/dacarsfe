@@ -324,6 +324,13 @@ const enqueueEvent = (payload: AnalyticsEventInput) => {
         page_url: buildPageUrl(payload.pageUrl),
     };
 
+    if (payload.country && typeof payload.country === "string") {
+        const trimmedCountry = payload.country.trim();
+        if (trimmedCountry.length > 0) {
+            event.country = trimmedCountry;
+        }
+    }
+
     const referrer = resolveReferrer(payload.referrerUrl ?? undefined);
     if (referrer) {
         event.referrer_url = referrer;

@@ -1,6 +1,7 @@
 'use client';
 
 import type {
+  AdminAnalyticsCountryStat,
   AdminAnalyticsScrollStats,
   AdminAnalyticsSummaryTotals,
   AnalyticsDateRange,
@@ -10,6 +11,7 @@ type SummaryCardsProps = {
   totals?: AdminAnalyticsSummaryTotals | null;
   scroll?: AdminAnalyticsScrollStats | null;
   range?: AnalyticsDateRange | null;
+  countries?: AdminAnalyticsCountryStat[] | null;
   loading?: boolean;
 };
 
@@ -86,7 +88,16 @@ const buildScrollValue = (value: unknown, isPercentage = false): string => {
     : `${integerFormatter.format(Math.round(numeric))} px`;
 };
 
-export default function SummaryCards({ totals, scroll, range, loading }: SummaryCardsProps) {
+const formatCountryShare = (value: unknown): string => {
+  const numeric = toFiniteNumber(value);
+  if (numeric == null) {
+    return '—';
+  }
+  const ratio = Math.min(Math.max(numeric, 0), 1);
+  return `${percentageFormatter.format(ratio * 100)}%`;
+};
+
+export default function SummaryCards({ totals, scroll, range, loading, countries }: SummaryCardsProps) {
   const metrics = [
     {
       label: 'Evenimente totale',
@@ -134,6 +145,7 @@ export default function SummaryCards({ totals, scroll, range, loading }: Summary
   ];
 
   const intervalLabel = formatRange(range);
+  const topCountries = (countries ?? []).slice(0, 3);
 
   return (
     <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -191,6 +203,25 @@ export default function SummaryCards({ totals, scroll, range, loading }: Summary
               {integerFormatter.format(scroll.total_events)} evenimente de scroll au fost înregistrate în
               intervalul selectat.
             </p>
+          ) : null}
+          {topCountries.length ? (
+            <div className="mt-3 space-y-1 text-xs text-slate-500">
+              <p className="font-semibold text-slate-600">Top țări după evenimente</p>
+              <ul className="space-y-1">
+                {topCountries.map((countryStat) => (
+                  <li key={countryStat.country ?? 'necunoscut'} className="flex items-center justify-between">
+                    <span className="text-slate-600">
+                      {countryStat.country && countryStat.country.trim().length > 0
+                        ? countryStat.country
+                        : 'Țară necunoscută'}
+                    </span>
+                    <span>
+                      {buildMetricValue(countryStat.total_events)} · {formatCountryShare(countryStat.share)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
         </div>
       </div>

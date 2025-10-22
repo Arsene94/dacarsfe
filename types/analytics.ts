@@ -24,6 +24,7 @@ export type AnalyticsEventInput = {
   occurredAt?: Date | string;
   pageUrl?: string;
   referrerUrl?: string | null;
+  country?: string | null;
   metadata?: AnalyticsMetadata | null;
   includeDevice?: boolean;
 };
@@ -33,6 +34,7 @@ export type AnalyticsQueuedEvent = {
   occurred_at: string;
   page_url: string;
   referrer_url?: string | null;
+  country?: string | null;
   metadata?: AnalyticsMetadata;
   device?: AnalyticsDeviceInfo;
 };
@@ -57,6 +59,7 @@ export type AdminAnalyticsTopPagesParams = AdminAnalyticsSummaryParams & {
 export type AdminAnalyticsVisitorsParams = AdminAnalyticsSummaryParams & {
   per_page?: number;
   page?: number;
+  country?: string;
 };
 
 export type AdminAnalyticsVisitorDetailParams = AdminAnalyticsSummaryParams & {
@@ -67,7 +70,13 @@ export type AdminAnalyticsEventsParams = AdminAnalyticsSummaryParams & {
   visitor_uuid?: string;
   session_uuid?: string;
   event_type?: string;
+  country?: string;
   page_url?: string;
+  interaction_target?: string;
+  interaction_label?: string;
+  car_id?: string;
+  car_name?: string;
+  car_license_plate?: string;
   per_page?: number;
   page?: number;
 };
@@ -86,10 +95,22 @@ export type AdminAnalyticsEventTypeStat = {
   unique_visitors?: number;
 };
 
+export type AdminAnalyticsEventTypeDistribution = {
+  total_events: number;
+  items: AdminAnalyticsEventTypeStat[];
+};
+
 export type AdminAnalyticsDailyActivityPoint = {
   date: string;
   events: number;
   visitors: number;
+};
+
+export type AdminAnalyticsCountryStat = {
+  country: string | null;
+  total_events: number;
+  unique_visitors?: number;
+  share?: number;
 };
 
 export type AdminAnalyticsScrollStats = {
@@ -111,10 +132,11 @@ export type AdminAnalyticsSummaryTotals = {
 export type AdminAnalyticsSummaryResponse = {
   range: AnalyticsDateRange;
   totals: AdminAnalyticsSummaryTotals;
-  events_by_type: AdminAnalyticsEventTypeStat[];
+  events_by_type: AdminAnalyticsEventTypeDistribution | AdminAnalyticsEventTypeStat[];
   daily_activity: AdminAnalyticsDailyActivityPoint[];
   top_pages: AdminAnalyticsTopPage[];
   scroll: AdminAnalyticsScrollStats;
+  countries?: AdminAnalyticsCountryStat[];
 };
 
 export type AdminAnalyticsTopPagesResponse = {
@@ -123,12 +145,23 @@ export type AdminAnalyticsTopPagesResponse = {
   pages: AdminAnalyticsTopPage[];
 };
 
+export type AdminAnalyticsCountriesParams = AdminAnalyticsSummaryParams & {
+  limit?: number;
+};
+
+export type AdminAnalyticsCountriesResponse = {
+  range: AnalyticsDateRange;
+  total_events: number;
+  items: AdminAnalyticsCountryStat[];
+};
+
 export type AdminAnalyticsVisitorSummary = {
   visitor_uuid: string;
   total_events: number;
   total_sessions: number;
   first_seen: string;
   last_seen: string;
+  last_country?: string | null;
 };
 
 export type AdminAnalyticsVisitorsResponse = {
@@ -164,6 +197,7 @@ export type AdminAnalyticsVisitorDetailResponse = {
   events_by_type: AdminAnalyticsEventTypeStat[];
   pages: AdminAnalyticsVisitorPageStat[];
   sessions: AdminAnalyticsVisitorSession[];
+  countries?: AdminAnalyticsCountryStat[];
   recent_events: AdminAnalyticsEvent[];
 };
 
@@ -181,13 +215,22 @@ export type AdminAnalyticsEvent = {
   referrer_url?: string | null;
   user_agent?: string | null;
   ip_address?: string | null;
+  country?: string | null;
   metadata?: AnalyticsMetadata | null;
   device?: AnalyticsDeviceInfo | null;
   occurred_at: string;
   created_at?: string;
   updated_at?: string;
   duration_ms?: number | null;
+  page_time_ms?: number | null;
+  component_visible_ms?: number | null;
   scroll?: AdminAnalyticsEventScroll | null;
+  car?: {
+    car_id?: number | null;
+    car_name?: string | null;
+    car_type?: string | null;
+    car_license_plate?: string | null;
+  } | null;
 };
 
 export type AdminAnalyticsEventDetailResponse = AdminAnalyticsEvent;
