@@ -1,10 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarRange, Globe, Loader2, RefreshCw, Search, Target, Users } from "lucide-react";
+import {
+  ArrowUpDown,
+  CalendarRange,
+  Globe,
+  Loader2,
+  RefreshCw,
+  Search,
+  Target,
+  Users,
+} from "lucide-react";
 import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import SummaryCards from "@/components/admin/analytics/SummaryCards";
+import { ChartContainer } from "@/components/admin/reports/ReportElements";
+import {
+  LineChart,
+  SimpleBarChart,
+  type BarSeries,
+  type LineSeries,
+} from "@/components/admin/reports/ChartPrimitives";
+import { getColor } from "@/components/admin/reports/chartSetup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popup } from "@/components/ui/popup";
@@ -14,9 +31,11 @@ import type { Column } from "@/types/ui";
 import type { ApiListResult, ApiMeta } from "@/types/api";
 import type {
   AdminAnalyticsCountryStat,
+  AdminAnalyticsCountriesResponse,
   AdminAnalyticsEvent,
   AdminAnalyticsEventTypeDistribution,
   AdminAnalyticsEventTypeStat,
+  AdminAnalyticsCarStat,
   AdminAnalyticsSummaryResponse,
   AdminAnalyticsTopPage,
   AdminAnalyticsTopPagesResponse,
@@ -48,6 +67,42 @@ const shareFormatter = new Intl.NumberFormat("ro-RO", {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 });
+
+const countryCollator = new Intl.Collator("ro-RO", { sensitivity: "base" });
+
+const chartDateFormatter = new Intl.DateTimeFormat("ro-RO", {
+  month: "short",
+  day: "numeric",
+});
+
+const formatChartDateLabel = (value: string | number): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+  return chartDateFormatter.format(date);
+};
+
+const truncateLabel = (value: string, max = 48): string => {
+  if (value.length <= max) {
+    return value;
+  }
+  return `${value.slice(0, Math.max(1, max - 1))}…`;
+};
+
+const formatPageLabelForChart = (url: string): string => {
+  if (!url) {
+    return "—";
+  }
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname && parsed.pathname.length > 0 ? parsed.pathname : "/";
+    const search = parsed.search ?? "";
+    return truncateLabel(`${path}${search}`);
+  } catch (error) {
+    return truncateLabel(url);
+  }
+};
 
 const formatCount = (value: unknown): string => {
   const numeric = toFiniteNumber(value);
@@ -174,6 +229,8 @@ const formatDuration = (durationMs: number | null | undefined): string => {
 };
 
 type MetadataContainer = Record<string, unknown>;
+
+type CountrySortField = "events" | "visitors" | "share" | "name";
 
 const normalizeShareValue = (value: unknown): number | undefined => {
   const numeric = toFiniteNumber(value);
@@ -607,6 +664,63 @@ const hasCarContext = (context: ResolvedCarContext): boolean => {
   return Boolean(context.id != null || context.name || context.type || context.licensePlate);
 };
 
+const buildCarKey = (context: ResolvedCarContext): string | null => {
+  if (context.id != null) {
+    return `id:${context.id}`;
+  }
+  if (context.licensePlate) {
+    return `plate:${context.licensePlate.toLowerCase()}`;
+  }
+  if (context.name) {
+    return `name:${context.name.toLowerCase()}`;
+  }
+  return null;
+};
+
+const aggregateCarStats = (events: AdminAnalyticsEvent[]): AdminAnalyticsCarStat[] => {
+  const map = new Map<string, AdminAnalyticsCarStat>();
+
+  events.forEach((event) => {
+    const car = resolveCarContext(event);
+    if (!hasCarContext(car)) {
+      return;
+    }
+
+    const key = buildCarKey(car);
+    if (!key) {
+      return;
+    }
+
+    const existing = map.get(key);
+    const normalized: AdminAnalyticsCarStat = existing
+      ? {
+          car_id: existing.car_id ?? car.id ?? null,
+          car_name: existing.car_name ?? car.name ?? car.licensePlate ?? null,
+          car_type: existing.car_type ?? car.type ?? null,
+          car_license_plate: existing.car_license_plate ?? car.licensePlate ?? null,
+          total_events: existing.total_events + 1,
+        }
+      : {
+          car_id: car.id ?? null,
+          car_name: car.name ?? car.licensePlate ?? null,
+          car_type: car.type ?? null,
+          car_license_plate: car.licensePlate ?? null,
+          total_events: 1,
+        };
+
+    map.set(key, normalized);
+  });
+
+  const totalEvents = Array.from(map.values()).reduce((sum, stat) => sum + stat.total_events, 0);
+
+  return Array.from(map.values())
+    .map((stat) => ({
+      ...stat,
+      share: totalEvents > 0 ? stat.total_events / totalEvents : undefined,
+    }))
+    .sort((a, b) => b.total_events - a.total_events);
+};
+
 type EventFilterState = {
   visitorUuid: string;
   sessionUuid: string;
@@ -724,6 +838,16 @@ export default function AdminAnalyticsPage() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [topPages, setTopPages] = useState<AdminAnalyticsTopPagesResponse | null>(null);
+  const [countriesResponse, setCountriesResponse] =
+    useState<AdminAnalyticsCountriesResponse | null>(null);
+  const [countriesLoading, setCountriesLoading] = useState(false);
+  const [countriesError, setCountriesError] = useState<string | null>(null);
+  const [countrySortField, setCountrySortField] = useState<CountrySortField>("events");
+  const [countrySortOrder, setCountrySortOrder] = useState<"asc" | "desc">("desc");
+
+  const [topCars, setTopCars] = useState<AdminAnalyticsCarStat[]>([]);
+  const [topCarsLoading, setTopCarsLoading] = useState(false);
+  const [topCarsError, setTopCarsError] = useState<string | null>(null);
 
   const [events, setEvents] = useState<AdminAnalyticsEvent[]>([]);
   const [eventsMeta, setEventsMeta] = useState<ApiMeta | undefined>(undefined);
@@ -852,6 +976,52 @@ export default function AdminAnalyticsPage() {
     }
   }, [buildRangeParams, visitorCountryFilter, visitorsPage]);
 
+  const loadCountries = useCallback(async () => {
+    setCountriesLoading(true);
+    setCountriesError(null);
+    try {
+      const params = buildRangeParams();
+      const response = await apiClient.fetchAdminAnalyticsCountries({
+        ...params,
+        limit: 50,
+      });
+      setCountriesResponse(response);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Nu am putut încărca distribuția pe țări.";
+      setCountriesError(message);
+    } finally {
+      setCountriesLoading(false);
+    }
+  }, [buildRangeParams]);
+
+  const loadTopCars = useCallback(async () => {
+    setTopCarsLoading(true);
+    setTopCarsError(null);
+    try {
+      const params = buildRangeParams();
+      const response = await apiClient.fetchAdminAnalyticsEvents({
+        ...params,
+        event_type: "custom:car_view",
+        per_page: 200,
+        page: 1,
+      });
+      const { data } = extractListAndMeta(response);
+      setTopCars(aggregateCarStats(data));
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Nu am putut încărca cele mai vizualizate mașini.";
+      setTopCarsError(message);
+      setTopCars([]);
+    } finally {
+      setTopCarsLoading(false);
+    }
+  }, [buildRangeParams]);
+
   const loadVisitorDetail = useCallback(
     async (visitorUuid: string) => {
       setDetailVisitorUuid(visitorUuid);
@@ -891,6 +1061,14 @@ export default function AdminAnalyticsPage() {
     void loadVisitors();
   }, [loadVisitors]);
 
+  useEffect(() => {
+    void loadCountries();
+  }, [loadCountries]);
+
+  useEffect(() => {
+    void loadTopCars();
+  }, [loadTopCars]);
+
   const summaryEventTypeStats = useMemo(
     () => normalizeEventTypeStats(summary?.events_by_type as unknown),
     [summary?.events_by_type],
@@ -901,9 +1079,154 @@ export default function AdminAnalyticsPage() {
     [summary?.events_by_type],
   );
 
+  const eventTypeChartData = useMemo(
+    () =>
+      summaryEventTypeStats.map((item) => {
+        const total = toFiniteNumber(item.total_events) ?? 0;
+        let shareRatio = toFiniteNumber(item.share);
+        if (shareRatio == null && summaryEventTypeTotal && summaryEventTypeTotal > 0) {
+          shareRatio = Math.min(Math.max(total / summaryEventTypeTotal, 0), 1);
+        }
+        return {
+          label: item.type,
+          events: total,
+          sharePercentage: shareRatio != null ? shareRatio * 100 : null,
+        };
+      }),
+    [summaryEventTypeStats, summaryEventTypeTotal],
+  );
+
+  const eventTypeBarSeries = useMemo<BarSeries[]>(
+    () => [
+      {
+        dataKey: "events",
+        name: "Evenimente",
+        color: getColor("accent"),
+      },
+    ],
+    [],
+  );
+
+  const eventTypeValueFormatter = useCallback(
+    (value: number, name: string, payload?: Record<string, unknown>) => {
+      const share = toFiniteNumber(payload?.sharePercentage);
+      const base = `${name}: ${numberFormatter.format(value)}`;
+      if (share != null) {
+        return `${base} (${shareFormatter.format(share)}%)`;
+      }
+      return base;
+    },
+    [],
+  );
+
   const summaryCountryStats = useMemo(
     () => normalizeCountryStats(summary?.countries as unknown),
     [summary?.countries],
+  );
+
+  const reportCountryStats = useMemo(
+    () => normalizeCountryStats(countriesResponse?.items as unknown),
+    [countriesResponse?.items],
+  );
+
+  const combinedCountryStats = useMemo(() => {
+    if (reportCountryStats.length > 0) {
+      return reportCountryStats;
+    }
+    return summaryCountryStats;
+  }, [reportCountryStats, summaryCountryStats]);
+
+  const sortedCountryStats = useMemo(() => {
+    const base = [...combinedCountryStats];
+    const missingValue = countrySortOrder === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+
+    const getNumericValue = (stat: AdminAnalyticsCountryStat): number => {
+      if (countrySortField === "events") {
+        return toFiniteNumber(stat.total_events) ?? missingValue;
+      }
+      if (countrySortField === "visitors") {
+        return toFiniteNumber(stat.unique_visitors) ?? missingValue;
+      }
+      if (countrySortField === "share") {
+        return toFiniteNumber(stat.share) ?? missingValue;
+      }
+      return 0;
+    };
+
+    base.sort((a, b) => {
+      if (countrySortField === "name") {
+        const labelA = trimOrNull(a.country) ?? "Țară necunoscută";
+        const labelB = trimOrNull(b.country) ?? "Țară necunoscută";
+        const compare = countryCollator.compare(labelA, labelB);
+        if (compare !== 0) {
+          return countrySortOrder === "asc" ? compare : -compare;
+        }
+        const eventsA = toFiniteNumber(a.total_events) ?? 0;
+        const eventsB = toFiniteNumber(b.total_events) ?? 0;
+        if (eventsA === eventsB) {
+          return 0;
+        }
+        const diff = eventsA - eventsB;
+        return countrySortOrder === "asc" ? diff : -diff;
+      }
+
+      const valueA = getNumericValue(a);
+      const valueB = getNumericValue(b);
+
+      if (valueA === valueB) {
+        const labelA = trimOrNull(a.country) ?? "Țară necunoscută";
+        const labelB = trimOrNull(b.country) ?? "Țară necunoscută";
+        return countryCollator.compare(labelA, labelB);
+      }
+
+      const diff = valueA - valueB;
+      return countrySortOrder === "asc" ? diff : -diff;
+    });
+
+    return base;
+  }, [combinedCountryStats, countrySortField, countrySortOrder]);
+
+  const countryChartData = useMemo(
+    () =>
+      sortedCountryStats.slice(0, 10).map((stat) => {
+        const eventsValue = toFiniteNumber(stat.total_events) ?? 0;
+        const visitorsValue = toFiniteNumber(stat.unique_visitors);
+        const shareRatio = toFiniteNumber(stat.share);
+        return {
+          label: trimOrNull(stat.country) ?? "Țară necunoscută",
+          events: eventsValue,
+          visitors: visitorsValue ?? null,
+          sharePercentage: shareRatio != null ? shareRatio * 100 : null,
+        };
+      }),
+    [sortedCountryStats],
+  );
+
+  const countryBarSeries = useMemo<BarSeries[]>(
+    () => [
+      {
+        dataKey: "events",
+        name: "Evenimente",
+        color: getColor("primary"),
+      },
+    ],
+    [],
+  );
+
+  const countryValueFormatter = useCallback(
+    (value: number, name: string, payload?: Record<string, unknown>) => {
+      const share = toFiniteNumber(payload?.sharePercentage);
+      const visitors = toFiniteNumber(payload?.visitors);
+      const parts = [`${name}: ${numberFormatter.format(value)}`];
+      if (visitors != null) {
+        parts.push(`Vizitatori: ${numberFormatter.format(visitors)}`);
+      }
+      if (share != null) {
+        parts.push(`Pondere: ${shareFormatter.format(share)}%`);
+      }
+      return parts.join(" • ");
+    },
+    [],
   );
 
   const visitorEventTypeStats = useMemo(
@@ -926,6 +1249,108 @@ export default function AdminAnalyticsPage() {
     return Array.from(options).sort();
   }, [eventFilters.eventType, summaryEventTypeStats, topPagesEventType]);
 
+  const topPagesData = useMemo(
+    () =>
+      (topPages?.pages && topPages.pages.length > 0
+        ? topPages.pages
+        : summary?.top_pages ?? []),
+    [summary?.top_pages, topPages?.pages],
+  );
+
+  const topPagesChartData = useMemo(
+    () =>
+      topPagesData.slice(0, 8).map((page) => {
+        const eventsValue = toFiniteNumber(page.total_events) ?? 0;
+        const visitorsValue = toFiniteNumber(page.unique_visitors);
+        const shareRatio = toFiniteNumber(page.share);
+        return {
+          label: formatPageLabelForChart(page.page_url),
+          events: eventsValue,
+          visitors: visitorsValue ?? null,
+          sharePercentage: shareRatio != null ? shareRatio * 100 : null,
+        };
+      }),
+    [topPagesData],
+  );
+
+  const topPagesBarSeries = useMemo<BarSeries[]>(
+    () => [
+      {
+        dataKey: "events",
+        name: "Evenimente",
+        color: getColor("primaryLight"),
+      },
+    ],
+    [],
+  );
+
+  const topPagesValueFormatter = useCallback(
+    (value: number, name: string, payload?: Record<string, unknown>) => {
+      const share = toFiniteNumber(payload?.sharePercentage);
+      const visitors = toFiniteNumber(payload?.visitors);
+      const parts = [`${name}: ${numberFormatter.format(value)}`];
+      if (visitors != null) {
+        parts.push(`Vizitatori: ${numberFormatter.format(visitors)}`);
+      }
+      if (share != null) {
+        parts.push(`Pondere: ${shareFormatter.format(share)}%`);
+      }
+      return parts.join(" • ");
+    },
+    [],
+  );
+
+  const topCarsChartData = useMemo(
+    () =>
+      topCars.slice(0, 8).map((car) => {
+        const eventsValue = toFiniteNumber(car.total_events) ?? 0;
+        const shareRatio = toFiniteNumber(car.share);
+        const label =
+          trimOrNull(car.car_name) ?? trimOrNull(car.car_license_plate) ?? "Mașină necunoscută";
+        return {
+          label,
+          events: eventsValue,
+          sharePercentage: shareRatio != null ? shareRatio * 100 : null,
+          plate: trimOrNull(car.car_license_plate),
+          carType: trimOrNull(car.car_type),
+        };
+      }),
+    [topCars],
+  );
+
+  const topCarsBarSeries = useMemo<BarSeries[]>(
+    () => [
+      {
+        dataKey: "events",
+        name: "Evenimente",
+        color: getColor("accentLight"),
+      },
+    ],
+    [],
+  );
+
+  const topCarsValueFormatter = useCallback(
+    (value: number, name: string, payload?: Record<string, unknown>) => {
+      const share = toFiniteNumber(payload?.sharePercentage);
+      const plateValue =
+        typeof payload?.plate === "string" ? trimOrNull(payload.plate) : null;
+      const typeValue =
+        typeof payload?.carType === "string" ? trimOrNull(payload.carType) : null;
+      const parts = [`${name}: ${numberFormatter.format(value)}`];
+      if (plateValue) {
+        parts.push(`Număr: ${plateValue}`);
+      }
+      if (typeValue) {
+        parts.push(`Tip: ${typeValue}`);
+      }
+      if (share != null) {
+        parts.push(`Pondere: ${shareFormatter.format(share)}%`);
+      }
+      return parts.join(" • ");
+    },
+    [],
+  );
+
   const handleRangeSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -934,8 +1359,10 @@ export default function AdminAnalyticsPage() {
       void loadSummary();
       void loadEvents();
       void loadVisitors();
+      void loadCountries();
+      void loadTopCars();
     },
-    [loadEvents, loadSummary, loadVisitors],
+    [loadCountries, loadEvents, loadSummary, loadTopCars, loadVisitors],
   );
 
   const handleResetRange = useCallback(() => {
@@ -984,6 +1411,10 @@ export default function AdminAnalyticsPage() {
     setVisitorCountryInput("");
     setVisitorCountryFilter("");
     setVisitorsPage(1);
+  }, []);
+
+  const handleToggleCountrySortOrder = useCallback(() => {
+    setCountrySortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   }, []);
 
   const currentEventsPage = useMemo(() => {
@@ -1345,6 +1776,35 @@ export default function AdminAnalyticsPage() {
     );
   };
 
+  const renderTopCarRow = (car: AdminAnalyticsCarStat, index: number) => {
+    const eventsValue = toFiniteNumber(car.total_events);
+    const shareValue = toFiniteNumber(car.share);
+    const label =
+      trimOrNull(car.car_name) ?? trimOrNull(car.car_license_plate) ?? `Mașină #${index + 1}`;
+
+    return (
+      <tr key={`${car.car_id ?? label}-${index}`} className="border-b border-slate-100">
+        <td className="px-4 py-3 text-sm text-slate-700">
+          <div className="flex flex-col">
+            <span className="font-semibold text-slate-800">{label}</span>
+            <span className="text-xs text-slate-500">
+              {car.car_type ? `Tip: ${car.car_type}` : null}
+              {car.car_type && car.car_id != null ? " • " : null}
+              {car.car_id != null ? `ID: ${numberFormatter.format(car.car_id)}` : null}
+            </span>
+          </div>
+        </td>
+        <td className="px-4 py-3 text-sm text-slate-700">{car.car_license_plate ?? "—"}</td>
+        <td className="px-4 py-3 text-sm text-right text-slate-700">
+          {eventsValue != null ? numberFormatter.format(eventsValue) : "—"}
+        </td>
+        <td className="px-4 py-3 text-sm text-right text-slate-700">
+          {shareValue != null ? `${shareFormatter.format(shareValue * 100)}%` : "—"}
+        </td>
+      </tr>
+    );
+  };
+
   const dailyActivity = useMemo(
     () =>
       (summary?.daily_activity ?? []).map((item) => ({
@@ -1354,9 +1814,28 @@ export default function AdminAnalyticsPage() {
       })),
     [summary?.daily_activity],
   );
-  const maxDailyEvents = dailyActivity.reduce(
-    (max, item) => (item.events > max ? item.events : max),
-    0,
+
+  const dailyActivitySeries = useMemo<LineSeries[]>(
+    () => [
+      {
+        dataKey: "events",
+        name: "Evenimente",
+        color: getColor("primary"),
+        strokeWidth: 2,
+      },
+      {
+        dataKey: "visitors",
+        name: "Vizitatori",
+        color: getColor("accent"),
+        strokeWidth: 2,
+      },
+    ],
+    [],
+  );
+
+  const dailyActivityValueFormatter = useCallback(
+    (value: number, name: string) => `${name}: ${numberFormatter.format(value)}`,
+    [],
   );
 
   return (
@@ -1440,6 +1919,8 @@ export default function AdminAnalyticsPage() {
                 void loadSummary();
                 void loadEvents();
                 void loadVisitors();
+                void loadCountries();
+                void loadTopCars();
               }}
             >
               <RefreshCw className="h-4 w-4" />
@@ -1481,8 +1962,8 @@ export default function AdminAnalyticsPage() {
         totals={summary?.totals}
         scroll={summary?.scroll}
         range={summary?.range as AnalyticsDateRange | undefined}
-        countries={summaryCountryStats}
-        loading={summaryLoading}
+        countries={sortedCountryStats}
+        loading={summaryLoading || countriesLoading}
       />
 
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -1501,30 +1982,45 @@ export default function AdminAnalyticsPage() {
             <p className="text-sm text-slate-500">Nu există evenimente în intervalul selectat.</p>
           )}
         </div>
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-600">Activitate zilnică</h3>
-          {dailyActivity.length === 0 ? (
-            <p className="text-sm text-slate-500">Nu există activitate pentru intervalul selectat.</p>
-          ) : (
-            <ul className="space-y-2">
-              {dailyActivity.map((entry) => {
-                const width = maxDailyEvents > 0 ? Math.round((entry.events / maxDailyEvents) * 100) : 0;
-                return (
-                  <li key={entry.date} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>{entry.date}</span>
-                      <span>
-                        {formatCount(entry.events)} evenimente / {formatCount(entry.visitors)} vizitatori
-                      </span>
-                    </div>
-                    <div className="h-2 rounded bg-slate-100">
-                      <div className="h-2 rounded bg-jade" style={{ width: `${width}%` }} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-slate-600">Grafic tipuri de evenimente</h3>
+            {summaryLoading ? (
+              <p className="text-sm text-slate-500">Se încarcă graficul de evenimente...</p>
+            ) : eventTypeChartData.length ? (
+              <ChartContainer>
+                <SimpleBarChart
+                  data={eventTypeChartData}
+                  xKey="label"
+                  series={eventTypeBarSeries}
+                  layout="vertical"
+                  valueFormatter={eventTypeValueFormatter}
+                  labelFormatter={(label) => String(label)}
+                />
+              </ChartContainer>
+            ) : (
+              <p className="text-sm text-slate-500">Nu există evenimente în intervalul selectat.</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-slate-600">Activitate zilnică</h3>
+            {summaryLoading ? (
+              <p className="text-sm text-slate-500">Se încarcă activitatea zilnică...</p>
+            ) : dailyActivity.length ? (
+              <ChartContainer>
+                <LineChart
+                  data={dailyActivity}
+                  xKey="date"
+                  series={dailyActivitySeries}
+                  valueFormatter={dailyActivityValueFormatter}
+                  labelFormatter={(label) => formatChartDateLabel(label)}
+                  xTickFormatter={(value) => formatChartDateLabel(value)}
+                />
+              </ChartContainer>
+            ) : (
+              <p className="text-sm text-slate-500">Nu există activitate pentru intervalul selectat.</p>
+            )}
+          </div>
         </div>
       </section>
 
@@ -1535,7 +2031,22 @@ export default function AdminAnalyticsPage() {
             Lista agregată din endpoint-ul de top pagini, filtrată după tipul selectat.
           </p>
         </header>
-        {topPages?.pages?.length ? (
+        {topPagesChartData.length ? (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-slate-600">Top 8 pagini (după evenimente)</h3>
+            <ChartContainer>
+              <SimpleBarChart
+                data={topPagesChartData}
+                xKey="label"
+                series={topPagesBarSeries}
+                layout="vertical"
+                valueFormatter={topPagesValueFormatter}
+                labelFormatter={(label) => String(label)}
+              />
+            </ChartContainer>
+          </div>
+        ) : null}
+        {topPagesData.length ? (
           <div className="overflow-x-auto rounded-lg border border-slate-200">
             <table className="min-w-full text-left">
               <thead className="bg-slate-100 text-xs uppercase text-slate-500">
@@ -1547,7 +2058,7 @@ export default function AdminAnalyticsPage() {
                 </tr>
               </thead>
               <tbody>
-                {topPages.pages.map((page) => renderTopPageRow(page))}
+                {topPagesData.map((page) => renderTopPageRow(page))}
               </tbody>
             </table>
           </div>
@@ -1557,7 +2068,62 @@ export default function AdminAnalyticsPage() {
       </section>
 
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <header className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <header className="space-y-1">
+          <h2 className="text-xl font-semibold text-berkeley">Mașini cel mai vizualizate</h2>
+          <p className="text-sm text-slate-600">
+            Statistici generate din evenimentele <code className="rounded bg-slate-100 px-1 py-0.5">custom:car_view</code>
+            , utile pentru a vedea interesul pe modele și numere de înmatriculare.
+          </p>
+        </header>
+        {topCarsError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {topCarsError}
+          </div>
+        ) : null}
+        {topCarsLoading ? (
+          <p className="text-sm text-slate-500">Se încarcă cele mai vizualizate mașini...</p>
+        ) : topCars.length ? (
+          <div className="space-y-4">
+            {topCarsChartData.length ? (
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-slate-600">Top 8 mașini după impresii</h3>
+                <ChartContainer>
+                  <SimpleBarChart
+                    data={topCarsChartData}
+                    xKey="label"
+                    series={topCarsBarSeries}
+                    layout="vertical"
+                    valueFormatter={topCarsValueFormatter}
+                    labelFormatter={(label) => String(label)}
+                  />
+                </ChartContainer>
+              </div>
+            ) : null}
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <table className="min-w-full text-left">
+                <thead className="bg-slate-100 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Mașină</th>
+                    <th className="px-4 py-3">Nr. înmatriculare</th>
+                    <th className="px-4 py-3 text-right">Evenimente</th>
+                    <th className="px-4 py-3 text-right">Pondere</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topCars.map((car, index) => renderTopCarRow(car, index))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">
+            Nu există evenimente <code className="rounded bg-slate-100 px-1 py-0.5">custom:car_view</code> în intervalul selectat.
+          </p>
+        )}
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <header className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-2 text-berkeley">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-berkeley/10">
               <Globe className="h-5 w-5" />
@@ -1569,24 +2135,78 @@ export default function AdminAnalyticsPage() {
               </p>
             </div>
           </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+            <label className="text-xs font-semibold uppercase text-slate-500">Sortare după</label>
+            <Select
+              value={countrySortField}
+              onValueChange={(value) => {
+                if (
+                  value === "events" ||
+                  value === "visitors" ||
+                  value === "share" ||
+                  value === "name"
+                ) {
+                  setCountrySortField(value);
+                }
+              }}
+              className="w-full sm:w-auto sm:min-w-[160px]"
+            >
+              <option value="events">Evenimente</option>
+              <option value="visitors">Vizitatori</option>
+              <option value="share">Pondere</option>
+              <option value="name">Nume țară</option>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
+              onClick={handleToggleCountrySortOrder}
+            >
+              <ArrowUpDown className="h-4 w-4" />
+              {countrySortOrder === "asc" ? "Ascendent" : "Descendent"}
+            </Button>
+          </div>
         </header>
-        {summaryLoading ? (
+        {countriesError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {countriesError}
+          </div>
+        ) : null}
+        {countriesLoading ? (
           <p className="text-sm text-slate-500">Se încarcă distribuția pe țări...</p>
-        ) : summaryCountryStats.length ? (
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
-            <table className="min-w-full text-left">
-              <thead className="bg-slate-100 text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="px-4 py-3">Țară</th>
-                  <th className="px-4 py-3 text-right">Evenimente</th>
-                  <th className="px-4 py-3 text-right">Vizitatori</th>
-                  <th className="px-4 py-3 text-right">Pondere</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summaryCountryStats.map((country) => renderCountryRow(country))}
-              </tbody>
-            </table>
+        ) : sortedCountryStats.length ? (
+          <div className="space-y-4">
+            {countryChartData.length ? (
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-slate-600">Top 10 țări după evenimente</h3>
+                <ChartContainer>
+                  <SimpleBarChart
+                    data={countryChartData}
+                    xKey="label"
+                    series={countryBarSeries}
+                    layout="vertical"
+                    valueFormatter={countryValueFormatter}
+                    labelFormatter={(label) => String(label)}
+                  />
+                </ChartContainer>
+              </div>
+            ) : null}
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <table className="min-w-full text-left">
+                <thead className="bg-slate-100 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Țară</th>
+                    <th className="px-4 py-3 text-right">Evenimente</th>
+                    <th className="px-4 py-3 text-right">Vizitatori</th>
+                    <th className="px-4 py-3 text-right">Pondere</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedCountryStats.map((country) => renderCountryRow(country))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
           <p className="text-sm text-slate-500">Nu există țări raportate pentru intervalul curent.</p>

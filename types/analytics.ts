@@ -113,6 +113,15 @@ export type AdminAnalyticsCountryStat = {
   share?: number;
 };
 
+export type AdminAnalyticsCarStat = {
+  car_id: number | null;
+  car_name: string | null;
+  car_type?: string | null;
+  car_license_plate?: string | null;
+  total_events: number;
+  share?: number;
+};
+
 export type AdminAnalyticsScrollStats = {
   average_percentage?: number | null;
   max_percentage?: number | null;
