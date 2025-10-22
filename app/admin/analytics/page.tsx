@@ -1049,12 +1049,15 @@ export default function AdminAnalyticsPage() {
       </header>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <form className="grid gap-4 md:grid-cols-2 xl:grid-cols-5" onSubmit={handleRangeSubmit}>
-          <div className="min-w-0 md:col-span-1">
+        <form
+          className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+          onSubmit={handleRangeSubmit}
+        >
+          <div className="min-w-0">
             <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
               <CalendarRange className="h-4 w-4" /> Interval rapid
             </label>
-            <Select value={rangePreset} onValueChange={setRangePreset} className="mt-2">
+            <Select value={rangePreset} onValueChange={setRangePreset} className="mt-2 w-full">
               <option value="7">Ultimele 7 zile</option>
               <option value="14">Ultimele 14 zile</option>
               <option value="30">Ultimele 30 de zile</option>
@@ -1085,17 +1088,17 @@ export default function AdminAnalyticsPage() {
               </div>
             </>
           ) : (
-            <div className="md:col-span-2 xl:col-span-3">
+            <div className="min-w-0 md:col-span-2 xl:col-span-3">
               <label className="text-sm font-medium text-slate-600">Descriere interval</label>
               <div className="mt-2 rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-3 text-sm text-slate-500">
                 Selectează opțiunea „Interval personalizat” pentru a introduce manual datele exacte.
               </div>
             </div>
           )}
-          <div className="flex flex-col gap-2 md:col-span-2 md:flex-row md:flex-wrap md:items-end xl:col-span-1">
+          <div className="grid gap-2 sm:grid-cols-2 md:col-span-2 xl:col-span-1 xl:grid-cols-1">
             <Button
               type="submit"
-              className="w-full whitespace-nowrap md:flex-1"
+              className="w-full whitespace-nowrap"
               disabled={summaryLoading}
             >
               Aplică interval
@@ -1103,7 +1106,7 @@ export default function AdminAnalyticsPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full whitespace-nowrap md:w-auto"
+              className="w-full whitespace-nowrap"
               onClick={handleResetRange}
             >
               Resetează
@@ -1111,7 +1114,7 @@ export default function AdminAnalyticsPage() {
             <Button
               type="button"
               variant="secondary"
-              className="w-full justify-center md:w-auto"
+              className="w-full sm:col-span-2"
               aria-label="Reîncarcă datele"
               onClick={() => {
                 void loadSummary();
@@ -1240,8 +1243,11 @@ export default function AdminAnalyticsPage() {
               Vizualizează feed-ul de evenimente colectate prin endpoint-ul public și inspectează metadata.
             </p>
           </div>
-          <form className="flex flex-wrap items-end gap-3" onSubmit={handleApplyEventFilters}>
-            <div className="flex flex-col">
+          <form
+            className="grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-6"
+            onSubmit={handleApplyEventFilters}
+          >
+            <div className="min-w-0">
               <label className="text-xs font-medium text-slate-600">Vizitator UUID</label>
               <Input
                 value={eventFilterForm.visitorUuid}
@@ -1252,7 +1258,7 @@ export default function AdminAnalyticsPage() {
                 className="mt-1"
               />
             </div>
-            <div className="flex flex-col">
+            <div className="min-w-0">
               <label className="text-xs font-medium text-slate-600">Sesiune UUID</label>
               <Input
                 value={eventFilterForm.sessionUuid}
@@ -1263,7 +1269,7 @@ export default function AdminAnalyticsPage() {
                 className="mt-1"
               />
             </div>
-            <div className="flex flex-col">
+            <div className="min-w-0">
               <label className="text-xs font-medium text-slate-600">URL pagină</label>
               <Input
                 value={eventFilterForm.pageUrl}
@@ -1274,14 +1280,14 @@ export default function AdminAnalyticsPage() {
                 className="mt-1"
               />
             </div>
-            <div className="flex flex-col">
+            <div className="min-w-0">
               <label className="text-xs font-medium text-slate-600">Tip eveniment</label>
               <Select
                 value={eventFilterForm.eventType}
                 onValueChange={(value) =>
                   setEventFilterForm((prev) => ({ ...prev, eventType: value }))
                 }
-                className="mt-1 min-w-[160px]"
+                className="mt-1 w-full"
               >
                 <option value="">Toate</option>
                 {eventTypeOptions.map((type) => (
@@ -1291,10 +1297,19 @@ export default function AdminAnalyticsPage() {
                 ))}
               </Select>
             </div>
-            <Button type="submit" variant="secondary" className="flex items-center gap-2">
+            <Button
+              type="submit"
+              variant="secondary"
+              className="flex w-full items-center justify-center gap-2 whitespace-nowrap sm:col-span-2 xl:col-span-2"
+            >
               <Search className="h-4 w-4" /> Aplică filtre
             </Button>
-            <Button type="button" variant="outline" onClick={handleClearEventFilters}>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full whitespace-nowrap sm:col-span-2 xl:col-span-2"
+              onClick={handleClearEventFilters}
+            >
               Resetează
             </Button>
           </form>
