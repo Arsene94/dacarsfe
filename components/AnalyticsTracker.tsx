@@ -36,6 +36,7 @@ const createPageTimingState = (): PageTimingState => {
     };
 };
 
+const SCROLL_TRACKING_ENABLED = false;
 const SCROLL_THRESHOLDS = [10, 25, 50, 75, 90, 100];
 const SCROLL_SECTION_SELECTOR = "[data-analytics-scroll-section]" as const;
 const MIN_SECTION_VIEW_MS = 400;
@@ -153,6 +154,9 @@ const emitSectionViewEvent = (
     durationMs: number,
     pageElapsedMs: number,
 ) => {
+    if (!SCROLL_TRACKING_ENABLED) {
+        return;
+    }
     if (!isAnalyticsTrackingEnabled()) {
         return;
     }
@@ -408,6 +412,7 @@ const useScrollTracking = (
     resetKey: string | undefined,
     getPageElapsedMs: () => number,
 ) => {
+    const scrollEnabled = enabled && SCROLL_TRACKING_ENABLED;
     const contextsRef = useRef<Map<ScrollTargetKey, ScrollContextState>>(new Map());
     const pendingTargetsRef = useRef<Set<ScrollTargetKey>>(new Set());
     const sectionTimingRef = useRef<Map<ScrollTargetKey, SectionTimingState>>(new Map());
@@ -415,6 +420,9 @@ const useScrollTracking = (
 
     const finalizeTimingState = useCallback(
         (state: SectionTimingState | undefined, now: number) => {
+            if (!scrollEnabled) {
+                return;
+            }
             if (!state || !state.section) {
                 if (state) {
                     state.since = now;
@@ -430,10 +438,14 @@ const useScrollTracking = (
             state.section = null;
             state.since = now;
         },
-        [getPageElapsedMs],
+        [getPageElapsedMs, scrollEnabled],
     );
 
     const finalizeAllSections = useCallback(() => {
+        if (!scrollEnabled) {
+            return;
+        }
+
         const sectionTimings = sectionTimingRef.current;
         if (sectionTimings.size === 0) {
             return;
@@ -444,7 +456,7 @@ const useScrollTracking = (
             finalizeTimingState(state, now);
         });
         sectionTimings.clear();
-    }, [finalizeTimingState]);
+    }, [finalizeTimingState, scrollEnabled]);
 
     useEffect(() => {
         const contexts = contextsRef.current;
@@ -459,7 +471,7 @@ const useScrollTracking = (
             rafRef.current = null;
         }
 
-        if (!enabled) {
+        if (!scrollEnabled) {
             return;
         }
 
@@ -470,7 +482,7 @@ const useScrollTracking = (
         let destroyed = false;
 
         const calculateForTarget = (target: ScrollTargetKey) => {
-            if (destroyed || !isAnalyticsTrackingEnabled()) {
+            if (!scrollEnabled || destroyed || !isAnalyticsTrackingEnabled()) {
                 return;
             }
 
@@ -563,7 +575,7 @@ const useScrollTracking = (
         };
 
         const scheduleCalculation = (target: ScrollTargetKey) => {
-            if (destroyed || !isAnalyticsTrackingEnabled()) {
+            if (!scrollEnabled || destroyed || !isAnalyticsTrackingEnabled()) {
                 return;
             }
 
@@ -617,7 +629,7 @@ const useScrollTracking = (
                 rafRef.current = null;
             }
         };
-    }, [enabled, finalizeAllSections, finalizeTimingState, getPageElapsedMs, resetKey]);
+    }, [finalizeAllSections, finalizeTimingState, getPageElapsedMs, resetKey, scrollEnabled]);
 
     return finalizeAllSections;
 };

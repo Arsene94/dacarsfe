@@ -1,3 +1,4 @@
+import { TIMEZONE_COUNTRY_MAP } from "./timezones";
 import type {
     AnalyticsDeviceInfo,
     AnalyticsEventInput,
@@ -38,6 +39,8 @@ const resolveBaseUrl = (): string => {
 };
 
 const ANALYTICS_ENDPOINT = `${resolveBaseUrl()}/api/analytics/events` as const;
+
+const TIMEZONE_COUNTRY_LOOKUP: Record<string, string> = TIMEZONE_COUNTRY_MAP;
 
 const isBrowser = () => typeof window !== "undefined";
 
@@ -372,10 +375,20 @@ const extractCountryFromLocale = (locale: string): string | null => {
         const LocaleCtor = (Intl as unknown as { Locale?: typeof Intl.Locale }).Locale;
         if (typeof LocaleCtor === "function") {
             const parsedLocale = new LocaleCtor(trimmed);
-            if (parsedLocale && parsedLocale.region) {
-                const region = String(parsedLocale.region).toUpperCase();
-                if (ISO_COUNTRY_CODES.has(region)) {
-                    return region;
+            if (parsedLocale) {
+                if (parsedLocale.region) {
+                    const region = String(parsedLocale.region).toUpperCase();
+                    if (ISO_COUNTRY_CODES.has(region)) {
+                        return region;
+                    }
+                }
+
+                const maximized = typeof parsedLocale.maximize === "function" ? parsedLocale.maximize() : null;
+                if (maximized && maximized.region) {
+                    const region = String(maximized.region).toUpperCase();
+                    if (ISO_COUNTRY_CODES.has(region)) {
+                        return region;
+                    }
                 }
             }
         }
@@ -433,6 +446,40 @@ const normalizeCountryInput = (value?: string | null): string | null => {
     return trimmed;
 };
 
+const resolveCountryFromTimezone = (timeZone?: string | null): string | null => {
+    if (typeof timeZone !== "string") {
+        return null;
+    }
+
+    const trimmed = timeZone.trim();
+    if (trimmed.length === 0) {
+        return null;
+    }
+
+    const direct = TIMEZONE_COUNTRY_LOOKUP[trimmed];
+    if (direct) {
+        return direct;
+    }
+
+    const normalized = trimmed.replace(/\s+/g, "_");
+    if (normalized !== trimmed) {
+        const normalizedMatch = TIMEZONE_COUNTRY_LOOKUP[normalized];
+        if (normalizedMatch) {
+            return normalizedMatch;
+        }
+    }
+
+    const upper = trimmed.toUpperCase();
+    if (upper !== trimmed) {
+        const upperMatch = TIMEZONE_COUNTRY_LOOKUP[upper];
+        if (upperMatch) {
+            return upperMatch;
+        }
+    }
+
+    return null;
+};
+
 const detectBrowserCountry = (): string | null => {
     if (!isBrowser() || typeof navigator === "undefined") {
         return null;
@@ -450,9 +497,17 @@ const detectBrowserCountry = (): string | null => {
     };
 
     try {
-        const locale = Intl.DateTimeFormat().resolvedOptions().locale;
-        if (typeof locale === "string") {
-            pushCandidate(locale);
+        const options = Intl.DateTimeFormat().resolvedOptions();
+        if (options?.timeZone) {
+            const timeZoneCountry = resolveCountryFromTimezone(options.timeZone);
+            if (timeZoneCountry) {
+                pushCandidate(timeZoneCountry);
+            }
+            pushCandidate(options.timeZone);
+        }
+
+        if (typeof options?.locale === "string") {
+            pushCandidate(options.locale);
         }
     } catch (error) {
         // Ignorăm erorile generate de browsere fără Intl complet

@@ -37,6 +37,8 @@ Această documentație descrie capabilitățile introduse pentru monitorizarea a
 | `additional`              | `object`   | Spațiu liber pentru orice alt set de date contextual pe care frontend-ul îl consideră util. |
 
 > Frontend-ul trimite duratele atât la nivel de pagină, cât și pentru componentele expuse. Backend-ul normalizează numeric aceste valori (`duration_ms`, `page_time_ms`, `component_visible_ms`) chiar și atunci când sosesc doar în `metadata.additional`, astfel încât să poată fi folosite direct în rapoarte.
+>
+> Pentru a reduce temporar volumul de date, frontend-ul nu mai emite în prezent evenimentele `scroll` și `component_view`. Backend-ul poate păstra logica de procesare pentru aceste tipuri, însă până la reactivare rapoartele vor primi valori zero sau lipsă pentru statisticile de scroll.
 
 `metadata.additional` are câteva chei standardizate pentru evenimentele dedicate flotei auto:
 
@@ -59,8 +61,7 @@ eveniment suplimentar `component_view`. Payload-ul include:
 * `additional.section_additional` – metadata serializată din atributul `data-analytics-scroll-metadata` (ex: `car_id`, `car_name`, filtre active)
   pentru a reconstrui contextul expunerii.
 
-Evenimentele sunt emise atât la schimbarea secțiunii active, cât și înainte de `beforeunload` sau la schimbarea rutei, astfel încât ultima
-componentă vizualizată să fie raportată corect.
+Evenimentele sunt emise atât la schimbarea secțiunii active, cât și înainte de `beforeunload` sau la schimbarea rutei, astfel încât ultima componentă vizualizată să fie raportată corect. Momentan, aceste emiteri sunt dezactivate în frontend până la finalizarea optimizărilor de volum pentru raportare.
 
 ### Evenimentul `custom:car_view`
 
@@ -80,7 +81,7 @@ Sugestii de valori standard utilizate în rapoarte:
 | Tip            | Scop |
 |----------------|------|
 | `page_view`    | Vizualizare de pagină. Folosit pentru numărul de vizite și pagini de top. |
-| `scroll`       | Progresul de scroll; se așteaptă valori în `metadata.scroll_percentage` / `scroll_pixels`. |
+| `scroll`       | Progresul de scroll; se așteaptă valori în `metadata.scroll_percentage` / `scroll_pixels` (dezactivat temporar în frontend). |
 | `page_duration`| Finalizarea vizitei unei pagini; `metadata.duration_ms` / `page_time_ms` includ timpul vizibil cumulat. |
 | `cta_click`    | Click pe un buton/CTA. Se recomandă completarea câmpurilor `metadata.interaction_target` și `interaction_label`. |
 | `form_start` / `form_submit` | Interacțiuni cu formulare (inițiere, trimitere, validare). |
