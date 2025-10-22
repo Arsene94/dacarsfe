@@ -681,8 +681,13 @@ const buildCarKey = (context: ResolvedCarContext): string | null => {
   return null;
 };
 
+type CarAggregation = {
+  stat: AdminAnalyticsCarStat;
+  visitors: Set<string>;
+};
+
 const aggregateCarStats = (events: AdminAnalyticsEvent[]): AdminAnalyticsCarStat[] => {
-  const map = new Map<string, AdminAnalyticsCarStat>();
+  const map = new Map<string, CarAggregation>();
 
   events.forEach((event) => {
     const car = resolveCarContext(event);
@@ -695,34 +700,75 @@ const aggregateCarStats = (events: AdminAnalyticsEvent[]): AdminAnalyticsCarStat
       return;
     }
 
+    const visitorUuid =
+      typeof event.visitor_uuid === "string" && event.visitor_uuid.trim().length > 0
+        ? event.visitor_uuid.trim()
+        : null;
+
     const existing = map.get(key);
-    const normalized: AdminAnalyticsCarStat = existing
-      ? {
-          car_id: existing.car_id ?? car.id ?? null,
-          car_name: existing.car_name ?? car.name ?? car.licensePlate ?? null,
-          car_type: existing.car_type ?? car.type ?? null,
-          car_license_plate: existing.car_license_plate ?? car.licensePlate ?? null,
-          total_events: existing.total_events + 1,
-        }
-      : {
+    if (existing) {
+      if (existing.stat.car_id == null && car.id != null) {
+        existing.stat.car_id = car.id;
+      }
+      if (!existing.stat.car_name && (car.name || car.licensePlate)) {
+        existing.stat.car_name = car.name ?? car.licensePlate ?? existing.stat.car_name;
+      }
+      if (!existing.stat.car_type && car.type) {
+        existing.stat.car_type = car.type;
+      }
+      if (!existing.stat.car_license_plate && car.licensePlate) {
+        existing.stat.car_license_plate = car.licensePlate;
+      }
+      existing.stat.total_events += 1;
+      if (visitorUuid) {
+        existing.visitors.add(visitorUuid);
+      }
+    } else {
+      const visitors = new Set<string>();
+      if (visitorUuid) {
+        visitors.add(visitorUuid);
+      }
+
+      map.set(key, {
+        stat: {
           car_id: car.id ?? null,
           car_name: car.name ?? car.licensePlate ?? null,
           car_type: car.type ?? null,
           car_license_plate: car.licensePlate ?? null,
           total_events: 1,
-        };
-
-    map.set(key, normalized);
+        },
+        visitors,
+      });
+    }
   });
 
-  const totalEvents = Array.from(map.values()).reduce((sum, stat) => sum + stat.total_events, 0);
+  const aggregated = Array.from(map.values()).map(({ stat, visitors }) => ({
+    ...stat,
+    unique_visitors: visitors.size,
+  }));
 
-  return Array.from(map.values())
+  const totalVisitors = aggregated.reduce(
+    (sum, stat) => sum + (stat.unique_visitors != null ? stat.unique_visitors : 0),
+    0,
+  );
+
+  return aggregated
     .map((stat) => ({
       ...stat,
-      share: totalEvents > 0 ? stat.total_events / totalEvents : undefined,
+      share:
+        totalVisitors > 0 && stat.unique_visitors != null
+          ? stat.unique_visitors / totalVisitors
+          : undefined,
     }))
-    .sort((a, b) => b.total_events - a.total_events);
+    .sort((a, b) => {
+      const visitorsDiff =
+        (b.unique_visitors != null ? b.unique_visitors : 0) -
+        (a.unique_visitors != null ? a.unique_visitors : 0);
+      if (visitorsDiff !== 0) {
+        return visitorsDiff;
+      }
+      return b.total_events - a.total_events;
+    });
 };
 
 type EventFilterState = {
@@ -1391,6 +1437,7 @@ export default function AdminAnalyticsPage() {
   const topCarsChartData = useMemo<DataRecord[]>(
     () =>
       topCars.slice(0, 8).map((car) => {
+        const visitorValue = toFiniteNumber(car.unique_visitors) ?? 0;
         const eventsValue = toFiniteNumber(car.total_events) ?? 0;
         const shareRatio = toFiniteNumber(car.share);
         const label =
@@ -1403,6 +1450,7 @@ export default function AdminAnalyticsPage() {
 
         const record: DataRecord = {
           label,
+          visitors: visitorValue,
           events: eventsValue,
           plate: plateValue,
           carType: carTypeValue,
@@ -1421,8 +1469,8 @@ export default function AdminAnalyticsPage() {
   const topCarsBarSeries = useMemo<BarSeries[]>(
     () => [
       {
-        dataKey: "events",
-        name: "Evenimente",
+        dataKey: "visitors",
+        name: "Utilizatori",
         color: getColor("accentLight"),
       },
     ],
@@ -1432,6 +1480,7 @@ export default function AdminAnalyticsPage() {
   const topCarsValueFormatter = useCallback(
     (value: number, name: string, payload?: Record<string, unknown>) => {
       const share = toFiniteNumber(payload?.sharePercentage);
+      const eventsValue = toFiniteNumber(payload?.events);
       const plateValue =
         typeof payload?.plate === "string" ? trimOrNull(payload.plate) : null;
       const typeValue =
@@ -1439,6 +1488,9 @@ export default function AdminAnalyticsPage() {
       const carNameValue =
         typeof payload?.carName === "string" ? trimOrNull(payload.carName) : null;
       const parts = [`${name}: ${numberFormatter.format(value)}`];
+      if (eventsValue != null) {
+        parts.push(`Evenimente: ${numberFormatter.format(eventsValue)}`);
+      }
       if (plateValue) {
         parts.push(`Număr: ${plateValue}`);
       }
@@ -1969,6 +2021,7 @@ export default function AdminAnalyticsPage() {
   };
 
   const renderTopCarRow = (car: AdminAnalyticsCarStat, index: number) => {
+    const visitorsValue = toFiniteNumber(car.unique_visitors);
     const eventsValue = toFiniteNumber(car.total_events);
     const shareValue = toFiniteNumber(car.share);
     const plateLabel =
@@ -1990,8 +2043,15 @@ export default function AdminAnalyticsPage() {
           </div>
         </td>
         <td className="px-4 py-3 text-sm text-slate-700">{modelLabel ?? "—"}</td>
-        <td className="px-4 py-3 text-sm text-right text-slate-700">
-          {eventsValue != null ? numberFormatter.format(eventsValue) : "—"}
+        <td
+          className="px-4 py-3 text-sm text-right text-slate-700"
+          title={
+            eventsValue != null
+              ? `${numberFormatter.format(eventsValue)} evenimente în total`
+              : undefined
+          }
+        >
+          {visitorsValue != null ? numberFormatter.format(visitorsValue) : "—"}
         </td>
         <td className="px-4 py-3 text-sm text-right text-slate-700">
           {shareValue != null ? `${shareFormatter.format(shareValue * 100)}%` : "—"}
@@ -2290,7 +2350,7 @@ export default function AdminAnalyticsPage() {
           <div className="space-y-4">
             {topCarsChartData.length ? (
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-slate-600">Top 8 mașini după impresii</h3>
+                <h3 className="text-sm font-semibold text-slate-600">Top 8 mașini după utilizatori</h3>
                 <ChartContainer>
                   <SimpleBarChart
                     data={topCarsChartData}
@@ -2309,7 +2369,7 @@ export default function AdminAnalyticsPage() {
                   <tr>
                     <th className="px-4 py-3">Nr. înmatriculare</th>
                     <th className="px-4 py-3">Model</th>
-                    <th className="px-4 py-3 text-right">Evenimente</th>
+                    <th className="px-4 py-3 text-right">Utilizatori</th>
                     <th className="px-4 py-3 text-right">Pondere</th>
                   </tr>
                 </thead>

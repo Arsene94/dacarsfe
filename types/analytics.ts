@@ -119,6 +119,7 @@ export type AdminAnalyticsCarStat = {
   car_type?: string | null;
   car_license_plate?: string | null;
   total_events: number;
+  unique_visitors?: number;
   share?: number;
 };
 
