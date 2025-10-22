@@ -759,7 +759,9 @@ const safeStringifyMetadata = (value: unknown): string | null => {
   }
 };
 
-const serializeMetadata = (metadata: AdminAnalyticsEvent["metadata"]) => {
+const serializeMetadata = (
+  metadata: AdminAnalyticsEvent["metadata"] | string | null | undefined,
+) => {
   if (metadata == null) {
     return emptyMetadataFallback;
   }
