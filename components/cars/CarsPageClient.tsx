@@ -89,6 +89,15 @@ const FleetPage = () => {
         [t],
     );
 
+    const parseLicensePlate = useCallback((value: unknown): string | null => {
+        if (typeof value !== "string") {
+            return null;
+        }
+
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }, []);
+
     const mapCar = useCallback(
         (c: ApiCar): Car => {
             const galleryCandidates: string[] = [];
@@ -156,6 +165,11 @@ const FleetPage = () => {
 
             const passengersCount = Number(c.number_of_seats) || 0;
 
+            const licensePlate =
+                parseLicensePlate(c.license_plate) ??
+                parseLicensePlate(c.licensePlate) ??
+                parseLicensePlate(c.plate);
+
             return {
                 id: c.id,
                 name: resolvedName,
@@ -163,6 +177,7 @@ const FleetPage = () => {
                 typeId: c.type?.id ?? null,
                 image: primaryImage,
                 gallery,
+                licensePlate: licensePlate ?? null,
                 price: parsePrice(
                     Math.round(Number(c.rental_rate)) ?? Math.round(Number(c.rental_rate_casco)),
                 ),
@@ -187,7 +202,7 @@ const FleetPage = () => {
                 specs: [],
             };
         },
-        [fallbackCarName, unknownValue],
+        [fallbackCarName, unknownValue, parseLicensePlate],
     );
 
     const searchParams = useSearchParams();
@@ -791,6 +806,7 @@ const FleetPage = () => {
                     car_id: car.id ?? null,
                     car_name: car.name,
                     car_type: car.type,
+                    car_license_plate: car.licensePlate ?? null,
                     price_per_day: car.price ?? null,
                     view_mode: viewMode,
                     card_index: index + 1,
@@ -857,6 +873,7 @@ const FleetPage = () => {
             car_id: car.id ?? null,
             car_name: car.name,
             car_type: car.type,
+            car_license_plate: car.licensePlate ?? null,
             card_index: index + 1,
             view_mode: cardViewMode,
             price_per_day: car.price ?? null,
@@ -867,6 +884,7 @@ const FleetPage = () => {
             car_id: car.id ?? null,
             car_name: car.name,
             car_type: car.type,
+            car_license_plate: car.licensePlate ?? null,
             with_deposit: false,
             price_per_day: car.price ?? null,
             view_mode: cardViewMode,
@@ -877,6 +895,7 @@ const FleetPage = () => {
             car_id: car.id ?? null,
             car_name: car.name,
             car_type: car.type,
+            car_license_plate: car.licensePlate ?? null,
             with_deposit: true,
             price_per_day: car.price ?? null,
             view_mode: cardViewMode,

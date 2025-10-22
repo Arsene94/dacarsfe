@@ -119,6 +119,15 @@ const parseMaybeNumber = (value: unknown): number | null => {
     return null;
 };
 
+const parseLicensePlate = (value: unknown): string | null => {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+};
+
 const coerceNumber = (value: unknown, fallback = 0): number => {
     const parsed = parseMaybeNumber(value);
     return parsed !== null ? parsed : fallback;
@@ -271,6 +280,14 @@ const mapApiCarToCar = (apiCar: ApiCar, fallbackName: string): Car => {
     const ratingSource =
         apiCar.avg_review ?? (extras["avg_review"] as unknown ?? extras["avgReview"]);
 
+    const licensePlate =
+        parseLicensePlate(apiCar.license_plate) ??
+        parseLicensePlate(apiCar.licensePlate) ??
+        parseLicensePlate(apiCar.plate) ??
+        parseLicensePlate(extras["license_plate"]) ??
+        parseLicensePlate(extras["licensePlate"]) ??
+        parseLicensePlate(extras["plate"]);
+
     return {
         id: apiCar.id,
         name:
@@ -281,6 +298,7 @@ const mapApiCarToCar = (apiCar: ApiCar, fallbackName: string): Car => {
         typeId,
         image: primaryImage,
         gallery,
+        licensePlate: licensePlate ?? null,
         price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
         rental_rate: rentalRateLabel,
         rental_rate_casco: rentalRateCascoLabel,

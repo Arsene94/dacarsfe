@@ -495,6 +495,7 @@ describe('Fluxul complet al clienților DaCars', () => {
       images: ['/images/logan.jpg'],
       avg_review: 4.4,
       content: 'Sedan de încredere',
+      license_plate: 'B-01-TEST',
     };
 
     apiClientMock.getServices.mockResolvedValue({
@@ -546,6 +547,7 @@ describe('Fluxul complet al clienților DaCars', () => {
       typeId: apiCar.type.id,
       image: '/images/logan.jpg',
       gallery: ['/images/logan.jpg'],
+      licensePlate: apiCar.license_plate ?? null,
       price: 55,
       rental_rate: String(apiCar.rental_rate),
       rental_rate_casco: String(apiCar.rental_rate_casco),

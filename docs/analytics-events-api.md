@@ -45,9 +45,21 @@ Atunci când vizitatorul părăsește vizibilitatea unei secțiuni marcate cu `d
 * `interaction_target` / `interaction_label` – identitatea componentei (ex: `car-card:123`) și eticheta UX extrasă din conținut.
 * `duration_ms` și `component_visible_ms` – durata totală (în milisecunde) în care secțiunea a rămas în zona activă a viewport-ului.
 * `page_time_ms` – timpul cumulat petrecut pe pagină până la finalizarea vizibilității.
-* `additional.section_additional` – metadata serializată din atributul `data-analytics-scroll-metadata` (ex: `car_id`, `car_name`, filtre active) pentru a reconstrui contextul expunerii.
+* `additional.section_additional` – metadata serializată din atributul `data-analytics-scroll-metadata` (ex: `car_id`, `car_name`, `car_license_plate`, filtre active) pentru a reconstrui contextul expunerii.
 
 Evenimentele sunt emise atât la schimbarea secțiunii active, cât și înainte de `beforeunload` sau la schimbarea rutei, astfel încât ultima componentă vizualizată să fie raportată corect.
+
+
+### Evenimentul `custom:car_view`
+
+Frontend-ul emite un eveniment `custom:car_view` o singură dată pentru fiecare card de mașină vizibil pe pagina publică `/cars`. Metadata conține:
+
+* `interaction_target` / `interaction_label` – identificatorul cardului (`car-card:<id>`) și numele mașinii afișate.
+* `additional.car_id`, `additional.car_name`, `additional.car_type` – contextul standard folosit în rapoarte și pentru segmentări.
+* `additional.car_license_plate` – numărul de înmatriculare raportat de API; backend-ul trebuie să îl persiste pentru a permite filtrarea și identificarea rapidă a mașinii vizualizate.
+* alte câmpuri complementare (`price_per_day`, `view_mode`, `card_index`, filtre active) care ajută la reconstruirea contextului.
+
+Backend-ul poate folosi `car_license_plate` pentru a corela rapid evenimentele cu înregistrările din tabelul flotei fără a rezolva suplimentar după `car_id`.
 
 
 ### Structura `device`
