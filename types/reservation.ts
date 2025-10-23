@@ -148,6 +148,7 @@ export interface ReservationPayload extends ReservationFormData {
   applied_offers?: ReservationAppliedOffer[];
   note?: string;
   offer_fixed_discount?: number;
+  source?: string | null;
 }
 
 export interface DiscountValidationPayload {
