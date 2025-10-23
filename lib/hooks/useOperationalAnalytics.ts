@@ -205,7 +205,15 @@ const extractTopCars = (
     const topEntries = collectRecords(
         candidateKeys,
         (record) => {
-            const profitLikeKeys = ['profit', 'total_profit', 'value', 'amount', 'revenue'];
+            const profitLikeKeys = [
+                'profit',
+                'total_profit',
+                'net_profit',
+                'netProfit',
+                'value',
+                'amount',
+                'revenue',
+            ];
 
             return profitLikeKeys.some((key) => normalizeNumber(record[key]) !== null);
         },
@@ -225,6 +233,8 @@ const extractTopCars = (
         const profit =
             normalizeNumber(record.profit) ??
             normalizeNumber(record.total_profit) ??
+            normalizeNumber(record.net_profit) ??
+            normalizeNumber(record.netProfit) ??
             normalizeNumber(record.value) ??
             normalizeNumber(record.amount) ??
             normalizeNumber(record.revenue) ??

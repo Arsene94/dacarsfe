@@ -27,9 +27,15 @@ export type OperationalTopCarApi = {
     plate?: string | null;
     profit?: number | string | null;
     total_profit?: number | string | null;
+    net_profit?: number | string | null;
+    netProfit?: number | string | null;
     value?: number | string | null;
     amount?: number | string | null;
     revenue?: number | string | null;
+    utilization_rate?: number | string | null;
+    total_reservations?: number | string | null;
+    average_revenue?: number | string | null;
+    maintenance_cost?: number | string | null;
 };
 
 export type OperationalMaintenanceTrendApi = {
