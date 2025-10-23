@@ -448,6 +448,16 @@ const menuItems: readonly AdminSidebarItem[] = [
           "marketing-dashboard",
         ]),
       },
+      {
+        name: "Analitice predictive",
+        href: "/admin/predictive",
+        icon: Sparkles,
+        requiredPermissions: buildPermissionList("analytics-predictive", [
+          "predictive-analytics",
+          "analytics.predictive",
+          "predictive-dashboard",
+        ]),
+      },
     ],
   },
   {
