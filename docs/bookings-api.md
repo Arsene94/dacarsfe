@@ -410,9 +410,15 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
     "discount_value": 20,
     "eligible": true
   },
-  "note": "Predare la terminal Plecări"
+  "note": "Predare la terminal Plecări",
+  "source": "facebook"
 }
 ```
+
+`source` este opțional și acceptă valoarea canalului din care a sosit clientul (de ex. `facebook`,
+`google`, `referral`, `direct`). Frontend-ul setează automat acest câmp folosind UTM-urile sau
+referrer-ul capturat în localStorage pentru a permite corelarea rezervărilor cu campaniile
+de marketing.
 
 ### Success response (HTTP 201)
 `BookingResource` payload plus an informational message:

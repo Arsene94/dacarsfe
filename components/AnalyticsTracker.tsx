@@ -12,6 +12,7 @@ import {
     trackPageView,
 } from "@/lib/analytics";
 import type { AnalyticsMetadata } from "@/types/analytics";
+import { trackSource } from "@/lib/marketing/trackSource";
 
 const getTimestamp = (): number => {
     if (typeof performance !== "undefined" && typeof performance.now === "function") {
@@ -850,6 +851,12 @@ const useUnloadFlush = (enabled: boolean, onBeforeUnload?: () => void) => {
 };
 
 const AnalyticsTracker = () => {
+    useEffect(() => {
+        void trackSource().catch((error) => {
+            console.warn('Nu am putut inițializa tracking-ul sursei', error);
+        });
+    }, []);
+
     const pathname = usePathname();
     const searchParams = useSearchParams();
 

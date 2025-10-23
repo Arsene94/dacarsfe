@@ -34,7 +34,8 @@ Accepted fields (all optional unless marked *required*):
 - `vehicle_type_id`, `transmission_id`, `fuel_type_id` – foreign keys.
 - `number_of_seats`, `number_of_doors` – integers.
 - `vin` – string, max 191.
-- `deposit`, `weight`, `weight_front` – integers >= 0.
+- `rental_rate`, `acquisition_cost` – decimale (EUR) >= 0.
+- `deposit`, `weight`, `weight_front` – valori >= 0 (integer sau decimal).
 - `is_partner` – boolean.
 - `partner_id` – user ID.
 - `partner_percentage` – integer 0-100.
@@ -56,6 +57,8 @@ Accepted fields (all optional unless marked *required*):
   "mileage": 8500,
   "number_of_seats": 5,
   "number_of_doors": 5,
+  "rental_rate": 48.5,
+  "acquisition_cost": 21500,
   "deposit": 500,
   "weight": 1360,
   "weight_front": 650,

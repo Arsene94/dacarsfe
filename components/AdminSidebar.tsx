@@ -40,6 +40,7 @@ import {
   ClipboardList,
   Wallet,
   TicketPercent,
+  Target,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -415,6 +416,46 @@ const menuItems: readonly AdminSidebarItem[] = [
         requiredPermissions: buildPermissionList("reports-annual", [
           "reports.kpi",
           "reports.annual",
+        ]),
+      },
+      {
+        name: "Tablou operațional",
+        href: "/admin/operational",
+        icon: ClipboardList,
+        requiredPermissions: buildPermissionList("analytics-operational", [
+          "operational-analytics",
+          "analytics.operational",
+          "operational-dashboard",
+        ]),
+      },
+      {
+        name: "Tablou financiar",
+        href: "/admin/financial",
+        icon: Wallet,
+        requiredPermissions: buildPermissionList("analytics-financial", [
+          "financial-analytics",
+          "analytics.financial",
+          "financial-dashboard",
+        ]),
+      },
+      {
+        name: "Tablou marketing",
+        href: "/admin/marketing",
+        icon: Target,
+        requiredPermissions: buildPermissionList("analytics-marketing", [
+          "marketing-analytics",
+          "analytics.marketing",
+          "marketing-dashboard",
+        ]),
+      },
+      {
+        name: "Analitice predictive",
+        href: "/admin/predictive",
+        icon: Sparkles,
+        requiredPermissions: buildPermissionList("analytics-predictive", [
+          "predictive-analytics",
+          "analytics.predictive",
+          "predictive-dashboard",
         ]),
       },
     ],

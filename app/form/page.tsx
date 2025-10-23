@@ -26,6 +26,7 @@ import {
     clearStoredWheelPrize,
     type StoredWheelPrizeEntry,
 } from "@/lib/wheelStorage";
+import { getStoredSource } from "@/lib/marketing/trackSource";
 import {ApiCar, Car} from "@/types/car";
 import type { BookingAppliedOffer } from "@/types/booking";
 import {
@@ -1682,6 +1683,8 @@ const ReservationPage = () => {
             null;
         const wheelPrizeIdForPayload = parseMaybeNumber(wheelPrizeIdForPayloadRaw);
 
+        const sourceAttribution = getStoredSource() ?? "direct";
+
         const payload: ReservationPayload = {
             ...formData,
             car_id: selectedCar.id,
@@ -1710,6 +1713,7 @@ const ReservationPage = () => {
                 typeof wheelPrizeIdForPayload === "number" && Number.isFinite(wheelPrizeIdForPayload)
                     ? wheelPrizeIdForPayload
                     : undefined,
+            source: sourceAttribution,
         };
 
         try {
