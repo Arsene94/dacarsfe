@@ -94,7 +94,7 @@ const renderLicensePlateTick = ({ x, y, payload }: LicensePlateTickProps) => {
     const rawLabel = typeof payload?.value === 'string' ? payload.value : '';
 
     if (rawLabel === '') {
-        return null;
+        return <g />;
     }
 
     const [firstLine, secondLine] = splitLicensePlateLabel(rawLabel);
@@ -370,7 +370,6 @@ export default function OperationalDashboardPage() {
                                         fill="#206442"
                                         cornerRadius={18}
                                         background={{ fill: '#E2E8F0' }}
-                                        barSize={26}
                                     />
                                 </RadialBarChart>
                             </ResponsiveContainer>
