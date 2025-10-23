@@ -283,6 +283,92 @@ const extractLookupOptions = (response: unknown): LookupOption[] => {
   );
 };
 
+type CategoryDetails = { id: number | null; name: string | null };
+
+const parseCategoryCandidate = (value: unknown): CategoryDetails | null => {
+  if (value == null) return null;
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const match = parseCategoryCandidate(item);
+      if (match) {
+        return match;
+      }
+    }
+    return null;
+  }
+
+  if (isRecord(value)) {
+    const pivot = isRecord(value.pivot) ? value.pivot : null;
+    const idCandidate =
+      toInteger(value.id) ??
+      toInteger((value as { category_id?: unknown }).category_id) ??
+      toInteger(pivot?.category_id);
+
+    if (idCandidate == null) {
+      return null;
+    }
+
+    const nameCandidate = [value.name, value.title, value.label].find(
+      (entry): entry is string =>
+        typeof entry === "string" && entry.trim().length > 0,
+    );
+
+    return {
+      id: idCandidate,
+      name: nameCandidate ? nameCandidate.trim() : null,
+    };
+  }
+
+  const numeric = toInteger(value);
+  if (numeric != null) {
+    return { id: numeric, name: null };
+  }
+
+  return null;
+};
+
+const extractCategoryDetails = (
+  raw: Record<string, unknown>,
+): CategoryDetails => {
+  let categoryId =
+    toInteger(raw.category_id) ??
+    toInteger((raw as { categoryId?: unknown }).categoryId) ??
+    null;
+  let categoryName =
+    toTrimmedString(raw.category_name) ??
+    toTrimmedString((raw as { categoryName?: unknown }).categoryName) ??
+    null;
+
+  const sources: unknown[] = [
+    raw["category"],
+    raw["car_category"],
+    raw["categories"],
+    raw["car_categories"],
+  ];
+
+  for (const source of sources) {
+    const parsed = parseCategoryCandidate(source);
+    if (!parsed) continue;
+
+    if (categoryId == null) {
+      categoryId = parsed.id;
+    }
+    if (categoryName == null && parsed.name) {
+      categoryName = parsed.name;
+    }
+
+    if (categoryId != null && categoryName) {
+      break;
+    }
+  }
+
+  return {
+    id: categoryId,
+    name: categoryName,
+  };
+};
+
 type PartnerOption = {
   id: number;
   name: string;
@@ -399,6 +485,8 @@ const mapApiCarToAdminCar = (raw: unknown): AdminCar => {
     throw new Error("Invalid car payload received from API.");
   }
 
+  const rawRecord = raw as Record<string, unknown>;
+
   const makeSource = raw.make ?? raw.car_make ?? raw.brand ?? null;
   const makeRecord = isRecord(makeSource) ? makeSource : null;
   const makeName =
@@ -444,6 +532,12 @@ const mapApiCarToAdminCar = (raw: unknown): AdminCar => {
     "";
   const fuelId =
     (fuelRecord ? toInteger(fuelRecord.id) : undefined) ?? toInteger(raw.fuel_id) ?? null;
+
+  const categoryDetails = extractCategoryDetails(rawRecord);
+  const categoryLabel =
+    toTrimmedString(rawRecord["category_label"]) ??
+    toTrimmedString((rawRecord as { categoryLabel?: unknown }).categoryLabel);
+  const resolvedCategoryName = categoryDetails.name ?? categoryLabel ?? null;
 
   const seatsValue =
     toInteger(
@@ -529,6 +623,8 @@ const mapApiCarToAdminCar = (raw: unknown): AdminCar => {
     makeId: makeId ?? null,
     makeName,
     price: parsePrice(raw.rental_rate ?? raw.price ?? raw.daily_rate ?? raw.rate),
+    categoryId: categoryDetails.id ?? null,
+    categoryName: resolvedCategoryName,
     features: {
       passengers,
       transmission: transmissionName || "—",
@@ -583,10 +679,10 @@ type CarFormState = {
   vehicle_type_id: number | null;
   transmission_id: number | null;
   fuel_type_id: number | null;
+  category_id: number | null;
   number_of_seats: string;
   number_of_doors: string;
   vin: string;
-  rental_rate: string;
   acquisition_cost: string;
   deposit: string;
   weight: string;
@@ -610,10 +706,10 @@ const createEmptyFormState = (): CarFormState => ({
   vehicle_type_id: null,
   transmission_id: null,
   fuel_type_id: null,
+  category_id: null,
   number_of_seats: "",
   number_of_doors: "",
   vin: "",
-  rental_rate: "",
   acquisition_cost: "",
   deposit: "",
   weight: "",
@@ -655,6 +751,7 @@ const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
     transmission_id:
       car.transmissionId ?? car.features?.transmissionId ?? null,
     fuel_type_id: car.fuelTypeId ?? car.features?.fuelId ?? null,
+    category_id: car.categoryId ?? null,
     number_of_seats:
       car.numberOfSeats != null
         ? String(car.numberOfSeats)
@@ -668,7 +765,6 @@ const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
         ? String(car.features.doors)
         : "",
     vin: car.vin ?? "",
-    rental_rate: car.price ? String(car.price) : "",
     acquisition_cost:
       acquisitionCostValue != null ? String(acquisitionCostValue) : "",
     deposit: car.deposit != null ? String(car.deposit) : "",
@@ -724,6 +820,10 @@ const buildCarPayload = (form: CarFormState) => {
     payload.fuel_type_id = form.fuel_type_id;
   }
 
+  if (form.category_id != null) {
+    payload.category_id = form.category_id;
+  }
+
   const seats = toInteger(form.number_of_seats);
   if (seats !== undefined) {
     payload.number_of_seats = seats;
@@ -763,11 +863,6 @@ const buildCarPayload = (form: CarFormState) => {
   const partnerPercentage = toDecimalFromString(form.partner_percentage);
   if (partnerPercentage !== undefined) {
     payload.partner_percentage = partnerPercentage;
-  }
-
-  const rentalRate = toDecimalFromString(form.rental_rate);
-  if (rentalRate !== undefined) {
-    payload.rental_rate = rentalRate;
   }
 
   const acquisitionCost = toDecimalFromString(form.acquisition_cost);
@@ -867,6 +962,11 @@ const CarsPage = () => {
   const [vehicleTypeOptions, setVehicleTypeOptions] = useState<LookupOption[]>([]);
   const [transmissionOptions, setTransmissionOptions] = useState<LookupOption[]>([]);
   const [fuelOptions, setFuelOptions] = useState<LookupOption[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<LookupOption[]>([]);
+  const [categorySearch, setCategorySearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<LookupOption | null>(
+    null,
+  );
   const [partnerSearch, setPartnerSearch] = useState("");
   const [partnerResults, setPartnerResults] = useState<PartnerOption[]>([]);
   const [partnerSearchActive, setPartnerSearchActive] = useState(false);
@@ -896,6 +996,16 @@ const CarsPage = () => {
     }),
     [],
   );
+
+  const filteredCategoryOptions = useMemo(() => {
+    const term = categorySearch.trim().toLowerCase();
+    if (!term) {
+      return categoryOptions;
+    }
+    return categoryOptions.filter((option) =>
+      option.name.toLowerCase().includes(term),
+    );
+  }, [categoryOptions, categorySearch]);
 
   const contentEditorConfig = useMemo(
     () => ({
@@ -1027,6 +1137,39 @@ const CarsPage = () => {
   }, [partnerSearch, partnerSearchActive, fetchPartnerOptions]);
 
   useEffect(() => {
+    const categoryId = carForm.category_id;
+
+    if (categoryId == null) {
+      setSelectedCategory(null);
+      return;
+    }
+
+    const match = categoryOptions.find(
+      (option) => option.id === categoryId,
+    );
+
+    if (match) {
+      setSelectedCategory((prev) => {
+        if (prev && prev.id === match.id && prev.name === match.name) {
+          return prev;
+        }
+        return match;
+      });
+      return;
+    }
+
+    setSelectedCategory((prev) => {
+      if (prev && prev.id === categoryId) {
+        return prev;
+      }
+      return {
+        id: categoryId,
+        name: `Categorie #${categoryId}`,
+      };
+    });
+  }, [carForm.category_id, categoryOptions]);
+
+  useEffect(() => {
     if (!carForm.is_partner) return;
     if (!carForm.partner_id) return;
     const match = partnerResults.find(
@@ -1052,13 +1195,19 @@ const CarsPage = () => {
 
     const loadLookups = async () => {
       try {
-        const [makesRes, typesRes, transmissionsRes, fuelsRes] =
-          await Promise.all([
-            apiClient.getCarMakes({ limit: 200 }),
-            apiClient.getCarTypes({ limit: 200 }),
-            apiClient.getCarTransmissions({ limit: 200 }),
-            apiClient.getCarFuels({ limit: 200 }),
-          ]);
+        const [
+          makesRes,
+          typesRes,
+          transmissionsRes,
+          fuelsRes,
+          categoriesRes,
+        ] = await Promise.all([
+          apiClient.getCarMakes({ limit: 200 }),
+          apiClient.getCarTypes({ limit: 200 }),
+          apiClient.getCarTransmissions({ limit: 200 }),
+          apiClient.getCarFuels({ limit: 200 }),
+          apiClient.getCarCategories({ limit: 200 }),
+        ]);
 
         if (!active) return;
 
@@ -1066,6 +1215,7 @@ const CarsPage = () => {
         setVehicleTypeOptions(extractLookupOptions(typesRes));
         setTransmissionOptions(extractLookupOptions(transmissionsRes));
         setFuelOptions(extractLookupOptions(fuelsRes));
+        setCategoryOptions(extractLookupOptions(categoriesRes));
       } catch (err) {
         console.error("Error loading car lookup data:", err);
       }
@@ -1243,6 +1393,8 @@ const CarsPage = () => {
     cleanupImages(carForm.images);
     resetPartnerLookup();
     setCarForm(createEmptyFormState());
+    setSelectedCategory(null);
+    setCategorySearch("");
     setModalMode("create");
     setFormError(null);
     setIsModalOpen(true);
@@ -1252,6 +1404,16 @@ const CarsPage = () => {
     cleanupImages(carForm.images);
     resetPartnerLookup();
     setCarForm(mapAdminCarToFormState(car));
+    setCategorySearch("");
+    if (car.categoryId != null) {
+      const fallbackName =
+        typeof car.categoryName === "string" && car.categoryName.trim().length > 0
+          ? car.categoryName.trim()
+          : `Categorie #${car.categoryId}`;
+      setSelectedCategory({ id: car.categoryId, name: fallbackName });
+    } else {
+      setSelectedCategory(null);
+    }
     if (car.partnerId != null) {
       const fallback = `Utilizator #${car.partnerId}`;
       const carRecord = car as unknown as Record<string, unknown>;
@@ -1301,6 +1463,8 @@ const CarsPage = () => {
     if (saving) return;
     setIsModalOpen(false);
     resetPartnerLookup();
+    setCategorySearch("");
+    setSelectedCategory(null);
   };
 
   const handleCloseDelete = () => {
@@ -1408,6 +1572,24 @@ const CarsPage = () => {
     });
   };
 
+  const handleCategorySelect = useCallback(
+    (option: LookupOption) => {
+      setSelectedCategory(option);
+      setCategorySearch("");
+      setCarForm((prev) => {
+        if (prev.category_id === option.id) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          category_id: option.id,
+        };
+      });
+    },
+    [setCarForm, setCategorySearch, setSelectedCategory],
+  );
+
   const handlePartnerSearchOpen = useCallback(() => {
     setPartnerSearchActive(true);
     if (
@@ -1483,6 +1665,13 @@ const CarsPage = () => {
     setSaving(true);
     setFormError(null);
 
+    const categoryId = carForm.category_id;
+    if (categoryId == null) {
+      setFormError("Te rugăm să selectezi categoria mașinii.");
+      setSaving(false);
+      return;
+    }
+
     try {
       const payload = buildCarPayload(carForm);
       const response =
@@ -1501,6 +1690,24 @@ const CarsPage = () => {
       }
 
       const normalizedCar = mapApiCarToAdminCar(normalizedSource);
+
+      try {
+        await apiClient.syncCarCategories(normalizedCar.id, {
+          category_id: categoryId,
+        });
+        normalizedCar.categoryId = categoryId;
+        normalizedCar.categoryName =
+          categoryOptions.find((option) => option.id === categoryId)?.name ??
+          selectedCategory?.name ??
+          normalizedCar.categoryName ??
+          null;
+      } catch (syncError) {
+        console.error("Error syncing car category:", syncError);
+        throw syncError instanceof Error
+          ? syncError
+          : new Error("Nu am putut salva categoria mașinii.");
+      }
+
       setCars((prev) => {
         if (modalMode === "edit") {
           return prev.map((car) =>
@@ -1513,6 +1720,8 @@ const CarsPage = () => {
       setIsModalOpen(false);
       cleanupImages(carForm.images);
       setCarForm(createEmptyFormState());
+      setSelectedCategory(null);
+      setCategorySearch("");
       await fetchMetrics();
       setHasMore(true);
       setCurrentPage(1);
@@ -2122,18 +2331,31 @@ const CarsPage = () => {
             </div>
 
             <div>
-              <Label htmlFor="car-price" className="text-sm font-dm-sans font-semibold text-gray-700">
-                Preț/zi (€)
+              <Label htmlFor="car-category" className="text-sm font-dm-sans font-semibold text-gray-700">
+                Categorie
               </Label>
-              <Input
-                id="car-price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={carForm.rental_rate}
-                onChange={handleFormChange("rental_rate")}
-                placeholder="45"
-              />
+              <div className="mt-2">
+                <SearchSelect
+                  id="car-category"
+                  value={selectedCategory}
+                  search={categorySearch}
+                  items={filteredCategoryOptions}
+                  onSearch={setCategorySearch}
+                  onSelect={handleCategorySelect}
+                  onOpen={() => setCategorySearch("")}
+                  placeholder="Selectează categoria"
+                  renderItem={(option) => (
+                    <span className="font-dm-sans text-sm text-gray-700">
+                      {option.name}
+                    </span>
+                  )}
+                  renderValue={(option) => (
+                    <span className="font-dm-sans font-semibold text-sm truncate">
+                      {option.name}
+                    </span>
+                  )}
+                />
+              </div>
             </div>
 
             <div>

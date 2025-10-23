@@ -64,7 +64,8 @@ const formatEuroAmount = (value: number | null | undefined): string | null => {
 const parsePrice = (raw: unknown): number => {
     if (raw == null) return 0;
     if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
-    const parsed = parseFloat(String(raw).replace(/[^\d.,]/g, "").replace(",", "."));
+    const sanitized = String(raw).replace(/[^\d.,-]/g, "").replace(/,/g, ".");
+    const parsed = parseFloat(sanitized);
     return Number.isFinite(parsed) ? parsed : 0;
 };
 
@@ -116,7 +117,8 @@ const toOptionalNumber = (value: unknown): number | null => {
         return Number.isFinite(value) ? value : null;
     }
     if (typeof value === "string") {
-        const parsed = Number(value.replace(/[^0-9.,-]/g, "").replace(",", "."));
+        const sanitized = value.replace(/[^0-9.,-]/g, "").replace(/,/g, ".");
+        const parsed = Number(sanitized);
         return Number.isFinite(parsed) ? parsed : null;
     }
     return null;
@@ -856,6 +858,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [customerResults, setCustomerResults] = useState<AdminBookingCustomerSummary[]>([]);
     const [customerSearchActive, setCustomerSearchActive] = useState(false);
     const [quote, setQuote] = useState<QuotePriceResponse | null>(null);
+    const [carDepositInput, setCarDepositInput] = useState<string>(
+        bookingInfo?.car_deposit != null ? toDisplayString(bookingInfo.car_deposit) : "",
+    );
+    const [advancePaymentInput, setAdvancePaymentInput] = useState<string>(
+        toDisplayString(bookingInfo?.advance_payment ?? 0, "0"),
+    );
+    const [couponAmountInput, setCouponAmountInput] = useState<string>(
+        toDisplayString(bookingInfo?.coupon_amount ?? ""),
+    );
     const originalTotals = useRef<{ subtotal: number; total: number }>({
         subtotal: 0,
         total: 0,
@@ -909,6 +920,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const bookingCarLicense = bookingInfo?.car_license_plate ?? "";
     const bookingCarTransmission = bookingInfo?.car_transmission ?? "";
     const bookingCarFuel = bookingInfo?.car_fuel ?? "";
+    const carDepositValue = bookingInfo?.car_deposit ?? null;
+    const advancePaymentValue = bookingInfo?.advance_payment ?? 0;
+    const couponAmountValue = bookingInfo?.coupon_amount ?? 0;
     const normalizedCouponType = normalizeManualCouponType(bookingInfo?.coupon_type);
     const hasManualCoupon = normalizedCouponType.length > 0;
     const couponTypeValue = hasManualCoupon ? normalizedCouponType : "none";
@@ -928,7 +942,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         normalizedCouponType === "code"
             ? bookingInfo?.coupon_code ?? ""
             : hasManualCoupon
-                ? bookingInfo?.coupon_amount ?? 0
+                ? couponAmountInput
                 : "";
     const selectedCarOption = bookingInfo?.car_id
         ? normalizeAdminCarOption({
@@ -945,6 +959,87 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const rentalStartDateValue = useMemo(() => parseDateTimeValue(rentalStart), [rentalStart]);
     const rentalEndDateValue = useMemo(() => parseDateTimeValue(rentalEnd), [rentalEnd]);
 
+    useEffect(() => {
+        if (!hasBookingInfo) {
+            if (carDepositInput !== "") {
+                setCarDepositInput("");
+            }
+            return;
+        }
+
+        if (carDepositValue == null) {
+            const trimmed = carDepositInput.trim();
+            if (trimmed === "" || trimmed === "-") {
+                return;
+            }
+            setCarDepositInput("");
+            return;
+        }
+
+        const parsedInput = toOptionalNumber(carDepositInput);
+        if (parsedInput != null && areApproximatelyEqual(carDepositValue, parsedInput)) {
+            return;
+        }
+
+        const nextDisplay = toDisplayString(carDepositValue);
+        if (carDepositInput !== nextDisplay) {
+            setCarDepositInput(nextDisplay);
+        }
+    }, [carDepositInput, carDepositValue, hasBookingInfo]);
+
+    useEffect(() => {
+        if (!hasBookingInfo) {
+            if (advancePaymentInput !== "") {
+                setAdvancePaymentInput("");
+            }
+            return;
+        }
+
+        const trimmed = advancePaymentInput.trim();
+        if ((trimmed === "" || trimmed === "-") && advancePaymentValue === 0) {
+            return;
+        }
+
+        const parsedInput = toOptionalNumber(advancePaymentInput);
+        if (
+            parsedInput != null &&
+            areApproximatelyEqual(advancePaymentValue, parsedInput)
+        ) {
+            return;
+        }
+
+        const nextDisplay = toDisplayString(advancePaymentValue, "0");
+        if (advancePaymentInput !== nextDisplay) {
+            setAdvancePaymentInput(nextDisplay);
+        }
+    }, [advancePaymentInput, advancePaymentValue, hasBookingInfo]);
+
+    useEffect(() => {
+        if (!hasManualCoupon || normalizedCouponType === "code") {
+            if (couponAmountInput !== "") {
+                setCouponAmountInput("");
+            }
+            return;
+        }
+
+        const trimmed = couponAmountInput.trim();
+        if ((trimmed === "" || trimmed === "-") && couponAmountValue === 0) {
+            return;
+        }
+
+        const parsedInput = toOptionalNumber(couponAmountInput);
+        if (
+            parsedInput != null &&
+            areApproximatelyEqual(couponAmountValue, parsedInput)
+        ) {
+            return;
+        }
+
+        const nextDisplay = toDisplayString(couponAmountValue);
+        if (couponAmountInput !== nextDisplay) {
+            setCouponAmountInput(nextDisplay);
+        }
+    }, [couponAmountInput, couponAmountValue, hasManualCoupon, normalizedCouponType]);
 
     useEffect(() => {
         setQuote(null);
@@ -1825,14 +1920,23 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         <Label htmlFor="car-deposit">Garantie</Label>
                         <Input
                             id="car-deposit"
-                            type="number"
-                            value={bookingInfo.car_deposit ?? ""}
-                            onChange={(e) =>
-                                setBookingInfo({
-                                    ...bookingInfo,
-                                    car_deposit: toOptionalNumber(e.target.value),
-                                })
-                            }
+                            type="text"
+                            inputMode="decimal"
+                            value={carDepositInput}
+                            onChange={(e) => {
+                                const rawValue = e.target.value;
+                                setCarDepositInput(rawValue);
+                                setBookingInfo((prev) => {
+                                    if (!prev) {
+                                        return prev;
+                                    }
+
+                                    return {
+                                        ...prev,
+                                        car_deposit: toOptionalNumber(rawValue),
+                                    };
+                                });
+                            }}
                         />
                     </div>
 
@@ -1948,9 +2052,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             type={couponValueInputType}
                             disabled={couponValueInputDisabled}
                             {...couponValueInputProps}
+                            inputMode={normalizedCouponType === "code" ? undefined : "decimal"}
                             value={couponValue}
                             onChange={(e) => {
                                 const rawValue = e.target.value;
+                                if (normalizedCouponType !== "code") {
+                                    setCouponAmountInput(rawValue);
+                                }
                                 updateBookingInfo((prev) => {
                                     const nextType = normalizeManualCouponType(
                                         prev.coupon_type && prev.coupon_type.length > 0
@@ -1958,17 +2066,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                             : "fixed_per_day",
                                     );
                                     if (nextType === "code") {
+                                        setCouponAmountInput("");
                                         return recalcTotals({
                                             ...prev,
                                             coupon_type: nextType,
                                             coupon_code: rawValue,
                                         });
                                     }
-                                    const numericValue = Number(rawValue);
+                                    const numericValue = toOptionalNumber(rawValue);
                                     return recalcTotals({
                                         ...prev,
                                         coupon_type: nextType,
-                                        coupon_amount: Number.isFinite(numericValue) ? numericValue : 0,
+                                        coupon_amount: numericValue ?? 0,
                                     });
                                 });
                             }}
@@ -1978,16 +2087,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         <Label htmlFor="advance-payment">Plată în avans</Label>
                         <Input
                             id="advance-payment"
-                            type="number"
-                            value={bookingInfo.advance_payment || 0}
-                            onChange={(e) =>
+                            type="text"
+                            inputMode="decimal"
+                            value={advancePaymentInput}
+                            onChange={(e) => {
+                                const rawValue = e.target.value;
+                                setAdvancePaymentInput(rawValue);
                                 updateBookingInfo((prev) =>
                                     recalcTotals({
                                         ...prev,
-                                        advance_payment: Number(e.target.value) || 0,
+                                        advance_payment: toOptionalNumber(rawValue) ?? 0,
                                     }),
-                                )
-                            }
+                                );
+                            }}
                         />
                     </div>
 
