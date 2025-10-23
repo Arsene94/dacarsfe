@@ -30,13 +30,20 @@ export type FinancialCarRanking = {
 
 export type FinancialCategoryApi = {
     id?: number | string | null;
+    category_id?: number | string | null;
     category?: string | null;
     name?: string | null;
     label?: string | null;
     revenue?: number | string | null;
     total_revenue?: number | string | null;
+    net_revenue?: number | string | null;
     profit?: number | string | null;
     total_profit?: number | string | null;
+    net_profit?: number | string | null;
+    total_expenses?: number | string | null;
+    ROI?: number | string | null;
+    roi?: number | string | null;
+    car_count?: number | string | null;
 };
 
 export type FinancialCarApi = {
@@ -44,12 +51,17 @@ export type FinancialCarApi = {
     car_id?: number | string | null;
     vehicle_id?: number | string | null;
     uuid?: string | null;
+    category_id?: number | string | null;
     name?: string | null;
     car_name?: string | null;
     model?: string | null;
     plate?: string | null;
     revenue?: number | string | null;
     profit?: number | string | null;
+    total_revenue?: number | string | null;
+    total_profit?: number | string | null;
+    net_profit?: number | string | null;
+    net_revenue?: number | string | null;
     roi?: number | string | null;
     ROI?: number | string | null;
     margin?: number | string | null;

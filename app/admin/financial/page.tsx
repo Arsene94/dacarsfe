@@ -36,6 +36,12 @@ export default function FinancialDashboardPage() {
     const revenue = summary?.total_revenue ?? 0;
     const netProfit = summary?.net_profit ?? 0;
     const roi = summary?.ROI ?? 0;
+    const hasCategories = categories.length > 0;
+    const hasCarRanking = carRanking.length > 0;
+    const topVehiclesCount = Math.min(carRanking.length, 10);
+    const topVehiclesLabel = hasCarRanking
+        ? `Top ${topVehiclesCount} vehicule`
+        : 'Clasament indisponibil momentan';
 
     return (
         <div className="bg-slate-50 py-12">
@@ -116,7 +122,7 @@ export default function FinancialDashboardPage() {
                             </p>
                         </div>
                         <div className="mt-8 h-72">
-                            {categories.length > 0 ? (
+                            {hasCategories ? (
                                 <ResponsiveContainer>
                                     <PieChart>
                                         <Pie
@@ -154,8 +160,9 @@ export default function FinancialDashboardPage() {
                                     </PieChart>
                                 </ResponsiveContainer>
                             ) : (
-                                <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                                    Nu există date pentru distribuția veniturilor.
+                                <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-500">
+                                    Momentan nu există date pentru distribuția veniturilor. Verifică perioada selectată sau
+                                    actualizează raportarea.
                                 </div>
                             )}
                         </div>
@@ -169,12 +176,10 @@ export default function FinancialDashboardPage() {
                                     Identifică vehiculele cu cel mai mare aport la profitul total și optimizează alocarea.
                                 </p>
                             </div>
-                            <span className="text-xs uppercase tracking-wide text-slate-400">
-                                Top {Math.min(carRanking.length, 10)} vehicule
-                            </span>
+                            <span className="text-xs uppercase tracking-wide text-slate-400">{topVehiclesLabel}</span>
                         </div>
                         <div className="mt-6 overflow-hidden rounded-xl border border-slate-200">
-                            {carRanking.length > 0 ? (
+                            {hasCarRanking ? (
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-slate-200 text-left">
                                         <thead className="bg-slate-100">
@@ -220,8 +225,9 @@ export default function FinancialDashboardPage() {
                                     </table>
                                 </div>
                             ) : (
-                                <div className="flex h-40 items-center justify-center text-sm text-slate-500">
-                                    Nu există date pentru clasamentul vehiculelor.
+                                <div className="flex h-40 items-center justify-center px-6 text-center text-sm text-slate-500">
+                                    Nu există suficiente date pentru clasamentul vehiculelor. Reîncarcă datele sau verifică
+                                    filtrele de raportare.
                                 </div>
                             )}
                         </div>

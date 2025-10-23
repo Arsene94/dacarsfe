@@ -73,7 +73,7 @@ const normalizeNumber = (value: unknown): number | null => {
 };
 
 const resolveIdentifier = (record: Record<string, unknown>, fallback: number): number | string => {
-    const candidateKeys = ['id', 'car_id', 'vehicle_id', 'uuid'];
+    const candidateKeys = ['id', 'category_id', 'car_id', 'vehicle_id', 'uuid'];
 
     for (const key of candidateKeys) {
         if (key in record) {
@@ -128,7 +128,15 @@ const extractSummary = (
 const gatherCategoryRecords = (
     payload: FinancialCategoriesResponse | (Record<string, unknown> & FinancialSummaryApi) | null | undefined,
 ): FinancialCategoryApi[] => {
-    if (!payload || typeof payload !== 'object') {
+    if (!payload) {
+        return [];
+    }
+
+    if (Array.isArray(payload)) {
+        return payload.filter((entry): entry is FinancialCategoryApi => Boolean(entry && typeof entry === 'object'));
+    }
+
+    if (typeof payload !== 'object') {
         return [];
     }
 
@@ -153,7 +161,15 @@ const gatherCategoryRecords = (
 const gatherCarRecords = (
     payload: FinancialCategoriesResponse | (Record<string, unknown> & FinancialSummaryApi) | null | undefined,
 ): FinancialCarApi[] => {
-    if (!payload || typeof payload !== 'object') {
+    if (!payload) {
+        return [];
+    }
+
+    if (Array.isArray(payload)) {
+        return payload.filter((entry): entry is FinancialCarApi => Boolean(entry && typeof entry === 'object'));
+    }
+
+    if (typeof payload !== 'object') {
         return [];
     }
 
@@ -198,11 +214,13 @@ const extractCategories = (
             const revenue =
                 normalizeNumber(record.revenue) ??
                 normalizeNumber(record.total_revenue) ??
+                normalizeNumber(record.net_revenue) ??
                 0;
 
             const profit =
                 normalizeNumber(record.profit) ??
                 normalizeNumber(record.total_profit) ??
+                normalizeNumber(record.net_profit) ??
                 0;
 
             const id = resolveIdentifier(record, aggregated.length + index);
@@ -247,10 +265,16 @@ const extractCarRanking = (
                 normalizeString(record.plate) ||
                 `Vehicul ${aggregated.length + index + 1}`;
 
-            const revenue = normalizeNumber(record.revenue) ?? 0;
+            const revenue =
+                normalizeNumber(record.revenue) ??
+                normalizeNumber(record.total_revenue) ??
+                normalizeNumber(record.net_revenue) ??
+                0;
             const profit =
                 normalizeNumber(record.profit) ??
                 normalizeNumber(record.margin) ??
+                normalizeNumber(record.total_profit) ??
+                normalizeNumber(record.net_profit) ??
                 0;
 
             const providedRoi =
