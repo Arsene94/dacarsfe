@@ -591,6 +591,10 @@ export class ApiClient {
             return this.request<ApiItemResult<UnknownRecord>>(`/cars/${id}`, {
                 method: 'PUT',
                 body: payload,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
             });
         }
 
