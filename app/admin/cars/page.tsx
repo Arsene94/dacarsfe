@@ -1137,13 +1137,15 @@ const CarsPage = () => {
   }, [partnerSearch, partnerSearchActive, fetchPartnerOptions]);
 
   useEffect(() => {
-    if (carForm.category_id == null) {
+    const categoryId = carForm.category_id;
+
+    if (categoryId == null) {
       setSelectedCategory(null);
       return;
     }
 
     const match = categoryOptions.find(
-      (option) => option.id === carForm.category_id,
+      (option) => option.id === categoryId,
     );
 
     if (match) {
@@ -1157,12 +1159,12 @@ const CarsPage = () => {
     }
 
     setSelectedCategory((prev) => {
-      if (prev && prev.id === carForm.category_id) {
+      if (prev && prev.id === categoryId) {
         return prev;
       }
       return {
-        id: carForm.category_id,
-        name: `Categorie #${carForm.category_id}`,
+        id: categoryId,
+        name: `Categorie #${categoryId}`,
       };
     });
   }, [carForm.category_id, categoryOptions]);
