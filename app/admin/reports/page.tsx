@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, RefreshCw } from "lucide-react";
 import apiClient from "@/lib/api";
-import type { AdminReportOverviewResponse } from "@/types/reports";
+import type {
+  AdminReportOverviewLink,
+  AdminReportOverviewResponse,
+} from "@/types/reports";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +43,29 @@ const buildQuarterOptions = () => {
 };
 
 const quarterOptions = buildQuarterOptions();
+
+const analyticsReportLinks: readonly AdminReportOverviewLink[] = [
+  {
+    slug: "reports-operational-dashboard",
+    title: "Tablou operațional",
+    href: "/admin/operational",
+  },
+  {
+    slug: "reports-financial-dashboard",
+    title: "Tablou financiar",
+    href: "/admin/financial",
+  },
+  {
+    slug: "reports-marketing-dashboard",
+    title: "Tablou marketing",
+    href: "/admin/marketing",
+  },
+  {
+    slug: "reports-predictive-dashboard",
+    title: "Analitice predictive",
+    href: "/admin/predictive",
+  },
+];
 
 export default function AdminReportsOverviewPage() {
   const [data, setData] = useState<AdminReportOverviewResponse | null>(null);
@@ -133,6 +159,24 @@ export default function AdminReportsOverviewPage() {
         : [],
     [data],
   );
+
+  const quickAccessLinks = useMemo(() => {
+    const linkMap = new Map<string, AdminReportOverviewLink>();
+    const register = (link: AdminReportOverviewLink) => {
+      const key = link.slug?.trim() || link.href;
+      if (!key) {
+        return;
+      }
+      if (!linkMap.has(key)) {
+        linkMap.set(key, link);
+      }
+    };
+
+    (data?.links ?? []).forEach(register);
+    analyticsReportLinks.forEach(register);
+
+    return Array.from(linkMap.values());
+  }, [data]);
 
   const formatThousands = useCallback(
     (value: number | string) => {
@@ -285,26 +329,32 @@ export default function AdminReportsOverviewPage() {
             title="Accese rapide"
             description="Navighează către rapoartele detaliate pentru intervale dedicate."
           >
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {data.links.map((link) => (
-                <Link
-                  key={link.slug}
-                  href={link.href}
-                  className="group flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-jade hover:shadow-lg"
-                >
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold text-berkeley">{link.title}</p>
-                    <p className="text-xs text-slate-500">
-                      Explorează indicatorii cheie pentru perioada selectată.
-                    </p>
-                  </div>
-                  <span className="mt-4 flex items-center gap-2 text-sm font-medium text-jade group-hover:text-jadeLight">
-                    Deschide raportul
-                    <ArrowRight className="h-4 w-4" />
-                  </span>
-                </Link>
-              ))}
-            </div>
+            {quickAccessLinks.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {quickAccessLinks.map((link) => (
+                  <Link
+                    key={link.slug ?? link.href}
+                    href={link.href}
+                    className="group flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-jade hover:shadow-lg"
+                  >
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-berkeley">{link.title}</p>
+                      <p className="text-xs text-slate-500">
+                        Explorează indicatorii cheie pentru perioada selectată.
+                      </p>
+                    </div>
+                    <span className="mt-4 flex items-center gap-2 text-sm font-medium text-jade group-hover:text-jadeLight">
+                      Deschide raportul
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-600">
+                Nu există rapoarte disponibile momentan.
+              </p>
+            )}
           </ReportSection>
 
           <ReportSection
