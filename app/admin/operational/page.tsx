@@ -54,12 +54,63 @@ const compactCurrencyFormatter = new Intl.NumberFormat('ro-RO', {
 
 const numberFormatter = new Intl.NumberFormat('ro-RO');
 
-const truncateLabel = (value: string): string => {
-    if (value.length <= 18) {
-        return value;
+const splitLicensePlateLabel = (value: string): [string, string] => {
+    const sanitized = value.trim();
+
+    if (sanitized.length === 0) {
+        return ['', ''];
     }
 
-    return `${value.slice(0, 15)}…`;
+    const separators = [' ', '-', '/', '·', '_'];
+    for (const separator of separators) {
+        if (sanitized.includes(separator)) {
+            const parts = sanitized.split(separator).filter(Boolean);
+
+            if (parts.length === 1) {
+                return [parts[0] ?? '', ''];
+            }
+
+            const midpoint = Math.ceil(parts.length / 2);
+            const first = parts.slice(0, midpoint).join(separator);
+            const second = parts.slice(midpoint).join(separator);
+
+            return [first, second];
+        }
+    }
+
+    const midpoint = Math.ceil(sanitized.length / 2);
+    return [sanitized.slice(0, midpoint), sanitized.slice(midpoint)];
+};
+
+type LicensePlateTickProps = {
+    x: number;
+    y: number;
+    payload?: {
+        value?: string | number;
+    };
+};
+
+const renderLicensePlateTick = ({ x, y, payload }: LicensePlateTickProps) => {
+    const rawLabel = typeof payload?.value === 'string' ? payload.value : '';
+
+    if (rawLabel === '') {
+        return null;
+    }
+
+    const [firstLine, secondLine] = splitLicensePlateLabel(rawLabel);
+
+    return (
+        <g transform={`translate(${x}, ${y + 10})`}>
+            <text fill="#475569" fontSize={12} textAnchor="middle">
+                <tspan x={0} dy={0}>
+                    {firstLine}
+                </tspan>
+                <tspan x={0} dy={14}>
+                    {secondLine}
+                </tspan>
+            </text>
+        </g>
+    );
 };
 
 const coerceNumber = (value: number | string): number => {
@@ -374,24 +425,8 @@ export default function OperationalDashboardPage() {
                                             tickLine={false}
                                             axisLine={false}
                                             interval={0}
-                                            height={70}
-                                            angle={-25}
-                                            textAnchor="end"
-                                            tick={({ x, y, payload }) => {
-                                                const label = typeof payload?.value === 'string' ? payload.value : '';
-                                                return (
-                                                    <text
-                                                        x={x}
-                                                        y={y}
-                                                        dy={16}
-                                                        fill="#475569"
-                                                        fontSize={12}
-                                                        textAnchor="end"
-                                                    >
-                                                        {truncateLabel(label)}
-                                                    </text>
-                                                );
-                                            }}
+                                            height={64}
+                                            tick={renderLicensePlateTick}
                                         />
                                         <YAxis
                                             axisLine={false}
