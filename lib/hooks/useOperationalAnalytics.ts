@@ -88,77 +88,247 @@ const resolveIdentifier = (record: Record<string, unknown>, fallback: number): n
     return fallback;
 };
 
-const extractTopCars = (payload?: OperationalTopResponse | null): OperationalTopCar[] => {
-    const rawItems =
-        (payload?.top_cars && Array.isArray(payload.top_cars) && payload.top_cars) ||
-        (payload?.cars && Array.isArray(payload.cars) && payload.cars) ||
-        (payload?.items && Array.isArray(payload.items) && payload.items) ||
-        (payload?.data && Array.isArray(payload.data) && payload.data) ||
-        [];
+const fallbackContainerKeys = [
+    'data',
+    'items',
+    'results',
+    'list',
+    'entries',
+    'values',
+    'payload',
+    'response',
+    'records',
+    'series',
+    'points',
+    'datasets',
+];
 
-    return rawItems
-        .map((entry, index) => {
-            const record = (entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {}) ?? {};
-            const name =
-                normalizeString(record.name) ||
-                normalizeString(record.car_name) ||
-                normalizeString(record.model) ||
-                normalizeString(record.plate) ||
-                `Mașină ${index + 1}`;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
 
-            const profit =
-                normalizeNumber(record.profit) ??
-                normalizeNumber(record.total_profit) ??
-                normalizeNumber(record.value) ??
-                normalizeNumber(record.amount) ??
-                normalizeNumber(record.revenue) ??
-                0;
+const collectRecords = (
+    candidateKeys: string[],
+    isEntry: (record: Record<string, unknown>) => boolean,
+    ...sources: unknown[]
+): Record<string, unknown>[] => {
+    const queue: unknown[] = [];
+    const visited = new Set<unknown>();
+    const collected: Record<string, unknown>[] = [];
+    const inspectionKeys = Array.from(new Set([...candidateKeys, ...fallbackContainerKeys]));
 
-            const id = resolveIdentifier(record, index);
+    sources.forEach((source) => {
+        if (!source) {
+            return;
+        }
 
-            return {
-                id,
-                name,
-                profit,
-            } satisfies OperationalTopCar;
-        })
+        if (Array.isArray(source) || isRecord(source)) {
+            queue.push(source);
+        }
+    });
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+
+        if (!current || typeof current !== 'object') {
+            continue;
+        }
+
+        if (visited.has(current)) {
+            continue;
+        }
+
+        visited.add(current);
+
+        if (Array.isArray(current)) {
+            current.forEach((item) => {
+                if (!item || typeof item !== 'object') {
+                    return;
+                }
+
+                if (isRecord(item) && isEntry(item)) {
+                    collected.push(item);
+                }
+
+                queue.push(item);
+            });
+
+            continue;
+        }
+
+        const record = current as Record<string, unknown>;
+
+        if (isEntry(record)) {
+            collected.push(record);
+        }
+
+        inspectionKeys.forEach((key) => {
+            if (!(key in record)) {
+                return;
+            }
+
+            const value = record[key];
+
+            if (!value || typeof value !== 'object') {
+                return;
+            }
+
+            queue.push(value);
+        });
+    }
+
+    return collected;
+};
+
+const extractTopCars = (
+    ...sources: (
+        | OperationalTopResponse
+        | OperationalOverview
+        | Record<string, unknown>
+        | null
+        | undefined
+    )[]
+): OperationalTopCar[] => {
+    const candidateKeys = [
+        'top_cars',
+        'topCars',
+        'cars',
+        'vehicles',
+        'top_vehicles',
+        'topVehicles',
+        'leaderboard',
+        'top',
+        'rankings',
+        'top10',
+        'profit_leaders',
+    ];
+
+    const topEntries = collectRecords(
+        candidateKeys,
+        (record) => {
+            const profitLikeKeys = ['profit', 'total_profit', 'value', 'amount', 'revenue'];
+
+            return profitLikeKeys.some((key) => normalizeNumber(record[key]) !== null);
+        },
+        ...sources,
+    );
+
+    const ranked = new Map<string, OperationalTopCar>();
+
+    topEntries.forEach((record, index) => {
+        const name =
+            normalizeString(record.name) ||
+            normalizeString(record.car_name) ||
+            normalizeString(record.model) ||
+            normalizeString(record.plate) ||
+            `Mașină ${index + 1}`;
+
+        const profit =
+            normalizeNumber(record.profit) ??
+            normalizeNumber(record.total_profit) ??
+            normalizeNumber(record.value) ??
+            normalizeNumber(record.amount) ??
+            normalizeNumber(record.revenue) ??
+            0;
+
+        const id = resolveIdentifier(record, index);
+        const key = typeof id === 'number' ? `number:${id}` : `string:${id}`;
+        const candidate: OperationalTopCar = {
+            id,
+            name,
+            profit,
+        };
+
+        const existing = ranked.get(key);
+        if (!existing || existing.profit < candidate.profit) {
+            ranked.set(key, candidate);
+        }
+    });
+
+    return Array.from(ranked.values())
         .sort((a, b) => b.profit - a.profit)
         .slice(0, 10);
 };
 
-const extractMaintenanceTrends = (payload?: OperationalTopResponse | null): OperationalMaintenanceTrend[] => {
-    const rawItems =
-        (payload?.maintenance_trends && Array.isArray(payload.maintenance_trends) && payload.maintenance_trends) ||
-        (payload?.trends && Array.isArray(payload.trends) && payload.trends) ||
-        (payload?.maintenance && Array.isArray(payload.maintenance) && payload.maintenance) ||
-        [];
+const extractMaintenanceTrends = (
+    ...sources: (
+        | OperationalTopResponse
+        | OperationalOverview
+        | Record<string, unknown>
+        | null
+        | undefined
+    )[]
+): OperationalMaintenanceTrend[] => {
+    const candidateKeys = [
+        'maintenance_trends',
+        'maintenanceTrends',
+        'trends',
+        'maintenance',
+        'maintenance_costs',
+        'cost_trends',
+        'timeline',
+        'series',
+        'history',
+    ];
 
-    return rawItems
-        .map((entry) => {
-            const record = (entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {}) ?? {};
-            const label =
+    const trendEntries = collectRecords(
+        candidateKeys,
+        (record) => {
+            const labelCandidate =
                 normalizeString(record.label) ||
                 normalizeString(record.period) ||
                 normalizeString(record.date) ||
                 normalizeString(record.month);
 
-            if (!label) {
-                return null;
+            if (!labelCandidate) {
+                return false;
             }
 
-            const cost =
-                normalizeNumber(record.cost) ??
-                normalizeNumber(record.value) ??
-                normalizeNumber(record.amount) ??
-                normalizeNumber(record.total_cost) ??
-                0;
+            const costLikeKeys = ['cost', 'value', 'amount', 'total_cost', 'expense'];
 
-            return {
-                label,
-                cost,
-            } satisfies OperationalMaintenanceTrend;
-        })
-        .filter((entry): entry is OperationalMaintenanceTrend => entry !== null);
+            return costLikeKeys.some((key) => normalizeNumber(record[key]) !== null);
+        },
+        ...sources,
+    );
+
+    const timeline: OperationalMaintenanceTrend[] = [];
+    const seen = new Map<string, OperationalMaintenanceTrend>();
+
+    trendEntries.forEach((record) => {
+        const label =
+            normalizeString(record.label) ||
+            normalizeString(record.period) ||
+            normalizeString(record.date) ||
+            normalizeString(record.month);
+
+        if (!label) {
+            return;
+        }
+
+        const cost =
+            normalizeNumber(record.cost) ??
+            normalizeNumber(record.value) ??
+            normalizeNumber(record.amount) ??
+            normalizeNumber(record.total_cost) ??
+            normalizeNumber(record.expense) ??
+            0;
+
+        const existing = seen.get(label);
+
+        if (existing) {
+            existing.cost = cost;
+            return;
+        }
+
+        const trend: OperationalMaintenanceTrend = {
+            label,
+            cost,
+        };
+
+        seen.set(label, trend);
+        timeline.push(trend);
+    });
+
+    return timeline;
 };
 
 export type UseOperationalAnalyticsResult = {
@@ -190,8 +360,11 @@ export const useOperationalAnalytics = (): UseOperationalAnalyticsResult => {
         revalidateOnFocus: false,
     });
 
-    const topCars = useMemo(() => extractTopCars(topResponse), [topResponse]);
-    const maintenanceTrends = useMemo(() => extractMaintenanceTrends(topResponse), [topResponse]);
+    const topCars = useMemo(() => extractTopCars(topResponse, overview), [topResponse, overview]);
+    const maintenanceTrends = useMemo(
+        () => extractMaintenanceTrends(topResponse, overview),
+        [topResponse, overview],
+    );
 
     const refresh = useCallback(async () => {
         await Promise.all([mutateOverview(), mutateTop()]);

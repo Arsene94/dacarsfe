@@ -45,10 +45,25 @@ export type OperationalMaintenanceTrendApi = {
 
 export type OperationalTopResponse = {
     top_cars?: (OperationalTopCarApi | null)[] | null;
+    topCars?: (OperationalTopCarApi | null)[] | null;
     cars?: (OperationalTopCarApi | null)[] | null;
+    vehicles?: (OperationalTopCarApi | null)[] | null;
+    top_vehicles?: (OperationalTopCarApi | null)[] | null;
+    topVehicles?: (OperationalTopCarApi | null)[] | null;
+    leaderboard?: (OperationalTopCarApi | null)[] | null;
+    top?: (OperationalTopCarApi | null)[] | null;
+    rankings?: (OperationalTopCarApi | null)[] | null;
+    top10?: (OperationalTopCarApi | null)[] | null;
+    profit_leaders?: (OperationalTopCarApi | null)[] | null;
     items?: (OperationalTopCarApi | null)[] | null;
     data?: (OperationalTopCarApi | null)[] | null;
     maintenance_trends?: (OperationalMaintenanceTrendApi | null)[] | null;
+    maintenanceTrends?: (OperationalMaintenanceTrendApi | null)[] | null;
     trends?: (OperationalMaintenanceTrendApi | null)[] | null;
     maintenance?: (OperationalMaintenanceTrendApi | null)[] | null;
+    maintenance_costs?: (OperationalMaintenanceTrendApi | null)[] | null;
+    cost_trends?: (OperationalMaintenanceTrendApi | null)[] | null;
+    timeline?: (OperationalMaintenanceTrendApi | null)[] | null;
+    series?: (OperationalMaintenanceTrendApi | null)[] | null;
+    history?: (OperationalMaintenanceTrendApi | null)[] | null;
 };
