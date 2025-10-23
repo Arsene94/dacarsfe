@@ -24,15 +24,17 @@ const resolveBaseUrl = (): string => {
         return explicit.replace(/\/$/, "");
     }
 
-    const backend = process.env.NEXT_PUBLIC_BACKEND_URL;
-    if (backend && backend.trim().length > 0) {
-        return backend.replace(/\/$/, "");
-    }
-
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (apiUrl && apiUrl.trim().length > 0) {
-        const sanitized = apiUrl.replace(/\/$/, "");
-        return sanitized.replace(/\/(api|api\/v\d+)$/, "");
+        const trimmed = apiUrl.trim();
+
+        try {
+            const parsed = new URL(trimmed);
+            return parsed.origin;
+        } catch (error) {
+            const withoutTrailingSlash = trimmed.replace(/\/$/, "");
+            return withoutTrailingSlash.replace(/\/api(?:\/v\d+)?$/i, "");
+        }
     }
 
     return "https://backend.dacars.ro";

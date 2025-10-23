@@ -22,7 +22,7 @@ const envAllowlist = (process.env.IMAGE_PROXY_ALLOWLIST ?? "")
 
 const derivedHosts = [
   process.env.NEXT_PUBLIC_STORAGE_URL,
-  process.env.NEXT_PUBLIC_BACKEND_URL,
+  process.env.NEXT_PUBLIC_API_URL,
 ]
   .map((value) => extractHostname(value))
   .filter((value): value is string => Boolean(value));

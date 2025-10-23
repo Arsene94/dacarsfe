@@ -95,8 +95,7 @@ Aplicația presupune un backend Laravel ce expune API-uri REST securizate.
 
 | Variabilă | Rol | Implicit |
 |-----------|-----|----------|
-| `NEXT_PUBLIC_API_URL` | Punctul de intrare al API-ului public (mașini, rezervări, wheel). | `http://localhost:8000/api/v1` |
-| `NEXT_PUBLIC_BACKEND_URL` | Baza pentru proxy-ul de fișiere (PDF, contracte). | `http://127.0.0.1:8000` |
+| `NEXT_PUBLIC_API_URL` | Punctul de intrare al API-ului public (mașini, rezervări, wheel) și baza pentru proxierea fișierelor Laravel. | `http://localhost:8000/api/v1` |
 | `NEXT_PUBLIC_STORAGE_URL` | URL-ul pentru imaginile din storage Laravel (folosit în cardurile mașinilor). | `https://backend.dacars.ro/storage` |
 | `IMAGE_PROXY_ALLOWLIST` | (Opțional) listă suplimentară de host-uri, separată prin virgulă, acceptate de API-ul de proxy pentru imagini. | – |
 | `CUSTOM_KEY` | Cheie opțională pentru logica custom din `next.config.js`. | – |

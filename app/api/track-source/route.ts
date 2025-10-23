@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const resolveBackendBase = (): string | null => {
-    const candidates = [process.env.LARAVEL_API_URL, process.env.NEXT_PUBLIC_BACKEND_URL];
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-    for (const candidate of candidates) {
-        if (typeof candidate === 'string' && candidate.trim().length > 0) {
-            return candidate.trim();
-        }
+    if (typeof apiUrl !== 'string' || apiUrl.trim().length === 0) {
+        return null;
     }
 
-    return null;
+    const trimmed = apiUrl.trim();
+
+    try {
+        const url = new URL(trimmed);
+        return url.origin;
+    } catch (error) {
+        const withoutTrailingSlash = trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+        const withoutApiSuffix = withoutTrailingSlash.replace(/\/api(?:\/v\d+)?$/i, '');
+        return withoutApiSuffix || withoutTrailingSlash;
+    }
 };
 
 const buildTargetUrl = (base: string): string => {
@@ -38,7 +45,7 @@ export async function POST(request: NextRequest) {
     const backendBase = resolveBackendBase();
     if (!backendBase) {
         return NextResponse.json(
-            { error: 'LARAVEL_API_URL sau NEXT_PUBLIC_BACKEND_URL nu este configurat.' },
+            { error: 'NEXT_PUBLIC_API_URL nu este configurat.' },
             { status: 500 },
         );
     }
