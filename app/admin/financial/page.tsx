@@ -165,7 +165,7 @@ export default function FinancialDashboardPage() {
                         </p>
                     </div>
                     <div className="flex w-full flex-col items-start gap-3 sm:w-auto sm:items-stretch">
-                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
                             <Select
                                 value={selectedPeriod}
                                 onValueChange={handlePeriodChange}
@@ -179,7 +179,7 @@ export default function FinancialDashboardPage() {
                                 ))}
                             </Select>
                             {isCustomRangeSelected && (
-                                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+                                <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                                     <Input
                                         type="date"
                                         value={customRangeDraft.start}
@@ -216,7 +216,7 @@ export default function FinancialDashboardPage() {
                                 </div>
                             )}
                         </div>
-                        <div className="flex w-full flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-end">
+                        <div className="flex w-full flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
                             {isLoading && (
                                 <span className="text-sm text-slate-500" aria-live="polite">
                                     Se încarcă datele financiare...

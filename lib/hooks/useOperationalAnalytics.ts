@@ -75,7 +75,16 @@ const normalizeNumber = (value: unknown): number | null => {
 };
 
 const resolveIdentifier = (record: Record<string, unknown>, fallback: number): number | string => {
-    const candidateKeys = ['id', 'car_id', 'vehicle_id', 'uuid'];
+    const candidateKeys = [
+        'id',
+        'car_id',
+        'vehicle_id',
+        'uuid',
+        'license_plate',
+        'car_license_plate',
+        'plate',
+        'registration',
+    ];
 
     for (const key of candidateKeys) {
         if (key in record) {
@@ -238,12 +247,20 @@ const extractTopCars = (
     const ranked = new Map<string, OperationalTopCar>();
 
     topEntries.forEach((record, index) => {
-        const name =
+        const licensePlate =
+            normalizeString(record.license_plate) ||
+            normalizeString(record.car_license_plate) ||
+            normalizeString(record.registration) ||
+            normalizeString(record.plate) ||
+            null;
+
+        const carName =
             normalizeString(record.name) ||
             normalizeString(record.car_name) ||
             normalizeString(record.model) ||
-            normalizeString(record.plate) ||
-            `Mașină ${index + 1}`;
+            null;
+
+        const label = licensePlate ?? carName ?? `Mașină ${index + 1}`;
 
         const profit =
             normalizeNumber(record.profit) ??
@@ -259,7 +276,8 @@ const extractTopCars = (
         const key = typeof id === 'number' ? `number:${id}` : `string:${id}`;
         const candidate: OperationalTopCar = {
             id,
-            name,
+            licensePlate: label,
+            carName,
             profit,
         };
 

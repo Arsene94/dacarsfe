@@ -7,7 +7,8 @@ export type OperationalOverview = {
 
 export type OperationalTopCar = {
     id: number | string;
-    name: string;
+    licensePlate: string;
+    carName?: string | null;
     profit: number;
 };
 
@@ -24,6 +25,9 @@ export type OperationalTopCarApi = {
     name?: string | null;
     car_name?: string | null;
     model?: string | null;
+    license_plate?: string | null;
+    car_license_plate?: string | null;
+    registration?: string | null;
     plate?: string | null;
     profit?: number | string | null;
     total_profit?: number | string | null;

@@ -27,6 +27,7 @@ import {
     describeAnalyticsFilters,
     type AnalyticsPeriod,
 } from '@/lib/analytics/filters';
+import type { OperationalTopCar } from '@/types/analytics-operational';
 
 const percentageFormatter = new Intl.NumberFormat('ro-RO', {
     minimumFractionDigits: 0,
@@ -213,7 +214,7 @@ export default function OperationalDashboardPage() {
                         </p>
                     </div>
                     <div className="flex w-full flex-col items-start gap-3 sm:w-auto sm:items-stretch">
-                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
                             <Select
                                 value={selectedPeriod}
                                 onValueChange={handlePeriodChange}
@@ -227,7 +228,7 @@ export default function OperationalDashboardPage() {
                                 ))}
                             </Select>
                             {isCustomRangeSelected && (
-                                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+                                <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                                     <Input
                                         type="date"
                                         value={customRangeDraft.start}
@@ -264,7 +265,7 @@ export default function OperationalDashboardPage() {
                                 </div>
                             )}
                         </div>
-                        <div className="flex w-full flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-end">
+                        <div className="flex w-full flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
                             {isLoading && (
                                 <span className="text-sm text-slate-500" aria-live="polite">
                                     Se încarcă datele inițiale...
@@ -369,7 +370,7 @@ export default function OperationalDashboardPage() {
                                     >
                                         <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
                                         <XAxis
-                                            dataKey="name"
+                                            dataKey="licensePlate"
                                             tickLine={false}
                                             axisLine={false}
                                             interval={0}
@@ -400,18 +401,40 @@ export default function OperationalDashboardPage() {
                                                 compactCurrencyFormatter.format(coerceNumber(value))
                                             }
                                         />
-                                        <Tooltip
-                                            cursor={{ fill: 'rgba(30, 64, 175, 0.08)' }}
-                                            formatter={(value: number | string) => [
-                                                currencyFormatter.format(coerceNumber(value)),
-                                                'Profit',
-                                            ]}
-                                            labelFormatter={(label) => label}
-                                            contentStyle={tooltipContentStyle}
-                                        />
-                                        <Bar dataKey="profit" radius={[8, 8, 0, 0]} fill="#1A3661" />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                            <Tooltip
+                                                cursor={{ fill: 'rgba(30, 64, 175, 0.08)' }}
+                                                formatter={(value: number | string) => [
+                                                    currencyFormatter.format(coerceNumber(value)),
+                                                    'Profit',
+                                                ]}
+                                                labelFormatter={(label, payload) => {
+                                                    const entry = payload?.[0]?.payload as
+                                                        | OperationalTopCar
+                                                        | undefined;
+
+                                                    if (!entry) {
+                                                        if (typeof label === 'string') {
+                                                            return label;
+                                                        }
+
+                                                        if (typeof label === 'number') {
+                                                            return numberFormatter.format(label);
+                                                        }
+
+                                                        return '—';
+                                                    }
+
+                                                    if (entry.carName && entry.carName !== entry.licensePlate) {
+                                                        return `${entry.licensePlate} • ${entry.carName}`;
+                                                    }
+
+                                                    return entry.licensePlate;
+                                                }}
+                                                contentStyle={tooltipContentStyle}
+                                            />
+                                            <Bar dataKey="profit" radius={[8, 8, 0, 0]} fill="#1A3661" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
                             ) : (
                                 <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
                                     Nu există suficiente date pentru a calcula topul mașinilor.
