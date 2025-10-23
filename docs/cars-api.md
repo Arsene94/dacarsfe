@@ -60,6 +60,7 @@ Example response with implicit eager-loaded relations (`make`, `type`, `transmis
       "deposit": 400,
       "weight": 1330,
       "weight_front": 620,
+      "acquisition_cost": 21500,
       "available": true,
       "base_price": 36,
       "rental_rate": 36,

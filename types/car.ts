@@ -54,6 +54,8 @@ export interface ApiCar {
   deposit?: number | string | null;
   weight?: number | string | null;
   weight_front?: number | string | null;
+  acquisition_cost?: number | string | null;
+  acquisitionCost?: number | string | null;
   available?: boolean;
   base_price?: number | string | null;
   price_per_day?: number | string | null;

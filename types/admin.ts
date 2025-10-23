@@ -105,6 +105,7 @@ export interface AdminCar {
   isPartner?: boolean;
   partnerId?: number | null;
   partnerPercentage?: number | null;
+  acquisitionCost?: number | null;
 }
 
 export interface AdminExpiringCarDocumentsParams {

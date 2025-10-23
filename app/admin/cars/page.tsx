@@ -483,6 +483,14 @@ const mapApiCarToAdminCar = (raw: unknown): AdminCar => {
     (imageList.length > 0 ? imageList[0] : getFirstImage(rawImages));
   const primaryImage = typeof primaryImageCandidate === "string" ? primaryImageCandidate : null;
 
+  const acquisitionCostValue = toDecimal(
+    raw.acquisition_cost ??
+      (raw as { acquisitionCost?: unknown }).acquisitionCost ??
+      (raw as { purchase_price?: unknown }).purchase_price ??
+      (raw as { buy_price?: unknown }).buy_price ??
+      (raw as { acquisitionPrice?: unknown }).acquisitionPrice ??
+      (raw as { cost_price?: unknown }).cost_price,
+  );
   const depositValue = toDecimal(raw.deposit ?? raw.security_deposit);
   const weightValue = toDecimal(raw.weight);
   const weightFrontValue = toDecimal(raw.weight_front ?? raw.front_weight);
@@ -551,6 +559,7 @@ const mapApiCarToAdminCar = (raw: unknown): AdminCar => {
     numberOfSeats: seatsValue ?? null,
     numberOfDoors: doorsValue ?? null,
     vin: vinValue,
+    acquisitionCost: acquisitionCostValue ?? null,
     deposit: depositValue,
     weight: weightValue,
     weightFront: weightFrontValue,
@@ -577,13 +586,14 @@ type CarFormState = {
   number_of_seats: string;
   number_of_doors: string;
   vin: string;
+  rental_rate: string;
+  acquisition_cost: string;
   deposit: string;
   weight: string;
   weight_front: string;
   is_partner: boolean;
   partner_id: string;
   partner_percentage: string;
-  rental_rate: string;
 };
 
 const createEmptyFormState = (): CarFormState => ({
@@ -603,13 +613,14 @@ const createEmptyFormState = (): CarFormState => ({
   number_of_seats: "",
   number_of_doors: "",
   vin: "",
+  rental_rate: "",
+  acquisition_cost: "",
   deposit: "",
   weight: "",
   weight_front: "",
   is_partner: false,
   partner_id: "",
   partner_percentage: "",
-  rental_rate: "",
 });
 
 const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
@@ -620,6 +631,12 @@ const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
             typeof value === "string" && value.trim().length > 0,
         )
       : [];
+
+  const acquisitionCostCandidate =
+    car.acquisitionCost ??
+    (car as { acquisition_cost?: unknown }).acquisition_cost ??
+    undefined;
+  const acquisitionCostValue = toDecimal(acquisitionCostCandidate);
 
   return {
     id: car.id,
@@ -651,6 +668,9 @@ const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
         ? String(car.features.doors)
         : "",
     vin: car.vin ?? "",
+    rental_rate: car.price ? String(car.price) : "",
+    acquisition_cost:
+      acquisitionCostValue != null ? String(acquisitionCostValue) : "",
     deposit: car.deposit != null ? String(car.deposit) : "",
     weight: car.weight != null ? String(car.weight) : "",
     weight_front: car.weightFront != null ? String(car.weightFront) : "",
@@ -658,7 +678,6 @@ const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
     partner_id: car.partnerId != null ? String(car.partnerId) : "",
     partner_percentage:
       car.partnerPercentage != null ? String(car.partnerPercentage) : "",
-    rental_rate: car.price ? String(car.price) : "",
   };
 };
 
@@ -749,6 +768,11 @@ const buildCarPayload = (form: CarFormState) => {
   const rentalRate = toDecimalFromString(form.rental_rate);
   if (rentalRate !== undefined) {
     payload.rental_rate = rentalRate;
+  }
+
+  const acquisitionCost = toDecimalFromString(form.acquisition_cost);
+  if (acquisitionCost !== undefined) {
+    payload.acquisition_cost = acquisitionCost;
   }
 
   const orderedImages: Array<{
@@ -2109,6 +2133,24 @@ const CarsPage = () => {
                 value={carForm.rental_rate}
                 onChange={handleFormChange("rental_rate")}
                 placeholder="45"
+              />
+            </div>
+
+            <div>
+              <Label
+                htmlFor="car-acquisition-cost"
+                className="text-sm font-dm-sans font-semibold text-gray-700"
+              >
+                Preț de achiziție (€)
+              </Label>
+              <Input
+                id="car-acquisition-cost"
+                type="number"
+                min="0"
+                step="0.01"
+                value={carForm.acquisition_cost}
+                onChange={handleFormChange("acquisition_cost")}
+                placeholder="15000"
               />
             </div>
 
