@@ -71,6 +71,8 @@ export interface AdminCar {
   image?: string;
   images?: string[];
   price: number;
+  categoryId?: number | null;
+  categoryName?: string | null;
   features?: {
     passengers: number;
     transmission: string;
