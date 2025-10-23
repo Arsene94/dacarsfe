@@ -16,6 +16,7 @@ import {
     DEFAULT_ANALYTICS_FILTERS,
     type AnalyticsFilters,
 } from '@/lib/analytics/filters';
+import {API_BASE_URL} from "@/lib/api";
 
 const jsonFetcher = async <T>(url: string): Promise<T> => {
     const response = await fetch(url, {
@@ -400,12 +401,12 @@ export const usePredictiveAnalytics = (filters?: PredictiveAnalyticsFilters) => 
     const normalizedFilters = useMemo(() => resolveFilters(filters), [filters]);
 
     const forecastKey = useMemo(
-        () => buildKey('/api/analytics/predictive/forecast', normalizedFilters),
+        () => buildKey(API_BASE_URL + '/analytics/predictive/forecast', normalizedFilters),
         [normalizedFilters],
     );
 
     const recommendationsKey = useMemo(
-        () => buildKey('/api/analytics/predictive/recommendations', normalizedFilters),
+        () => buildKey(API_BASE_URL + '/analytics/predictive/recommendations', normalizedFilters),
         [normalizedFilters],
     );
 

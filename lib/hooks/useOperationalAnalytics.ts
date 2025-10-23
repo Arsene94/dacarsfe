@@ -14,6 +14,7 @@ import {
     DEFAULT_ANALYTICS_FILTERS,
     type AnalyticsFilters,
 } from '@/lib/analytics/filters';
+import {API_BASE_URL} from "@/lib/api";
 
 const jsonFetcher = async <T>(url: string): Promise<T> => {
     const response = await fetch(url, {
@@ -392,12 +393,12 @@ export const useOperationalAnalytics = (
     const activeFilters = filters ?? DEFAULT_ANALYTICS_FILTERS;
 
     const overviewKey = useMemo(
-        () => buildAnalyticsUrl('/api/analytics/operational/overview', activeFilters),
+        () => buildAnalyticsUrl(API_BASE_URL+ '/analytics/operational/overview', activeFilters),
         [activeFilters],
     );
 
     const topKey = useMemo(
-        () => buildAnalyticsUrl('/api/analytics/operational/top', activeFilters),
+        () => buildAnalyticsUrl(API_BASE_URL+ '/analytics/operational/top', activeFilters),
         [activeFilters],
     );
 

@@ -17,6 +17,7 @@ import {
     DEFAULT_ANALYTICS_FILTERS,
     type AnalyticsFilters,
 } from '@/lib/analytics/filters';
+import {API_BASE_URL} from "@/lib/api";
 
 const jsonFetcher = async <T>(url: string): Promise<T> => {
     const response = await fetch(url, {
@@ -407,12 +408,12 @@ export const useMarketingAnalytics = (filters?: MarketingAnalyticsFilters) => {
     const normalizedFilters = useMemo(() => resolveFilters(filters), [filters]);
 
     const overviewKey = useMemo(
-        () => buildKey('/api/analytics/marketing/overview', normalizedFilters),
+        () => buildKey(API_BASE_URL + '/analytics/marketing/overview', normalizedFilters),
         [normalizedFilters],
     );
 
     const sourcesKey = useMemo(
-        () => buildKey('/api/analytics/marketing/sources', normalizedFilters),
+        () => buildKey(API_BASE_URL + '/analytics/marketing/sources', normalizedFilters),
         [normalizedFilters],
     );
 

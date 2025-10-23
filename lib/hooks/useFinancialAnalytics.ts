@@ -17,6 +17,7 @@ import {
     DEFAULT_ANALYTICS_FILTERS,
     type AnalyticsFilters,
 } from '@/lib/analytics/filters';
+import {API_BASE_URL} from "@/lib/api";
 
 const jsonFetcher = async <T>(url: string): Promise<T> => {
     const response = await fetch(url, {
@@ -346,12 +347,12 @@ export const useFinancialAnalytics = (
     const activeFilters = filters ?? DEFAULT_ANALYTICS_FILTERS;
 
     const summaryKey = useMemo(
-        () => buildAnalyticsUrl('/api/analytics/financial/summary', activeFilters),
+        () => buildAnalyticsUrl(API_BASE_URL+ '/analytics/financial/summary', activeFilters),
         [activeFilters],
     );
 
     const categoriesKey = useMemo(
-        () => buildAnalyticsUrl('/api/analytics/financial/categories', activeFilters),
+        () => buildAnalyticsUrl(API_BASE_URL+ '/analytics/financial/categories', activeFilters),
         [activeFilters],
     );
 
