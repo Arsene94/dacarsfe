@@ -593,7 +593,7 @@ export class ApiClient {
                 body: payload,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    Accept: 'application/json',
                 }
             });
         }
@@ -602,6 +602,10 @@ export class ApiClient {
         return this.request<ApiItemResult<UnknownRecord>>(`/cars/${id}`, {
             method: 'PUT',
             body: JSON.stringify(cleanPayload),
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            }
         });
     }
 
