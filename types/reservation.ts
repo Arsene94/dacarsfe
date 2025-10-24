@@ -8,6 +8,17 @@ export type ServiceStatus =
   | "unavailable"
   | (string & {});
 
+export interface CampaignTrackingPayload {
+  source: string | null;
+  medium?: string | null;
+  campaign_id?: string | null;
+  adset_id?: string | null;
+  ad_id?: string | null;
+  fbclid?: string | null;
+  ttclid?: string | null;
+  referrer?: string | null;
+}
+
 export interface ReservationFormData {
   customer_name: string;
   customer_email: string;
@@ -149,6 +160,7 @@ export interface ReservationPayload extends ReservationFormData {
   note?: string;
   offer_fixed_discount?: number;
   source?: string | null;
+  campaign_tracking?: CampaignTrackingPayload | null;
 }
 
 export interface DiscountValidationPayload {

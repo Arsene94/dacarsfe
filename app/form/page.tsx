@@ -27,6 +27,7 @@ import {
     type StoredWheelPrizeEntry,
 } from "@/lib/wheelStorage";
 import { getStoredSource } from "@/lib/marketing/trackSource";
+import { getStoredCampaignTrackingData } from "@/lib/marketing/campaignTracking";
 import {ApiCar, Car} from "@/types/car";
 import type { BookingAppliedOffer } from "@/types/booking";
 import {
@@ -1684,6 +1685,7 @@ const ReservationPage = () => {
         const wheelPrizeIdForPayload = parseMaybeNumber(wheelPrizeIdForPayloadRaw);
 
         const sourceAttribution = getStoredSource() ?? "direct";
+        const campaignTracking = getStoredCampaignTrackingData();
 
         const payload: ReservationPayload = {
             ...formData,
@@ -1714,6 +1716,7 @@ const ReservationPage = () => {
                     ? wheelPrizeIdForPayload
                     : undefined,
             source: sourceAttribution,
+            campaign_tracking: campaignTracking ?? undefined,
         };
 
         try {

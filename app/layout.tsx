@@ -21,6 +21,7 @@ import MetaPixel from "../components/MetaPixel";
 import MetaPixelServiceWorker from "../components/MetaPixelServiceWorker";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import AnalyticsTracker from "../components/AnalyticsTracker";
+import CampaignTrackingInitializer from "../components/CampaignTrackingInitializer";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -107,6 +108,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     </head>
     <body className="min-h-screen bg-white">
     <Suspense fallback={null}>
+        <CampaignTrackingInitializer />
         <MixpanelInitializer/>
         <MetaPixel />
         <MetaPixelServiceWorker />
