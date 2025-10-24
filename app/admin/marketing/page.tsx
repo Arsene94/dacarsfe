@@ -442,14 +442,14 @@ export default function MarketingDashboardPage() {
                                         <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
                                             Detalii pe canal
                                         </h3>
-                                        <ul className="grid gap-3">
+                                        <ul className="grid gap-4 sm:grid-cols-2">
                                             {channelData.map((entry) => (
                                                 <li
                                                     key={`${entry.id}-details`}
-                                                    className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                                                    className="h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
                                                 >
-                                                    <div className="flex flex-wrap items-start justify-between gap-3">
-                                                        <div>
+                                                    <div className="flex h-full flex-col justify-between gap-4">
+                                                        <div className="space-y-1">
                                                             <p className="text-sm font-semibold text-berkeley">
                                                                 {entry.channelLabel}
                                                             </p>
@@ -457,50 +457,50 @@ export default function MarketingDashboardPage() {
                                                                 {formatPercentage(entry.conversionRate)} rată de conversie
                                                             </p>
                                                         </div>
-                                                        <div className="flex flex-wrap gap-4 text-xs text-slate-600 sm:text-sm">
-                                                            <span>
-                                                                <strong className="text-berkeley">
+                                                        <dl className="grid grid-cols-1 gap-3 text-xs text-slate-600 sm:grid-cols-2 sm:text-sm">
+                                                            <div className="space-y-1">
+                                                                <dt className="font-medium text-slate-500">Rezervări</dt>
+                                                                <dd className="text-base font-semibold text-berkeley">
                                                                     {integerFormatter.format(entry.bookingsCount ?? 0)}
-                                                                </strong>{' '}
-                                                                rezervări
-                                                            </span>
+                                                                </dd>
+                                                            </div>
                                                             {typeof entry.totalRevenue === 'number'
                                                             && Number.isFinite(entry.totalRevenue) ? (
-                                                                <span>
-                                                                    <strong className="text-berkeley">
+                                                                <div className="space-y-1">
+                                                                    <dt className="font-medium text-slate-500">Venit total</dt>
+                                                                    <dd className="text-base font-semibold text-berkeley">
                                                                         {currencyFormatter.format(entry.totalRevenue)}
-                                                                    </strong>{' '}
-                                                                    venit total
-                                                                </span>
+                                                                    </dd>
+                                                                </div>
                                                             ) : null}
                                                             {typeof entry.avgRevenue === 'number'
                                                             && Number.isFinite(entry.avgRevenue) ? (
-                                                                <span>
-                                                                    <strong className="text-berkeley">
+                                                                <div className="space-y-1">
+                                                                    <dt className="font-medium text-slate-500">Venit mediu</dt>
+                                                                    <dd className="text-base font-semibold text-berkeley">
                                                                         {currencyFormatter.format(entry.avgRevenue)}
-                                                                    </strong>{' '}
-                                                                    venit mediu
-                                                                </span>
+                                                                    </dd>
+                                                                </div>
                                                             ) : null}
                                                             {typeof entry.cpaValue === 'number'
                                                             && Number.isFinite(entry.cpaValue) ? (
-                                                                <span>
-                                                                    <strong className="text-berkeley">
+                                                                <div className="space-y-1">
+                                                                    <dt className="font-medium text-slate-500">CPA</dt>
+                                                                    <dd className="text-base font-semibold text-berkeley">
                                                                         {currencyFormatter.format(entry.cpaValue)}
-                                                                    </strong>{' '}
-                                                                    CPA
-                                                                </span>
+                                                                    </dd>
+                                                                </div>
                                                             ) : null}
                                                             {typeof entry.costPerLead === 'number'
                                                             && Number.isFinite(entry.costPerLead) ? (
-                                                                <span>
-                                                                    <strong className="text-berkeley">
+                                                                <div className="space-y-1">
+                                                                    <dt className="font-medium text-slate-500">CPL</dt>
+                                                                    <dd className="text-base font-semibold text-berkeley">
                                                                         {currencyFormatter.format(entry.costPerLead)}
-                                                                    </strong>{' '}
-                                                                    CPL
-                                                                </span>
+                                                                    </dd>
+                                                                </div>
                                                             ) : null}
-                                                        </div>
+                                                        </dl>
                                                     </div>
                                                 </li>
                                             ))}
