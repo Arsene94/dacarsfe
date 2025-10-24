@@ -27,7 +27,10 @@ import {
     type StoredWheelPrizeEntry,
 } from "@/lib/wheelStorage";
 import { getStoredSource } from "@/lib/marketing/trackSource";
-import { getStoredCampaignTrackingData } from "@/lib/marketing/campaignTracking";
+import {
+    getStoredCampaignTrackingData,
+    readTrackingCookies,
+} from "@/lib/marketing/campaignTracking";
 import {ApiCar, Car} from "@/types/car";
 import type { BookingAppliedOffer } from "@/types/booking";
 import {
@@ -39,6 +42,7 @@ import {
     type QuotePriceResponse,
     type ReservationAppliedOffer,
     type ReservationPayload,
+    type ReservationTrackingPayload,
 } from "@/types/reservation";
 import SelectedCarGallery from "@/components/checkout/SelectedCarGallery";
 import {Button} from "@/components/ui/button";
@@ -118,6 +122,23 @@ const parseMaybeNumber = (value: unknown): number | null => {
         }
         return parsed;
     }
+    return null;
+};
+
+const pickFirstNonEmptyString = (
+    ...values: Array<string | null | undefined>
+): string | null => {
+    for (const value of values) {
+        if (typeof value !== "string") {
+            continue;
+        }
+
+        const trimmed = value.trim();
+        if (trimmed.length > 0) {
+            return trimmed;
+        }
+    }
+
     return null;
 };
 
@@ -1684,8 +1705,93 @@ const ReservationPage = () => {
             null;
         const wheelPrizeIdForPayload = parseMaybeNumber(wheelPrizeIdForPayloadRaw);
 
-        const sourceAttribution = getStoredSource() ?? "direct";
+        const trackingCookies = readTrackingCookies();
         const campaignTracking = getStoredCampaignTrackingData();
+        const storedSourceCandidate = getStoredSource();
+
+        const sourceAttribution =
+            pickFirstNonEmptyString(
+                trackingCookies?.source,
+                campaignTracking?.source,
+                storedSourceCandidate,
+            ) ?? "direct";
+
+        const normalizedCampaignTracking = campaignTracking
+            ? { ...campaignTracking }
+            : null;
+
+        if (normalizedCampaignTracking) {
+            if (!normalizedCampaignTracking.source) {
+                normalizedCampaignTracking.source = sourceAttribution;
+            }
+            if (!normalizedCampaignTracking.campaign_id && trackingCookies?.campaign_id) {
+                normalizedCampaignTracking.campaign_id = trackingCookies.campaign_id;
+            }
+            if (!normalizedCampaignTracking.ttclid && trackingCookies?.ttclid) {
+                normalizedCampaignTracking.ttclid = trackingCookies.ttclid;
+            }
+        }
+
+        const trackingPayload: ReservationTrackingPayload | null = (() => {
+            const result: ReservationTrackingPayload = {};
+
+            if (sourceAttribution) {
+                result.source = sourceAttribution;
+            }
+
+            const sourceName = pickFirstNonEmptyString(trackingCookies?.source_name);
+            if (sourceName) {
+                result.source_name = sourceName;
+            }
+
+            const sourceId = pickFirstNonEmptyString(trackingCookies?.source_id);
+            if (sourceId) {
+                result.source_id = sourceId;
+            }
+
+            const campaignId = pickFirstNonEmptyString(
+                trackingCookies?.campaign_id,
+                normalizedCampaignTracking?.campaign_id,
+            );
+            if (campaignId) {
+                result.campaign_id = campaignId;
+            }
+
+            const ttclid = pickFirstNonEmptyString(
+                trackingCookies?.ttclid,
+                normalizedCampaignTracking?.ttclid,
+            );
+            if (ttclid) {
+                result.ttclid = ttclid;
+            }
+
+            const medium = pickFirstNonEmptyString(normalizedCampaignTracking?.medium);
+            if (medium) {
+                result.medium = medium;
+            }
+
+            const adsetId = pickFirstNonEmptyString(normalizedCampaignTracking?.adset_id);
+            if (adsetId) {
+                result.adset_id = adsetId;
+            }
+
+            const adId = pickFirstNonEmptyString(normalizedCampaignTracking?.ad_id);
+            if (adId) {
+                result.ad_id = adId;
+            }
+
+            const fbclid = pickFirstNonEmptyString(normalizedCampaignTracking?.fbclid);
+            if (fbclid) {
+                result.fbclid = fbclid;
+            }
+
+            const referrer = pickFirstNonEmptyString(normalizedCampaignTracking?.referrer);
+            if (referrer) {
+                result.referrer = referrer;
+            }
+
+            return Object.keys(result).length > 0 ? result : null;
+        })();
 
         const payload: ReservationPayload = {
             ...formData,
@@ -1716,7 +1822,8 @@ const ReservationPage = () => {
                     ? wheelPrizeIdForPayload
                     : undefined,
             source: sourceAttribution,
-            campaign_tracking: campaignTracking ?? undefined,
+            campaign_tracking: normalizedCampaignTracking ?? undefined,
+            tracking: trackingPayload ?? undefined,
         };
 
         try {
@@ -1788,6 +1895,9 @@ const ReservationPage = () => {
                     offers_discount: offersDiscountValue,
                     deposit_waived: depositWaived,
                     selectedCar: selectedCar,
+                    source: sourceAttribution,
+                    campaign_tracking: normalizedCampaignTracking ?? undefined,
+                    tracking: trackingPayload ?? undefined,
                     total: totalAfterAdjustments,
                     sub_total: normalizedSubtotal,
                     total_before_wheel_prize: totalBeforeWheelPrize,

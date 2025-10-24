@@ -1,3 +1,5 @@
+import { readMarketingCookie, readTrackingCookieSnapshot } from '@/lib/marketing/cookies';
+
 export type TrackedSourceDetails = {
     source: string;
     medium?: string | null;
@@ -67,6 +69,25 @@ const safeRemoveItem = (key: string) => {
     } catch (error) {
         console.warn('Nu am putut elimina elementul din localStorage', key, error);
     }
+};
+
+const resolveCookieSource = (): string | null =>
+    readMarketingCookie('dacars_source_name') ?? readMarketingCookie('dacars_source');
+
+const readCookieDetails = (): TrackedSourceDetails | null => {
+    const snapshot = readTrackingCookieSnapshot();
+    if (!snapshot || !snapshot.source) {
+        return null;
+    }
+
+    return {
+        source: snapshot.source,
+        medium: null,
+        campaign: snapshot.campaign_id,
+        referrer: null,
+        capturedAt: new Date().toISOString(),
+        sessionId: snapshot.source_id,
+    } satisfies TrackedSourceDetails;
 };
 
 const parseStoredDetails = (raw: string | null): TrackedSourceDetails | null => {
@@ -249,10 +270,23 @@ const storeDetails = (details: TrackedSourceDetails | null) => {
     }
 };
 
-export const getStoredSource = (): string | null => safeGetItem(SOURCE_KEY);
+export const getStoredSource = (): string | null =>
+    sanitizeValue(safeGetItem(SOURCE_KEY)) ?? resolveCookieSource();
 
-export const getStoredSourceDetails = (): TrackedSourceDetails | null =>
-    parseStoredDetails(safeGetItem(SOURCE_DETAILS_KEY));
+export const getStoredSourceDetails = (): TrackedSourceDetails | null => {
+    const stored = parseStoredDetails(safeGetItem(SOURCE_DETAILS_KEY));
+    if (stored) {
+        return stored;
+    }
+
+    const cookieDetails = readCookieDetails();
+    if (!cookieDetails) {
+        return null;
+    }
+
+    storeDetails(cookieDetails);
+    return cookieDetails;
+};
 
 const buildPayload = (details: TrackedSourceDetails, sessionId: string | null): Record<string, unknown> => {
     const payload: Record<string, unknown> = {
