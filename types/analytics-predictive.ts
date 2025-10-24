@@ -5,9 +5,20 @@ export type PredictiveForecastPoint = {
     predicted_demand: number;
 };
 
+export type PredictiveRecommendationLink = {
+    href: string;
+    label: string;
+};
+
+export type PredictiveRecommendationItem = {
+    title: string;
+    details: string[];
+    link: PredictiveRecommendationLink | null;
+};
+
 export type PredictiveRecommendations = {
-    buy: string[];
-    sell: string[];
+    buy: PredictiveRecommendationItem[];
+    sell: PredictiveRecommendationItem[];
 };
 
 export type PredictiveContext = {

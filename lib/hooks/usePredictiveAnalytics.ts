@@ -5,6 +5,7 @@ import useSWR from 'swr';
 
 import type {
     PredictiveForecastPoint,
+    PredictiveRecommendationItem,
     PredictiveRecommendations,
     PredictiveForecastApi,
     PredictiveRecommendationsApi,
@@ -247,12 +248,117 @@ const buildRecommendationLabel = (record: Record<string, unknown>): string | nul
 
 const BUY_KEYWORDS = ['buy', 'cumpara', 'achiz', 'acquire'];
 const SELL_KEYWORDS = ['sell', 'vinde', 'cede', 'retire', 'dispose'];
+const LINK_DIRECTIVE_REGEX =
+    /\s*(?:,|\.)?\s*(?:vezi|acceseaz[ăa]|consult[ăa]|descoper[ăa])\s*:?\s*$/iu;
+const LINK_MATCH_REGEX = /https?:\/\/[^\s)]+/i;
+const RECOMMENDATION_SEPARATORS = [
+    ' — ',
+    ' – ',
+    ' - ',
+    ' —',
+    ' –',
+    ' -',
+    '— ',
+    '– ',
+    '- ',
+    '—',
+    '–',
+    '-',
+    ': ',
+    ':',
+];
+
+const findSeparator = (value: string): { index: number; length: number } | null => {
+    for (const separator of RECOMMENDATION_SEPARATORS) {
+        const index = value.indexOf(separator);
+        if (index !== -1) {
+            return { index, length: separator.length };
+        }
+    }
+
+    return null;
+};
+
+const splitRecommendationDetails = (text: string): string[] => {
+    if (!text) {
+        return [];
+    }
+
+    const normalized = text.replace(/\s+/g, ' ').trim();
+    if (normalized.length === 0) {
+        return [];
+    }
+
+    const segments = normalized
+        .split(/[,;]\s+/)
+        .map((segment) => segment.replace(/^[—–-]\s*/, '').replace(/[,.;]+$/u, '').trim())
+        .filter((segment) => segment.length > 0);
+
+    if (segments.length === 0 && normalized.length > 0) {
+        return [normalized];
+    }
+
+    return dedupeList(segments);
+};
+
+const parseRecommendationItem = (
+    raw: string,
+    type: 'buy' | 'sell',
+): PredictiveRecommendationItem => {
+    let sanitized = raw.trim();
+    let link: PredictiveRecommendationItem['link'] = null;
+
+    const linkMatch = sanitized.match(LINK_MATCH_REGEX);
+    if (linkMatch) {
+        let href = linkMatch[0].replace(/[),.;]+$/u, '');
+        if (href.length > 0) {
+            link = {
+                href,
+                label: type === 'buy' ? 'Vezi ofertă' : 'Vezi detalii',
+            };
+        }
+
+        const start = linkMatch.index ?? 0;
+        const end = start + linkMatch[0].length;
+        const prefix = sanitized.slice(0, start);
+        const suffix = sanitized.slice(end);
+        const cleanedPrefix = prefix.replace(LINK_DIRECTIVE_REGEX, '');
+        sanitized = `${cleanedPrefix}${suffix}`.replace(/\s+/g, ' ').trim();
+    }
+
+    sanitized = sanitized.replace(LINK_DIRECTIVE_REGEX, '').replace(/\s+/g, ' ').trim();
+
+    if (sanitized.length === 0) {
+        sanitized = raw.trim();
+    }
+
+    const separator = findSeparator(sanitized);
+    let title = sanitized;
+    let remainder = '';
+
+    if (separator) {
+        title = sanitized.slice(0, separator.index).trim();
+        remainder = sanitized.slice(separator.index + separator.length).trim();
+    }
+
+    if (!title) {
+        title = sanitized || raw.trim() || 'Recomandare flotă';
+    }
+
+    const details = splitRecommendationDetails(remainder);
+
+    return {
+        title,
+        details,
+        link,
+    } satisfies PredictiveRecommendationItem;
+};
 
 const collectRecommendationLists = (
     ...sources: PredictiveRecommendationsResponse[]
 ): PredictiveRecommendations => {
-    const buy: string[] = [];
-    const sell: string[] = [];
+    const buyRaw: string[] = [];
+    const sellRaw: string[] = [];
     const visited = new Set<unknown>();
 
     const appendValue = (value: unknown, bucket: string[]) => {
@@ -298,12 +404,12 @@ const collectRecommendationLists = (
                 const normalizedKey = key.toLowerCase();
 
                 if (BUY_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
-                    appendValue(nested, buy);
+                    appendValue(nested, buyRaw);
                     return;
                 }
 
                 if (SELL_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
-                    appendValue(nested, sell);
+                    appendValue(nested, sellRaw);
                     return;
                 }
 
@@ -320,13 +426,13 @@ const collectRecommendationLists = (
         }
     });
 
-    const uniqueBuy = Array.from(new Set(buy));
-    const uniqueSell = Array.from(new Set(sell));
+    const uniqueBuy = dedupeList(buyRaw);
+    const uniqueSell = dedupeList(sellRaw);
 
     return {
-        buy: uniqueBuy,
-        sell: uniqueSell,
-    };
+        buy: uniqueBuy.map((entry) => parseRecommendationItem(entry, 'buy')),
+        sell: uniqueSell.map((entry) => parseRecommendationItem(entry, 'sell')),
+    } satisfies PredictiveRecommendations;
 };
 
 const dedupeList = (values: string[]): string[] => {
