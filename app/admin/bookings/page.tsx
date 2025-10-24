@@ -492,6 +492,16 @@ const formatTimeLabel = (iso?: string | null): string | undefined => {
   return parsed.toISOString().slice(11, 16);
 };
 
+const formatDateFilterValue = (value: Date | null): string => {
+  if (!value) return "";
+
+  const year = value.getFullYear();
+  const month = (value.getMonth() + 1).toString().padStart(2, "0");
+  const day = value.getDate().toString().padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 const pickNonEmptyString = (value: unknown): string | undefined => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
@@ -1489,12 +1499,8 @@ const ReservationsPage = () => {
   const handleDateRangeChange = useCallback(
     (range: { startDate: Date | null; endDate: Date | null }) => {
       setDateRange(range);
-      setStartDateFilter(
-        range.startDate ? range.startDate.toISOString().split("T")[0] : "",
-      );
-      setEndDateFilter(
-        range.endDate ? range.endDate.toISOString().split("T")[0] : "",
-      );
+      setStartDateFilter(formatDateFilterValue(range.startDate));
+      setEndDateFilter(formatDateFilterValue(range.endDate));
       setCurrentPage(1);
     },
     [],
