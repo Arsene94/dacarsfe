@@ -5,18 +5,22 @@ import useSWR from 'swr';
 
 import type {
     PredictiveForecastPoint,
+    PredictiveRecommendationItem,
     PredictiveRecommendations,
     PredictiveForecastApi,
     PredictiveRecommendationsApi,
     PredictiveForecastResponse,
     PredictiveRecommendationsResponse,
+    PredictiveContext,
+    PredictiveContextApi,
+    PredictiveContextResponse,
 } from '@/types/analytics-predictive';
 import {
     createAnalyticsQuery,
     DEFAULT_ANALYTICS_FILTERS,
     type AnalyticsFilters,
 } from '@/lib/analytics/filters';
-import {API_BASE_URL} from "@/lib/api";
+import { API_BASE_URL } from '@/lib/api';
 
 const jsonFetcher = async <T>(url: string): Promise<T> => {
     const response = await fetch(url, {
@@ -244,12 +248,117 @@ const buildRecommendationLabel = (record: Record<string, unknown>): string | nul
 
 const BUY_KEYWORDS = ['buy', 'cumpara', 'achiz', 'acquire'];
 const SELL_KEYWORDS = ['sell', 'vinde', 'cede', 'retire', 'dispose'];
+const LINK_DIRECTIVE_REGEX =
+    /\s*(?:,|\.)?\s*(?:vezi|acceseaz[ăa]|consult[ăa]|descoper[ăa])\s*:?\s*$/iu;
+const LINK_MATCH_REGEX = /https?:\/\/[^\s)]+/i;
+const RECOMMENDATION_SEPARATORS = [
+    ' — ',
+    ' – ',
+    ' - ',
+    ' —',
+    ' –',
+    ' -',
+    '— ',
+    '– ',
+    '- ',
+    '—',
+    '–',
+    '-',
+    ': ',
+    ':',
+];
+
+const findSeparator = (value: string): { index: number; length: number } | null => {
+    for (const separator of RECOMMENDATION_SEPARATORS) {
+        const index = value.indexOf(separator);
+        if (index !== -1) {
+            return { index, length: separator.length };
+        }
+    }
+
+    return null;
+};
+
+const splitRecommendationDetails = (text: string): string[] => {
+    if (!text) {
+        return [];
+    }
+
+    const normalized = text.replace(/\s+/g, ' ').trim();
+    if (normalized.length === 0) {
+        return [];
+    }
+
+    const segments = normalized
+        .split(/[,;]\s+/)
+        .map((segment) => segment.replace(/^[—–-]\s*/, '').replace(/[,.;]+$/u, '').trim())
+        .filter((segment) => segment.length > 0);
+
+    if (segments.length === 0 && normalized.length > 0) {
+        return [normalized];
+    }
+
+    return dedupeList(segments);
+};
+
+const parseRecommendationItem = (
+    raw: string,
+    type: 'buy' | 'sell',
+): PredictiveRecommendationItem => {
+    let sanitized = raw.trim();
+    let link: PredictiveRecommendationItem['link'] = null;
+
+    const linkMatch = sanitized.match(LINK_MATCH_REGEX);
+    if (linkMatch) {
+        let href = linkMatch[0].replace(/[),.;]+$/u, '');
+        if (href.length > 0) {
+            link = {
+                href,
+                label: type === 'buy' ? 'Vezi ofertă' : 'Vezi detalii',
+            };
+        }
+
+        const start = linkMatch.index ?? 0;
+        const end = start + linkMatch[0].length;
+        const prefix = sanitized.slice(0, start);
+        const suffix = sanitized.slice(end);
+        const cleanedPrefix = prefix.replace(LINK_DIRECTIVE_REGEX, '');
+        sanitized = `${cleanedPrefix}${suffix}`.replace(/\s+/g, ' ').trim();
+    }
+
+    sanitized = sanitized.replace(LINK_DIRECTIVE_REGEX, '').replace(/\s+/g, ' ').trim();
+
+    if (sanitized.length === 0) {
+        sanitized = raw.trim();
+    }
+
+    const separator = findSeparator(sanitized);
+    let title = sanitized;
+    let remainder = '';
+
+    if (separator) {
+        title = sanitized.slice(0, separator.index).trim();
+        remainder = sanitized.slice(separator.index + separator.length).trim();
+    }
+
+    if (!title) {
+        title = sanitized || raw.trim() || 'Recomandare flotă';
+    }
+
+    const details = splitRecommendationDetails(remainder);
+
+    return {
+        title,
+        details,
+        link,
+    } satisfies PredictiveRecommendationItem;
+};
 
 const collectRecommendationLists = (
     ...sources: PredictiveRecommendationsResponse[]
 ): PredictiveRecommendations => {
-    const buy: string[] = [];
-    const sell: string[] = [];
+    const buyRaw: string[] = [];
+    const sellRaw: string[] = [];
     const visited = new Set<unknown>();
 
     const appendValue = (value: unknown, bucket: string[]) => {
@@ -295,12 +404,12 @@ const collectRecommendationLists = (
                 const normalizedKey = key.toLowerCase();
 
                 if (BUY_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
-                    appendValue(nested, buy);
+                    appendValue(nested, buyRaw);
                     return;
                 }
 
                 if (SELL_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
-                    appendValue(nested, sell);
+                    appendValue(nested, sellRaw);
                     return;
                 }
 
@@ -317,13 +426,433 @@ const collectRecommendationLists = (
         }
     });
 
-    const uniqueBuy = Array.from(new Set(buy));
-    const uniqueSell = Array.from(new Set(sell));
+    const uniqueBuy = dedupeList(buyRaw);
+    const uniqueSell = dedupeList(sellRaw);
 
     return {
-        buy: uniqueBuy,
-        sell: uniqueSell,
+        buy: uniqueBuy.map((entry) => parseRecommendationItem(entry, 'buy')),
+        sell: uniqueSell.map((entry) => parseRecommendationItem(entry, 'sell')),
+    } satisfies PredictiveRecommendations;
+};
+
+const dedupeList = (values: string[]): string[] => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+
+    values.forEach((value) => {
+        if (!seen.has(value)) {
+            seen.add(value);
+            result.push(value);
+        }
+    });
+
+    return result;
+};
+
+const collectStringValues = (value: unknown): string[] => {
+    const collected: string[] = [];
+    const visited = new Set<unknown>();
+
+    const explore = (current: unknown) => {
+        if (current === null || typeof current === 'undefined') {
+            return;
+        }
+
+        if (visited.has(current)) {
+            return;
+        }
+
+        visited.add(current);
+
+        if (Array.isArray(current)) {
+            current.forEach((entry) => explore(entry));
+            return;
+        }
+
+        const normalized = normalizeString(current);
+        if (normalized) {
+            collected.push(normalized);
+            return;
+        }
+
+        if (isRecord(current)) {
+            const record = current as Record<string, unknown>;
+            const prioritizedKeys = [
+                'text',
+                'description',
+                'descriere',
+                'context',
+                'details',
+                'detalii',
+                'reason',
+                'motiv',
+                'label',
+                'title',
+                'name',
+                'value',
+                'message',
+                'summary',
+                'rezumat',
+            ];
+
+            const labelKeys = [
+                'label',
+                'title',
+                'name',
+                'text',
+                'description',
+                'descriere',
+                'context',
+            ];
+            const valueKeys = [
+                'value',
+                'amount',
+                'valoare',
+                'metric',
+                'score',
+                'valoare_numerica',
+                'valoare_text',
+            ];
+
+            const handledKeys = new Set<string>();
+
+            const labelKey = labelKeys.find((key) => {
+                if (!(key in record)) {
+                    return false;
+                }
+
+                return normalizeString(record[key]) !== null;
+            });
+
+            const valueKey = valueKeys.find((key) => {
+                if (!(key in record)) {
+                    return false;
+                }
+
+                return normalizeString(record[key]) !== null;
+            });
+
+            if (labelKey && valueKey) {
+                const labelValue = normalizeString(record[labelKey]);
+                const valueValue = normalizeString(record[valueKey]);
+
+                if (labelValue && valueValue) {
+                    collected.push(`${labelValue}: ${valueValue}`);
+                    handledKeys.add(labelKey);
+                    handledKeys.add(valueKey);
+                }
+            }
+
+            prioritizedKeys.forEach((key) => {
+                if (key in record && !handledKeys.has(key)) {
+                    handledKeys.add(key);
+                    explore(record[key as keyof typeof record]);
+                }
+            });
+
+            Object.entries(record).forEach(([key, value]) => {
+                if (!handledKeys.has(key)) {
+                    explore(value);
+                }
+            });
+        }
     };
+
+    explore(value);
+
+    return dedupeList(collected);
+};
+
+const DRIVER_LABELS: Record<string, string> = {
+    fleet_size: 'Dimensiune flotă',
+    fleet: 'Dimensiune flotă',
+    fleetcount: 'Dimensiune flotă',
+    avg_utilization: 'Utilizare medie',
+    utilization: 'Utilizare',
+    occupancy: 'Grad de ocupare',
+    roi: 'ROI',
+    return_on_investment: 'ROI',
+    market_multiplier: 'Multiplicator piață',
+    multiplier: 'Multiplicator',
+    demand_multiplier: 'Multiplicator cerere',
+    demand_index: 'Indice cerere',
+    demand_score: 'Scor cerere',
+    seasonality_index: 'Indice sezonalitate',
+    seasonality: 'Indice sezonalitate',
+};
+
+const percentFormatter = new Intl.NumberFormat('ro-RO', {
+    style: 'percent',
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+});
+
+const integerFormatter = new Intl.NumberFormat('ro-RO', {
+    maximumFractionDigits: 0,
+});
+
+const decimalFormatter = new Intl.NumberFormat('ro-RO', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+});
+
+const preciseDecimalFormatter = new Intl.NumberFormat('ro-RO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 3,
+});
+
+const containsToken = (key: string, tokens: string[]): boolean => {
+    const normalizedKey = key.toLowerCase();
+    return tokens.some((token) => normalizedKey.includes(token));
+};
+
+const formatDriverLabel = (rawKey: string): string | null => {
+    const normalizedKey = rawKey.trim().toLowerCase();
+    if (!normalizedKey) {
+        return null;
+    }
+
+    if (normalizedKey in DRIVER_LABELS) {
+        return DRIVER_LABELS[normalizedKey];
+    }
+
+    const cleaned = normalizedKey.replace(/[_\s]+/g, ' ').trim();
+    if (cleaned.length === 0) {
+        return null;
+    }
+
+    return cleaned
+        .split(' ')
+        .map((segment) => {
+            if (segment.length === 0) {
+                return segment;
+            }
+            if (segment === 'avg') {
+                return 'Medie';
+            }
+            if (segment === 'max') {
+                return 'Maxim';
+            }
+            if (segment === 'min') {
+                return 'Minim';
+            }
+            return segment.charAt(0).toUpperCase() + segment.slice(1);
+        })
+        .join(' ');
+};
+
+const formatDriverValue = (rawKey: string, rawValue: unknown): string | null => {
+    const normalizedKey = rawKey.trim().toLowerCase();
+    const numeric = normalizeNumber(rawValue);
+
+    if (numeric !== null) {
+        if (containsToken(normalizedKey, ['percent', 'percentage', 'utilization', 'occupancy', 'rate', 'ratio'])) {
+            if (numeric <= 1) {
+                return percentFormatter.format(numeric);
+            }
+            return `${decimalFormatter.format(numeric)}%`;
+        }
+
+        if (containsToken(normalizedKey, ['fleet', 'vehicle', 'car', 'count', 'size', 'total', 'num'])) {
+            const formatted = integerFormatter.format(Math.round(numeric));
+            const needsUnit = containsToken(normalizedKey, ['fleet', 'vehicle', 'car']);
+            return needsUnit ? `${formatted} vehicule` : formatted;
+        }
+
+        if (containsToken(normalizedKey, ['multiplier'])) {
+            return `${preciseDecimalFormatter.format(numeric)}x`;
+        }
+
+        if (containsToken(normalizedKey, ['index'])) {
+            return preciseDecimalFormatter.format(numeric);
+        }
+
+        if (containsToken(normalizedKey, ['score'])) {
+            return decimalFormatter.format(numeric);
+        }
+
+        return decimalFormatter.format(numeric);
+    }
+
+    const normalizedString = normalizeString(rawValue);
+    if (normalizedString) {
+        return normalizedString;
+    }
+
+    return null;
+};
+
+const formatDriverMetrics = (value: unknown): string[] => {
+    if (!isRecord(value)) {
+        return [];
+    }
+
+    const record = value as Record<string, unknown>;
+    const formatted = Object.entries(record)
+        .map(([key, metricValue]) => {
+            const label = formatDriverLabel(key);
+            const formattedValue = formatDriverValue(key, metricValue);
+
+            if (!label || !formattedValue) {
+                return null;
+            }
+
+            return `${label}: ${formattedValue}`;
+        })
+        .filter((entry): entry is string => entry !== null);
+
+    return dedupeList(formatted);
+};
+
+const hasLetters = (value: string): boolean => /[A-Za-zĂÂÎȘȚăâîșț]/u.test(value);
+
+const hasDigits = (value: string): boolean => /\d/.test(value);
+
+const formatAnalysisFactors = (factors: string[]): string[] => {
+    const result: string[] = [];
+    let pendingLabel: string | null = null;
+
+    const pushPendingLabel = () => {
+        if (pendingLabel) {
+            result.push(pendingLabel);
+            pendingLabel = null;
+        }
+    };
+
+    factors.forEach((raw) => {
+        const factor = raw.trim();
+
+        if (factor.length === 0) {
+            return;
+        }
+
+        const containsSeparator = /[:–—\u2013\u2014-]/u.test(factor);
+        const containsLetters = hasLetters(factor);
+        const containsNumbers = hasDigits(factor);
+
+        if (containsSeparator) {
+            pushPendingLabel();
+            result.push(factor);
+            return;
+        }
+
+        if (containsLetters && !containsNumbers) {
+            pushPendingLabel();
+            pendingLabel = factor.charAt(0).toUpperCase() + factor.slice(1);
+            return;
+        }
+
+        if (pendingLabel) {
+            const combined = `${pendingLabel}: ${factor}`;
+            result.push(combined);
+            pendingLabel = null;
+            return;
+        }
+
+        result.push(factor);
+    });
+
+    pushPendingLabel();
+
+    return dedupeList(result);
+};
+
+const SUMMARY_KEYWORDS = ['summary', 'rezumat', 'overview', 'executive', 'context', 'sinte', 'descr'];
+const OPPORTUNITY_KEYWORDS = ['opportunit', 'oportunit', 'growth', 'avantaj', 'benef'];
+const RISK_KEYWORDS = ['risk', 'riscur', 'threat', 'amenint'];
+const ACTION_KEYWORDS = ['action', 'acti', 'step', 'plan', 'recomand', 'recom'];
+
+const mapContext = (
+    ...sources: PredictiveContextResponse[]
+): PredictiveContext => {
+    const summaryCandidates: string[] = [];
+    const opportunities: string[] = [];
+    const risks: string[] = [];
+    const actions: string[] = [];
+
+    const visited = new Set<unknown>();
+    const queue: unknown[] = [];
+
+    sources.forEach((source) => {
+        if (source !== null && typeof source !== 'undefined') {
+            queue.push(source);
+        }
+    });
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+
+        if (current === null || typeof current === 'undefined') {
+            continue;
+        }
+
+        if (visited.has(current)) {
+            continue;
+        }
+
+        visited.add(current);
+
+        if (Array.isArray(current)) {
+            current.forEach((entry) => {
+                if (!visited.has(entry)) {
+                    queue.push(entry);
+                }
+            });
+            continue;
+        }
+
+        if (isRecord(current)) {
+            const record = current as PredictiveContextApi | Record<string, unknown>;
+
+            Object.entries(record).forEach(([key, value]) => {
+                const normalizedKey = key.toLowerCase();
+
+                if (SUMMARY_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
+                    const summaryValues = collectStringValues(value);
+                    if (summaryValues.length > 0) {
+                        summaryValues.forEach((entry) => summaryCandidates.push(entry));
+                    }
+                }
+
+                if (OPPORTUNITY_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
+                    opportunities.push(...collectStringValues(value));
+                    return;
+                }
+
+                if (RISK_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
+                    risks.push(...collectStringValues(value));
+                    return;
+                }
+
+                if (ACTION_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
+                    actions.push(...collectStringValues(value));
+                    return;
+                }
+            });
+
+            Object.values(record).forEach((value) => {
+                if (!visited.has(value)) {
+                    queue.push(value);
+                }
+            });
+
+            continue;
+        }
+
+        const normalized = normalizeString(current);
+        if (normalized) {
+            summaryCandidates.push(normalized);
+        }
+    }
+
+    const summary = dedupeList(summaryCandidates)[0] ?? null;
+
+    return {
+        summary,
+        opportunities: dedupeList(opportunities),
+        risks: dedupeList(risks),
+        actions: dedupeList(actions),
+    } satisfies PredictiveContext;
 };
 
 const mapForecast = (
@@ -359,6 +888,34 @@ const mapForecast = (
             normalizeNumber(entry.score) ??
             0;
 
+        const confidenceLevel =
+            normalizeString(entry.confidence_level) ||
+            normalizeString(entry.confidenceLevel) ||
+            normalizeString(entry.confidence) ||
+            normalizeString(entry.confidenceScore) ||
+            normalizeString((record.confidence_level as string | undefined) ?? null) ||
+            normalizeString((record.confidenceLevel as string | undefined) ?? null) ||
+            normalizeString((record.confidence as string | undefined) ?? null) ||
+            normalizeString((record.confidenceScore as string | undefined) ?? null) ||
+            null;
+
+        const driverMetrics = formatDriverMetrics(entry.drivers ?? record.drivers ?? null);
+
+        const analysisFactorsRaw = collectStringValues({
+            entryAnalysis: entry.analysis_factors,
+            entryAnalysisAlt: entry.analysisFactors,
+            entryAnalysisGeneric: entry.analysis,
+            entryFactors: entry.factors,
+            entryRationale: entry.rationale,
+            recordAnalysis: record.analysis_factors,
+            recordAnalysisAlt: record.analysisFactors,
+            recordAnalysisGeneric: record.analysis,
+            recordFactors: record.factors,
+            recordRationale: record.rationale,
+        });
+
+        const analysisFactors = formatAnalysisFactors([...analysisFactorsRaw, ...driverMetrics]);
+
         const id = buildIdentifier(record, index);
 
         return {
@@ -366,14 +923,30 @@ const mapForecast = (
             month: month ?? 'Perioada următoare',
             category: category ?? `Categorie ${index + 1}`,
             predicted_demand: Number.isFinite(demand) && demand !== null ? demand : 0,
+            confidence_level: confidenceLevel,
+            analysis_factors: analysisFactors,
         } satisfies PredictiveForecastPoint;
     });
 
     const deduplicated = new Map<PredictiveForecastPoint['id'], PredictiveForecastPoint>();
     mapped.forEach((entry) => {
-        if (!deduplicated.has(entry.id)) {
+        const existing = deduplicated.get(entry.id);
+        if (!existing) {
             deduplicated.set(entry.id, entry);
+            return;
         }
+
+        const combinedFactors = dedupeList([
+            ...existing.analysis_factors,
+            ...entry.analysis_factors,
+        ]);
+
+        deduplicated.set(entry.id, {
+            ...existing,
+            predicted_demand: entry.predicted_demand,
+            confidence_level: entry.confidence_level ?? existing.confidence_level,
+            analysis_factors: formatAnalysisFactors(combinedFactors),
+        });
     });
 
     return Array.from(deduplicated.values());
@@ -410,6 +983,11 @@ export const usePredictiveAnalytics = (filters?: PredictiveAnalyticsFilters) => 
         [normalizedFilters],
     );
 
+    const contextKey = useMemo(
+        () => buildKey(API_BASE_URL + '/analytics/predictive/context', normalizedFilters),
+        [normalizedFilters],
+    );
+
     const {
         data: forecastResponse,
         error: forecastError,
@@ -428,6 +1006,15 @@ export const usePredictiveAnalytics = (filters?: PredictiveAnalyticsFilters) => 
         revalidateOnFocus: false,
     });
 
+    const {
+        data: contextResponse,
+        error: contextError,
+        isValidating: contextValidating,
+        mutate: mutateContext,
+    } = useSWR<PredictiveContextResponse>(contextKey, jsonFetcher, {
+        revalidateOnFocus: false,
+    });
+
     const forecast = useMemo(
         () => mapForecast(forecastResponse, recommendationsResponse),
         [forecastResponse, recommendationsResponse],
@@ -437,6 +1024,8 @@ export const usePredictiveAnalytics = (filters?: PredictiveAnalyticsFilters) => 
         () => collectRecommendationLists(recommendationsResponse, forecastResponse),
         [recommendationsResponse, forecastResponse],
     );
+
+    const context = useMemo(() => mapContext(contextResponse), [contextResponse]);
 
     const refresh = useCallback(async () => {
         const tasks: Array<Promise<unknown>> = [];
@@ -449,27 +1038,42 @@ export const usePredictiveAnalytics = (filters?: PredictiveAnalyticsFilters) => 
             tasks.push(mutateRecommendations());
         }
 
+        if (contextKey) {
+            tasks.push(mutateContext());
+        }
+
         await Promise.all(tasks);
-    }, [forecastKey, recommendationsKey, mutateForecast, mutateRecommendations]);
+    }, [forecastKey, recommendationsKey, contextKey, mutateForecast, mutateRecommendations, mutateContext]);
 
     const isLoading =
         Boolean(forecastKey && typeof forecastResponse === 'undefined' && !forecastError) ||
-        Boolean(recommendationsKey && typeof recommendationsResponse === 'undefined' && !recommendationsError);
+        Boolean(recommendationsKey && typeof recommendationsResponse === 'undefined' && !recommendationsError) ||
+        Boolean(contextKey && typeof contextResponse === 'undefined' && !contextError);
 
-    const isRefreshing = Boolean(forecastKey && forecastValidating) || Boolean(recommendationsKey && recommendationsValidating);
+    const isRefreshing =
+        Boolean(forecastKey && forecastValidating) ||
+        Boolean(recommendationsKey && recommendationsValidating) ||
+        Boolean(contextKey && contextValidating);
 
-    const isError = Boolean((forecastKey && forecastError) || (recommendationsKey && recommendationsError));
+    const isError = Boolean(
+        (forecastKey && forecastError) ||
+        (recommendationsKey && recommendationsError) ||
+        (contextKey && contextError),
+    );
 
     const hasData = forecast.length > 0 || recommendations.buy.length > 0 || recommendations.sell.length > 0;
 
     return {
         forecast,
         recommendations,
+        context,
         isLoading,
         isRefreshing,
         isError,
         hasData,
         refresh,
+        isContextLoading: Boolean(contextKey && typeof contextResponse === 'undefined' && !contextError),
+        isContextRefreshing: Boolean(contextKey && contextValidating),
     };
 };
 

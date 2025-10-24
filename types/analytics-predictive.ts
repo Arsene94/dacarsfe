@@ -3,11 +3,31 @@ export type PredictiveForecastPoint = {
     month: string;
     category: string;
     predicted_demand: number;
+    confidence_level: string | null;
+    analysis_factors: string[];
+};
+
+export type PredictiveRecommendationLink = {
+    href: string;
+    label: string;
+};
+
+export type PredictiveRecommendationItem = {
+    title: string;
+    details: string[];
+    link: PredictiveRecommendationLink | null;
 };
 
 export type PredictiveRecommendations = {
-    buy: string[];
-    sell: string[];
+    buy: PredictiveRecommendationItem[];
+    sell: PredictiveRecommendationItem[];
+};
+
+export type PredictiveContext = {
+    summary: string | null;
+    opportunities: string[];
+    risks: string[];
+    actions: string[];
 };
 
 export type PredictiveForecastApi = {
@@ -23,6 +43,16 @@ export type PredictiveForecastApi = {
     demand?: number | string | null;
     value?: number | string | null;
     score?: number | string | null;
+    confidence_level?: string | null;
+    confidenceLevel?: string | null;
+    confidence?: string | null;
+    confidenceScore?: string | null;
+    analysis_factors?: unknown;
+    analysisFactors?: unknown;
+    analysis?: unknown;
+    drivers?: unknown;
+    factors?: unknown;
+    rationale?: unknown;
 };
 
 export type PredictiveRecommendationsApi = {
@@ -51,6 +81,31 @@ export type PredictiveForecastResponse =
 export type PredictiveRecommendationsResponse =
     | PredictiveRecommendationsApi
     | PredictiveForecastApi[]
+    | Record<string, unknown>
+    | null
+    | undefined;
+
+export type PredictiveContextApi = {
+    summary?: unknown;
+    rezumat?: unknown;
+    overview?: unknown;
+    context?: unknown;
+    opportunities?: unknown;
+    oportunitati?: unknown;
+    growth?: unknown;
+    riscuri?: unknown;
+    risks?: unknown;
+    threats?: unknown;
+    actions?: unknown;
+    actiuni?: unknown;
+    recommendations?: unknown;
+    recomandari?: unknown;
+    next_steps?: unknown;
+};
+
+export type PredictiveContextResponse =
+    | PredictiveContextApi
+    | PredictiveContextApi[]
     | Record<string, unknown>
     | null
     | undefined;
