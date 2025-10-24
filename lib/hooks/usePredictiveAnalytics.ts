@@ -563,6 +563,147 @@ const collectStringValues = (value: unknown): string[] => {
     return dedupeList(collected);
 };
 
+const DRIVER_LABELS: Record<string, string> = {
+    fleet_size: 'Dimensiune flotă',
+    fleet: 'Dimensiune flotă',
+    fleetcount: 'Dimensiune flotă',
+    avg_utilization: 'Utilizare medie',
+    utilization: 'Utilizare',
+    occupancy: 'Grad de ocupare',
+    roi: 'ROI',
+    return_on_investment: 'ROI',
+    market_multiplier: 'Multiplicator piață',
+    multiplier: 'Multiplicator',
+    demand_multiplier: 'Multiplicator cerere',
+    demand_index: 'Indice cerere',
+    demand_score: 'Scor cerere',
+    seasonality_index: 'Indice sezonalitate',
+    seasonality: 'Indice sezonalitate',
+};
+
+const percentFormatter = new Intl.NumberFormat('ro-RO', {
+    style: 'percent',
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+});
+
+const integerFormatter = new Intl.NumberFormat('ro-RO', {
+    maximumFractionDigits: 0,
+});
+
+const decimalFormatter = new Intl.NumberFormat('ro-RO', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+});
+
+const preciseDecimalFormatter = new Intl.NumberFormat('ro-RO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 3,
+});
+
+const containsToken = (key: string, tokens: string[]): boolean => {
+    const normalizedKey = key.toLowerCase();
+    return tokens.some((token) => normalizedKey.includes(token));
+};
+
+const formatDriverLabel = (rawKey: string): string | null => {
+    const normalizedKey = rawKey.trim().toLowerCase();
+    if (!normalizedKey) {
+        return null;
+    }
+
+    if (normalizedKey in DRIVER_LABELS) {
+        return DRIVER_LABELS[normalizedKey];
+    }
+
+    const cleaned = normalizedKey.replace(/[_\s]+/g, ' ').trim();
+    if (cleaned.length === 0) {
+        return null;
+    }
+
+    return cleaned
+        .split(' ')
+        .map((segment) => {
+            if (segment.length === 0) {
+                return segment;
+            }
+            if (segment === 'avg') {
+                return 'Medie';
+            }
+            if (segment === 'max') {
+                return 'Maxim';
+            }
+            if (segment === 'min') {
+                return 'Minim';
+            }
+            return segment.charAt(0).toUpperCase() + segment.slice(1);
+        })
+        .join(' ');
+};
+
+const formatDriverValue = (rawKey: string, rawValue: unknown): string | null => {
+    const normalizedKey = rawKey.trim().toLowerCase();
+    const numeric = normalizeNumber(rawValue);
+
+    if (numeric !== null) {
+        if (containsToken(normalizedKey, ['percent', 'percentage', 'utilization', 'occupancy', 'rate', 'ratio'])) {
+            if (numeric <= 1) {
+                return percentFormatter.format(numeric);
+            }
+            return `${decimalFormatter.format(numeric)}%`;
+        }
+
+        if (containsToken(normalizedKey, ['fleet', 'vehicle', 'car', 'count', 'size', 'total', 'num'])) {
+            const formatted = integerFormatter.format(Math.round(numeric));
+            const needsUnit = containsToken(normalizedKey, ['fleet', 'vehicle', 'car']);
+            return needsUnit ? `${formatted} vehicule` : formatted;
+        }
+
+        if (containsToken(normalizedKey, ['multiplier'])) {
+            return `${preciseDecimalFormatter.format(numeric)}x`;
+        }
+
+        if (containsToken(normalizedKey, ['index'])) {
+            return preciseDecimalFormatter.format(numeric);
+        }
+
+        if (containsToken(normalizedKey, ['score'])) {
+            return decimalFormatter.format(numeric);
+        }
+
+        return decimalFormatter.format(numeric);
+    }
+
+    const normalizedString = normalizeString(rawValue);
+    if (normalizedString) {
+        return normalizedString;
+    }
+
+    return null;
+};
+
+const formatDriverMetrics = (value: unknown): string[] => {
+    if (!isRecord(value)) {
+        return [];
+    }
+
+    const record = value as Record<string, unknown>;
+    const formatted = Object.entries(record)
+        .map(([key, metricValue]) => {
+            const label = formatDriverLabel(key);
+            const formattedValue = formatDriverValue(key, metricValue);
+
+            if (!label || !formattedValue) {
+                return null;
+            }
+
+            return `${label}: ${formattedValue}`;
+        })
+        .filter((entry): entry is string => entry !== null);
+
+    return dedupeList(formatted);
+};
+
 const hasLetters = (value: string): boolean => /[A-Za-zĂÂÎȘȚăâîșț]/u.test(value);
 
 const hasDigits = (value: string): boolean => /\d/.test(value);
@@ -758,22 +899,22 @@ const mapForecast = (
             normalizeString((record.confidenceScore as string | undefined) ?? null) ||
             null;
 
+        const driverMetrics = formatDriverMetrics(entry.drivers ?? record.drivers ?? null);
+
         const analysisFactorsRaw = collectStringValues({
             entryAnalysis: entry.analysis_factors,
             entryAnalysisAlt: entry.analysisFactors,
             entryAnalysisGeneric: entry.analysis,
-            entryDrivers: entry.drivers,
             entryFactors: entry.factors,
             entryRationale: entry.rationale,
             recordAnalysis: record.analysis_factors,
             recordAnalysisAlt: record.analysisFactors,
             recordAnalysisGeneric: record.analysis,
-            recordDrivers: record.drivers,
             recordFactors: record.factors,
             recordRationale: record.rationale,
         });
 
-        const analysisFactors = formatAnalysisFactors(analysisFactorsRaw);
+        const analysisFactors = formatAnalysisFactors([...analysisFactorsRaw, ...driverMetrics]);
 
         const id = buildIdentifier(record, index);
 
