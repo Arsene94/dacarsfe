@@ -2,6 +2,16 @@ export type CarCashflowDirection = "income" | "expense";
 
 export type CarCashflowPaymentMethod = "cash" | "card" | "cash_card";
 
+export type CarCashflowExpenseType =
+  | "car"
+  | "house"
+  | "parking_wash"
+  | "marketing"
+  | "company_operations"
+  | "salary"
+  | "fuel"
+  | "other";
+
 export interface CarCashflowUser {
   id: number;
   first_name?: string | null;
@@ -18,9 +28,9 @@ export interface CarCashflowCar {
 
 export interface CarCashflowRecord {
   id: number;
-  car_id: number;
+  car_id: number | null;
   direction: CarCashflowDirection;
-  category?: string | null;
+  expense_type?: CarCashflowExpenseType | null;
   description?: string | null;
   payment_method: CarCashflowPaymentMethod;
   total_amount: number;
@@ -35,12 +45,12 @@ export interface CarCashflowRecord {
 }
 
 export interface CarCashflowPayload {
-  car_id: number;
+  car_id?: number | null;
   direction: CarCashflowDirection;
+  expense_type?: CarCashflowExpenseType | null;
   payment_method: CarCashflowPaymentMethod;
   total_amount: number;
   occurred_on: string;
-  category?: string | null;
   description?: string | null;
   cash_amount?: number | null;
   card_amount?: number | null;
@@ -50,6 +60,7 @@ export interface CarCashflowPayload {
 export interface CarCashflowListParams extends Record<string, unknown> {
   car_id?: number;
   direction?: CarCashflowDirection;
+  expense_type?: CarCashflowExpenseType | string;
   payment_method?: CarCashflowPaymentMethod;
   created_by?: number;
   occurred_on_date?: string;

@@ -6,6 +6,13 @@ export interface ActivityCar {
   license_plate: string;
 }
 
+export interface ActivityReservationService {
+  id: number;
+  name: string;
+  price?: number | string | null;
+  [key: string]: unknown;
+}
+
 export interface ActivityReservation {
   id: number;
   booking_number: string;
@@ -23,6 +30,7 @@ export interface ActivityReservation {
   total_services: number;
   coupon_amount: number;
   coupon_type: string;
+  discount?: number | string | null;
   with_deposit: boolean;
   customer_id: number | null;
   rental_start_date: string;
@@ -31,7 +39,8 @@ export interface ActivityReservation {
   end_hour_group: string;
   child_seat_service_name: string | null;
   car: ActivityCar;
-  services: { id: number; name: string }[];
+  services: ActivityReservationService[];
+  services_list?: ActivityReservationService[] | null;
   extension?: ReservationExtension | null;
 }
 

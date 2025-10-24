@@ -28,7 +28,6 @@ describe('ApiClient admin car cashflows management', () => {
       payment_method: 'card',
       total_amount: 1250,
       occurred_on: '2024-04-15',
-      category: 'Încasări rezervări',
       description: 'Plată integrală pentru rezervarea DAC-2024-0415',
       cash_amount: undefined,
       card_amount: 1250,
@@ -65,7 +64,6 @@ describe('ApiClient admin car cashflows management', () => {
           payment_method: 'card',
           total_amount: 1250,
           occurred_on: '2024-04-15',
-          category: 'Încasări rezervări',
           description: 'Plată integrală pentru rezervarea DAC-2024-0415',
           card_amount: 1250,
           created_by: 7,
@@ -89,7 +87,7 @@ describe('ApiClient admin car cashflows management', () => {
     const payload = {
       car_id: 12,
       direction: 'expense',
-      category: 'Costuri service',
+      expense_type: 'car',
       description: 'Schimb plăcuțe frână și verificare suspensie',
       payment_method: 'cash_card',
       total_amount: 860,
@@ -126,7 +124,7 @@ describe('ApiClient admin car cashflows management', () => {
         body: JSON.stringify({
           car_id: 12,
           direction: 'expense',
-          category: 'Costuri service',
+          expense_type: 'car',
           description: 'Schimb plăcuțe frână și verificare suspensie',
           payment_method: 'cash_card',
           total_amount: 860,
