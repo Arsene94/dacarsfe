@@ -495,13 +495,66 @@ const collectStringValues = (value: unknown): string[] => {
                 'rezumat',
             ];
 
+            const labelKeys = [
+                'label',
+                'title',
+                'name',
+                'text',
+                'description',
+                'descriere',
+                'context',
+            ];
+            const valueKeys = [
+                'value',
+                'amount',
+                'valoare',
+                'metric',
+                'score',
+                'valoare_numerica',
+                'valoare_text',
+            ];
+
+            const handledKeys = new Set<string>();
+
+            const labelKey = labelKeys.find((key) => {
+                if (!(key in record)) {
+                    return false;
+                }
+
+                return normalizeString(record[key]) !== null;
+            });
+
+            const valueKey = valueKeys.find((key) => {
+                if (!(key in record)) {
+                    return false;
+                }
+
+                return normalizeString(record[key]) !== null;
+            });
+
+            if (labelKey && valueKey) {
+                const labelValue = normalizeString(record[labelKey]);
+                const valueValue = normalizeString(record[valueKey]);
+
+                if (labelValue && valueValue) {
+                    collected.push(`${labelValue}: ${valueValue}`);
+                    handledKeys.add(labelKey);
+                    handledKeys.add(valueKey);
+                }
+            }
+
             prioritizedKeys.forEach((key) => {
-                if (key in record) {
+                if (key in record && !handledKeys.has(key)) {
+                    handledKeys.add(key);
                     explore(record[key as keyof typeof record]);
                 }
             });
 
-            Object.values(record).forEach((entry) => explore(entry));
+            Object.entries(record).forEach(([key, value]) => {
+                if (!handledKeys.has(key)) {
+                    explore(value);
+                }
+            });
         }
     };
 
