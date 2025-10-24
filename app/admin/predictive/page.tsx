@@ -521,7 +521,6 @@ export default function PredictiveDashboardPage() {
                                                                                 type="button"
                                                                                 className="group relative inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full text-slate-400 transition hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-jade focus-visible:ring-offset-0"
                                                                                 aria-label={`${label}. ${description}`}
-                                                                                title={description}
                                                                             >
                                                                                 <HelpCircle
                                                                                     className="h-3.5 w-3.5"

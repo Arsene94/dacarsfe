@@ -438,74 +438,6 @@ export default function MarketingDashboardPage() {
                                         </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
-                                    <div className="mt-6 space-y-3">
-                                        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                                            Detalii pe canal
-                                        </h3>
-                                        <ul className="grid gap-4 sm:grid-cols-2">
-                                            {channelData.map((entry) => (
-                                                <li
-                                                    key={`${entry.id}-details`}
-                                                    className="h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                                                >
-                                                    <div className="flex h-full flex-col justify-between gap-4">
-                                                        <div className="space-y-1">
-                                                            <p className="text-sm font-semibold text-berkeley">
-                                                                {entry.channelLabel}
-                                                            </p>
-                                                            <p className="text-xs text-slate-500">
-                                                                {formatPercentage(entry.conversionRate)} rată de conversie
-                                                            </p>
-                                                        </div>
-                                                        <dl className="grid grid-cols-1 gap-3 text-xs text-slate-600 sm:grid-cols-2 sm:text-sm">
-                                                            <div className="space-y-1">
-                                                                <dt className="font-medium text-slate-500">Rezervări</dt>
-                                                                <dd className="text-base font-semibold text-berkeley">
-                                                                    {integerFormatter.format(entry.bookingsCount ?? 0)}
-                                                                </dd>
-                                                            </div>
-                                                            {typeof entry.totalRevenue === 'number'
-                                                            && Number.isFinite(entry.totalRevenue) ? (
-                                                                <div className="space-y-1">
-                                                                    <dt className="font-medium text-slate-500">Venit total</dt>
-                                                                    <dd className="text-base font-semibold text-berkeley">
-                                                                        {currencyFormatter.format(entry.totalRevenue)}
-                                                                    </dd>
-                                                                </div>
-                                                            ) : null}
-                                                            {typeof entry.avgRevenue === 'number'
-                                                            && Number.isFinite(entry.avgRevenue) ? (
-                                                                <div className="space-y-1">
-                                                                    <dt className="font-medium text-slate-500">Venit mediu</dt>
-                                                                    <dd className="text-base font-semibold text-berkeley">
-                                                                        {currencyFormatter.format(entry.avgRevenue)}
-                                                                    </dd>
-                                                                </div>
-                                                            ) : null}
-                                                            {typeof entry.cpaValue === 'number'
-                                                            && Number.isFinite(entry.cpaValue) ? (
-                                                                <div className="space-y-1">
-                                                                    <dt className="font-medium text-slate-500">CPA</dt>
-                                                                    <dd className="text-base font-semibold text-berkeley">
-                                                                        {currencyFormatter.format(entry.cpaValue)}
-                                                                    </dd>
-                                                                </div>
-                                                            ) : null}
-                                                            {typeof entry.costPerLead === 'number'
-                                                            && Number.isFinite(entry.costPerLead) ? (
-                                                                <div className="space-y-1">
-                                                                    <dt className="font-medium text-slate-500">CPL</dt>
-                                                                    <dd className="text-base font-semibold text-berkeley">
-                                                                        {currencyFormatter.format(entry.costPerLead)}
-                                                                    </dd>
-                                                                </div>
-                                                            ) : null}
-                                                        </dl>
-                                                    </div>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
                                 </>
                             ) : (
                                 <div className="flex h-full items-center justify-center">
@@ -516,6 +448,74 @@ export default function MarketingDashboardPage() {
                                     </p>
                                 </div>
                             )}
+                        </div>
+                        <div className="mt-6 space-y-3">
+                            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                Detalii pe canal
+                            </h3>
+                            <ul className="grid gap-4 sm:grid-cols-2">
+                                {channelData.map((entry) => (
+                                    <li
+                                        key={`${entry.id}-details`}
+                                        className="h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                                    >
+                                        <div className="flex h-full flex-col justify-between gap-4">
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-semibold text-berkeley">
+                                                    {entry.channelLabel}
+                                                </p>
+                                                <p className="text-xs text-slate-500">
+                                                    {formatPercentage(entry.conversionRate)} rată de conversie
+                                                </p>
+                                            </div>
+                                            <dl className="grid grid-cols-1 gap-3 text-xs text-slate-600 sm:grid-cols-2 sm:text-sm">
+                                                <div className="space-y-1">
+                                                    <dt className="font-medium text-slate-500">Rezervări</dt>
+                                                    <dd className="text-base font-semibold text-berkeley">
+                                                        {integerFormatter.format(entry.bookingsCount ?? 0)}
+                                                    </dd>
+                                                </div>
+                                                {typeof entry.totalRevenue === 'number'
+                                                && Number.isFinite(entry.totalRevenue) ? (
+                                                    <div className="space-y-1">
+                                                        <dt className="font-medium text-slate-500">Venit total</dt>
+                                                        <dd className="text-base font-semibold text-berkeley">
+                                                            {currencyFormatter.format(entry.totalRevenue)}
+                                                        </dd>
+                                                    </div>
+                                                ) : null}
+                                                {typeof entry.avgRevenue === 'number'
+                                                && Number.isFinite(entry.avgRevenue) ? (
+                                                    <div className="space-y-1">
+                                                        <dt className="font-medium text-slate-500">Venit mediu</dt>
+                                                        <dd className="text-base font-semibold text-berkeley">
+                                                            {currencyFormatter.format(entry.avgRevenue)}
+                                                        </dd>
+                                                    </div>
+                                                ) : null}
+                                                {typeof entry.cpaValue === 'number'
+                                                && Number.isFinite(entry.cpaValue) ? (
+                                                    <div className="space-y-1">
+                                                        <dt className="font-medium text-slate-500">CPA</dt>
+                                                        <dd className="text-base font-semibold text-berkeley">
+                                                            {currencyFormatter.format(entry.cpaValue)}
+                                                        </dd>
+                                                    </div>
+                                                ) : null}
+                                                {typeof entry.costPerLead === 'number'
+                                                && Number.isFinite(entry.costPerLead) ? (
+                                                    <div className="space-y-1">
+                                                        <dt className="font-medium text-slate-500">CPL</dt>
+                                                        <dd className="text-base font-semibold text-berkeley">
+                                                            {currencyFormatter.format(entry.costPerLead)}
+                                                        </dd>
+                                                    </div>
+                                                ) : null}
+                                            </dl>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                     </div>
 
