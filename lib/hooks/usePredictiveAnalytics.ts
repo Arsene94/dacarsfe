@@ -10,13 +10,16 @@ import type {
     PredictiveRecommendationsApi,
     PredictiveForecastResponse,
     PredictiveRecommendationsResponse,
+    PredictiveContext,
+    PredictiveContextApi,
+    PredictiveContextResponse,
 } from '@/types/analytics-predictive';
 import {
     createAnalyticsQuery,
     DEFAULT_ANALYTICS_FILTERS,
     type AnalyticsFilters,
 } from '@/lib/analytics/filters';
-import {API_BASE_URL} from "@/lib/api";
+import { API_BASE_URL } from '@/lib/api';
 
 const jsonFetcher = async <T>(url: string): Promise<T> => {
     const response = await fetch(url, {
@@ -326,6 +329,179 @@ const collectRecommendationLists = (
     };
 };
 
+const dedupeList = (values: string[]): string[] => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+
+    values.forEach((value) => {
+        if (!seen.has(value)) {
+            seen.add(value);
+            result.push(value);
+        }
+    });
+
+    return result;
+};
+
+const collectStringValues = (value: unknown): string[] => {
+    const collected: string[] = [];
+    const visited = new Set<unknown>();
+
+    const explore = (current: unknown) => {
+        if (current === null || typeof current === 'undefined') {
+            return;
+        }
+
+        if (visited.has(current)) {
+            return;
+        }
+
+        visited.add(current);
+
+        if (Array.isArray(current)) {
+            current.forEach((entry) => explore(entry));
+            return;
+        }
+
+        const normalized = normalizeString(current);
+        if (normalized) {
+            collected.push(normalized);
+            return;
+        }
+
+        if (isRecord(current)) {
+            const record = current as Record<string, unknown>;
+            const prioritizedKeys = [
+                'text',
+                'description',
+                'descriere',
+                'context',
+                'details',
+                'detalii',
+                'reason',
+                'motiv',
+                'label',
+                'title',
+                'name',
+                'value',
+                'message',
+                'summary',
+                'rezumat',
+            ];
+
+            prioritizedKeys.forEach((key) => {
+                if (key in record) {
+                    explore(record[key as keyof typeof record]);
+                }
+            });
+
+            Object.values(record).forEach((entry) => explore(entry));
+        }
+    };
+
+    explore(value);
+
+    return dedupeList(collected);
+};
+
+const SUMMARY_KEYWORDS = ['summary', 'rezumat', 'overview', 'executive', 'context', 'sinte', 'descr'];
+const OPPORTUNITY_KEYWORDS = ['opportunit', 'oportunit', 'growth', 'avantaj', 'benef'];
+const RISK_KEYWORDS = ['risk', 'riscur', 'threat', 'amenint'];
+const ACTION_KEYWORDS = ['action', 'acti', 'step', 'plan', 'recomand', 'recom'];
+
+const mapContext = (
+    ...sources: PredictiveContextResponse[]
+): PredictiveContext => {
+    const summaryCandidates: string[] = [];
+    const opportunities: string[] = [];
+    const risks: string[] = [];
+    const actions: string[] = [];
+
+    const visited = new Set<unknown>();
+    const queue: unknown[] = [];
+
+    sources.forEach((source) => {
+        if (source !== null && typeof source !== 'undefined') {
+            queue.push(source);
+        }
+    });
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+
+        if (current === null || typeof current === 'undefined') {
+            continue;
+        }
+
+        if (visited.has(current)) {
+            continue;
+        }
+
+        visited.add(current);
+
+        if (Array.isArray(current)) {
+            current.forEach((entry) => {
+                if (!visited.has(entry)) {
+                    queue.push(entry);
+                }
+            });
+            continue;
+        }
+
+        if (isRecord(current)) {
+            const record = current as PredictiveContextApi | Record<string, unknown>;
+
+            Object.entries(record).forEach(([key, value]) => {
+                const normalizedKey = key.toLowerCase();
+
+                if (SUMMARY_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
+                    const summaryValues = collectStringValues(value);
+                    if (summaryValues.length > 0) {
+                        summaryValues.forEach((entry) => summaryCandidates.push(entry));
+                    }
+                }
+
+                if (OPPORTUNITY_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
+                    opportunities.push(...collectStringValues(value));
+                    return;
+                }
+
+                if (RISK_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
+                    risks.push(...collectStringValues(value));
+                    return;
+                }
+
+                if (ACTION_KEYWORDS.some((keyword) => normalizedKey.includes(keyword))) {
+                    actions.push(...collectStringValues(value));
+                    return;
+                }
+            });
+
+            Object.values(record).forEach((value) => {
+                if (!visited.has(value)) {
+                    queue.push(value);
+                }
+            });
+
+            continue;
+        }
+
+        const normalized = normalizeString(current);
+        if (normalized) {
+            summaryCandidates.push(normalized);
+        }
+    }
+
+    const summary = dedupeList(summaryCandidates)[0] ?? null;
+
+    return {
+        summary,
+        opportunities: dedupeList(opportunities),
+        risks: dedupeList(risks),
+        actions: dedupeList(actions),
+    } satisfies PredictiveContext;
+};
+
 const mapForecast = (
     ...sources: PredictiveForecastResponse[]
 ): PredictiveForecastPoint[] => {
@@ -410,6 +586,11 @@ export const usePredictiveAnalytics = (filters?: PredictiveAnalyticsFilters) => 
         [normalizedFilters],
     );
 
+    const contextKey = useMemo(
+        () => buildKey(API_BASE_URL + '/analytics/predictive/context', normalizedFilters),
+        [normalizedFilters],
+    );
+
     const {
         data: forecastResponse,
         error: forecastError,
@@ -428,6 +609,15 @@ export const usePredictiveAnalytics = (filters?: PredictiveAnalyticsFilters) => 
         revalidateOnFocus: false,
     });
 
+    const {
+        data: contextResponse,
+        error: contextError,
+        isValidating: contextValidating,
+        mutate: mutateContext,
+    } = useSWR<PredictiveContextResponse>(contextKey, jsonFetcher, {
+        revalidateOnFocus: false,
+    });
+
     const forecast = useMemo(
         () => mapForecast(forecastResponse, recommendationsResponse),
         [forecastResponse, recommendationsResponse],
@@ -437,6 +627,8 @@ export const usePredictiveAnalytics = (filters?: PredictiveAnalyticsFilters) => 
         () => collectRecommendationLists(recommendationsResponse, forecastResponse),
         [recommendationsResponse, forecastResponse],
     );
+
+    const context = useMemo(() => mapContext(contextResponse), [contextResponse]);
 
     const refresh = useCallback(async () => {
         const tasks: Array<Promise<unknown>> = [];
@@ -449,27 +641,42 @@ export const usePredictiveAnalytics = (filters?: PredictiveAnalyticsFilters) => 
             tasks.push(mutateRecommendations());
         }
 
+        if (contextKey) {
+            tasks.push(mutateContext());
+        }
+
         await Promise.all(tasks);
-    }, [forecastKey, recommendationsKey, mutateForecast, mutateRecommendations]);
+    }, [forecastKey, recommendationsKey, contextKey, mutateForecast, mutateRecommendations, mutateContext]);
 
     const isLoading =
         Boolean(forecastKey && typeof forecastResponse === 'undefined' && !forecastError) ||
-        Boolean(recommendationsKey && typeof recommendationsResponse === 'undefined' && !recommendationsError);
+        Boolean(recommendationsKey && typeof recommendationsResponse === 'undefined' && !recommendationsError) ||
+        Boolean(contextKey && typeof contextResponse === 'undefined' && !contextError);
 
-    const isRefreshing = Boolean(forecastKey && forecastValidating) || Boolean(recommendationsKey && recommendationsValidating);
+    const isRefreshing =
+        Boolean(forecastKey && forecastValidating) ||
+        Boolean(recommendationsKey && recommendationsValidating) ||
+        Boolean(contextKey && contextValidating);
 
-    const isError = Boolean((forecastKey && forecastError) || (recommendationsKey && recommendationsError));
+    const isError = Boolean(
+        (forecastKey && forecastError) ||
+        (recommendationsKey && recommendationsError) ||
+        (contextKey && contextError),
+    );
 
     const hasData = forecast.length > 0 || recommendations.buy.length > 0 || recommendations.sell.length > 0;
 
     return {
         forecast,
         recommendations,
+        context,
         isLoading,
         isRefreshing,
         isError,
         hasData,
         refresh,
+        isContextLoading: Boolean(contextKey && typeof contextResponse === 'undefined' && !contextError),
+        isContextRefreshing: Boolean(contextKey && contextValidating),
     };
 };
 

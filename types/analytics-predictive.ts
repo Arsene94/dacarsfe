@@ -10,6 +10,13 @@ export type PredictiveRecommendations = {
     sell: string[];
 };
 
+export type PredictiveContext = {
+    summary: string | null;
+    opportunities: string[];
+    risks: string[];
+    actions: string[];
+};
+
 export type PredictiveForecastApi = {
     id?: number | string | null;
     month?: string | null;
@@ -51,6 +58,31 @@ export type PredictiveForecastResponse =
 export type PredictiveRecommendationsResponse =
     | PredictiveRecommendationsApi
     | PredictiveForecastApi[]
+    | Record<string, unknown>
+    | null
+    | undefined;
+
+export type PredictiveContextApi = {
+    summary?: unknown;
+    rezumat?: unknown;
+    overview?: unknown;
+    context?: unknown;
+    opportunities?: unknown;
+    oportunitati?: unknown;
+    growth?: unknown;
+    riscuri?: unknown;
+    risks?: unknown;
+    threats?: unknown;
+    actions?: unknown;
+    actiuni?: unknown;
+    recommendations?: unknown;
+    recomandari?: unknown;
+    next_steps?: unknown;
+};
+
+export type PredictiveContextResponse =
+    | PredictiveContextApi
+    | PredictiveContextApi[]
     | Record<string, unknown>
     | null
     | undefined;

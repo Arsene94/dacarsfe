@@ -178,8 +178,18 @@ export default function PredictiveDashboardPage() {
         [activeFilters],
     );
 
-    const { forecast, recommendations, isLoading, isRefreshing, isError, hasData, refresh } =
-        usePredictiveAnalytics(activeFilters);
+    const {
+        forecast,
+        recommendations,
+        context,
+        isLoading,
+        isRefreshing,
+        isError,
+        hasData,
+        refresh,
+        isContextLoading,
+        isContextRefreshing,
+    } = usePredictiveAnalytics(activeFilters);
 
     const dataReady = !isLoading && !isRefreshing && !isError;
 
@@ -189,7 +199,7 @@ export default function PredictiveDashboardPage() {
         }
 
         setLastUpdatedAt(new Date());
-    }, [dataReady, forecast, recommendations]);
+    }, [dataReady, forecast, recommendations, context]);
 
     const formattedLastUpdated = useMemo(() => {
         if (!lastUpdatedAt) {
@@ -216,6 +226,31 @@ export default function PredictiveDashboardPage() {
     const hasForecast = forecast.length > 0;
     const hasRecommendations =
         recommendations.buy.length > 0 || recommendations.sell.length > 0;
+    const hasContextContent =
+        (context.summary !== null && context.summary.trim().length > 0) ||
+        context.opportunities.length > 0 ||
+        context.risks.length > 0 ||
+        context.actions.length > 0;
+    const isContextBusy = isContextLoading || isContextRefreshing;
+
+    const renderContextList = (items: string[], emptyMessage: string, keyPrefix: string) => {
+        if (items.length === 0) {
+            return <p className="text-sm text-slate-500">{emptyMessage}</p>;
+        }
+
+        return (
+            <ul className="space-y-2">
+                {items.map((item, index) => (
+                    <li
+                        key={`${keyPrefix}-${index}`}
+                        className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-sm text-slate-700"
+                    >
+                        {item}
+                    </li>
+                ))}
+            </ul>
+        );
+    };
 
     return (
         <div className="bg-slate-50 py-12">
@@ -474,17 +509,56 @@ export default function PredictiveDashboardPage() {
                                     Folosește aceste date pentru a calibra bugetele, strategiile de preț și campaniile de achiziție.
                                 </p>
                             </div>
-                            <ul className="space-y-3 text-sm text-slate-600">
-                                <li className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
-                                    Corelează cererea estimată cu disponibilitatea actuală a flotei pentru a evita lipsurile de vehicule în perioadele aglomerate.
-                                </li>
-                                <li className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
-                                    Monitorizează lunar recomandările pentru a identifica rapid modelele cu performanță scăzută și pentru a planifica înlocuirea lor.
-                                </li>
-                                <li className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
-                                    Pregătește scenarii de preț dinamic pe baza cererii anticipate pentru a maximiza gradul de ocupare și marjele de profit.
-                                </li>
-                            </ul>
+                            {isContextBusy ? (
+                                <div className="flex items-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-100/60 px-4 py-6 text-sm text-slate-500">
+                                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                    Se pregătește contextul strategic...
+                                </div>
+                            ) : hasContextContent ? (
+                                <div className="space-y-4 text-sm text-slate-600">
+                                    {context.summary && (
+                                        <div className="rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                                            {context.summary}
+                                        </div>
+                                    )}
+                                    <div className="grid gap-4 lg:grid-cols-2">
+                                        <div className="space-y-3">
+                                            <h4 className="text-xs font-semibold uppercase tracking-wide text-jade">
+                                                Oportunități cheie
+                                            </h4>
+                                            {renderContextList(
+                                                context.opportunities,
+                                                'Nu au fost identificate oportunități majore pentru perioada selectată.',
+                                                'opportunity',
+                                            )}
+                                        </div>
+                                        <div className="space-y-3">
+                                            <h4 className="text-xs font-semibold uppercase tracking-wide text-amber-600">
+                                                Riscuri anticipate
+                                            </h4>
+                                            {renderContextList(
+                                                context.risks,
+                                                'Nu au fost identificate riscuri semnificative în acest moment.',
+                                                'risk',
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-semibold uppercase tracking-wide text-berkeley">
+                                            Acțiuni recomandate
+                                        </h4>
+                                        {renderContextList(
+                                            context.actions,
+                                            'Nu există acțiuni recomandate generate pentru acest context.',
+                                            'action',
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-6 text-sm text-slate-500">
+                                    Nu a fost generat un context strategic pentru perioada selectată.
+                                </div>
+                            )}
                         </div>
                     </section>
                 )}
