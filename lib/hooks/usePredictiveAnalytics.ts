@@ -641,6 +641,32 @@ const mapForecast = (
             normalizeNumber(entry.score) ??
             0;
 
+        const confidenceLevel =
+            normalizeString(entry.confidence_level) ||
+            normalizeString(entry.confidenceLevel) ||
+            normalizeString(entry.confidence) ||
+            normalizeString(entry.confidenceScore) ||
+            normalizeString((record.confidence_level as string | undefined) ?? null) ||
+            normalizeString((record.confidenceLevel as string | undefined) ?? null) ||
+            normalizeString((record.confidence as string | undefined) ?? null) ||
+            normalizeString((record.confidenceScore as string | undefined) ?? null) ||
+            null;
+
+        const analysisFactors = collectStringValues({
+            entryAnalysis: entry.analysis_factors,
+            entryAnalysisAlt: entry.analysisFactors,
+            entryAnalysisGeneric: entry.analysis,
+            entryDrivers: entry.drivers,
+            entryFactors: entry.factors,
+            entryRationale: entry.rationale,
+            recordAnalysis: record.analysis_factors,
+            recordAnalysisAlt: record.analysisFactors,
+            recordAnalysisGeneric: record.analysis,
+            recordDrivers: record.drivers,
+            recordFactors: record.factors,
+            recordRationale: record.rationale,
+        });
+
         const id = buildIdentifier(record, index);
 
         return {
@@ -648,14 +674,30 @@ const mapForecast = (
             month: month ?? 'Perioada următoare',
             category: category ?? `Categorie ${index + 1}`,
             predicted_demand: Number.isFinite(demand) && demand !== null ? demand : 0,
+            confidence_level: confidenceLevel,
+            analysis_factors: analysisFactors,
         } satisfies PredictiveForecastPoint;
     });
 
     const deduplicated = new Map<PredictiveForecastPoint['id'], PredictiveForecastPoint>();
     mapped.forEach((entry) => {
-        if (!deduplicated.has(entry.id)) {
+        const existing = deduplicated.get(entry.id);
+        if (!existing) {
             deduplicated.set(entry.id, entry);
+            return;
         }
+
+        const combinedFactors = dedupeList([
+            ...existing.analysis_factors,
+            ...entry.analysis_factors,
+        ]);
+
+        deduplicated.set(entry.id, {
+            ...existing,
+            predicted_demand: entry.predicted_demand,
+            confidence_level: entry.confidence_level ?? existing.confidence_level,
+            analysis_factors: combinedFactors,
+        });
     });
 
     return Array.from(deduplicated.values());

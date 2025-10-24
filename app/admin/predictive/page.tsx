@@ -430,17 +430,35 @@ export default function PredictiveDashboardPage() {
                                 {sortedForecast.map((entry, index) => (
                                     <div
                                         key={entry.id}
-                                        className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3"
+                                        className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3"
                                     >
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-medium text-slate-700">
-                                                {index + 1}. {entry.category}
-                                            </span>
-                                            <span className="text-xs text-slate-500">Perioada: {entry.month}</span>
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-medium text-slate-700">
+                                                        {index + 1}. {entry.category}
+                                                    </span>
+                                                    <span className="text-xs text-slate-500">Perioada: {entry.month}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-lg font-semibold text-berkeley">
+                                                        {numberFormatter.format(entry.predicted_demand)}
+                                                    </span>
+                                                    {entry.confidence_level && (
+                                                        <p className="text-xs text-slate-500">
+                                                            Încredere estimare: {entry.confidence_level}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {entry.analysis_factors.length > 0 && (
+                                                <ul className="list-disc space-y-1 pl-4 text-xs text-slate-600">
+                                                    {entry.analysis_factors.map((factor, factorIndex) => (
+                                                        <li key={`${entry.id}-factor-${factorIndex}`}>{factor}</li>
+                                                    ))}
+                                                </ul>
+                                            )}
                                         </div>
-                                        <span className="text-lg font-semibold text-berkeley">
-                                            {numberFormatter.format(entry.predicted_demand)}
-                                        </span>
                                     </div>
                                 ))}
                                 {!isLoading && sortedForecast.length === 0 && (

@@ -3,6 +3,8 @@ export type PredictiveForecastPoint = {
     month: string;
     category: string;
     predicted_demand: number;
+    confidence_level: string | null;
+    analysis_factors: string[];
 };
 
 export type PredictiveRecommendationLink = {
@@ -41,6 +43,16 @@ export type PredictiveForecastApi = {
     demand?: number | string | null;
     value?: number | string | null;
     score?: number | string | null;
+    confidence_level?: string | null;
+    confidenceLevel?: string | null;
+    confidence?: string | null;
+    confidenceScore?: string | null;
+    analysis_factors?: unknown;
+    analysisFactors?: unknown;
+    analysis?: unknown;
+    drivers?: unknown;
+    factors?: unknown;
+    rationale?: unknown;
 };
 
 export type PredictiveRecommendationsApi = {
