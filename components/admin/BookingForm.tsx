@@ -1706,12 +1706,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo.discount_applied,
     ]);
 
+    const totalServicesEuro = pickFirstNumber([
+        quoteServicesEuro,
+        bookingInfo.total_services,
+    ]);
+
     const basePriceLeiDisplay = formatLeiAmount(basePriceEuro);
     const subtotalLeiDisplay = formatLeiAmount(subtotalEuro);
     const totalLeiDisplay = formatLeiAmount(totalEuro);
     const rentalRateLeiDisplay = formatLeiAmount(rentalRateEuro);
     const discountSubtotalLeiDisplay = formatLeiAmount(discountSubtotalEuro);
     const discountTotalLeiDisplay = formatLeiAmount(discountTotalEuro);
+    const totalServicesLeiDisplay = formatLeiAmount(totalServicesEuro);
 
     const basePriceEuroDisplay = formatEuroAmount(basePriceEuro);
     const subtotalEuroDisplay = formatEuroAmount(subtotalEuro);
@@ -1719,6 +1725,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const rentalRateEuroDisplay = formatEuroAmount(rentalRateEuro);
     const discountSubtotalEuroDisplay = formatEuroAmount(discountSubtotalEuro);
     const discountTotalEuroDisplay = formatEuroAmount(discountTotalEuro);
+    const totalServicesEuroDisplay = formatEuroAmount(totalServicesEuro);
     const showAdvancePayment =
         typeof advancePaymentEuro === "number" &&
         Number.isFinite(advancePaymentEuro) &&
@@ -1744,10 +1751,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const discountAppliedEuroDisplay = formatEuroAmount(discountAppliedEuro);
     const discountAppliedLeiDisplay = formatLeiAmount(discountAppliedEuro);
 
-    const showDiscountDetails = Boolean(
-        (discountSubtotalEuro != null && discountSubtotalEuro !== 0) ||
-            (discountTotalEuro != null && discountTotalEuro !== 0) ||
-            (discountAppliedEuro != null && discountAppliedEuro !== 0),
+    const discountMetrics = [
+        discountSubtotalEuro,
+        discountTotalEuro,
+        discountAmountEuro,
+        discountAppliedEuro,
+    ];
+    const showDiscountDetails = discountMetrics.some(
+        (value) => typeof value === "number" && !areApproximatelyEqual(value, 0),
     );
 
     const isNewBooking = bookingInfo?.id == null;
@@ -2326,6 +2337,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <span>{subtotalLeiDisplay ?? "—"}</span>
                                 </div>
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Servicii suplimentare:</span>
+                                    <span>{totalServicesLeiDisplay ?? "—"}</span>
+                                </div>
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Total:</span>
                                     <span>{totalLeiDisplay ?? "—"}</span>
                                 </div>
@@ -2358,6 +2373,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 <span>{discountSubtotalLeiDisplay ?? "—"}</span>
                                             </li>
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Servicii suplimentare:</span>
+                                                <span>{totalServicesLeiDisplay ?? "—"}</span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Total:</span>
                                                 <span>{discountTotalLeiDisplay ?? "—"}</span>
                                             </li>
@@ -2378,6 +2397,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <span>Subtotal:</span>
                                     <span>
                                         {subtotalEuroDisplay != null ? `${subtotalEuroDisplay}€` : "—"}
+                                    </span>
+                                </div>
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Servicii suplimentare:</span>
+                                    <span>
+                                        {totalServicesEuroDisplay != null
+                                            ? `${totalServicesEuroDisplay}€`
+                                            : "—"}
                                     </span>
                                 </div>
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
@@ -2431,6 +2458,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 <span>
                                                     {discountSubtotalEuroDisplay != null
                                                         ? `${discountSubtotalEuroDisplay}€`
+                                                        : "—"}
+                                                </span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Servicii suplimentare:</span>
+                                                <span>
+                                                    {totalServicesEuroDisplay != null
+                                                        ? `${totalServicesEuroDisplay}€`
                                                         : "—"}
                                                 </span>
                                             </li>
