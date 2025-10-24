@@ -1757,9 +1757,41 @@ const BookingForm: React.FC<BookingFormProps> = ({
         discountAmountEuro,
         discountAppliedEuro,
     ];
-    const showDiscountDetails = discountMetrics.some(
+    const hasDiscountMetrics = discountMetrics.some(
         (value) => typeof value === "number" && !areApproximatelyEqual(value, 0),
     );
+
+    const rawDiscount = quote?.discount;
+    const discountPayloadValues: unknown[] = [];
+
+    if (
+        typeof rawDiscount === "number" ||
+        (typeof rawDiscount === "string" && rawDiscount.trim().length > 0)
+    ) {
+        discountPayloadValues.push(rawDiscount);
+    } else if (rawDiscount && typeof rawDiscount === "object" && !Array.isArray(rawDiscount)) {
+        discountPayloadValues.push(...Object.values(rawDiscount));
+    }
+
+    discountPayloadValues.push(
+        quote?.coupon_total_discount,
+        quote?.coupon_amount,
+        quote?.discount_amount,
+        quote?.discount,
+        quote?.offers_discount,
+        quote?.offer_fixed_discount,
+        quote?.wheel_prize_discount,
+        quote?.discount_casco,
+        quote?.discount_amount_casco,
+        bookingInfo.discount_applied,
+    );
+
+    const hasDiscountPayloadValue = discountPayloadValues.some((value) => {
+        const numeric = toOptionalNumber(value);
+        return typeof numeric === "number" && !areApproximatelyEqual(numeric, 0);
+    });
+
+    const showDiscountDetails = hasDiscountPayloadValue && hasDiscountMetrics;
 
     const isNewBooking = bookingInfo?.id == null;
 
