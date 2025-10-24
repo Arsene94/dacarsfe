@@ -19,6 +19,11 @@ export interface CampaignTrackingPayload {
   referrer?: string | null;
 }
 
+export interface ReservationTrackingPayload extends CampaignTrackingPayload {
+  source_id?: string | null;
+  source_name?: string | null;
+}
+
 export interface ReservationFormData {
   customer_name: string;
   customer_email: string;
@@ -161,6 +166,7 @@ export interface ReservationPayload extends ReservationFormData {
   offer_fixed_discount?: number;
   source?: string | null;
   campaign_tracking?: CampaignTrackingPayload | null;
+  tracking?: ReservationTrackingPayload | null;
 }
 
 export interface DiscountValidationPayload {

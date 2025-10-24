@@ -310,6 +310,33 @@ const extractChannels = (
             normalizeNumber(record.retention_rate) ??
             0;
 
+        const bookingsValue =
+            normalizeNumber(entry.bookings) ??
+            normalizeNumber(record.booking_count) ??
+            normalizeNumber(record.bookingCount) ??
+            normalizeNumber(record.reservations) ??
+            normalizeNumber(record.total_bookings) ??
+            normalizeNumber(record.conversions) ??
+            normalizeNumber(record.leads) ??
+            0;
+
+        const avgRevenueValue =
+            normalizeNumber((entry as Record<string, unknown>).avg_revenue) ??
+            normalizeNumber(record.average_revenue) ??
+            normalizeNumber(record.averageRevenue) ??
+            normalizeNumber(record.average_value) ??
+            normalizeNumber(record.avg_value) ??
+            normalizeNumber(record.averageValue) ??
+            null;
+
+        const totalRevenueValue =
+            normalizeNumber((entry as Record<string, unknown>).total_revenue) ??
+            normalizeNumber(record.revenue) ??
+            normalizeNumber(record.totalRevenue) ??
+            normalizeNumber(record.revenue_total) ??
+            normalizeNumber(record.revenueTotal) ??
+            null;
+
         const cpaValue =
             normalizeNumber(entry.CPA) ??
             normalizeNumber(record.cpa) ??
@@ -317,11 +344,31 @@ const extractChannels = (
             normalizeNumber(record.cost) ??
             null;
 
+        const cplValue =
+            normalizeNumber((entry as Record<string, unknown>).cost_per_lead) ??
+            normalizeNumber(record.CPL) ??
+            normalizeNumber(record.cpl) ??
+            null;
+
         return {
             id: resolveIdentifier(record, index),
             channel: channelName,
+            bookings:
+                typeof bookingsValue === 'number' && Number.isFinite(bookingsValue)
+                    ? Math.max(0, Math.round(bookingsValue))
+                    : 0,
+            avg_revenue:
+                typeof avgRevenueValue === 'number' && Number.isFinite(avgRevenueValue)
+                    ? avgRevenueValue
+                    : null,
+            total_revenue:
+                typeof totalRevenueValue === 'number' && Number.isFinite(totalRevenueValue)
+                    ? totalRevenueValue
+                    : null,
             conversion_rate: conversionRate,
             CPA: typeof cpaValue === 'number' && Number.isFinite(cpaValue) ? cpaValue : null,
+            cost_per_lead:
+                typeof cplValue === 'number' && Number.isFinite(cplValue) ? cplValue : null,
         } satisfies MarketingChannelPerformance;
     });
 

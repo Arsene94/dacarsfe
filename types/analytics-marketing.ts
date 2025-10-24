@@ -53,8 +53,12 @@ export type MarketingOverviewApi = Partial<
 export interface MarketingChannelPerformance {
     id: number | string;
     channel: string;
+    bookings: number;
+    avg_revenue: number | null;
+    total_revenue: number | null;
     conversion_rate: number;
     CPA: number | null;
+    cost_per_lead: number | null;
 }
 
 export type MarketingChannelApi = Partial<
@@ -73,6 +77,39 @@ export type MarketingChannelApi = Partial<
     > &
     Partial<
         Record<
+            | 'bookings'
+            | 'booking_count'
+            | 'bookingCount'
+            | 'reservations'
+            | 'total_bookings'
+            | 'conversions'
+            | 'leads',
+            number | string
+        >
+    > &
+    Partial<
+        Record<
+            | 'avg_revenue'
+            | 'average_revenue'
+            | 'averageRevenue'
+            | 'average_value'
+            | 'avg_value'
+            | 'averageValue',
+            number | string
+        >
+    > &
+    Partial<
+        Record<
+            | 'total_revenue'
+            | 'revenue'
+            | 'totalRevenue'
+            | 'revenue_total'
+            | 'revenueTotal',
+            number | string
+        >
+    > &
+    Partial<
+        Record<
             | 'conversion_rate'
             | 'conversionRate'
             | 'conversion'
@@ -84,6 +121,9 @@ export type MarketingChannelApi = Partial<
     > &
     Partial<
         Record<'CPA' | 'cpa' | 'cost_per_acquisition' | 'cost', number | string>
+    > &
+    Partial<
+        Record<'cost_per_lead' | 'CPL' | 'cpl', number | string>
     > &
     Record<string, unknown>;
 

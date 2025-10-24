@@ -88,3 +88,38 @@ Provides a deeper breakdown of customer behaviour for cohort analysis.
 `average_repeat_bookings` counts how many reservations returning customers make on average, while
 `average_revenue_returning` focuses on revenue for those same customers. `average_LTV` mirrors the value from
 `/overview` for easy comparisons.
+
+## POST /api/track-source
+
+Sincronizează manual informațiile de atribuire captate din cookies sau parametri UTM către Laravel.
+Endpoint-ul acceptă un payload JSON cu următoarele chei:
+
+```json
+{
+  "source": "google",
+  "medium": "cpc",
+  "campaign": "promo-octombrie",
+  "referrer": "https://www.google.com",
+  "session_id": "abc123xyz"
+}
+```
+
+- `source` (**obligatoriu**) – canalul identificat (ex. `google`, `facebook`, `direct`).
+- `medium` – tipul traficului (ex. `cpc`, `referral`, `email`).
+- `campaign` – identificatorul campaniei din rețeaua de ads.
+- `referrer` – URL-ul complet al paginii care a trimis vizitatorul.
+- `session_id` – sesiunea de tracking generată anterior de backend (dacă există). Folosită pentru a evita duplicatele.
+
+### Răspuns 200
+
+```json
+{
+  "session_id": "abc123xyz",
+  "status": "tracked",
+  "synced_at": "2025-01-14T12:36:42Z"
+}
+```
+
+- `session_id` – ID-ul stabilit de backend pentru a lega lead-ul de rezervări viitoare.
+- `status` – confirmă faptul că payload-ul a fost procesat.
+- `synced_at` – momentul ultimei sincronizări (ISO 8601). Poate lipsi dacă backend-ul nu furnizează valoarea.

@@ -1,3 +1,8 @@
+import {
+    readTrackingCookieSnapshot,
+    type TrackingCookieSnapshot,
+} from '@/lib/marketing/cookies';
+
 export type CampaignTrackingData = {
     source: string | null;
     medium: string | null;
@@ -69,3 +74,7 @@ export const getStoredCampaignTrackingData = (): CampaignTrackingData | null => 
         return null;
     }
 };
+
+export type TrackingCookies = TrackingCookieSnapshot;
+
+export const readTrackingCookies = (): TrackingCookies | null => readTrackingCookieSnapshot();

@@ -41,7 +41,8 @@ const integerFormatter = new Intl.NumberFormat('ro-RO', {
 const currencyFormatter = new Intl.NumberFormat('ro-RO', {
     style: 'currency',
     currency: 'RON',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
 });
 
 const ratingFormatter = new Intl.NumberFormat('ro-RO', {
@@ -202,6 +203,10 @@ export default function MarketingDashboardPage() {
                 conversionRate: entry.conversion_rate,
                 channelLabel: entry.channel,
                 cpaValue: entry.CPA,
+                bookingsCount: entry.bookings,
+                avgRevenue: entry.avg_revenue,
+                totalRevenue: entry.total_revenue,
+                costPerLead: entry.cost_per_lead,
             })),
         [channels],
     );
@@ -340,8 +345,12 @@ export default function MarketingDashboardPage() {
                         </div>
                         <div className="mt-6 h-80 w-full">
                             {hasChannels ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={channelData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                                <>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart
+                                            data={channelData}
+                                            margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+                                        >
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                         <XAxis dataKey="channelLabel" tickLine={false} stroke="#94a3b8" />
                                         <YAxis
@@ -352,14 +361,70 @@ export default function MarketingDashboardPage() {
                                         <Tooltip
                                             contentStyle={tooltipContentStyle}
                                             cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }}
-                                            formatter={(value: number, _name, payload) => [
-                                                payload?.payload?.cpaValue
-                                                    ? `${formatConversion(value)} • CPA ${currencyFormatter.format(
-                                                          payload.payload.cpaValue,
-                                                      )}`
-                                                    : formatConversion(value),
-                                                payload?.payload?.channelLabel ?? 'Canal',
-                                            ]}
+                                            formatter={(value: number, _name, payload) => {
+                                                const details = payload?.payload as
+                                                    | {
+                                                          channelLabel?: string;
+                                                          cpaValue?: number | null;
+                                                          bookingsCount?: number;
+                                                          avgRevenue?: number | null;
+                                                          totalRevenue?: number | null;
+                                                          costPerLead?: number | null;
+                                                      }
+                                                    | undefined;
+
+                                                const segments: string[] = [formatConversion(value)];
+
+                                                if (
+                                                    typeof details?.bookingsCount === 'number'
+                                                    && Number.isFinite(details.bookingsCount)
+                                                ) {
+                                                    segments.push(
+                                                        `${integerFormatter.format(details.bookingsCount)} rezervări`,
+                                                    );
+                                                }
+
+                                                if (
+                                                    typeof details?.totalRevenue === 'number'
+                                                    && Number.isFinite(details.totalRevenue)
+                                                ) {
+                                                    segments.push(
+                                                        `Venit total ${currencyFormatter.format(details.totalRevenue)}`,
+                                                    );
+                                                }
+
+                                                if (
+                                                    typeof details?.avgRevenue === 'number'
+                                                    && Number.isFinite(details.avgRevenue)
+                                                ) {
+                                                    segments.push(
+                                                        `Venit mediu ${currencyFormatter.format(details.avgRevenue)}`,
+                                                    );
+                                                }
+
+                                                if (
+                                                    typeof details?.cpaValue === 'number'
+                                                    && Number.isFinite(details.cpaValue)
+                                                ) {
+                                                    segments.push(
+                                                        `CPA ${currencyFormatter.format(details.cpaValue)}`,
+                                                    );
+                                                }
+
+                                                if (
+                                                    typeof details?.costPerLead === 'number'
+                                                    && Number.isFinite(details.costPerLead)
+                                                ) {
+                                                    segments.push(
+                                                        `CPL ${currencyFormatter.format(details.costPerLead)}`,
+                                                    );
+                                                }
+
+                                                return [
+                                                    segments.join(' • '),
+                                                    details?.channelLabel ?? 'Canal',
+                                                ];
+                                            }}
                                             labelFormatter={() => 'Detalii canal'}
                                         />
                                         <Bar dataKey="conversionRate" radius={[8, 8, 0, 0]}>
@@ -371,8 +436,77 @@ export default function MarketingDashboardPage() {
                                                 />
                                             ))}
                                         </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                    <div className="mt-6 space-y-3">
+                                        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                            Detalii pe canal
+                                        </h3>
+                                        <ul className="grid gap-4 sm:grid-cols-2">
+                                            {channelData.map((entry) => (
+                                                <li
+                                                    key={`${entry.id}-details`}
+                                                    className="h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                                                >
+                                                    <div className="flex h-full flex-col justify-between gap-4">
+                                                        <div className="space-y-1">
+                                                            <p className="text-sm font-semibold text-berkeley">
+                                                                {entry.channelLabel}
+                                                            </p>
+                                                            <p className="text-xs text-slate-500">
+                                                                {formatPercentage(entry.conversionRate)} rată de conversie
+                                                            </p>
+                                                        </div>
+                                                        <dl className="grid grid-cols-1 gap-3 text-xs text-slate-600 sm:grid-cols-2 sm:text-sm">
+                                                            <div className="space-y-1">
+                                                                <dt className="font-medium text-slate-500">Rezervări</dt>
+                                                                <dd className="text-base font-semibold text-berkeley">
+                                                                    {integerFormatter.format(entry.bookingsCount ?? 0)}
+                                                                </dd>
+                                                            </div>
+                                                            {typeof entry.totalRevenue === 'number'
+                                                            && Number.isFinite(entry.totalRevenue) ? (
+                                                                <div className="space-y-1">
+                                                                    <dt className="font-medium text-slate-500">Venit total</dt>
+                                                                    <dd className="text-base font-semibold text-berkeley">
+                                                                        {currencyFormatter.format(entry.totalRevenue)}
+                                                                    </dd>
+                                                                </div>
+                                                            ) : null}
+                                                            {typeof entry.avgRevenue === 'number'
+                                                            && Number.isFinite(entry.avgRevenue) ? (
+                                                                <div className="space-y-1">
+                                                                    <dt className="font-medium text-slate-500">Venit mediu</dt>
+                                                                    <dd className="text-base font-semibold text-berkeley">
+                                                                        {currencyFormatter.format(entry.avgRevenue)}
+                                                                    </dd>
+                                                                </div>
+                                                            ) : null}
+                                                            {typeof entry.cpaValue === 'number'
+                                                            && Number.isFinite(entry.cpaValue) ? (
+                                                                <div className="space-y-1">
+                                                                    <dt className="font-medium text-slate-500">CPA</dt>
+                                                                    <dd className="text-base font-semibold text-berkeley">
+                                                                        {currencyFormatter.format(entry.cpaValue)}
+                                                                    </dd>
+                                                                </div>
+                                                            ) : null}
+                                                            {typeof entry.costPerLead === 'number'
+                                                            && Number.isFinite(entry.costPerLead) ? (
+                                                                <div className="space-y-1">
+                                                                    <dt className="font-medium text-slate-500">CPL</dt>
+                                                                    <dd className="text-base font-semibold text-berkeley">
+                                                                        {currencyFormatter.format(entry.costPerLead)}
+                                                                    </dd>
+                                                                </div>
+                                                            ) : null}
+                                                        </dl>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </>
                             ) : (
                                 <div className="flex h-full items-center justify-center">
                                     <p className="text-sm text-slate-500">
