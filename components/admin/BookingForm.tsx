@@ -858,6 +858,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [customerResults, setCustomerResults] = useState<AdminBookingCustomerSummary[]>([]);
     const [customerSearchActive, setCustomerSearchActive] = useState(false);
     const [quote, setQuote] = useState<QuotePriceResponse | null>(null);
+    const [quoteRawResponse, setQuoteRawResponse] = useState<any>([]);
     const [carDepositInput, setCarDepositInput] = useState<string>(
         bookingInfo?.car_deposit != null ? toDisplayString(bookingInfo.car_deposit) : "",
     );
@@ -1077,6 +1078,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 if (cancelled) {
                     return;
                 }
+                setQuoteRawResponse(data);
                 const normalizedData = normalizeQuoteResponse(data) ?? data;
                 setQuote(normalizedData);
                 updateBookingInfo((prev) => {
@@ -1706,12 +1708,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
         bookingInfo.discount_applied,
     ]);
 
+    const totalServicesEuro = pickFirstNumber([
+        quoteServicesEuro,
+        bookingInfo.total_services,
+    ]);
+
     const basePriceLeiDisplay = formatLeiAmount(basePriceEuro);
     const subtotalLeiDisplay = formatLeiAmount(subtotalEuro);
     const totalLeiDisplay = formatLeiAmount(totalEuro);
     const rentalRateLeiDisplay = formatLeiAmount(rentalRateEuro);
     const discountSubtotalLeiDisplay = formatLeiAmount(discountSubtotalEuro);
     const discountTotalLeiDisplay = formatLeiAmount(discountTotalEuro);
+    const totalServicesLeiDisplay = formatLeiAmount(totalServicesEuro);
 
     const basePriceEuroDisplay = formatEuroAmount(basePriceEuro);
     const subtotalEuroDisplay = formatEuroAmount(subtotalEuro);
@@ -1719,6 +1727,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const rentalRateEuroDisplay = formatEuroAmount(rentalRateEuro);
     const discountSubtotalEuroDisplay = formatEuroAmount(discountSubtotalEuro);
     const discountTotalEuroDisplay = formatEuroAmount(discountTotalEuro);
+    const totalServicesEuroDisplay = formatEuroAmount(totalServicesEuro);
     const showAdvancePayment =
         typeof advancePaymentEuro === "number" &&
         Number.isFinite(advancePaymentEuro) &&
@@ -1743,12 +1752,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 : null;
     const discountAppliedEuroDisplay = formatEuroAmount(discountAppliedEuro);
     const discountAppliedLeiDisplay = formatLeiAmount(discountAppliedEuro);
-
-    const showDiscountDetails = Boolean(
-        (discountSubtotalEuro != null && discountSubtotalEuro !== 0) ||
-            (discountTotalEuro != null && discountTotalEuro !== 0) ||
-            (discountAppliedEuro != null && discountAppliedEuro !== 0),
-    );
 
     const isNewBooking = bookingInfo?.id == null;
 
@@ -2326,6 +2329,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <span>{subtotalLeiDisplay ?? "—"}</span>
                                 </div>
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Servicii suplimentare:</span>
+                                    <span>{totalServicesLeiDisplay ?? "—"}</span>
+                                </div>
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
                                     <span>Total:</span>
                                     <span>{totalLeiDisplay ?? "—"}</span>
                                 </div>
@@ -2341,7 +2348,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         </div>
                                     </>
                                 )}
-                                {showDiscountDetails && (
+                                {quoteRawResponse?.discount?.total !== 0 && (
                                     <div className="font-dm-sans text-sm mt-3">
                                         Detalii discount:
                                         <ul className="list-disc">
@@ -2356,6 +2363,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Subtotal:</span>
                                                 <span>{discountSubtotalLeiDisplay ?? "—"}</span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Servicii suplimentare:</span>
+                                                <span>{totalServicesLeiDisplay ?? "—"}</span>
                                             </li>
                                             <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
                                                 <span>Total:</span>
@@ -2378,6 +2389,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                     <span>Subtotal:</span>
                                     <span>
                                         {subtotalEuroDisplay != null ? `${subtotalEuroDisplay}€` : "—"}
+                                    </span>
+                                </div>
+                                <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
+                                    <span>Servicii suplimentare:</span>
+                                    <span>
+                                        {totalServicesEuroDisplay != null
+                                            ? `${totalServicesEuroDisplay}€`
+                                            : "—"}
                                     </span>
                                 </div>
                                 <div className="font-dm-sans text-sm flex justify-between border-b border-b-1 mb-1">
@@ -2406,7 +2425,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         </div>
                                     </>
                                 )}
-                                {showDiscountDetails && (
+                                {quoteRawResponse?.discount?.total !== 0 && (
                                     <div className="font-dm-sans text-sm mt-3">
                                         Detalii discount:
                                         <ul className="list-disc">
@@ -2431,6 +2450,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                                 <span>
                                                     {discountSubtotalEuroDisplay != null
                                                         ? `${discountSubtotalEuroDisplay}€`
+                                                        : "—"}
+                                                </span>
+                                            </li>
+                                            <li className="ms-5 flex justify-between border-b border-b-1 mb-1">
+                                                <span>Servicii suplimentare:</span>
+                                                <span>
+                                                    {totalServicesEuroDisplay != null
+                                                        ? `${totalServicesEuroDisplay}€`
                                                         : "—"}
                                                 </span>
                                             </li>

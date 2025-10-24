@@ -1,12 +1,12 @@
 # Predictive Analytics API
 
-Endpoints under `/api/analytics/predictive` provide AI-assisted demand forecasts and fleet strategy recommendations generated from the latest 12 months of booking and cashflow activity. Responses are produced în limba română via OpenAI's `gpt-4o-mini` model și necesită configurarea variabilei `OPENAI_API_KEY` în mediu.
+Endpoints under `/api/analytics/predictive` provide AI-assisted demand forecasts and fleet strategy recommendations generated from the latest 12 months of booking and cashflow activity. Responses are produced in Romanian via OpenAI's `gpt-4o-mini` model and require `OPENAI_API_KEY` to be configured in the environment.
 
 ## Endpoints
 
 ### `GET /api/analytics/predictive/forecast`
 
-Returnează cererea estimată per categorie pentru luna următoare.
+Returns the predicted demand per car category for the upcoming month.
 
 **Response example**
 
@@ -19,7 +19,7 @@ Returnează cererea estimată per categorie pentru luna următoare.
 
 ### `GET /api/analytics/predictive/recommendations`
 
-Returnează recomandările pentru flotă cu liste de modele ce ar trebui achiziționate sau scoase din exploatare pe baza utilizării și a ROI-ului.
+Returns fleet recommendations with lists of models to acquire or retire based on utilization and ROI trends.
 
 **Response example**
 
@@ -30,13 +30,14 @@ Returnează recomandările pentru flotă cu liste de modele ce ar trebui achizi�
 }
 ```
 
-## Dataset sintetizat în prompt
+## Dataset summarised in the prompt
 
-Motorul predictiv compilează, pentru fiecare lună și categorie din ultimele 12 luni:
+The predictive engine compiles, for each month and category in the last 12 months:
 
-- numărul de rezervări
-- veniturile și cheltuielile totale (via `dacars_car_cashflows`)
-- rata de utilizare (zile închiriate vs. zile disponibile)
-- ROI calculat din costurile de achiziție și marja netă
+- reservation count
+- total revenue and car-specific expenses (via `dacars_car_cashflows`, filtrate pe `expense_type = car`)
+- utilization rate (rented days vs. available days)
+- ROI calculated from acquisition costs and net margin
 
-Acest rezumat este integrat în promptul trimis către OpenAI pentru ca rezultatul generat să reflecte atât performanța rezervărilor, cât și structura de costuri.
+This summary is embedded into the OpenAI prompt so that the generated output reflects both booking performance and cost structure.
+
