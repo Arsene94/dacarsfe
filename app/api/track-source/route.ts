@@ -29,7 +29,21 @@ const buildTargetUrl = (base: string): string => {
     }
 };
 
-const examplePayload = {
+type TrackSourcePayload = {
+    source: string;
+    medium?: string;
+    campaign?: string;
+    referrer?: string;
+    session_id?: string;
+};
+
+type TrackSourceResponse = {
+    session_id?: string;
+    status: 'tracked';
+    synced_at?: string;
+};
+
+const examplePayload: TrackSourcePayload = {
     source: 'google',
     medium: 'cpc',
     campaign: 'promo-octombrie',
@@ -37,9 +51,10 @@ const examplePayload = {
     session_id: 'abc123xyz',
 };
 
-const exampleResponse = {
+const exampleResponse: TrackSourceResponse = {
     session_id: 'abc123xyz',
     status: 'tracked',
+    synced_at: '2025-01-14T12:36:42Z',
 };
 
 export function GET() {
@@ -112,7 +127,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(data as Record<string, unknown>, { status: 200 });
         }
 
-        return NextResponse.json({ status: 'tracked' }, { status: 200 });
+        return NextResponse.json({ status: 'tracked' } satisfies TrackSourceResponse, { status: 200 });
     } catch (error) {
         console.error('Nu am putut trimite tracking-ul sursei către Laravel', error);
         return NextResponse.json(
