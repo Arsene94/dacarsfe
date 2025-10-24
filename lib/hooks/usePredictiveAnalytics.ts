@@ -563,6 +563,59 @@ const collectStringValues = (value: unknown): string[] => {
     return dedupeList(collected);
 };
 
+const hasLetters = (value: string): boolean => /[A-Za-zĂÂÎȘȚăâîșț]/u.test(value);
+
+const hasDigits = (value: string): boolean => /\d/.test(value);
+
+const formatAnalysisFactors = (factors: string[]): string[] => {
+    const result: string[] = [];
+    let pendingLabel: string | null = null;
+
+    const pushPendingLabel = () => {
+        if (pendingLabel) {
+            result.push(pendingLabel);
+            pendingLabel = null;
+        }
+    };
+
+    factors.forEach((raw) => {
+        const factor = raw.trim();
+
+        if (factor.length === 0) {
+            return;
+        }
+
+        const containsSeparator = /[:–—\u2013\u2014-]/u.test(factor);
+        const containsLetters = hasLetters(factor);
+        const containsNumbers = hasDigits(factor);
+
+        if (containsSeparator) {
+            pushPendingLabel();
+            result.push(factor);
+            return;
+        }
+
+        if (containsLetters && !containsNumbers) {
+            pushPendingLabel();
+            pendingLabel = factor.charAt(0).toUpperCase() + factor.slice(1);
+            return;
+        }
+
+        if (pendingLabel) {
+            const combined = `${pendingLabel}: ${factor}`;
+            result.push(combined);
+            pendingLabel = null;
+            return;
+        }
+
+        result.push(factor);
+    });
+
+    pushPendingLabel();
+
+    return dedupeList(result);
+};
+
 const SUMMARY_KEYWORDS = ['summary', 'rezumat', 'overview', 'executive', 'context', 'sinte', 'descr'];
 const OPPORTUNITY_KEYWORDS = ['opportunit', 'oportunit', 'growth', 'avantaj', 'benef'];
 const RISK_KEYWORDS = ['risk', 'riscur', 'threat', 'amenint'];
@@ -705,7 +758,7 @@ const mapForecast = (
             normalizeString((record.confidenceScore as string | undefined) ?? null) ||
             null;
 
-        const analysisFactors = collectStringValues({
+        const analysisFactorsRaw = collectStringValues({
             entryAnalysis: entry.analysis_factors,
             entryAnalysisAlt: entry.analysisFactors,
             entryAnalysisGeneric: entry.analysis,
@@ -719,6 +772,8 @@ const mapForecast = (
             recordFactors: record.factors,
             recordRationale: record.rationale,
         });
+
+        const analysisFactors = formatAnalysisFactors(analysisFactorsRaw);
 
         const id = buildIdentifier(record, index);
 
@@ -749,7 +804,7 @@ const mapForecast = (
             ...existing,
             predicted_demand: entry.predicted_demand,
             confidence_level: entry.confidence_level ?? existing.confidence_level,
-            analysis_factors: combinedFactors,
+            analysis_factors: formatAnalysisFactors(combinedFactors),
         });
     });
 

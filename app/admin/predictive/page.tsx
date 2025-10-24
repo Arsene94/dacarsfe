@@ -49,6 +49,31 @@ const forecastCardClass =
 const recommendationCardClass =
     'rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-4';
 
+const parseAnalysisFactor = (
+    factor: string,
+): { label: string | null; value: string | null } => {
+    if (!factor) {
+        return { label: null, value: null };
+    }
+
+    const separatorIndex = factor.indexOf(':');
+
+    if (separatorIndex === -1) {
+        return {
+            label: null,
+            value: factor.trim() || null,
+        };
+    }
+
+    const label = factor.slice(0, separatorIndex).trim();
+    const value = factor.slice(separatorIndex + 1).trim();
+
+    return {
+        label: label.length > 0 ? label : null,
+        value: value.length > 0 ? value : null,
+    };
+};
+
 const formatForecastPeriod = (values: string[]): string | null => {
     const unique = Array.from(new Set(values.filter((value) => value && value.trim().length > 0)));
 
@@ -453,9 +478,29 @@ export default function PredictiveDashboardPage() {
                                             </div>
                                             {entry.analysis_factors.length > 0 && (
                                                 <ul className="list-disc space-y-1 pl-4 text-xs text-slate-600">
-                                                    {entry.analysis_factors.map((factor, factorIndex) => (
-                                                        <li key={`${entry.id}-factor-${factorIndex}`}>{factor}</li>
-                                                    ))}
+                                                    {entry.analysis_factors.map((factor, factorIndex) => {
+                                                        const { label, value } = parseAnalysisFactor(factor);
+
+                                                        if (label && value) {
+                                                            return (
+                                                                <li
+                                                                    key={`${entry.id}-factor-${factorIndex}`}
+                                                                    className="text-slate-600"
+                                                                >
+                                                                    <span className="font-semibold text-slate-700">
+                                                                        {label}:
+                                                                    </span>{' '}
+                                                                    <span>{value}</span>
+                                                                </li>
+                                                            );
+                                                        }
+
+                                                        return (
+                                                            <li key={`${entry.id}-factor-${factorIndex}`}>
+                                                                {factor}
+                                                            </li>
+                                                        );
+                                                    })}
                                                 </ul>
                                             )}
                                         </div>
