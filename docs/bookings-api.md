@@ -10,8 +10,8 @@ The bookings controller powers public availability checks, quotes, and booking c
 | POST | `/api/bookings/quote` | Compute pricing (rates, totals, discounts, wheel prize impact). | None | Validation mirrors the booking form. |
 | POST | `/api/bookings/availability/check` | Check if a car is free between two dates. | None | Returns `{ "available": true|false }`. |
 | POST | `/api/bookings` | Create a booking and compute totals. | None | Automatically links the authenticated customer if a token is provided. |
-| POST | `/api/bookings/{booking}/extend` | Extend the reservation end date, storing extension pricing and payment status. | Admin token (`bookings.extend`) | Updates `remaining_balance` and exposes the `extension` summary. |
 | PATCH | `/api/bookings/{id}/cancel` | Mark a booking as cancelled. | Bearer token (`customer` guard) | Returns the updated `BookingResource` and a message. |
+| DELETE | `/api/bookings/{id}` | Permanently delete a booking owned by the authenticated customer. | Bearer token (`customer` guard) | Returns `{ "deleted": true }` when successful. |
 
 > **Caching:** GET endpoints are cached for 10 minutes per filter combination. Mutations automatically flush the cache.
 
@@ -55,9 +55,9 @@ Returns a Laravel paginator plus nested resources defined in `BookingResource`.
       "advance_payment": 50.0,
       "price_per_day": 36.0,
       "with_deposit": true,
-      "coupon_amount": 15.0,
+      "coupon_amount": 15,
       "coupon_code": "SPRING15",
-      "coupon_type": "percentage",
+      "coupon_type": "percent",
       "offers_discount": 30.0,
       "offer_fixed_discount": 10.0,
       "applied_offers": [
@@ -168,70 +168,13 @@ Returns a Laravel paginator plus nested resources defined in `BookingResource`.
 }
 ```
 
-`remaining_balance` însumează diferența dintre `total` și `advance_payment`, iar dacă rezervarea are o prelungire neachitată adaugă automat suma din `extension.total`. Obiectul `extension` este prezent doar când data de final a fost extinsă și include data inițială (`from`), noua dată (`to`), numărul de zile suplimentare, tariful folosit, totalul și statusul de plată.
-
 `wheel_prize.eligible` indică dacă reducerea aferentă premiului poate fi aplicată pentru intervalul de rezervare curent. Atunci
 când este `false`, câmpurile `wheel_prize_discount` și `wheel_prize.discount_value` vor rămâne la `0` chiar dacă premiul există,
 deoarece perioada configurată (`active_months`) nu se suprapune cu datele selectate. Pentru transparență expunem și `discount_value_deposit`/`discount_value_casco`, astfel încât clientul să poată afișa exact reducerea calculată pentru planul curent.
 
+`remaining_balance` însumează diferența dintre `total` și `advance_payment`, iar dacă rezervarea are o prelungire neachitată adaugă automat suma din `extension.total`. Obiectul `extension` este prezent doar când data de final a fost extinsă și include data inițială (`from`), noua dată (`to`), numărul de zile suplimentare, tariful folosit, totalul și statusul de plată.
+
 Structura `applied_offers` normalizează atât reducerile procentuale, cât și pe cele fixe. Fiecare intrare include valorile brute configurate în ofertă (`percent_discount_*`, `fixed_discount_*`), suma efectiv aplicată după scalare (`*_applied`) și totalurile per plan (`discount_amount_*`) plus valoarea finală (`discount_amount`) raportată în funcție de `with_deposit`.
-
----
-
-## POST `/api/bookings/{booking}/extend`
-
-Extinde perioada unei rezervări existente plecând de la data de sfârșit inițială. Serviciul verifică disponibilitatea pentru intervalul extins, calculează numărul de zile suplimentare și stochează tariful aplicat împreună cu statusul de plată. Dacă prelungirea rămâne neachitată, `remaining_balance` și `extension.remaining_payment` evidențiază suma datorată în dashboard și în payload-ul rezervării.
-
-### Request body
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `extended_until` | string | Yes* | ISO datetime pentru noua dată/ora de returnare. |
-| `extended_until_date` | string | No | Dată (`YYYY-MM-DD`) folosită împreună cu `extended_until_time`. |
-| `extended_until_time` | string | No | Oră (`HH:mm` sau `HH:mm:ss`) folosită împreună cu `extended_until_date`. |
-| `price_per_day` | number | No | Tarif personalizat pentru zilele de prelungire. Dacă lipsește se reutilizează `price_per_day` din rezervare. |
-| `paid` | boolean | Yes | Marchează extinderea ca achitată (`true`) sau în așteptare (`false`). |
-
-`extended_until` trebuie trimis dacă nu folosiți perechea `extended_until_date` + `extended_until_time`. Valorile înainte de data curentă de finalizare sunt respinse.
-
-### Example
-
-```http
-POST /api/bookings/412/extend
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "extended_until": "2025-02-22T10:00:00+02:00",
-  "price_per_day": 45,
-  "paid": false
-}
-```
-
-### Response (excerpt)
-
-```json
-{
-  "data": {
-    "id": 412,
-    "booking_number": "#1058821",
-    "rental_end_date": "2025-02-22T10:00:00+02:00",
-    "remaining_balance": 170,
-    "extension": {
-      "from": "2025-02-20T09:00:00+02:00",
-      "to": "2025-02-22T10:00:00+02:00",
-      "days": 2,
-      "price_per_day": 45,
-      "total": 90,
-      "paid": false,
-      "remaining_payment": 90
-    }
-  },
-  "message": "Booking extended"
-}
-```
-
-Apelurile ulterioare cu același `extended_until` permit actualizarea tarifului sau a indicatorului de plată fără a reseta data de bază a rezervării.
 
 ---
 
@@ -250,7 +193,7 @@ Validates the provided payload, resolves the base price via `CarPriceService`, a
   "rental_start_date": "2025-03-12T09:00:00",
   "rental_end_date": "2025-03-18T09:00:00",
   "with_deposit": true,
-  "coupon_type": "percentage",
+  "coupon_type": "percent",
   "coupon_amount": 15,
   "coupon_code": "SPRING15",
   "customer_email": "maria.enache@example.com",
@@ -270,24 +213,38 @@ Validates the provided payload, resolves the base price via `CarPriceService`, a
 the services and populates `total_services` in the response; the request field remains optional for backward compatibility and is
 ignored when `service_ids` are present.
 
+When recalculating a saved reservation you may pass `booking_id`. The quote engine will hydrate the request with the booking’s
+stored pricing context (daily rate, deposit mode, selected services, coupon metadata, offers and wheel prize) so that the
+response mirrors the reservation even if the public price calendar has changed. To intentionally re-evaluate the quote with a
+different deposit mode send `allow_deposit_override=true` alongside the new `with_deposit` flag; otherwise the existing booking
+configuration is enforced to prevent mixing stale calendar data into historical reservations.
+
 If a coupon is limited to a specific address (`limited_to_email`), the same value must be provided in `customer_email`; otherwise
 the response is HTTP 422 with the validation error `Emailul din cupon nu coincide cu cel din cererea de rezervare.` When a coupon
 enforces a booking window (`is_date_valid=true` together with `valid_start_date`/`valid_end_date`), the requested
 `rental_start_date`/`rental_end_date` must fall inside that interval. Quotes outside the range are rejected with
 `Cuponul nu este valabil pentru perioada selectată.`
 
-Manual overrides can also be applied without a coupon code by providing `coupon_type` and `coupon_amount`:
+#### Manual discount types
+Besides coupon codes (`coupon_type=code` + `coupon_code`), the quote endpoint accepts manual overrides through `coupon_type`:
 
-- `per_day` – subtract a fixed value from the computed daily rate.
-- `fixed_per_day` – force the daily rate to the supplied value.
-- `days` – make the given number of rental days free of charge.
-- `from_total` – subtract a flat amount from the computed subtotal.
-- `percentage` – subtract the given percentage (0–100) from the subtotal. Send `coupon_amount` as the percentage value, e.g. `10`
-  for a 10 % discount. The quote response returns the monetary value deducted via the usual `discount` / `coupon_amount` fields.
+- `per_day` – subtracts a fixed amount from the daily rate.
+- `fixed_per_day` – subtracts the supplied value from the daily rate (clamped at zero).
+- `days` – removes a number of paid days (e.g. value `1` makes one day free).
+- `from_total` – subtracts a flat amount from the computed subtotal.
+- `percentage` – new in this release; subtracts the given percentage (0–100) from the subtotal.
 
-The response additionally reports `coupon_total_discount` (the aggregated value removed from the subtotal) and
-`coupon_total_discount_details`, which breaks the amount down for deposit vs CASCO pricing so the frontend can reconstruct totals
-when toggling between plans.
+When using `percentage`, send `coupon_amount` as the percentage value (for example `10` for a 10 % discount). The response still
+provides the monetary impact through the `discount` field so the frontend can show both the percentage and the applied currency
+value. For manual `per_day` discounts the response now echoes the daily amount entered by the operator (instead of multiplying it
+by the number of rental days), making subsequent edits consistent with the form input.
+
+The quote payload also reports `coupon_total_discount` (used when the system needs to recompute totals from the base rate) and
+`coupon_total_discount_details`, which breaks down the applied coupon value for deposit vs CASCO pricing modes. Wheel prizes are
+evaluated against the amounts before coupon deductions so their value remains stable even when stacking a coupon code with a
+wheel reward. The `sub_total`/`sub_total_casco` fields stay anchored to the base amounts prior to coupons, while `discount`
+contains the rounded-up deduction that is actually subtracted from `total`. Aside from the `per_day` exception mentioned above,
+`coupon_amount` continues to reflect the currency value removed by the selected discount.
 
 ### Response
 ```json
@@ -388,7 +345,7 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
   "with_deposit": true,
   "coupon_amount": 15,
   "coupon_code": "SPRING15",
-  "coupon_type": "percentage",
+  "coupon_type": "percent",
   "offers_discount": 30,
   "deposit_waived": false,
   "applied_offers": [
@@ -411,14 +368,28 @@ Persists a booking using `BookingService::create`. The controller recomputes pri
     "eligible": true
   },
   "note": "Predare la terminal Plecări",
-  "source": "facebook"
+  "tracking": {
+    "source": "tiktok",
+    "campaign_id": "17293492",
+    "ttclid": "1a2b3c4d5e"
+  }
 }
 ```
 
-`source` este opțional și acceptă valoarea canalului din care a sosit clientul (de ex. `facebook`,
-`google`, `referral`, `direct`). Frontend-ul setează automat acest câmp folosind UTM-urile sau
-referrer-ul capturat în localStorage pentru a permite corelarea rezervărilor cu campaniile
-de marketing.
+#### Tracking payload
+
+- `source` – marketing channel identifier (normalised server-side to lowercase).
+- `campaign_id` – raw campaign ID received from TikTok (or any other ad network).
+- `ttclid` – TikTok click identifier, used later to reconcile paid traffic with
+  reservation conversions.
+
+The `TrackReferralSource` middleware automatically persists the last detected
+marketing touch in cookies (`dacars_source`, `dacars_source_name`,
+`dacars_source_id`) together with `dacars_campaign_id` (campaign) and
+`dacars_ttclid` (click). Front-ends should read those values on the booking
+form and send them via the `tracking` object so reservations can be tied back
+to the original campaign. All fields are optional; when omitted the API falls
+back to the relationship inferred from cookies/session data.
 
 ### Success response (HTTP 201)
 `BookingResource` payload plus an informational message:
@@ -433,6 +404,9 @@ de marketing.
     "customer_email": "maria.enache@example.com",
     "customer_phone": "+40 723 555 111",
     "customer_age": null,
+    "traffic_source_id": 12,
+    "tracking_campaign_id": "17293492",
+    "tracking_click_id": "1a2b3c4d5e",
     "car_id": 17,
     "car_image": "cars/17/gallery/main.webp",
     "car_name": "Dacia Jogger Expression 1.0 TCe",
@@ -447,7 +421,7 @@ de marketing.
   "with_deposit": true,
   "coupon_amount": 15.0,
   "coupon_code": "SPRING15",
-  "coupon_type": "percentage",
+  "coupon_type": "percent",
   "offers_discount": 30.0,
   "offer_fixed_discount": 10.0,
   "deposit_waived": false,
@@ -500,6 +474,11 @@ Availability conflicts or invalid date ranges trigger `422` errors sourced from 
 
 Pe lângă câmpurile existente, `BookingResource` serializată de endpoint include suma totală `offers_discount`, componenta fixă aplicată (`offer_fixed_discount`), lista normalizată `applied_offers` cu reduceri distribuite pe plan și indicatorul `deposit_waived`, astfel încât aplicațiile client să știe ce promoții au fost acceptate, ce valoare s-a aplicat efectiv și dacă garanția a fost eliminată în urma unei oferte.
 
+Pentru urmărirea campaniilor plătite, răspunsul expune `tracking_campaign_id` și
+`tracking_click_id` (când sunt disponibile) împreună cu `traffic_source_id`. Dacă
+relația `traffic_source` este inclusă, obiectul returnat cuprinde și
+`campaign_id`, `cost`, `leads`, `conversions` și CPL-ul calculat în backend.
+
 ---
 
 ## PATCH `/api/bookings/{id}/cancel`
@@ -522,4 +501,15 @@ Requires a customer Sanctum token. Updates the status to `cancelled` and flushes
 }
 ```
 
-If the booking does not belong to the authenticated customer, authorisation must be enforced at application level (the route currently exposes the controller directly, so the frontend should only send cancellations for bookings owned by the logged-in customer).
+If the booking does not belong to the authenticated customer the controller returns `403 Forbidden`, ensuring that one customer cannot cancel another customer's reservation.
+
+---
+
+## DELETE `/api/bookings/{id}`
+Requires a customer Sanctum token. Deletes the booking record and flushes caches. Only the customer who owns the reservation can perform the operation; otherwise a `403` is returned.
+
+```json
+{
+  "deleted": true
+}
+```
