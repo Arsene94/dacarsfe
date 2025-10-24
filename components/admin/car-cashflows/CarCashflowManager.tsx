@@ -56,7 +56,6 @@ interface NormalizedCashflow {
   createdAtDate: Date | null;
   createdById: number | null;
   createdByName: string | null;
-  category: string | null;
   description: string | null;
 }
 
@@ -68,7 +67,6 @@ interface CashflowFormState {
   occurredOn: string;
   description: string;
   expenseType: CarCashflowExpenseType | "";
-  category: string;
 }
 
 interface MonthlySummary {
@@ -368,7 +366,6 @@ const normalizeCashflow = (
     createdAtDate,
     createdById: createdByCandidate,
     createdByName,
-    category: coerceNonEmptyString(record.category),
     description: coerceNonEmptyString(record.description),
   };
 };
@@ -381,7 +378,6 @@ const createDefaultFormState = (): CashflowFormState => ({
   occurredOn: toDateTimeInputValue(new Date()),
   description: "",
   expenseType: "",
-  category: "",
 });
 
 const CarCashflowManager = () => {
@@ -427,6 +423,12 @@ const CarCashflowManager = () => {
     () => formState.direction === "income" || formState.expenseType === "car",
     [formState.direction, formState.expenseType],
   );
+
+  useEffect(() => {
+    if (!isCarSelectionRequired) {
+      setFormCar(null);
+    }
+  }, [isCarSelectionRequired]);
 
   const totalAmountNumber = useMemo(() => {
     if (!formState.paymentMethod) {
@@ -886,7 +888,6 @@ const CarCashflowManager = () => {
       payment_method: paymentMethod,
       total_amount: totalAmount,
       occurred_on: formatDateTimeForApi(formState.occurredOn),
-      category: coerceNonEmptyString(formState.category),
       description: coerceNonEmptyString(formState.description),
       cash_amount: cashAmount,
       card_amount: cardAmount,
@@ -942,18 +943,12 @@ const CarCashflowManager = () => {
         ),
       },
       {
-        id: "category",
-        header: "Categorie",
-        accessor: (row) => {
-          const fragments: string[] = [];
-          if (row.direction === "expense" && (row.expenseTypeLabel || row.expenseType)) {
-            fragments.push((row.expenseTypeLabel ?? row.expenseType ?? "").toString());
-          }
-          if (row.category) {
-            fragments.push(row.category);
-          }
-          return fragments.join(" ").trim();
-        },
+        id: "expense_type",
+        header: "Tip cheltuială",
+        accessor: (row) =>
+          row.direction === "expense"
+            ? row.expenseTypeLabel ?? row.expenseType ?? ""
+            : "",
         sortable: true,
         cell: (row) => (
           <div className="space-y-0.5">
@@ -962,7 +957,13 @@ const CarCashflowManager = () => {
                 {row.expenseTypeLabel ?? row.expenseType ?? "—"}
               </p>
             )}
-            <p className="text-sm text-gray-700">{row.category ?? "—"}</p>
+            {row.direction === "expense" ? (
+              <p className="text-sm text-gray-700">
+                {row.description ? row.description : "—"}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-700">—</p>
+            )}
           </div>
         ),
       },
@@ -1030,10 +1031,9 @@ const CarCashflowManager = () => {
   const renderRowDetails = useCallback((row: NormalizedCashflow) => {
     const hasExpenseType =
       row.direction === "expense" && Boolean(row.expenseTypeLabel ?? row.expenseType);
-    const hasCategory = Boolean(row.category);
     const hasDescription = Boolean(row.description);
 
-    if (!hasExpenseType && !hasCategory && !hasDescription) {
+    if (!hasExpenseType && !hasDescription) {
       return (
         <div className="space-y-2 text-sm text-gray-600">
           <p className="italic text-gray-400">Nu există detalii suplimentare.</p>
@@ -1047,11 +1047,6 @@ const CarCashflowManager = () => {
           <p>
             <span className="font-medium text-gray-800">Tip cheltuială:</span>{" "}
             {row.expenseTypeLabel ?? row.expenseType ?? "—"}
-          </p>
-        )}
-        {hasCategory && (
-          <p>
-            <span className="font-medium text-gray-800">Categorie:</span> {row.category}
           </p>
         )}
         {hasDescription && (
@@ -1396,46 +1391,33 @@ const CarCashflowManager = () => {
                 </Select>
               </div>
             )}
-            <div className="space-y-1 md:col-span-2">
-              <Label htmlFor="form-car">Mașină</Label>
-              <SearchSelect<CarOption>
-                id="form-car"
-                value={formCar}
-                search={formCarSearch}
-                items={filteredFormCars}
-                onSearch={setFormCarSearch}
-                onSelect={(item) => setFormCar(item)}
-                placeholder="Selectează mașina"
-                renderItem={(item) => (
-                  <div className="flex flex-col">
-                    <span className="font-medium">{item.name}</span>
-                    {item.licensePlate && <span className="text-xs text-gray-500">{item.licensePlate}</span>}
-                  </div>
-                )}
-                renderValue={(item) => (
-                  <div className="flex flex-col">
-                    <span>{item.name}</span>
-                    {item.licensePlate && <span className="text-xs text-gray-500">{item.licensePlate}</span>}
-                  </div>
-                )}
-              />
-              <p className="text-xs text-gray-500">
-                {isCarSelectionRequired
-                  ? "Selectează mașina asociată tranzacției."
-                  : "Opțional pentru cheltuieli fără mașină alocată."}
-              </p>
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <Label htmlFor="form-category">Categorie</Label>
-              <Input
-                id="form-category"
-                value={formState.category}
-                onChange={handleFormChange("category")}
-                placeholder="Ex: chirii, service, marketing"
-                maxLength={80}
-              />
-              <p className="text-xs text-gray-500">Folosită pentru a grupa tranzacțiile similare.</p>
-            </div>
+            {isCarSelectionRequired && (
+              <div className="space-y-1 md:col-span-2">
+                <Label htmlFor="form-car">Mașină</Label>
+                <SearchSelect<CarOption>
+                  id="form-car"
+                  value={formCar}
+                  search={formCarSearch}
+                  items={filteredFormCars}
+                  onSearch={setFormCarSearch}
+                  onSelect={(item) => setFormCar(item)}
+                  placeholder="Selectează mașina"
+                  renderItem={(item) => (
+                    <div className="flex flex-col">
+                      <span className="font-medium">{item.name}</span>
+                      {item.licensePlate && <span className="text-xs text-gray-500">{item.licensePlate}</span>}
+                    </div>
+                  )}
+                  renderValue={(item) => (
+                    <div className="flex flex-col">
+                      <span>{item.name}</span>
+                      {item.licensePlate && <span className="text-xs text-gray-500">{item.licensePlate}</span>}
+                    </div>
+                  )}
+                />
+                <p className="text-xs text-gray-500">Selectează mașina asociată tranzacției.</p>
+              </div>
+            )}
             {isCashSelected && (
               <div className="space-y-1">
                 <Label htmlFor="form-cash-amount">Sumă cash</Label>

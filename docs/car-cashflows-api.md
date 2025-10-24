@@ -15,7 +15,6 @@ require an authenticated admin and the relevant `car_cashflows.*` permission.
 - `car_id` – vehicle identifier (`dacars_cars.id`). Required for `direction = income` and for `direction = expense` when `expense_type = car`.
 - `direction` (required) – `income` or `expense`.
 - `expense_type` – required when `direction = expense`. One of `car`, `house`, `parking_wash`, `marketing`, `company_operations`, `salary`, `fuel`, `other`.
-- `category` – optional label (max 80 chars) to group entries (e.g. `chirii`, `service`, `taxe`).
 - `description` – free text explaining the transaction.
 - `payment_method` (required) – one of `cash`, `card`, `cash_card`.
 - `total_amount` (required) – numeric ≥ 0. For `cash`/`card` methods it is auto-aligned with the corresponding amount.
@@ -49,7 +48,6 @@ require an authenticated admin and the relevant `car_cashflows.*` permission.
 {
   "car_id": 12,
   "direction": "income",
-  "category": "chirii",
   "payment_method": "cash",
   "total_amount": 550.75,
   "occurred_on": "2025-03-12 10:15:00"
@@ -62,7 +60,6 @@ require an authenticated admin and the relevant `car_cashflows.*` permission.
   "car_id": 5,
   "direction": "expense",
   "expense_type": "car",
-  "category": "service",
   "payment_method": "cash_card",
   "total_amount": 380,
   "cash_amount": 150,
@@ -91,7 +88,7 @@ require an authenticated admin and the relevant `car_cashflows.*` permission.
     "id": 27,
     "car_id": 5,
     "direction": "expense",
-    "category": "service",
+    "expense_type": "car",
     "description": "Revizie și ITP",
     "payment_method": "cash_card",
     "cash_amount": 150,

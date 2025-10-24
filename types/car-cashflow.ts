@@ -31,7 +31,6 @@ export interface CarCashflowRecord {
   car_id: number | null;
   direction: CarCashflowDirection;
   expense_type?: CarCashflowExpenseType | null;
-  category?: string | null;
   description?: string | null;
   payment_method: CarCashflowPaymentMethod;
   total_amount: number;
@@ -52,7 +51,6 @@ export interface CarCashflowPayload {
   payment_method: CarCashflowPaymentMethod;
   total_amount: number;
   occurred_on: string;
-  category?: string | null;
   description?: string | null;
   cash_amount?: number | null;
   card_amount?: number | null;
