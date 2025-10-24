@@ -858,6 +858,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const [customerResults, setCustomerResults] = useState<AdminBookingCustomerSummary[]>([]);
     const [customerSearchActive, setCustomerSearchActive] = useState(false);
     const [quote, setQuote] = useState<QuotePriceResponse | null>(null);
+    const [quoteRawResponse, setQuoteRawResponse] = useState<any>([]);
     const [carDepositInput, setCarDepositInput] = useState<string>(
         bookingInfo?.car_deposit != null ? toDisplayString(bookingInfo.car_deposit) : "",
     );
@@ -1077,6 +1078,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 if (cancelled) {
                     return;
                 }
+                setQuoteRawResponse(data);
                 const normalizedData = normalizeQuoteResponse(data) ?? data;
                 setQuote(normalizedData);
                 updateBookingInfo((prev) => {
@@ -1751,48 +1753,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const discountAppliedEuroDisplay = formatEuroAmount(discountAppliedEuro);
     const discountAppliedLeiDisplay = formatLeiAmount(discountAppliedEuro);
 
-    const discountMetrics = [
-        discountSubtotalEuro,
-        discountTotalEuro,
-        discountAmountEuro,
-        discountAppliedEuro,
-    ];
-    const hasDiscountMetrics = discountMetrics.some(
-        (value) => typeof value === "number" && !areApproximatelyEqual(value, 0),
-    );
-
-    const rawDiscount = quote?.discount;
-    const discountPayloadValues: unknown[] = [];
-
-    if (
-        typeof rawDiscount === "number" ||
-        (typeof rawDiscount === "string" && rawDiscount.trim().length > 0)
-    ) {
-        discountPayloadValues.push(rawDiscount);
-    } else if (rawDiscount && typeof rawDiscount === "object" && !Array.isArray(rawDiscount)) {
-        discountPayloadValues.push(...Object.values(rawDiscount));
-    }
-
-    discountPayloadValues.push(
-        quote?.coupon_total_discount,
-        quote?.coupon_amount,
-        quote?.discount_amount,
-        quote?.discount,
-        quote?.offers_discount,
-        quote?.offer_fixed_discount,
-        quote?.wheel_prize_discount,
-        quote?.discount_casco,
-        quote?.discount_amount_casco,
-        bookingInfo.discount_applied,
-    );
-
-    const hasDiscountPayloadValue = discountPayloadValues.some((value) => {
-        const numeric = toOptionalNumber(value);
-        return typeof numeric === "number" && !areApproximatelyEqual(numeric, 0);
-    });
-
-    const showDiscountDetails = hasDiscountPayloadValue && hasDiscountMetrics;
-
     const isNewBooking = bookingInfo?.id == null;
 
     const handleSubmitBooking = async () => {
@@ -2388,7 +2348,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         </div>
                                     </>
                                 )}
-                                {showDiscountDetails && (
+                                {quoteRawResponse?.discount?.total !== 0 && (
                                     <div className="font-dm-sans text-sm mt-3">
                                         Detalii discount:
                                         <ul className="list-disc">
@@ -2465,7 +2425,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                                         </div>
                                     </>
                                 )}
-                                {showDiscountDetails && (
+                                {quoteRawResponse?.discount?.total !== 0 && (
                                     <div className="font-dm-sans text-sm mt-3">
                                         Detalii discount:
                                         <ul className="list-disc">
