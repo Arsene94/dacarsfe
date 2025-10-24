@@ -288,6 +288,27 @@ export const getStoredSourceDetails = (): TrackedSourceDetails | null => {
     return cookieDetails;
 };
 
+const buildPayload = (details: TrackedSourceDetails, sessionId: string | null): Record<string, unknown> => {
+    const payload: Record<string, unknown> = {
+        source: details.source,
+    };
+
+    if (sessionId) {
+        payload.session_id = sessionId;
+    }
+    if (details.medium) {
+        payload.medium = details.medium;
+    }
+    if (details.campaign) {
+        payload.campaign = details.campaign;
+    }
+    if (details.referrer) {
+        payload.referrer = details.referrer;
+    }
+
+    return payload;
+};
+
 const shouldResend = (current: TrackedSourceDetails | null, next: TrackedSourceDetails): boolean => {
     if (!current) {
         return true;
@@ -348,6 +369,8 @@ export const trackSource = async (): Promise<TrackedSourceDetails | null> => {
         }
     }
 
+    storeSessionSignature(signature, 'pending');
+
     const needResend = shouldResend(stored, merged);
 
     if (!needResend) {
@@ -356,14 +379,41 @@ export const trackSource = async (): Promise<TrackedSourceDetails | null> => {
         return { ...merged, sessionId };
     }
 
-    const resolvedSessionId = merged.sessionId ?? sessionId ?? null;
-    const syncedDetails: TrackedSourceDetails = {
-        ...merged,
-        sessionId: resolvedSessionId,
-        lastSyncedAt: new Date().toISOString(),
-    };
+    try {
+        const response = await fetch('/api/track-source', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify(buildPayload(merged, sessionId)),
+        });
 
-    storeDetails(syncedDetails);
+        if (response.ok) {
+            const result = await response.json().catch(() => null);
+            const returnedSession =
+                result && typeof result.session_id === 'string' && result.session_id.trim().length > 0
+                    ? result.session_id.trim()
+                    : null;
+
+            if (returnedSession) {
+                merged.sessionId = returnedSession;
+            } else if (sessionId) {
+                merged.sessionId = sessionId;
+            }
+
+            merged.lastSyncedAt = new Date().toISOString();
+            storeDetails(merged);
+            storeSessionSignature(signature, 'synced');
+            return merged;
+        }
+
+        console.warn('Tracking source a returnat un status neașteptat', response.status);
+    } catch (error) {
+        console.warn('Nu am putut trimite informațiile de atribuire către backend', error);
+    }
+
+    storeDetails({ ...merged, sessionId });
     storeSessionSignature(signature, 'synced');
-    return syncedDetails;
+    return { ...merged, sessionId };
 };
