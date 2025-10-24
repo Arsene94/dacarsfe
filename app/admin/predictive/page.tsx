@@ -10,7 +10,7 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-import { Loader2, RotateCcw } from 'lucide-react';
+import { HelpCircle, Loader2, RotateCcw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,6 +72,28 @@ const parseAnalysisFactor = (
         label: label.length > 0 ? label : null,
         value: value.length > 0 ? value : null,
     };
+};
+
+const driverFactorDescriptions: Record<string, string> = {
+    'Dimensiune flotă':
+        'Numărul total de vehicule disponibile în flotă pentru categoria analizată în perioada selectată.',
+    'Utilizare medie':
+        'Procentul mediu de timp în care vehiculele din categorie au fost închiriate, pe baza istoricului recent.',
+    Utilizare:
+        'Nivelul de utilizare calculat pentru categoria respectivă, exprimat ca procent din perioada monitorizată.',
+    'Grad de ocupare':
+        'Procentul rezervărilor confirmate din totalul disponibilității pentru categoria analizată.',
+    'Multiplicator piață':
+        'Coeficientul care arată cum afectează contextul de piață (cerere și concurență) cererea estimată.',
+    'Multiplicator cerere':
+        'Factorul aplicat cererii istorice pentru a integra variațiile recente din piață.',
+    'Indice cerere':
+        'Indicele compozit ce agregă indicatorii de cerere curenți vs. istoric pentru categorie.',
+    'Scor cerere':
+        'Scorul calitativ folosit pentru a compara performanța cererii între categorii similare.',
+    'Indice sezonalitate':
+        'Nivelul de influență al sezonalității asupra cererii anticipate pentru categoria selectată.',
+    ROI: 'Randamentul investiției obținut sau estimat pentru categoria respectivă, exprimat procentual.',
 };
 
 const formatForecastPeriod = (values: string[]): string | null => {
@@ -482,6 +504,8 @@ export default function PredictiveDashboardPage() {
                                                         const { label, value } = parseAnalysisFactor(factor);
 
                                                         if (label && value) {
+                                                            const description = driverFactorDescriptions[label] ?? null;
+
                                                             return (
                                                                 <li
                                                                     key={`${entry.id}-factor-${factorIndex}`}
@@ -490,7 +514,25 @@ export default function PredictiveDashboardPage() {
                                                                     <span className="font-semibold text-slate-700">
                                                                         {label}:
                                                                     </span>{' '}
-                                                                    <span>{value}</span>
+                                                                    <span className="inline-flex items-center gap-2">
+                                                                        <span>{value}</span>
+                                                                        {description && (
+                                                                            <button
+                                                                                type="button"
+                                                                                className="group relative inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full text-slate-400 transition hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-jade focus-visible:ring-offset-0"
+                                                                                aria-label={`${label}. ${description}`}
+                                                                                title={description}
+                                                                            >
+                                                                                <HelpCircle
+                                                                                    className="h-3.5 w-3.5"
+                                                                                    aria-hidden="true"
+                                                                                />
+                                                                                <span className="pointer-events-none absolute left-1/2 top-full z-20 hidden w-60 -translate-x-1/2 translate-y-2 rounded-md bg-slate-900 px-3 py-2 text-xs font-medium text-white shadow-lg group-hover:block group-focus-visible:block">
+                                                                                    {description}
+                                                                                </span>
+                                                                            </button>
+                                                                        )}
+                                                                    </span>
                                                                 </li>
                                                             );
                                                         }
