@@ -1733,11 +1733,7 @@ const ReservationPage = () => {
         }
 
         const trackingPayload: ReservationTrackingPayload | null = (() => {
-            const result: ReservationTrackingPayload = {};
-
-            if (sourceAttribution) {
-                result.source = sourceAttribution;
-            }
+            const result: ReservationTrackingPayload = { source: sourceAttribution };
 
             const sourceName = pickFirstNonEmptyString(trackingCookies?.source_name);
             if (sourceName) {
