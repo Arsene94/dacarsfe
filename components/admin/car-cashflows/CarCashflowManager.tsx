@@ -19,6 +19,7 @@ import type { ApiCar } from "@/types/car";
 import type { User } from "@/types/auth";
 import type {
   CarCashflowDirection,
+  CarCashflowExpenseType,
   CarCashflowListParams,
   CarCashflowPaymentMethod,
   CarCashflowRecord,
@@ -37,11 +38,13 @@ interface UserOption {
 
 interface NormalizedCashflow {
   id: number;
-  carId: number;
+  carId: number | null;
   carLabel: string;
   carPlate: string | null;
   direction: CarCashflowDirection;
   directionLabel: string;
+  expenseType: CarCashflowExpenseType | null;
+  expenseTypeLabel: string | null;
   paymentMethod: CarCashflowPaymentMethod;
   paymentMethodLabel: string;
   totalAmount: number;
@@ -53,6 +56,7 @@ interface NormalizedCashflow {
   createdAtDate: Date | null;
   createdById: number | null;
   createdByName: string | null;
+  category: string | null;
   description: string | null;
 }
 
@@ -63,6 +67,8 @@ interface CashflowFormState {
   cardAmount: string;
   occurredOn: string;
   description: string;
+  expenseType: CarCashflowExpenseType | "";
+  category: string;
 }
 
 interface MonthlySummary {
@@ -91,6 +97,35 @@ const paymentMethodLabels: Record<CarCashflowPaymentMethod, string> = {
 type SinglePaymentMethod = Exclude<CarCashflowPaymentMethod, "cash_card">;
 
 const paymentMethodSummaryOrder: readonly SinglePaymentMethod[] = ["cash", "card"];
+
+type ExpenseTypeFilterValue = "all" | CarCashflowExpenseType;
+
+const expenseTypeValues: readonly CarCashflowExpenseType[] = [
+  "car",
+  "fuel",
+  "parking_wash",
+  "marketing",
+  "company_operations",
+  "salary",
+  "house",
+  "other",
+];
+
+const expenseTypeLabels: Record<CarCashflowExpenseType, string> = {
+  car: "Flotă",
+  fuel: "Carburant",
+  parking_wash: "Parcare & spălătorie",
+  marketing: "Marketing",
+  company_operations: "Operațiuni companie",
+  salary: "Salarii",
+  house: "Chirie & utilități",
+  other: "Altele",
+};
+
+const expenseTypeFilterOptions: readonly { value: ExpenseTypeFilterValue; label: string }[] = [
+  { value: "all", label: "Toate cheltuielile" },
+  ...expenseTypeValues.map((value) => ({ value, label: expenseTypeLabels[value] })),
+];
 
 const currencyFormatter = new Intl.NumberFormat("ro-RO", {
   style: "currency",
@@ -246,21 +281,41 @@ const normalizeCashflow = (
   carLookup: Map<number, CarOption>,
   userLookup: Map<number, UserOption>,
 ): NormalizedCashflow => {
-  const fallbackCar: CarOption = record.car
-    ? {
-        id: record.car.id,
-        name:
-          coerceNonEmptyString(record.car.name)
-            ?? coerceNonEmptyString(record.car.license_plate)
-            ?? `Mașină #${record.car.id}`,
-        licensePlate: coerceNonEmptyString(record.car.license_plate),
-      }
-    : {
-        id: record.car_id,
-        name: `Mașină #${record.car_id}`,
-        licensePlate: null,
-      };
-  const carInfo = carLookup.get(record.car_id) ?? fallbackCar;
+  const resolvedCarId =
+    typeof record.car_id === "number" && Number.isFinite(record.car_id)
+      ? record.car_id
+      : typeof record.car?.id === "number" && Number.isFinite(record.car.id)
+        ? record.car.id
+        : null;
+
+  let carLabel = "Fără mașină";
+  let carPlate: string | null = null;
+
+  if (resolvedCarId !== null) {
+    const fallbackCar: CarOption | null = record.car
+      ? {
+          id: record.car.id,
+          name:
+            coerceNonEmptyString(record.car.name)
+              ?? coerceNonEmptyString(record.car.license_plate)
+              ?? `Mașină #${record.car.id}`,
+          licensePlate: coerceNonEmptyString(record.car.license_plate),
+        }
+      : {
+          id: resolvedCarId,
+          name: `Mașină #${resolvedCarId}`,
+          licensePlate: null,
+        };
+    const carInfo = carLookup.get(resolvedCarId) ?? fallbackCar;
+    carLabel = carInfo.name;
+    carPlate = carInfo.licensePlate ?? null;
+  } else if (record.car) {
+    carLabel =
+      coerceNonEmptyString(record.car.name)
+        ?? coerceNonEmptyString(record.car.license_plate)
+        ?? "Fără mașină";
+    carPlate = coerceNonEmptyString(record.car.license_plate);
+  }
 
   const occurredOnDate = safeParseDate(record.occurred_on);
   const createdAtDate = safeParseDate(record.created_at ?? undefined);
@@ -288,13 +343,20 @@ const normalizeCashflow = (
         ? record.total_amount
         : null;
 
+  const expenseType = record.expense_type ?? null;
+  const expenseTypeLabel = expenseType
+    ? expenseTypeLabels[expenseType] ?? expenseType
+    : null;
+
   return {
     id: record.id,
-    carId: record.car_id,
-    carLabel: carInfo.name,
-    carPlate: carInfo.licensePlate,
+    carId: resolvedCarId,
+    carLabel,
+    carPlate,
     direction: record.direction,
     directionLabel: directionLabels[record.direction],
+    expenseType,
+    expenseTypeLabel,
     paymentMethod: record.payment_method,
     paymentMethodLabel: paymentMethodLabels[record.payment_method],
     totalAmount: record.total_amount,
@@ -306,6 +368,7 @@ const normalizeCashflow = (
     createdAtDate,
     createdById: createdByCandidate,
     createdByName,
+    category: coerceNonEmptyString(record.category),
     description: coerceNonEmptyString(record.description),
   };
 };
@@ -317,6 +380,8 @@ const createDefaultFormState = (): CashflowFormState => ({
   cardAmount: "",
   occurredOn: toDateTimeInputValue(new Date()),
   description: "",
+  expenseType: "",
+  category: "",
 });
 
 const CarCashflowManager = () => {
@@ -338,6 +403,7 @@ const CarCashflowManager = () => {
 
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
   const [directionFilter, setDirectionFilter] = useState<string>("all");
+  const [expenseTypeFilter, setExpenseTypeFilter] = useState<ExpenseTypeFilterValue>("all");
   const [createdDateFilter, setCreatedDateFilter] = useState<string>("");
   const [createdMonthFilter, setCreatedMonthFilter] = useState<string>(() => getCurrentMonthInput());
 
@@ -355,6 +421,11 @@ const CarCashflowManager = () => {
   const isCardSelected = useMemo(
     () => formState.paymentMethod === "card" || formState.paymentMethod === "cash_card",
     [formState.paymentMethod],
+  );
+
+  const isCarSelectionRequired = useMemo(
+    () => formState.direction === "income" || formState.expenseType === "car",
+    [formState.direction, formState.expenseType],
   );
 
   const totalAmountNumber = useMemo(() => {
@@ -583,6 +654,10 @@ const CarCashflowManager = () => {
           directionFilter !== "all"
             ? (directionFilter as CarCashflowDirection)
             : undefined,
+        expense_type:
+          expenseTypeFilter !== "all" && directionFilter !== "income"
+            ? (expenseTypeFilter as CarCashflowExpenseType)
+            : undefined,
         created_by: selectedCreatorId ?? undefined,
         created_date: createdDateFilter || undefined,
         created_month: createdDateFilter ? undefined : createdMonthFilter || undefined,
@@ -631,7 +706,17 @@ const CarCashflowManager = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [carLookup, createdDateFilter, createdMonthFilter, directionFilter, paymentMethodFilter, selectedCar, selectedCreatorId, userLookup]);
+  }, [
+    carLookup,
+    createdDateFilter,
+    createdMonthFilter,
+    directionFilter,
+    expenseTypeFilter,
+    paymentMethodFilter,
+    selectedCar,
+    selectedCreatorId,
+    userLookup,
+  ]);
 
   useEffect(() => {
     loadCars();
@@ -643,7 +728,12 @@ const CarCashflowManager = () => {
   }, [loadEntries]);
 
   const openModal = (direction: CarCashflowDirection) => {
-    setFormState((prev) => ({ ...createDefaultFormState(), direction }));
+    const baseState = createDefaultFormState();
+    setFormState({
+      ...baseState,
+      direction,
+      expenseType: direction === "expense" ? "car" : "",
+    });
     setFormError(null);
     setFormCar(selectedCar);
     setFormCarSearch("");
@@ -666,6 +756,7 @@ const CarCashflowManager = () => {
     setCarSearch("");
     setPaymentMethodFilter("all");
     setDirectionFilter("all");
+    setExpenseTypeFilter("all");
     setSelectedCreatorId(null);
     setCreatorSearch("");
     setCreatedDateFilter("");
@@ -673,7 +764,7 @@ const CarCashflowManager = () => {
   };
 
   const handleFormChange = <K extends keyof CashflowFormState>(key: K) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       const { value } = event.target;
       setFormState((prev) => ({ ...prev, [key]: value }));
     };
@@ -717,18 +808,14 @@ const CarCashflowManager = () => {
       });
     };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!formCar) {
-      setFormError("Selectează mașina pentru care înregistrezi tranzacția.");
-      return;
-    }
-    if (!formState.paymentMethod) {
-      setFormError("Selectează cel puțin o metodă de plată pentru tranzacție.");
-      return;
-    }
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
 
-    const paymentMethod = formState.paymentMethod;
+      const paymentMethod = formState.paymentMethod;
+      if (!paymentMethod) {
+        setFormError("Selectează cel puțin o metodă de plată.");
+        return;
+      }
     let cashAmount: number | undefined;
     let cardAmount: number | undefined;
     let totalAmount: number;
@@ -775,12 +862,31 @@ const CarCashflowManager = () => {
       return;
     }
 
+    const selectedExpenseType =
+      formState.direction === "expense" ? formState.expenseType : "";
+
+    if (formState.direction === "expense" && !selectedExpenseType) {
+      setFormError("Selectează tipul cheltuielii pentru a continua.");
+      return;
+    }
+
+    const carId = formCar?.id;
+    if (isCarSelectionRequired && !carId) {
+      setFormError("Selectează mașina pentru această tranzacție.");
+      return;
+    }
+
     const payload = {
-      car_id: formCar.id,
+      car_id: carId ?? undefined,
       direction: formState.direction,
+      expense_type:
+        formState.direction === "expense" && selectedExpenseType
+          ? (selectedExpenseType as CarCashflowExpenseType)
+          : undefined,
       payment_method: paymentMethod,
       total_amount: totalAmount,
       occurred_on: formatDateTimeForApi(formState.occurredOn),
+      category: coerceNonEmptyString(formState.category),
       description: coerceNonEmptyString(formState.description),
       cash_amount: cashAmount,
       card_amount: cardAmount,
@@ -833,6 +939,31 @@ const CarCashflowManager = () => {
           >
             {row.directionLabel}
           </span>
+        ),
+      },
+      {
+        id: "category",
+        header: "Categorie",
+        accessor: (row) => {
+          const fragments: string[] = [];
+          if (row.direction === "expense" && (row.expenseTypeLabel || row.expenseType)) {
+            fragments.push((row.expenseTypeLabel ?? row.expenseType ?? "").toString());
+          }
+          if (row.category) {
+            fragments.push(row.category);
+          }
+          return fragments.join(" ").trim();
+        },
+        sortable: true,
+        cell: (row) => (
+          <div className="space-y-0.5">
+            {row.direction === "expense" && (
+              <p className="text-xs font-semibold uppercase tracking-wide text-rose-700">
+                {row.expenseTypeLabel ?? row.expenseType ?? "—"}
+              </p>
+            )}
+            <p className="text-sm text-gray-700">{row.category ?? "—"}</p>
+          </div>
         ),
       },
       {
@@ -896,20 +1027,41 @@ const CarCashflowManager = () => {
     [],
   );
 
-  const renderRowDetails = useCallback(
-    (row: NormalizedCashflow) => (
+  const renderRowDetails = useCallback((row: NormalizedCashflow) => {
+    const hasExpenseType =
+      row.direction === "expense" && Boolean(row.expenseTypeLabel ?? row.expenseType);
+    const hasCategory = Boolean(row.category);
+    const hasDescription = Boolean(row.description);
+
+    if (!hasExpenseType && !hasCategory && !hasDescription) {
+      return (
+        <div className="space-y-2 text-sm text-gray-600">
+          <p className="italic text-gray-400">Nu există detalii suplimentare.</p>
+        </div>
+      );
+    }
+
+    return (
       <div className="space-y-2 text-sm text-gray-600">
-        {row.description ? (
+        {hasExpenseType && (
+          <p>
+            <span className="font-medium text-gray-800">Tip cheltuială:</span>{" "}
+            {row.expenseTypeLabel ?? row.expenseType ?? "—"}
+          </p>
+        )}
+        {hasCategory && (
+          <p>
+            <span className="font-medium text-gray-800">Categorie:</span> {row.category}
+          </p>
+        )}
+        {hasDescription && (
           <p>
             <span className="font-medium text-gray-800">Descriere:</span> {row.description}
           </p>
-        ) : (
-          <p className="italic text-gray-400">Nu există detalii suplimentare.</p>
         )}
       </div>
-    ),
-    [],
-  );
+    );
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -1019,6 +1171,24 @@ const CarCashflowManager = () => {
               <option value="income">Încasări</option>
               <option value="expense">Cheltuieli</option>
             </Select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="cashflow-expense-type">Tip cheltuială</Label>
+            <Select
+              id="cashflow-expense-type"
+              value={expenseTypeFilter}
+              onValueChange={(value) => setExpenseTypeFilter(value as ExpenseTypeFilterValue)}
+              disabled={directionFilter === "income"}
+            >
+              {expenseTypeFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+            <p className="text-xs text-gray-500">
+              Filtrul se aplică doar pentru tranzacțiile de tip cheltuială.
+            </p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="cashflow-creator">Adăugat de</Label>
@@ -1208,6 +1378,24 @@ const CarCashflowManager = () => {
               </div>
               <p className="text-xs text-gray-500">Selectează cel puțin o metodă de plată.</p>
             </div>
+            {formState.direction === "expense" && (
+              <div className="space-y-1">
+                <Label htmlFor="form-expense-type">Tip cheltuială</Label>
+                <Select
+                  id="form-expense-type"
+                  value={formState.expenseType}
+                  onChange={handleFormChange("expenseType")}
+                  required
+                >
+                  <option value="">Selectează</option>
+                  {expenseTypeValues.map((value) => (
+                    <option key={value} value={value}>
+                      {expenseTypeLabels[value]}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
             <div className="space-y-1 md:col-span-2">
               <Label htmlFor="form-car">Mașină</Label>
               <SearchSelect<CarOption>
@@ -1231,6 +1419,22 @@ const CarCashflowManager = () => {
                   </div>
                 )}
               />
+              <p className="text-xs text-gray-500">
+                {isCarSelectionRequired
+                  ? "Selectează mașina asociată tranzacției."
+                  : "Opțional pentru cheltuieli fără mașină alocată."}
+              </p>
+            </div>
+            <div className="space-y-1 md:col-span-2">
+              <Label htmlFor="form-category">Categorie</Label>
+              <Input
+                id="form-category"
+                value={formState.category}
+                onChange={handleFormChange("category")}
+                placeholder="Ex: chirii, service, marketing"
+                maxLength={80}
+              />
+              <p className="text-xs text-gray-500">Folosită pentru a grupa tranzacțiile similare.</p>
             </div>
             {isCashSelected && (
               <div className="space-y-1">

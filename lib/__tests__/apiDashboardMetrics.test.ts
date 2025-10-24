@@ -49,6 +49,7 @@ describe('ApiClient admin dashboard metrics', () => {
           total_services: 12,
           coupon_amount: 15,
           coupon_type: 'percentage',
+          discount: 90,
           with_deposit: true,
           days: 6,
           child_seat_service_name: 'Scaun copil',
@@ -60,6 +61,10 @@ describe('ApiClient admin dashboard metrics', () => {
           services: [
             { id: 1, name: 'Scaun copil' },
             { id: 3, name: 'Asigurare CASCO extinsă' },
+          ],
+          services_list: [
+            { id: 1, name: 'Scaun copil', price: 10 },
+            { id: 3, name: 'Asigurare CASCO extinsă', price: 12 },
           ],
           start_hour_group: '09:00',
           end_hour_group: '19:00',
