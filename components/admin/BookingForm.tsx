@@ -1108,6 +1108,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 setQuoteRawResponse(resolvedQuote ?? data);
                 setQuote(resolvedQuote);
                 updateBookingInfo((prev) => {
+                    const quoteData = normalizedData ?? resolvedQuote;
+                    if (!quoteData) {
+                        return prev;
+                    }
                     const preferCasco = prev.with_deposit === false;
                     const prevPricePerDay = toOptionalNumber(prev.price_per_day);
                     const prevOriginalPrice = toOptionalNumber(prev.original_price_per_day);
@@ -1123,16 +1127,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         ? Math.round(manualCouponAmount * 100) / 100
                         : null;
                     const depositRateCandidate = pickFirstNumber([
-                        normalizedData.rental_rate,
-                        normalizedData.base_price,
-                        normalizedData.price_per_day,
+                        quoteData.rental_rate,
+                        quoteData.base_price,
+                        quoteData.price_per_day,
                         prev.base_price,
                         prev.price_per_day,
                     ]);
                     const cascoRateCandidate = pickFirstNumber([
-                        (normalizedData as { rental_rate_casco?: unknown }).rental_rate_casco,
-                        (normalizedData as { base_price_casco?: unknown }).base_price_casco,
-                        (normalizedData as { price_per_day_casco?: unknown }).price_per_day_casco,
+                        (quoteData as { rental_rate_casco?: unknown }).rental_rate_casco,
+                        (quoteData as { base_price_casco?: unknown }).base_price_casco,
+                        (quoteData as { price_per_day_casco?: unknown }).price_per_day_casco,
                         prev.base_price_casco,
                         prev.price_per_day,
                     ]);
@@ -1152,7 +1156,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             ? Math.round(cascoRateCandidate * 100) / 100
                             : null;
 
-                    const breakdown = (normalizedData as {
+                    const breakdown = (quoteData as {
                         discount_breakdown?: {
                             discount?: number | null | undefined;
                             subtotal?: number | null | undefined;
@@ -1161,14 +1165,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     }).discount_breakdown;
 
                     const totalServicesValue =
-                        toOptionalNumber(normalizedData.total_services) ??
+                        toOptionalNumber(quoteData.total_services) ??
                         toOptionalNumber(prev.total_services) ??
                         0;
 
                     const subtotalBeforeCandidates: unknown[] = [
-                        normalizedData.sub_total,
-                        normalizedData.subtotal,
-                        (normalizedData as { subtotal?: unknown }).subtotal,
+                        quoteData.sub_total,
+                        quoteData.subtotal,
+                        (quoteData as { subtotal?: unknown }).subtotal,
                     ];
                     const normalizedSubtotalBefore =
                         pickFirstNumber(subtotalBeforeCandidates) ??
@@ -1176,8 +1180,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
                     const normalizedDiscountSubtotal = pickFirstNumber([
                         breakdown?.subtotal,
-                        normalizedData.discount_subtotal,
-                        (normalizedData as { discount_subtotal_casco?: unknown })?.discount_subtotal_casco,
+                        quoteData.discount_subtotal,
+                        (quoteData as { discount_subtotal_casco?: unknown })?.discount_subtotal_casco,
                     ]);
 
                     const derivedDiscountFromSubtotal =
@@ -1190,16 +1194,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     const subtotalPlanValue = resolvePlanAmount(
                         preferCasco,
                         [
-                            normalizedData.sub_total,
-                            normalizedData.subtotal,
+                            quoteData.sub_total,
+                            quoteData.subtotal,
                             breakdown?.subtotal,
-                            normalizedData.discount_subtotal,
+                            quoteData.discount_subtotal,
                         ],
                         [
-                            normalizedData.sub_total_casco,
-                            (normalizedData as { subtotal_casco?: unknown }).subtotal_casco,
+                            quoteData.sub_total_casco,
+                            (quoteData as { subtotal_casco?: unknown }).subtotal_casco,
                             breakdown?.subtotal,
-                            (normalizedData as { discount_subtotal_casco?: unknown })
+                            (quoteData as { discount_subtotal_casco?: unknown })
                                 .discount_subtotal_casco,
                         ],
                     );
@@ -1215,22 +1219,22 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         resolvePlanAmount(
                             preferCasco,
                             [
-                                normalizedData.total,
+                                quoteData.total,
                                 breakdown?.subtotal != null && totalServicesValue
                                     ? breakdown.subtotal + totalServicesValue
                                     : null,
-                                normalizedData.discount_subtotal,
-                                normalizedData.discount_total,
+                                quoteData.discount_subtotal,
+                                quoteData.discount_total,
                             ],
                             [
-                                (normalizedData as { total_casco?: unknown }).total_casco,
+                                (quoteData as { total_casco?: unknown }).total_casco,
                                 breakdown?.subtotal != null && totalServicesValue
                                     ? breakdown.subtotal + totalServicesValue
                                     : null,
-                                (normalizedData as { discount_subtotal_casco?: unknown })
+                                (quoteData as { discount_subtotal_casco?: unknown })
                                     .discount_subtotal_casco,
-                                (normalizedData as { discount_total_casco?: unknown }).discount_total_casco,
-                                normalizedData.total_casco,
+                                (quoteData as { discount_total_casco?: unknown }).discount_total_casco,
+                                quoteData.total_casco,
                             ],
                         ) ?? toOptionalNumber(prev.total);
 
@@ -1240,21 +1244,21 @@ const BookingForm: React.FC<BookingFormProps> = ({
                             [
                                 derivedDiscountFromSubtotal,
                                 breakdown?.discount,
-                                normalizedData.discount,
-                                normalizedData.discount_amount,
-                                normalizedData.coupon_amount,
+                                quoteData.discount,
+                                quoteData.discount_amount,
+                                quoteData.coupon_amount,
                             ],
                             [
                                 derivedDiscountFromSubtotal,
                                 breakdown?.discount,
-                                (normalizedData as { discount_casco?: unknown }).discount_casco,
-                                (normalizedData as { discount_amount_casco?: unknown })
+                                (quoteData as { discount_casco?: unknown }).discount_casco,
+                                (quoteData as { discount_amount_casco?: unknown })
                                     .discount_amount_casco,
                             ],
                         ) ?? prevDiscountApplied;
 
                     const normalizedDays =
-                        toOptionalNumber(normalizedData.days) ?? toOptionalNumber(prev.days) ?? 0;
+                        toOptionalNumber(quoteData.days) ?? toOptionalNumber(prev.days) ?? 0;
 
                     return {
                         ...prev,
@@ -1269,18 +1273,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         base_price:
                             manualOverrideRate ??
                             normalizedDepositRate ??
-                            toOptionalNumber(normalizedData.base_price) ??
+                            toOptionalNumber(quoteData.base_price) ??
                             prev.base_price ??
                             null,
                         base_price_casco:
                             manualOverrideRate ??
                             normalizedCascoRate ??
-                            toOptionalNumber((normalizedData as { base_price_casco?: unknown }).base_price_casco) ??
+                            toOptionalNumber((quoteData as { base_price_casco?: unknown }).base_price_casco) ??
                             prev.base_price_casco ??
                             null,
                         with_deposit:
-                            typeof normalizedData.with_deposit === "boolean"
-                                ? normalizedData.with_deposit
+                            typeof quoteData.with_deposit === "boolean"
+                                ? quoteData.with_deposit
                                 : prev.with_deposit,
                         sub_total:
                             typeof nextSubtotalValue === "number" && Number.isFinite(nextSubtotalValue)
