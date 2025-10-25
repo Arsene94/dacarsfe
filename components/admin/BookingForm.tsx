@@ -169,14 +169,35 @@ const resolvePlanAmount = (
 };
 
 const normalizeQuoteResponse = (
-    raw: QuotePriceResponse | null | undefined,
+    raw: QuotePriceResponse | Record<string, unknown> | null | undefined,
 ): QuotePriceResponse | null => {
     if (!raw || typeof raw !== "object") {
         return raw ?? null;
     }
 
+    const potentialSources: unknown[] = [
+        (raw as { data?: unknown }).data,
+        (raw as { quote?: unknown }).quote,
+        (raw as { item?: unknown }).item,
+        (raw as { result?: unknown }).result,
+        (raw as { resource?: unknown }).resource,
+        (raw as { booking?: unknown }).booking,
+        (raw as { reservation?: unknown }).reservation,
+    ];
+
+    for (const source of potentialSources) {
+        if (source && typeof source === "object") {
+            const unwrapped = normalizeQuoteResponse(
+                source as QuotePriceResponse | Record<string, unknown>,
+            );
+            if (unwrapped) {
+                return unwrapped;
+            }
+        }
+    }
+
     const normalized: QuotePriceResponse = {
-        ...raw,
+        ...(raw as QuotePriceResponse),
     };
 
     const applyNumeric = <K extends keyof QuotePriceResponse>(
@@ -189,23 +210,23 @@ const normalizeQuoteResponse = (
         }
     };
 
-    applyNumeric("price_per_day", raw.price_per_day);
-    applyNumeric("price_per_day_casco", raw.price_per_day_casco);
-    applyNumeric("base_price", raw.base_price);
-    applyNumeric("base_price_casco", raw.base_price_casco);
-    applyNumeric("sub_total", raw.sub_total);
-    applyNumeric("sub_total_casco", raw.sub_total_casco);
+    applyNumeric("price_per_day", (raw as QuotePriceResponse).price_per_day);
+    applyNumeric("price_per_day_casco", (raw as QuotePriceResponse).price_per_day_casco);
+    applyNumeric("base_price", (raw as QuotePriceResponse).base_price);
+    applyNumeric("base_price_casco", (raw as QuotePriceResponse).base_price_casco);
+    applyNumeric("sub_total", (raw as QuotePriceResponse).sub_total);
+    applyNumeric("sub_total_casco", (raw as QuotePriceResponse).sub_total_casco);
     applyNumeric("subtotal", (raw as { subtotal?: unknown }).subtotal);
     applyNumeric("subtotal_casco", (raw as { subtotal_casco?: unknown }).subtotal_casco);
-    applyNumeric("total", raw.total);
-    applyNumeric("total_casco", raw.total_casco);
-    applyNumeric("days", raw.days);
-    applyNumeric("advance_payment", raw.advance_payment);
-    applyNumeric("rental_rate", raw.rental_rate);
-    applyNumeric("rental_rate_casco", raw.rental_rate_casco);
-    applyNumeric("coupon_amount", raw.coupon_amount);
-    applyNumeric("coupon_total_discount", raw.coupon_total_discount);
-    applyNumeric("total_services", raw.total_services);
+    applyNumeric("total", (raw as QuotePriceResponse).total);
+    applyNumeric("total_casco", (raw as QuotePriceResponse).total_casco);
+    applyNumeric("days", (raw as QuotePriceResponse).days);
+    applyNumeric("advance_payment", (raw as QuotePriceResponse).advance_payment);
+    applyNumeric("rental_rate", (raw as QuotePriceResponse).rental_rate);
+    applyNumeric("rental_rate_casco", (raw as QuotePriceResponse).rental_rate_casco);
+    applyNumeric("coupon_amount", (raw as QuotePriceResponse).coupon_amount);
+    applyNumeric("coupon_total_discount", (raw as QuotePriceResponse).coupon_total_discount);
+    applyNumeric("total_services", (raw as QuotePriceResponse).total_services);
     applyNumeric("discount_amount", (raw as { discount_amount?: unknown }).discount_amount);
     applyNumeric("discount_subtotal", (raw as { discount_subtotal?: unknown }).discount_subtotal);
     applyNumeric("discount_total", (raw as { discount_total?: unknown }).discount_total);
@@ -1078,9 +1099,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 if (cancelled) {
                     return;
                 }
-                setQuoteRawResponse(data);
-                const normalizedData = normalizeQuoteResponse(data) ?? data;
-                setQuote(normalizedData);
+                const normalizedData = normalizeQuoteResponse(data);
+                const resolvedQuote =
+                    normalizedData ??
+                    (data && typeof data === "object"
+                        ? (data as QuotePriceResponse)
+                        : null);
+                setQuoteRawResponse(resolvedQuote ?? data);
+                setQuote(resolvedQuote);
                 updateBookingInfo((prev) => {
                     const preferCasco = prev.with_deposit === false;
                     const prevPricePerDay = toOptionalNumber(prev.price_per_day);
