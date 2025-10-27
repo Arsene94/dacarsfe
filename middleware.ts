@@ -90,6 +90,7 @@ function setLocaleCookie(response: NextResponse, locale: Locale) {
     value: locale,
     path: "/",
     maxAge: LOCALE_COOKIE_MAX_AGE,
+    sameSite: "lax",
   });
 }
 
