@@ -6,6 +6,8 @@ import { buildBreadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { DOCS_HREFLANG_LOCALES, resolveDocsSeo } from "@/app/docs/seo";
+import { createLocalePathBuilder } from "@/lib/i18n/routing";
+import { getSupportedLocales } from "@/lib/i18n/serverLocale";
 
 export async function generateMetadata(): Promise<Metadata> {
     const { locale, copy } = await resolveDocsSeo();
@@ -19,8 +21,14 @@ export async function generateMetadata(): Promise<Metadata> {
     });
 }
 
+const SUPPORTED_LOCALES = getSupportedLocales();
+
 const DocsIndexPage = async () => {
-    const { copy } = await resolveDocsSeo();
+    const { locale, copy } = await resolveDocsSeo();
+    const buildLocaleHref = createLocalePathBuilder({
+        locale,
+        availableLocales: SUPPORTED_LOCALES,
+    });
     const breadcrumbJson = buildBreadcrumbJsonLd([
         { name: copy.breadcrumbHome, url: siteMetadata.siteUrl },
         { name: copy.breadcrumbDocs, url: resolveStaticUrl("/docs") },
@@ -38,7 +46,7 @@ const DocsIndexPage = async () => {
                 {STATIC_DOCS_PAGES.map((doc) => (
                     <Link
                         key={doc.slug}
-                        href={`/docs/${doc.slug}`}
+                        href={buildLocaleHref(`/docs/${doc.slug}`)}
                         className="group rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-berkeley hover:shadow-lg"
                     >
                         <h2 className="text-xl font-semibold text-gray-900 group-hover:text-berkeley">{doc.title}</h2>

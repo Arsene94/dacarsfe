@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, Home, RefreshCw } from "lucide-react";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 type GlobalErrorProps = {
     error: Error & { digest?: string };
@@ -10,6 +11,8 @@ type GlobalErrorProps = {
 };
 
 const GlobalError = ({ error, reset }: GlobalErrorProps) => {
+    const buildLocaleHref = useLocaleHref();
+
     useEffect(() => {
         console.error("A apărut o eroare neașteptată în aplicație", error);
     }, [error]);
@@ -43,7 +46,7 @@ const GlobalError = ({ error, reset }: GlobalErrorProps) => {
                         Reîncearcă
                     </button>
                     <Link
-                        href="/"
+                        href={buildLocaleHref("/")}
                         className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-50 transition hover:border-slate-600 hover:bg-slate-900 sm:w-auto"
                     >
                         <Home className="h-4 w-4" aria-hidden="true" />

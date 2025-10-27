@@ -9,6 +9,7 @@ import type { WheelPrize } from "@/types/wheel";
 import { formatWheelPrizeExpiry } from "@/lib/wheelFormatting";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import type { Locale } from "@/lib/i18n/config";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 import successMessagesRo from "@/messages/success/ro.json";
 import {
     buildMetaPixelAdvancedMatchingFromCustomer,
@@ -94,6 +95,7 @@ const resolveReservationTrackingIdentifier = (
 const SuccessPage = () => {
     const [reservationData, setReservationData] = useState<ReservationPayload | null>(null);
     const { locale, messages, t } = useTranslations<SuccessMessages>("success");
+    const buildLocaleHref = useLocaleHref();
     const { user } = useAuth();
     const intlLocale = LOCALE_TO_INTL[locale] ?? LOCALE_TO_INTL.ro;
     const hasTrackedMetaLeadRef = useRef(false);
@@ -844,7 +846,7 @@ const SuccessPage = () => {
                         {t("actions.print.label")}
                     </Button>
 
-                    <Link href="/" aria-label={t("actions.home.aria")}>
+                    <Link href={buildLocaleHref("/")} aria-label={t("actions.home.aria")}>
                         <Button className="transform hover:scale-105 shadow-lg">
                             <Home className="h-5 w-5 mr-2" />
                             {t("actions.home.label")}

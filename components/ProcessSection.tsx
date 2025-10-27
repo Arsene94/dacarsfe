@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MousePointer, MapPin, Route } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 type ProcessStep = {
     number?: string;
@@ -24,6 +25,7 @@ const icons = [MousePointer, MapPin, Route];
 
 const ProcessSection = () => {
     const { messages, t } = useTranslations("home");
+    const buildLocaleHref = useLocaleHref();
     const process = (messages.process ?? {}) as ProcessMessages;
     const steps = process.steps ?? [];
     const cta = process.cta ?? {};
@@ -90,7 +92,7 @@ const ProcessSection = () => {
                         </p>
 
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
-                            <Link href="/form" aria-label={cta.primary ?? "Rezervă acum"}>
+                            <Link href={buildLocaleHref("/form")} aria-label={cta.primary ?? "Rezervă acum"}>
                                 <Button
                                     className="transform hover:scale-105 shadow-lg"
                                     aria-label={cta.primary ?? "Rezervă acum"}

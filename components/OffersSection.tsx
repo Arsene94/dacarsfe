@@ -10,6 +10,7 @@ import apiClient from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { cn } from "@/lib/utils";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 import type { Offer, OfferKind } from "@/types/offer";
 
 type OfferCard = {
@@ -175,6 +176,7 @@ const mapOfferToCard = (entry: Offer | Record<string, unknown>): OfferCard | nul
 
 const OffersSection = () => {
     const { messages, t } = useTranslations("home");
+    const buildLocaleHref = useLocaleHref();
     const offers = (messages.offers ?? {}) as OffersMessages;
     const cards = offers.cards ?? [];
     const secondaryButton = offers.cta?.secondaryButton ?? "Rezervă cu reducere";
@@ -303,7 +305,7 @@ const OffersSection = () => {
 
                                     <ApplyOfferButton
                                         className="px-6 py-3 bg-white !text-berkeley hover:!bg-gray-100"
-                                        href={ctaHref ?? "/form"}
+                                        href={buildLocaleHref(ctaHref ?? "/form")}
                                         label={ctaLabel ?? primaryCtaLabel}
                                         ariaLabel={ctaLabel ?? primaryCtaLabel}
                                         offer={
@@ -333,7 +335,7 @@ const OffersSection = () => {
                         {offers.cta?.secondaryDescription ??
                             "Rezervă acum pentru perioada sărbătorilor și beneficiezi de tarife preferențiale și servicii premium incluse."}
                     </p>
-                    <Link href="/form" aria-label={secondaryButton}>
+                    <Link href={buildLocaleHref("/form")} aria-label={secondaryButton}>
                         <Button className="px-8 py-4" aria-label={secondaryButton}>
                             {secondaryButton}
                         </Button>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useBooking } from "@/context/useBooking";
 import type { BookingAppliedOffer } from "@/types/booking";
 import type { ButtonProps } from "@/types/ui";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 type OfferPayload = Pick<BookingAppliedOffer, "id" | "title"> & Partial<BookingAppliedOffer>;
 
@@ -28,6 +29,7 @@ const ApplyOfferButton = ({
 }: ApplyOfferButtonProps) => {
     const router = useRouter();
     const { booking, setBooking } = useBooking();
+    const buildLocaleHref = useLocaleHref();
 
     const handleClick = useCallback(() => {
         if (offer && typeof offer.id === "number") {
@@ -55,12 +57,13 @@ const ApplyOfferButton = ({
         }
 
         const target = href && href.trim().length > 0 ? href : "/form";
-        if (/^https?:\/\//i.test(target)) {
-            window.location.href = target;
+        const localizedTarget = buildLocaleHref(target);
+        if (/^https?:\/\//i.test(localizedTarget)) {
+            window.location.href = localizedTarget;
             return;
         }
-        router.push(target);
-    }, [booking, href, offer, router, setBooking]);
+        router.push(localizedTarget);
+    }, [booking, buildLocaleHref, href, offer, router, setBooking]);
 
     return (
         <Button

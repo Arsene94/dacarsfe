@@ -40,7 +40,7 @@ const OPEN_GRAPH_LOCALE_MAP: Record<string, string> = {
     de: "de_DE",
 };
 
-const resolveOpenGraphLocale = (locale?: Locale | string): string => {
+export const resolveOpenGraphLocale = (locale?: Locale | string): string => {
     if (!locale) {
         return SITE_LOCALE;
     }

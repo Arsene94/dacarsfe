@@ -23,6 +23,7 @@ import { trackMixpanelEvent } from "@/lib/mixpanelClient";
 import { trackMetaPixelViewContent } from "@/lib/metaPixel";
 import { trackTikTokSearch, trackTikTokViewContent } from "@/lib/tiktokPixel";
 import { isAnalyticsTrackingEnabled, trackAnalyticsEvent } from "@/lib/analytics";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 const siteUrl = siteMetadata.siteUrl;
 const fleetPageUrl = `${siteUrl}/cars`;
@@ -78,6 +79,7 @@ type FiltersState = {
 
 const FleetPage = () => {
     const { t, locale } = useTranslations("cars");
+    const buildLocaleHref = useLocaleHref();
     const fallbackCarName = useMemo(() => t("fallbacks.carName"), [t]);
     const unknownValue = useMemo(() => t("fallbacks.unknownValue"), [t]);
     const formatCategoryFallback = useCallback(
@@ -432,7 +434,7 @@ const FleetPage = () => {
         if (searchTerm) params.set("search", searchTerm); else params.delete("search");
         params.set("sort_by", sortBy);
         params.set("page", String(currentPage));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+                router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }, [filters, searchTerm, sortBy, currentPage, router, pathname]);
 
     // IntersectionObserver pentru infinite scroll
@@ -640,7 +642,7 @@ const FleetPage = () => {
 
                 setAvailabilityFeedback({ carId: null, message: null });
                 closeDateModal();
-                router.push("/form");
+                router.push(buildLocaleHref("/form"));
                 return true;
             } catch (error) {
                 console.error(error);
@@ -657,7 +659,19 @@ const FleetPage = () => {
                 setCheckingAvailabilityFor(null);
             }
         },
-        [booking, closeDateModal, endDate, openDateModal, pathname, router, setBooking, startDate, t, viewMode],
+        [
+            booking,
+            buildLocaleHref,
+            closeDateModal,
+            endDate,
+            openDateModal,
+            pathname,
+            router,
+            setBooking,
+            startDate,
+            t,
+            viewMode,
+        ],
     );
 
     const handleBooking = useCallback(
@@ -1116,20 +1130,20 @@ const FleetPage = () => {
                             <span className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-berkeley shadow-sm">
                                 {t("interlink.title", { fallback: "Continuă către paginile cheie" })}
                             </span>
-                            <Link
-                                href="/offers"
+                                <Link
+                                href={buildLocaleHref("/offers")}
                                 className="inline-flex items-center rounded-full border border-berkeley px-4 py-2 text-sm font-semibold text-berkeley transition hover:bg-berkeley hover:text-white"
                             >
                                 {t("interlink.offers", { fallback: "Promoții verificate" })}
                             </Link>
-                            <Link
-                                href="/faq"
+                                <Link
+                                href={buildLocaleHref("/faq")}
                                 className="inline-flex items-center rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
                             >
                                 {t("interlink.faq", { fallback: "Întrebări frecvente" })}
                             </Link>
-                            <Link
-                                href="/contact"
+                                <Link
+                                href={buildLocaleHref("/contact")}
                                 className="inline-flex items-center rounded-full border border-jade px-4 py-2 text-sm font-semibold text-jade transition hover:bg-jade hover:text-white"
                             >
                                 {t("interlink.contact", { fallback: "Solicită un consultant" })}
@@ -1379,7 +1393,7 @@ const FleetPage = () => {
                             {t("cta.description")}
                         </p>
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
-                            <Link href="/form" aria-label={t("cta.primary")}>
+                            <Link href={buildLocaleHref("/form")} aria-label={t("cta.primary")}> 
                                 <Button
                                     className="transform hover:scale-105 shadow-lg"
                                     aria-label={t("cta.primary")}

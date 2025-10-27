@@ -11,6 +11,8 @@ import { BookingContext, defaultBooking } from '@/context/booking-store';
 import { LocaleProvider } from '@/context/LocaleContext';
 import type { BookingData } from '@/types/booking';
 import type { StoredWheelPrizeEntry } from '@/lib/wheelStorage';
+import { AVAILABLE_LOCALES, type Locale } from '@/lib/i18n/config';
+import { createLocalePathBuilder } from '@/lib/i18n/routing';
 
 type ApiClientMock = {
   getCarCategories: ReturnType<typeof vi.fn>;
@@ -50,6 +52,13 @@ const pushMock = vi.fn();
 const replaceMock = vi.fn();
 let currentSearchParams = new URLSearchParams();
 let currentPathname = '/';
+
+const TEST_LOCALE: Locale = 'ro';
+const buildLocaleHref = createLocalePathBuilder({
+  locale: TEST_LOCALE,
+  availableLocales: AVAILABLE_LOCALES,
+});
+const FORM_PATH = buildLocaleHref('/form');
 
 vi.mock('next/navigation', () => {
   return {
@@ -147,7 +156,7 @@ const renderWithProviders = (
     }, []);
 
     return (
-      <LocaleProvider initialLocale="ro">
+      <LocaleProvider initialLocale={TEST_LOCALE}>
         <BookingContext.Provider value={{ booking, setBooking: handleSetBooking }}>
           {children}
         </BookingContext.Provider>
@@ -337,7 +346,7 @@ describe('Fluxul complet al clienților DaCars', () => {
         }),
       );
     });
-    expect(pushMock).toHaveBeenCalledWith('/form');
+    expect(pushMock).toHaveBeenCalledWith(FORM_PATH);
 
     pushMock.mockClear();
     await user.click(screen.getByRole('button', { name: 'Caută mașini' }));
@@ -442,7 +451,7 @@ describe('Fluxul complet al clienților DaCars', () => {
     });
 
     await user.click(screen.getByText('Rezervă fără garanție'));
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/form'));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith(FORM_PATH));
     await waitFor(() => {
       const lastCall = setBookingSpy.mock.calls.at(-1)?.[0];
       expect(lastCall?.withDeposit).toBe(false);
@@ -456,7 +465,7 @@ describe('Fluxul complet al clienților DaCars', () => {
 
     pushMock.mockClear();
     await user.click(screen.getByText('Rezervă cu garanție'));
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/form'));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith(FORM_PATH));
     await waitFor(() => {
       const lastCall = setBookingSpy.mock.calls.at(-1)?.[0];
       expect(lastCall?.withDeposit).toBe(true);
@@ -470,9 +479,9 @@ describe('Fluxul complet al clienților DaCars', () => {
   });
 
   it('parcurge formularul de checkout, validează coduri și trimite rezervarea completă', async () => {
-    currentPathname = '/form';
+    currentPathname = FORM_PATH;
     currentSearchParams = new URLSearchParams();
-    window.history.replaceState({}, '', '/form');
+    window.history.replaceState({}, '', FORM_PATH);
 
     const storedPrize = buildWheelPrize();
     getStoredWheelPrizeMock.mockReturnValue(storedPrize);

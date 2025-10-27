@@ -10,6 +10,8 @@ import { SITE_NAME } from "@/lib/config";
 import { buildBreadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/meta";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
+import { createLocalePathBuilder } from "@/lib/i18n/routing";
+import { getSupportedLocales } from "@/lib/i18n/serverLocale";
 
 type DocPageProps = {
     params: Promise<{
@@ -48,9 +50,11 @@ export async function generateMetadata({ params }: DocPageProps): Promise<Metada
     });
 }
 
+const SUPPORTED_LOCALES = getSupportedLocales();
+
 export default async function DocPage({ params }: DocPageProps) {
     const { slug } = await params;
-    const { copy } = await resolveDocsSeo();
+    const { locale, copy } = await resolveDocsSeo();
     const doc = findDocBySlug(slug);
 
     if (!doc) {
@@ -63,6 +67,10 @@ export default async function DocPage({ params }: DocPageProps) {
         { name: copy.breadcrumbDocs, url: resolveStaticUrl("/docs") },
         { name: doc.title, url: resolveStaticUrl(`/docs/${doc.slug}`) },
     ]);
+    const buildLocaleHref = createLocalePathBuilder({
+        locale,
+        availableLocales: SUPPORTED_LOCALES,
+    });
 
     return (
         <article className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
@@ -70,13 +78,13 @@ export default async function DocPage({ params }: DocPageProps) {
             <nav aria-label="Breadcrumb" className="mb-6 text-sm text-gray-500">
                 <ol className="flex flex-wrap items-center gap-2">
                     <li>
-                        <Link href="/" className="hover:text-berkeley">
+                        <Link href={buildLocaleHref("/")} className="hover:text-berkeley">
                             {copy.breadcrumbHome}
                         </Link>
                     </li>
                     <li aria-hidden="true">/</li>
                     <li>
-                        <Link href="/docs" className="hover:text-berkeley">
+                        <Link href={buildLocaleHref("/docs")} className="hover:text-berkeley">
                             {copy.breadcrumbDocs}
                         </Link>
                     </li>
@@ -120,7 +128,7 @@ export default async function DocPage({ params }: DocPageProps) {
             <nav className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" aria-label="Navigare capitole">
                 {neighbours.previous ? (
                     <Link
-                        href={`/docs/${neighbours.previous.slug}`}
+                        href={buildLocaleHref(`/docs/${neighbours.previous.slug}`)}
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-700 transition hover:border-berkeley hover:text-berkeley"
                     >
                         ← {neighbours.previous.title}
@@ -133,7 +141,7 @@ export default async function DocPage({ params }: DocPageProps) {
 
                 {neighbours.next ? (
                     <Link
-                        href={`/docs/${neighbours.next.slug}`}
+                        href={buildLocaleHref(`/docs/${neighbours.next.slug}`)}
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-700 transition hover:border-berkeley hover:text-berkeley"
                     >
                         {neighbours.next.title} →

@@ -5,6 +5,8 @@ import { useLocale } from "@/context/LocaleContext";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { cn } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n/config";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { createLocalePathBuilder } from "@/lib/i18n/routing";
 
 const flagByLocale: Partial<Record<Locale, string>> = {
     ro: "🇷🇴",
@@ -24,6 +26,9 @@ const LanguageSwitcher = (props: HTMLAttributes<HTMLDivElement>) => {
     const { messages, t } = useTranslations("layout");
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [isOpen, setIsOpen] = useState(false);
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     const languageMessages = (messages.header ?? {}) as {
         languageSwitcher?: { labels?: Record<string, string> };
@@ -68,6 +73,17 @@ const LanguageSwitcher = (props: HTMLAttributes<HTMLDivElement>) => {
         fallback: "Select language",
     });
 
+    const buildLocalePath = (nextLocale: Locale): string => {
+        const currentPath = pathname ?? "/";
+        const queryString = searchParams?.toString();
+        const target = queryString ? `${currentPath}?${queryString}` : currentPath;
+        const builder = createLocalePathBuilder({
+            locale: nextLocale,
+            availableLocales,
+        });
+        return builder(target || "/");
+    };
+
     return (
         <div
             {...rest}
@@ -103,6 +119,8 @@ const LanguageSwitcher = (props: HTMLAttributes<HTMLDivElement>) => {
                                     onClick={() => {
                                         setLocale(item);
                                         setIsOpen(false);
+                                        const targetPath = buildLocalePath(item);
+                                        router.push(targetPath);
                                     }}
                                     className={dropdownBaseItemClass}
                                 >

@@ -17,6 +17,7 @@ import type { JsonLd as JsonLdPayload } from "@/lib/seo/jsonld";
 import type { Locale } from "@/lib/i18n/config";
 import { getUserDisplayName } from "@/lib/users";
 import type { BlogPost } from "@/types/blog";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 type BlogPostPageContentProps = {
     slug: string;
@@ -42,6 +43,7 @@ const BlogPostPageContent = ({
     initialStructuredData,
 }: BlogPostPageContentProps) => {
     const { locale } = useLocale();
+    const buildLocaleHref = useLocaleHref();
     const [copy, setCopy] = useState(initialCopy);
     const [post, setPost] = useState<BlogPost>(initialPost);
     const [summary, setSummary] = useState(initialSummary);
@@ -156,13 +158,13 @@ const BlogPostPageContent = ({
             <nav aria-label="Breadcrumb" className="text-sm text-gray-500">
                 <ol className="flex flex-wrap items-center gap-2">
                     <li>
-                        <Link href="/" className="hover:text-berkeley">
+                        <Link href={buildLocaleHref("/")} className="hover:text-berkeley">
                             {copy.breadcrumbHome}
                         </Link>
                     </li>
                     <li aria-hidden="true">/</li>
                     <li>
-                        <Link href="/blog" className="hover:text-berkeley">
+                        <Link href={buildLocaleHref("/blog")} className="hover:text-berkeley">
                             {copy.breadcrumbBlog}
                         </Link>
                     </li>

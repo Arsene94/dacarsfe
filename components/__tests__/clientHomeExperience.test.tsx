@@ -12,10 +12,18 @@ import { LocaleProvider } from '@/context/LocaleContext';
 import type { BookingContextType, BookingData } from '@/types/booking';
 import type { ApiCar } from '@/types/car';
 import type { WheelOfFortunePeriod } from '@/types/wheel';
+import { AVAILABLE_LOCALES, type Locale } from '@/lib/i18n/config';
+import { createLocalePathBuilder } from '@/lib/i18n/routing';
 
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
 let currentSearchParams = new URLSearchParams();
+
+const TEST_LOCALE: Locale = 'ro';
+const buildLocaleHref = createLocalePathBuilder({
+  locale: TEST_LOCALE,
+  availableLocales: AVAILABLE_LOCALES,
+});
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -114,7 +122,7 @@ const renderWithProviders = (
   return {
     setBooking,
     ...render(
-      <LocaleProvider initialLocale="ro">
+      <LocaleProvider initialLocale={TEST_LOCALE}>
         <BookingContext.Provider value={{ booking, setBooking }}>
           {ui}
         </BookingContext.Provider>
@@ -284,7 +292,7 @@ describe('FleetSection', () => {
     });
 
     const cta = screen.getByRole('link', { name: /Vezi toată flota/i });
-    expect(cta).toHaveAttribute('href', '/cars');
+    expect(cta).toHaveAttribute('href', buildLocaleHref('/cars'));
   });
 });
 

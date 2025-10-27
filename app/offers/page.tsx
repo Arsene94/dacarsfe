@@ -14,6 +14,8 @@ import { resolveRequestLocale } from "@/lib/i18n/server";
 import { buildMetadata } from "@/lib/seo/meta";
 import { offerCatalog, type OfferInput, breadcrumb } from "@/lib/seo/jsonld";
 import type { Offer, OfferKind } from "@/types/offer";
+import { createLocalePathBuilder } from "@/lib/i18n/routing";
+import { getSupportedLocales } from "@/lib/i18n/serverLocale";
 
 type OffersSeoCopy = {
   pageTitle: string;
@@ -339,8 +341,14 @@ const mapOfferToJsonLdInput = (offer: PublicOffer): OfferInput => ({
   description: offer.description,
 });
 
+const SUPPORTED_LOCALES = getSupportedLocales();
+
 const OffersPage = async () => {
-  const { copy } = await resolveOffersSeo();
+  const { locale, copy } = await resolveOffersSeo();
+  const buildLocaleHref = createLocalePathBuilder({
+    locale,
+    availableLocales: SUPPORTED_LOCALES,
+  });
   const api = new ApiClient(getApiBaseUrl());
   let rawOffers: unknown[] = [];
   try {
@@ -394,19 +402,19 @@ const OffersPage = async () => {
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link
-            href="/faq"
+            href={buildLocaleHref("/faq")}
             className="inline-flex items-center rounded-full border border-berkeley px-4 py-2 text-sm font-semibold text-berkeley transition hover:bg-berkeley hover:text-white"
           >
             Întrebări frecvente despre reduceri
           </Link>
           <Link
-            href="/cars"
+            href={buildLocaleHref("/cars")}
             className="inline-flex items-center rounded-full border border-jade px-4 py-2 text-sm font-semibold text-jade transition hover:bg-jade hover:text-white"
           >
             Verifică disponibilitatea flotei
           </Link>
           <Link
-            href="/contact"
+            href={buildLocaleHref("/contact")}
             className="inline-flex items-center rounded-full bg-berkeley px-4 py-2 text-sm font-semibold text-white transition hover:bg-berkeley/90"
           >
             Cere o ofertă personalizată
@@ -423,10 +431,10 @@ const OffersPage = async () => {
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button asChild>
-                <Link href="/form">Rezervă o mașină</Link>
+                <Link href={buildLocaleHref("/form")}>Rezervă o mașină</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/contact">Contactează-ne</Link>
+                <Link href={buildLocaleHref("/contact")}>Contactează-ne</Link>
               </Button>
             </div>
           </div>
@@ -480,7 +488,7 @@ const OffersPage = async () => {
 
                     <ApplyOfferButton
                       className="mt-4 bg-white !text-berkeley hover:!bg-gray-100"
-                      href={ctaHref ?? "/form"}
+                      href={buildLocaleHref(ctaHref ?? "/form")}
                       label={ctaLabel}
                       ariaLabel={ctaLabel}
                       offer={
