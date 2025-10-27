@@ -1,46 +1,7 @@
 import { cookies, headers } from "next/headers";
 
-import {
-    AVAILABLE_LOCALES,
-    DEFAULT_LOCALE,
-    LOCALE_STORAGE_KEY,
-    type Locale,
-} from "./config";
-
-const SUPPORTED_LOCALES = new Set<string>(AVAILABLE_LOCALES);
-
-const normalizeLocaleCandidate = (candidate: string | null | undefined): Locale | null => {
-    if (!candidate) {
-        return null;
-    }
-
-    const trimmed = candidate.trim().toLowerCase();
-    if (!trimmed) {
-        return null;
-    }
-
-    if (SUPPORTED_LOCALES.has(trimmed)) {
-        return trimmed as Locale;
-    }
-
-    const base = trimmed.split(/[-_]/)[0];
-    if (SUPPORTED_LOCALES.has(base)) {
-        return base as Locale;
-    }
-
-    return null;
-};
-
-const parseAcceptLanguage = (value: string | null): string[] => {
-    if (!value) {
-        return [];
-    }
-
-    return value
-        .split(",")
-        .map((part) => part.split(";")[0]?.trim())
-        .filter((part): part is string => Boolean(part));
-};
+import { AVAILABLE_LOCALES, DEFAULT_LOCALE, LOCALE_STORAGE_KEY, type Locale } from "./config";
+import { normalizeLocaleCandidate, parseAcceptLanguage, pickSupportedLocale } from "./localeDetection";
 
 type ResolveRequestLocaleOptions = {
     fallbackLocale?: Locale;
@@ -63,16 +24,8 @@ export const resolveRequestLocale = async (
 
     const headerList = await headers();
     const acceptedLocales = parseAcceptLanguage(headerList.get(headerName));
-    for (const candidate of acceptedLocales) {
-        const normalized = normalizeLocaleCandidate(candidate);
-        if (normalized) {
-            return normalized;
-        }
-    }
-
-    return fallbackLocale;
+    return pickSupportedLocale(acceptedLocales, fallbackLocale);
 };
 
 export const getSupportedLocales = (): readonly Locale[] => AVAILABLE_LOCALES;
-
 export const getFallbackLocale = (): Locale => DEFAULT_LOCALE;

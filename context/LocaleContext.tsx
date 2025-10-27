@@ -10,7 +10,13 @@ import {
     useState,
     type ReactNode,
 } from "react";
-import { AVAILABLE_LOCALES, DEFAULT_LOCALE, LOCALE_STORAGE_KEY, type Locale } from "@/lib/i18n/config";
+import {
+    AVAILABLE_LOCALES,
+    DEFAULT_LOCALE,
+    LOCALE_COOKIE_MAX_AGE,
+    LOCALE_STORAGE_KEY,
+    type Locale,
+} from "@/lib/i18n/config";
 import { apiClient } from "@/lib/api";
 import { isLocale } from "@/lib/i18n/utils";
 
@@ -26,8 +32,6 @@ type LocaleProviderProps = {
     children: ReactNode;
     initialLocale?: Locale;
 };
-
-const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 an
 
 export const LocaleProvider = ({ children, initialLocale }: LocaleProviderProps) => {
     const [locale, setLocaleState] = useState<Locale>(initialLocale ?? DEFAULT_LOCALE);
