@@ -10,10 +10,19 @@ import { BookingContext, defaultBooking } from '@/context/booking-store';
 import { LocaleProvider } from '@/context/LocaleContext';
 import type { BookingData } from '@/types/booking';
 import type { ApiCar, Car } from '@/types/car';
+import { AVAILABLE_LOCALES, type Locale } from '@/lib/i18n/config';
+import { createLocalePathBuilder } from '@/lib/i18n/routing';
 
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
 let searchParams = new URLSearchParams();
+
+const TEST_LOCALE: Locale = 'ro';
+const buildLocaleHref = createLocalePathBuilder({
+  locale: TEST_LOCALE,
+  availableLocales: AVAILABLE_LOCALES,
+});
+const FORM_PATH = buildLocaleHref('/form');
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -156,7 +165,7 @@ const renderWithProviders = (
   return {
     setBooking,
     ...render(
-      <LocaleProvider initialLocale="ro">
+      <LocaleProvider initialLocale={TEST_LOCALE}>
         <BookingContext.Provider value={{ booking: bookingData, setBooking }}>
           {ui}
         </BookingContext.Provider>
@@ -277,7 +286,7 @@ describe('Fluxul de închiriere pentru clienți', () => {
       start_date: '2025-07-01T08:00',
       end_date: '2025-07-05T10:00',
     });
-    expect(pushMock).toHaveBeenCalledWith('/form');
+    expect(pushMock).toHaveBeenCalledWith(FORM_PATH);
 
     pushMock.mockClear();
 
@@ -297,7 +306,7 @@ describe('Fluxul de închiriere pentru clienți', () => {
       start_date: '2025-07-01T08:00',
       end_date: '2025-07-05T10:00',
     });
-    expect(pushMock).toHaveBeenCalledWith('/form');
+    expect(pushMock).toHaveBeenCalledWith(FORM_PATH);
   }, 15000);
 
   it('solicită perioada de închiriere dacă lipsește și deschide modalul pentru selectare', async () => {
@@ -334,7 +343,7 @@ describe('Fluxul de închiriere pentru clienți', () => {
       }),
     );
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/form'));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith(FORM_PATH));
     expect(setBooking).toHaveBeenCalledWith(
       expect.objectContaining({
         startDate: '2025-09-10T09:00',

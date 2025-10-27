@@ -6,6 +6,7 @@ import { useTranslations } from "@/lib/i18n/useTranslations";
 import { cn } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n/config";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { createLocalePathBuilder } from "@/lib/i18n/routing";
 
 const flagByLocale: Partial<Record<Locale, string>> = {
     ro: "🇷🇴",
@@ -74,18 +75,13 @@ const LanguageSwitcher = (props: HTMLAttributes<HTMLDivElement>) => {
 
     const buildLocalePath = (nextLocale: Locale): string => {
         const currentPath = pathname ?? "/";
-        const segments = currentPath.split("/").filter((segment) => segment.length > 0);
-
-        if (segments.length === 0) {
-            return `/${nextLocale}`;
-        }
-
-        const [firstSegment, ...rest] = segments;
-        const isCurrentPrefixed = availableLocales.includes(firstSegment as Locale);
-        const nextSegments = isCurrentPrefixed ? [nextLocale, ...rest] : [nextLocale, ...segments];
-        const basePath = `/${nextSegments.join("/")}`;
         const queryString = searchParams?.toString();
-        return queryString ? `${basePath}?${queryString}` : basePath;
+        const target = queryString ? `${currentPath}?${queryString}` : currentPath;
+        const builder = createLocalePathBuilder({
+            locale: nextLocale,
+            availableLocales,
+        });
+        return builder(target || "/");
     };
 
     return (

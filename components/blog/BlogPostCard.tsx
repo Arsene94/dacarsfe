@@ -8,6 +8,7 @@ import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveMediaUrl } from "@/lib/media";
 import { getUserDisplayName } from "@/lib/users";
 import type { BlogPost } from "@/types/blog";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 type BlogPostCardProps = {
   post: BlogPost;
@@ -41,6 +42,7 @@ const BlogPostCard = ({
   const hasPublishedDate = publishedLabel !== "—";
   const categorySlug = post.category?.slug ?? null;
   const categoryName = post.category?.name ?? null;
+  const buildLocaleHref = useLocaleHref();
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
@@ -61,7 +63,7 @@ const BlogPostCard = ({
       <div className="flex flex-1 flex-col p-6">
         {categoryName && (
           <Link
-            href={buildCategoryHref(categorySlug)}
+            href={buildLocaleHref(buildCategoryHref(categorySlug))}
             className="text-xs font-semibold uppercase tracking-wide text-berkeley"
           >
             {categoryName}
@@ -69,7 +71,7 @@ const BlogPostCard = ({
         )}
         <h3 className="mt-3 text-xl font-semibold text-gray-900">
           <Link
-            href={`/blog/${post.slug}`}
+            href={buildLocaleHref(`/blog/${post.slug}`)}
             className="transition-colors hover:text-berkeley"
           >
             {post.title}
@@ -103,7 +105,7 @@ const BlogPostCard = ({
         )}
         <div className="mt-6">
           <Link
-            href={`/blog/${post.slug}`}
+            href={buildLocaleHref(`/blog/${post.slug}`)}
             className="inline-flex items-center text-sm font-semibold text-berkeley transition hover:text-berkeley/80"
           >
             {ctaLabel}

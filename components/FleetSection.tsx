@@ -22,6 +22,7 @@ import {
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { ApiCar, CarCategory, FleetCar } from "@/types/car";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 import { resolveMediaUrl } from "@/lib/media";
 
 const siteUrl = siteMetadata.siteUrl;
@@ -97,6 +98,7 @@ const FleetSection = () => {
     const autoplayTimerRef = useRef<number | null>(null);
     const prefersReducedMotionRef = useRef(false);
     const { messages, t, locale } = useTranslations("home");
+    const buildLocaleHref = useLocaleHref();
     const fleetMessages = (messages.fleet ?? {}) as Record<string, unknown>;
     const fleetTitle = (fleetMessages.title ?? {}) as { main?: string; highlight?: string };
     const fleetLabels = (fleetMessages.labels ?? {}) as { seatsSuffix?: string };
@@ -375,7 +377,7 @@ const FleetSection = () => {
                 </div>
 
                 <div className="text-center mt-12">
-                    <Link href="/cars" aria-label={fleetCtaLabel}>
+                    <Link href={buildLocaleHref("/cars")} aria-label={fleetCtaLabel}>
                         <Button
                             aria-label={fleetCtaLabel}
                             variant="outline"

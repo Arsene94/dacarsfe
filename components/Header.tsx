@@ -10,6 +10,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { apiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 const isOffersMenuHref = (href?: string) => {
   if (!href) {
@@ -101,13 +102,19 @@ const Header = () => {
     ? menuItems.filter((item) => !isOffersMenuHref(item.href))
     : menuItems;
 
+  const buildLocaleHref = useLocaleHref();
+
   return (
     <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${
       isScrolled ? 'bg-white shadow-lg' : 'bg-white/95 backdrop-blur-sm'
     }`}>
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center h-16 lg:h-20">
-            <Link href="/" className="max-h-[80px] overflow-hidden flex items-center space-x-2 group" aria-label="DaCars — închirieri auto rapide și oneste">
+            <Link
+              href={buildLocaleHref("/")}
+              className="max-h-[80px] overflow-hidden flex items-center space-x-2 group"
+              aria-label="DaCars — închirieri auto rapide și oneste"
+            >
                     {/* Eager + fetchpriority=high ajută LCP pe homepage */}
                     <Image
                         src="/images/logo-308x154.webp"
@@ -126,7 +133,7 @@ const Header = () => {
             {visibleMenuItems.map((item) => (
               <Link
                 key={`${item.href}-${item.label}`}
-                href={item.href ?? '#'}
+                href={buildLocaleHref(item.href ?? '#')}
                 className="text-eefie font-dm-sans font-medium hover:text-jade transition-colors duration-300 relative group"
                 aria-label={item.aria ?? item.label}
               >
@@ -168,7 +175,7 @@ const Header = () => {
               {visibleMenuItems.map((item) => (
                 <Link
                   key={`${item.href}-${item.label}`}
-                  href={item.href ?? '#'}
+                  href={buildLocaleHref(item.href ?? '#')}
                   className="block px-3 py-2 text-base font-dm-sans font-medium text-eefie hover:text-jade hover:bg-gray-50 rounded-md transition-colors duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
                   aria-label={item.aria ?? item.label}
@@ -176,12 +183,12 @@ const Header = () => {
                   {item.label}
                 </Link>
               ))}
-                {cta?.label && cta?.href && (
-                  <Link
-                    href={cta.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    aria-label={cta.label}
-                  >
+              {cta?.label && cta?.href && (
+                <Link
+                  href={buildLocaleHref(cta.href)}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  aria-label={cta.label}
+                >
                     <Button
                       aria-label={cta.label}
                       className="w-full mt-4 px-3 py-2 bg-jade text-white hover:bg-jade/90"

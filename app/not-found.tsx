@@ -1,7 +1,18 @@
 import Link from "next/link";
 import { Compass, Home, Phone } from "lucide-react";
+import { createLocalePathBuilder } from "@/lib/i18n/routing";
+import { getFallbackLocale, getSupportedLocales, resolveRequestLocale } from "@/lib/i18n/serverLocale";
 
-const NotFoundPage = () => {
+const FALLBACK_LOCALE = getFallbackLocale();
+const SUPPORTED_LOCALES = getSupportedLocales();
+
+const NotFoundPage = async () => {
+    const locale = await resolveRequestLocale({ fallbackLocale: FALLBACK_LOCALE });
+    const buildLocaleHref = createLocalePathBuilder({
+        locale,
+        availableLocales: SUPPORTED_LOCALES,
+    });
+
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-slate-50">
             <div className="w-full max-w-lg space-y-6 text-center">
@@ -20,14 +31,14 @@ const NotFoundPage = () => {
                 </div>
                 <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
                     <Link
-                        href="/"
+                        href={buildLocaleHref("/")}
                         className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 sm:w-auto"
                     >
                         <Home className="h-4 w-4" aria-hidden="true" />
                         Înapoi la pagina principală
                     </Link>
                     <Link
-                        href="/contact"
+                        href={buildLocaleHref("/contact")}
                         className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-50 transition hover:border-slate-600 hover:bg-slate-900 sm:w-auto"
                     >
                         <Phone className="h-4 w-4" aria-hidden="true" />

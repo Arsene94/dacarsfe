@@ -18,6 +18,7 @@ import {
     type FaqSeoCopy,
     type NormalizedFaqCategory,
 } from "@/lib/faq/publicFaq";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 type FaqPageContentProps = {
     initialLocale: Locale;
@@ -27,6 +28,7 @@ type FaqPageContentProps = {
 
 const FaqPageContent = ({ initialLocale, initialCopy, initialCategories }: FaqPageContentProps) => {
     const { locale } = useLocale();
+    const buildLocaleHref = useLocaleHref();
     const [copy, setCopy] = useState<FaqSeoCopy>(initialCopy);
     const [categories, setCategories] = useState<NormalizedFaqCategory[]>(initialCategories);
     const [isLoading, setIsLoading] = useState(false);
@@ -138,19 +140,19 @@ const FaqPageContent = ({ initialLocale, initialCopy, initialCategories }: FaqPa
                 </p>
                 <div className="flex flex-wrap gap-3">
                     <Link
-                        href="/offers"
+                        href={buildLocaleHref("/offers")}
                         className="inline-flex items-center rounded-full bg-berkeley px-4 py-2 text-sm font-semibold text-white transition hover:bg-berkeley/90"
                     >
                         Vezi promoțiile active DaCars
                     </Link>
                     <Link
-                        href="/cars"
+                        href={buildLocaleHref("/cars")}
                         className="inline-flex items-center rounded-full border border-berkeley px-4 py-2 text-sm font-semibold text-berkeley transition hover:bg-berkeley hover:text-white"
                     >
                         Explorează flota completă
                     </Link>
                     <Link
-                        href="/contact"
+                        href={buildLocaleHref("/contact")}
                         className="inline-flex items-center rounded-full border border-jade px-4 py-2 text-sm font-semibold text-jade transition hover:bg-jade hover:text-white"
                     >
                         Contactează un consultant 24/7

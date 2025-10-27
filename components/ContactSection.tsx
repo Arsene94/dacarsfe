@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
 import LazyMap from "./LazyMap";
 import { useTranslations } from "@/lib/i18n/useTranslations";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 type ContactMessages = {
     title?: { main?: string; highlight?: string };
@@ -40,6 +41,7 @@ const ContactSection = () => {
     const contact = (messages.contact ?? {}) as ContactMessages;
     const mapMessages = contact.map ?? {};
     const quickLinks = contact.quickLinks ?? {};
+    const buildLocaleHref = useLocaleHref();
 
     return (
         <section id="contact" className="py-20 bg-gray-50">
@@ -60,19 +62,19 @@ const ContactSection = () => {
                             {quickLinks.title ?? t("contact.quickLinks.title", { fallback: "Linkuri rapide" })}
                         </span>
                         <Link
-                            href="/offers"
+                            href={buildLocaleHref("/offers")}
                             className="inline-flex items-center rounded-full border border-berkeley px-4 py-2 text-sm font-semibold text-berkeley transition hover:bg-berkeley hover:text-white"
                         >
                             {quickLinks.offers ?? t("contact.quickLinks.offers", { fallback: "Promoții active" })}
                         </Link>
                         <Link
-                            href="/cars"
+                            href={buildLocaleHref("/cars")}
                             className="inline-flex items-center rounded-full border border-jade px-4 py-2 text-sm font-semibold text-jade transition hover:bg-jade hover:text-white"
                         >
                             {quickLinks.cars ?? t("contact.quickLinks.cars", { fallback: "Flota disponibilă" })}
                         </Link>
                         <Link
-                            href="/faq"
+                            href={buildLocaleHref("/faq")}
                             className="inline-flex items-center rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
                         >
                             {quickLinks.faq ?? t("contact.quickLinks.faq", { fallback: "Întrebări frecvente" })}

@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { STATIC_DOCS_PAGES } from "@/lib/content/staticEntries";
 import { cn } from "@/lib/utils";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 const DocsSidebar = () => {
     const activeSegment = useSelectedLayoutSegment();
+    const buildLocaleHref = useLocaleHref();
 
     return (
         <nav aria-label="Navigare documentație" className="space-y-2">
@@ -15,7 +17,7 @@ const DocsSidebar = () => {
                 return (
                     <Link
                         key={page.slug}
-                        href={`/docs/${page.slug}`}
+                        href={buildLocaleHref(`/docs/${page.slug}`)}
                         className={cn(
                             "block rounded-lg px-4 py-2 text-sm font-medium transition",
                             isActive

@@ -8,6 +8,7 @@ import { useTranslations } from "@/lib/i18n/useTranslations";
 import InterlinkingSection from "@/components/interlinking/InterlinkingSection";
 import { getSiteInterlinkingCopy } from "@/lib/interlinking/publicInterlinking";
 import type { Locale } from "@/lib/i18n/config";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 type FooterLink = { label?: string; href?: string; aria?: string };
 
@@ -31,6 +32,7 @@ const Footer = () => {
 
     const quickLinks = footer.quickLinks?.links?.filter((item) => item?.label) ?? [];
     const bottomLinks = footer.bottom?.links?.filter((item) => item?.label) ?? [];
+    const buildLocaleHref = useLocaleHref();
 
     return (
         <>
@@ -61,7 +63,7 @@ const Footer = () => {
                             {quickLinks.map((link) => (
                                 <li key={`${link.href}-${link.label}`}>
                                     <Link
-                                        href={link.href ?? "#"}
+                                        href={buildLocaleHref(link.href ?? "#")}
                                         className="text-gray-300 hover:text-jade transition-colors duration-300"
                                         aria-label={link.aria ?? link.label}
                                     >
@@ -118,7 +120,7 @@ const Footer = () => {
                         {bottomLinks.map((link) => (
                             <Link
                                 key={`${link.href}-${link.label}`}
-                                href={link.href ?? "#"}
+                                href={buildLocaleHref(link.href ?? "#")}
                                 className="text-gray-300 hover:text-jade transition-colors duration-300 text-sm font-dm-sans"
                                 aria-label={link.aria ?? link.label}
                             >

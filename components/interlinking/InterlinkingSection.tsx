@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { InterlinkTone, InterlinkingCopy, InterlinkingLink } from "@/types/interlinking";
+import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 
 export type { InterlinkTone, InterlinkingCopy, InterlinkingLink } from "@/types/interlinking";
 
@@ -20,6 +21,7 @@ const toneClassMap: Record<InterlinkTone, string> = {
 };
 
 const InterlinkingSection = ({ copy, className }: InterlinkingSectionProps) => {
+    const buildLocaleHref = useLocaleHref();
     const links = Array.isArray(copy.links)
         ? copy.links.filter((item) => item.href?.trim() && item.label?.trim())
         : [];
@@ -48,7 +50,7 @@ const InterlinkingSection = ({ copy, className }: InterlinkingSectionProps) => {
                             return (
                                 <Link
                                     key={`${link.href}-${link.label}`}
-                                    href={link.href}
+                                    href={buildLocaleHref(link.href ?? "#")}
                                     className={cn(
                                         "group flex h-full min-h-[220px] flex-col justify-between rounded-3xl border bg-white p-6 text-left shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl",
                                         toneClasses,
