@@ -32,7 +32,7 @@ const webpManifestEntries = Array.isArray(webpManifest)
 const webpManifestSet = new Set(webpManifestEntries);
 
 const PUBLIC_FILE_PATTERN = /\.[^/]+$/;
-const LOCALE_REDIRECT_SKIP_PREFIXES = ["/_next", "/api"];
+const LOCALE_REDIRECT_SKIP_PREFIXES = ["/_next", "/api", "/admin"];
 
 type LocaleExtractionResult =
   | { type: "rewrite"; locale: Locale; restPath: string }
