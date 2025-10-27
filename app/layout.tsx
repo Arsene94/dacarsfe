@@ -22,6 +22,7 @@ import MetaPixelServiceWorker from "../components/MetaPixelServiceWorker";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import AnalyticsTracker from "../components/AnalyticsTracker";
 import CampaignTrackingInitializer from "../components/CampaignTrackingInitializer";
+import LocaleHeadTags from "../components/LocaleHeadTags";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -105,6 +106,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes"/>
         <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
         <meta httpEquiv="x-dns-prefetch-control" content="on"/>
+        <LocaleHeadTags locale={initialLocale} languages={supportedLocales} />
     </head>
     <body className="min-h-screen bg-white">
     <Suspense fallback={null}>
