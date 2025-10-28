@@ -13,10 +13,13 @@ Gestionarea ofertelor promoționale din platforma DaCars. Endpoint-urile suport�
 
 ### Parametri comuni pentru `GET /api/offers`
 - `status` – filtrează după status: `draft`, `scheduled`, `published`, `archived`.
+- `show_on_site` – boolean; implicit doar ofertele vizibile pe site sunt returnate pentru public.
 - `audience` – `public` pentru listă destinată site-ului (fără drafturi), `admin` pentru consola internă.
 - `limit` / `per_page` – numărul de înregistrări returnate.
 - `include` – liste separate prin virgulă pentru relații suplimentare (`translations`, `author`, etc.).
 - `search` – text liber pentru titlu/descriere.
+
+> **Vizibilitate** – Cererile publice (`audience` omis sau `public`) returnează exclusiv ofertele cu `status` public și `show_on_site = true`. Editorii autentificați pot folosi `audience=admin` sau rutele `/api/admin/offers*` pentru a gestiona ofertele ascunse care sunt atașate articolelor de blog, dar nu apar în pagina publică de promoții.
 
 ### Răspuns listă (exemplu `audience=public&status=published`)
 ```json
@@ -42,8 +45,9 @@ Gestionarea ofertelor promoționale din platforma DaCars. Endpoint-urile suport�
       "background_class": "bg-gradient-to-br from-jade to-emerald-600",
       "text_class": "text-white",
       "primary_cta_label": "Rezervă oferta",
-      "primary_cta_url": "/form",
+      "primary_cta_url": "/checkout",
       "status": "published",
+      "show_on_site": true,
       "starts_at": "2025-06-01T00:00:00+03:00",
       "ends_at": "2025-09-01T23:59:59+03:00",
       "created_at": "2025-05-10T09:32:00+03:00",
@@ -79,8 +83,9 @@ Creează o ofertă. Câmpurile sunt opționale, exceptând `title`.
   "background_class": "bg-berkeley",
   "text_class": "text-white",
   "primary_cta_label": "Rezervă acum",
-  "primary_cta_url": "/form",
+  "primary_cta_url": "/checkout",
   "status": "scheduled",
+  "show_on_site": true,
   "starts_at": "2025-07-01T00:00:00+03:00",
   "ends_at": "2025-08-31T23:59:59+03:00"
 }
@@ -93,6 +98,7 @@ Creează o ofertă. Câmpurile sunt opționale, exceptând `title`.
     "id": 18,
     "title": "Early booking -15%",
     "status": "scheduled",
+    "show_on_site": true,
     "starts_at": "2025-07-01T00:00:00+03:00",
     "ends_at": "2025-08-31T23:59:59+03:00",
     "created_at": "2025-05-18T11:22:00+03:00",
@@ -161,7 +167,7 @@ La trimiterea formularului frontend-ul include un câmp opțional `applied_offer
 
 Backend-ul poate utiliza această listă pentru a aplica logica descrisă în tabelul de mai sus (inclusiv cumularea ofertelor acolo unde este permisă). Dacă lista este goală, cheia lipsește din request.
 
-> Pentru descrierea completă a câmpurilor de preț trimise alături de ofertă consultați secțiunea „Detalierea câmpurilor de prețuri din checkout” din [Bookings API](./bookings-api.md#detalierea-câmpurilor-de-prețuri-din-checkout). Backend-ul trebuie să ajusteze `total` și valorile auxiliare după ce aplică fiecare promoție.
+Rezultatele `POST /api/bookings/quote` și `POST /api/bookings` includ câmpurile `applied_offers`, `offers_discount` și `deposit_waived` pentru a confirma promoțiile acceptate, totalul reducerilor aplicate și faptul că depozitul a fost eliminat atunci când o ofertă de tip `deposit_waiver` este validă.
 
 ---
 
@@ -210,7 +216,7 @@ Returnează `{ "deleted": true }` la succes. Pentru interfața publică folosiț
 
 `benefits` este acum o listă simplă de string-uri (maxim 255 caractere recomandat) care descriu avantajele comunicate clienților.
 Valorile sunt afișate ca atare în interfață, în ordinea în care sunt trimise. Backend-ul poate interpreta fiecare intrare pentru a
-declanșa logica necesară (ex. `"Reducere 15%"`, `"Șofer adițional inclus"`).
+declanșa logica necesară (ex. "Reducere 15%", "Șofer adițional inclus").
 
 Pentru aplicarea automată a promoției folosiți combinația `offer_type` + `offer_value`, conform tabelului de mai sus.
 
