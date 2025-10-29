@@ -1425,6 +1425,78 @@ export class ApiClient {
         );
     }
 
+    async getAdminFaqCategories(
+        params: (FaqCategoryListParams & { language?: string }) = {},
+    ): Promise<ApiListResult<FaqCategory>> {
+        const { language, include, ...filters } = params;
+        const searchParams = new URLSearchParams();
+
+        if (typeof filters.page === 'number' && Number.isFinite(filters.page)) {
+            searchParams.append('page', filters.page.toString());
+        }
+
+        const perPageCandidate =
+            typeof filters.perPage === 'number' && Number.isFinite(filters.perPage)
+                ? filters.perPage
+                : typeof filters.per_page === 'number' && Number.isFinite(filters.per_page)
+                    ? filters.per_page
+                    : undefined;
+
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+
+        if (typeof filters.limit === 'number' && Number.isFinite(filters.limit)) {
+            searchParams.append('limit', filters.limit.toString());
+        }
+
+        if (typeof filters.status === 'string' && filters.status.trim().length > 0) {
+            searchParams.append('status', filters.status.trim());
+        }
+
+        if (typeof filters.order === 'string' && filters.order.trim().length > 0) {
+            searchParams.append('order', filters.order.trim());
+        }
+
+        if (typeof filters.name_like === 'string' && filters.name_like.trim().length > 0) {
+            searchParams.append('name_like', filters.name_like.trim());
+        }
+
+        if (
+            typeof filters.show_on_site !== 'undefined' &&
+            filters.show_on_site !== null
+        ) {
+            if (typeof filters.show_on_site === 'boolean') {
+                searchParams.append('show_on_site', filters.show_on_site ? '1' : '0');
+            } else if (
+                typeof filters.show_on_site === 'number' &&
+                Number.isFinite(filters.show_on_site)
+            ) {
+                searchParams.append('show_on_site', filters.show_on_site.toString());
+            } else {
+                const value = String(filters.show_on_site).trim();
+                if (value.length > 0) {
+                    searchParams.append('show_on_site', value);
+                }
+            }
+        }
+
+        if (typeof filters.audience === 'string' && filters.audience.trim().length > 0) {
+            searchParams.append('audience', filters.audience.trim());
+        }
+
+        const includeParam = resolveIncludeParam(include);
+        if (includeParam) {
+            searchParams.append('include', includeParam);
+        }
+
+        const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/admin/faq-categories`, this.resolveLanguage(language));
+        return this.request<ApiListResult<FaqCategory>>(
+            query.length > 0 ? `${basePath}?${query}` : basePath,
+        );
+    }
+
     async getFaqCategory(
         id: number | string,
         params: { include?: string | readonly string[]; language?: string } = {},
@@ -1696,6 +1768,76 @@ export class ApiClient {
 
         const query = searchParams.toString();
         const basePath = appendOptionalLanguage(`/offers`, this.resolveLanguage(language));
+        return this.request<ApiListResult<Offer>>(query ? `${basePath}?${query}` : basePath);
+    }
+
+    async getAdminOffers(params: OfferListParams = {}): Promise<ApiListResult<Offer>> {
+        const { language, include, ...rest } = params;
+        const searchParams = new URLSearchParams();
+
+        if (typeof rest.page === 'number' && Number.isFinite(rest.page)) {
+            searchParams.append('page', rest.page.toString());
+        }
+
+        const perPageCandidate =
+            typeof rest.perPage === 'number' && Number.isFinite(rest.perPage)
+                ? rest.perPage
+                : typeof (rest as { per_page?: number }).per_page === 'number' &&
+                        Number.isFinite((rest as { per_page?: number }).per_page)
+                    ? (rest as { per_page: number }).per_page
+                    : undefined;
+        if (typeof perPageCandidate === 'number') {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+
+        if (typeof rest.limit === 'number' && Number.isFinite(rest.limit)) {
+            searchParams.append('limit', rest.limit.toString());
+        }
+
+        if (typeof rest.status === 'string' && rest.status.trim().length > 0) {
+            searchParams.append('status', rest.status.trim());
+        }
+
+        if (
+            typeof rest.show_on_site !== 'undefined' &&
+            rest.show_on_site !== null
+        ) {
+            if (typeof rest.show_on_site === 'boolean') {
+                searchParams.append('show_on_site', rest.show_on_site ? '1' : '0');
+            } else if (
+                typeof rest.show_on_site === 'number' &&
+                Number.isFinite(rest.show_on_site)
+            ) {
+                searchParams.append('show_on_site', rest.show_on_site.toString());
+            } else {
+                const value = String(rest.show_on_site).trim();
+                if (value.length > 0) {
+                    searchParams.append('show_on_site', value);
+                }
+            }
+        }
+
+        if (typeof rest.search === 'string' && rest.search.trim().length > 0) {
+            searchParams.append('search', rest.search.trim());
+        }
+
+        if (typeof rest.audience === 'string' && rest.audience.trim().length > 0) {
+            searchParams.append('audience', rest.audience.trim());
+        }
+
+        if (typeof rest.sort === 'string' && rest.sort.trim().length > 0) {
+            searchParams.append('sort', rest.sort.trim());
+        }
+
+        const includeParam = resolveIncludeParam(
+            include ?? (rest as { include?: string | readonly string[] }).include,
+        );
+        if (includeParam) {
+            searchParams.append('include', includeParam);
+        }
+
+        const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/admin/offers`, this.resolveLanguage(language));
         return this.request<ApiListResult<Offer>>(query ? `${basePath}?${query}` : basePath);
     }
 

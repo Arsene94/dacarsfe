@@ -254,9 +254,9 @@ const BlogPostsPage = () => {
           apiClient.getBlogCategories({ perPage: 200, sort: "name" }),
           apiClient.getBlogTags({ perPage: 200, sort: "name" }),
           apiClient.getUsers({ perPage: 200, sort: "first_name" }),
-          apiClient.getOffers({ perPage: 200, audience: "admin", sort: "title" }),
+          apiClient.getAdminOffers({ perPage: 200, audience: "admin", sort: "title" }),
           apiClient.getFaqs({ per_page: 200, audience: "admin", include: ["category"] }),
-          apiClient.getFaqCategories({ per_page: 200, audience: "admin" }),
+          apiClient.getAdminFaqCategories({ per_page: 200, audience: "admin" }),
         ]);
 
         const categoryList = sortByName(extractList(blogCategoryResponse));

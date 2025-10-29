@@ -270,7 +270,10 @@ const AdminFaqPage = () => {
             setCategoryError(null);
             setCategoryManagementError(null);
             try {
-                const response = await apiClient.getFaqCategories({ limit: 200, include: "faqs" });
+                const response = await apiClient.getAdminFaqCategories({
+                    limit: 200,
+                    include: "faqs",
+                });
                 const rawCategories = extractList<FaqCategory>(response);
                 const mapped = rawCategories
                     .map((category): NormalizedCategory | null => {

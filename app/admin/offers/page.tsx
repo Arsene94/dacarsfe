@@ -415,7 +415,11 @@ const OffersAdminPage = () => {
     const loadOffers = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await apiClient.getOffers({ audience: "admin", perPage: 100, sort: "-updated_at" });
+            const response = await apiClient.getAdminOffers({
+                audience: "admin",
+                perPage: 100,
+                sort: "-updated_at",
+            });
             const rawList = extractList(response);
             const normalized = rawList
                 .map((entry) => normalizeOffer(entry))
