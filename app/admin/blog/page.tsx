@@ -11,7 +11,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
-import { extractItem, extractList } from "@/lib/apiResponse";
+import { extractList } from "@/lib/apiResponse";
 import { formatDateTime, toIsoStringFromInput, toLocalDatetimeInputValue } from "@/lib/datetime";
 import { resolveMediaUrl } from "@/lib/media";
 import { getUserDisplayName } from "@/lib/users";
@@ -26,6 +26,8 @@ import type {
 } from "@/types/blog";
 import type { User } from "@/types/auth";
 import { ensureUser } from "@/types/auth";
+import type { Offer } from "@/types/offer";
+import type { Faq } from "@/types/faq";
 
 type BlogPostFormState = {
   title: string;
@@ -36,8 +38,19 @@ type BlogPostFormState = {
   excerpt: string;
   content: string;
   tagIds: number[];
+  offerIds: number[];
+  faqIds: number[];
   metaTitle: string;
   metaDescription: string;
+  ogType: string;
+  ogTitle: string;
+  ogDescription: string;
+  ogImage: string;
+  ogUrl: string;
+  twitterCard: string;
+  twitterTitle: string;
+  twitterDescription: string;
+  twitterImage: string;
 };
 
 type BlogPostImageState = {
@@ -77,8 +90,19 @@ const EMPTY_FORM: BlogPostFormState = {
   excerpt: "",
   content: "",
   tagIds: [],
+  offerIds: [],
+  faqIds: [],
   metaTitle: "",
   metaDescription: "",
+  ogType: "",
+  ogTitle: "",
+  ogDescription: "",
+  ogImage: "",
+  ogUrl: "",
+  twitterCard: "",
+  twitterTitle: "",
+  twitterDescription: "",
+  twitterImage: "",
 };
 
 const sortByName = <T extends { name: string }>(entries: T[]): T[] =>
@@ -91,6 +115,8 @@ const BlogPostsPage = () => {
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [tags, setTags] = useState<BlogTag[]>([]);
   const [authors, setAuthors] = useState<User[]>([]);
+  const [availableOffers, setAvailableOffers] = useState<Offer[]>([]);
+  const [availableFaqs, setAvailableFaqs] = useState<Faq[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -199,7 +225,7 @@ const BlogPostsPage = () => {
     try {
       const params: BlogPostListParams = {
         perPage: 100,
-        include: ["category", "tags", "author"],
+        include: ["category", "tags", "author", "offers", "faqs"],
         sort: "-published_at,-id",
       };
       if (filters.status !== "all") {
@@ -226,10 +252,18 @@ const BlogPostsPage = () => {
   useEffect(() => {
     const loadLookups = async () => {
       try {
-        const [categoryResponse, tagResponse, authorResponse] = await Promise.all([
+        const [
+          categoryResponse,
+          tagResponse,
+          authorResponse,
+          offerResponse,
+          faqResponse,
+        ] = await Promise.all([
           apiClient.getBlogCategories({ perPage: 200, sort: "name" }),
           apiClient.getBlogTags({ perPage: 200, sort: "name" }),
           apiClient.getUsers({ perPage: 200, sort: "first_name" }),
+          apiClient.getOffers({ perPage: 200, audience: "admin", sort: "title" }),
+          apiClient.getFaqs({ per_page: 200, audience: "admin" }),
         ]);
 
         const categoryList = sortByName(extractList(categoryResponse));
@@ -253,9 +287,25 @@ const BlogPostsPage = () => {
             getUserDisplayName(a).localeCompare(getUserDisplayName(b), "ro", { sensitivity: "base" }),
           );
         setAuthors(normalizedAuthors);
+
+        const offerList = extractList(offerResponse)
+          .filter((offer): offer is Offer => typeof offer?.id === "number")
+          .sort((a, b) =>
+            (a.title ?? "").localeCompare(b.title ?? "", "ro", { sensitivity: "base" }),
+          );
+        setAvailableOffers(offerList);
+
+        const faqList = extractList(faqResponse)
+          .filter((faq): faq is Faq => typeof faq?.id === "number")
+          .sort((a, b) =>
+            (a.question ?? "").localeCompare(b.question ?? "", "ro", { sensitivity: "base" }),
+          );
+        setAvailableFaqs(faqList);
       } catch (error) {
         console.error("Nu am putut încărca datele auxiliare pentru blog", error);
-        setGlobalError("Nu am putut încărca listele de categorii, etichete sau autori.");
+        setGlobalError(
+          "Nu am putut încărca listele de categorii, etichete, autori, oferte sau întrebări frecvente.",
+        );
       }
     };
 
@@ -296,6 +346,20 @@ const BlogPostsPage = () => {
           .map((tag) => (typeof tag?.id === "number" ? tag.id : null))
           .filter((id): id is number => id !== null)
       : [];
+    const offerIds = Array.isArray(post.offers)
+      ? post.offers
+          .map((offer) => (typeof offer?.id === "number" ? offer.id : null))
+          .filter((id): id is number => id !== null)
+      : Array.isArray(post.offer_ids)
+        ? post.offer_ids.filter((id): id is number => typeof id === "number")
+        : [];
+    const faqIds = Array.isArray(post.faqs)
+      ? post.faqs
+          .map((faq) => (typeof faq?.id === "number" ? faq.id : null))
+          .filter((id): id is number => id !== null)
+      : Array.isArray(post.faq_ids)
+        ? post.faq_ids.filter((id): id is number => typeof id === "number")
+        : [];
 
     setEditing(post);
     setFormState({
@@ -307,8 +371,19 @@ const BlogPostsPage = () => {
       excerpt: post.excerpt ?? "",
       content: post.content ?? "",
       tagIds,
+      offerIds,
+      faqIds,
       metaTitle: post.meta_title ?? "",
       metaDescription: post.meta_description ?? "",
+      ogType: post.og_type ?? "",
+      ogTitle: post.og_title ?? "",
+      ogDescription: post.og_description ?? "",
+      ogImage: post.og_image ?? "",
+      ogUrl: post.og_url ?? "",
+      twitterCard: post.twitter_card ?? "",
+      twitterTitle: post.twitter_title ?? "",
+      twitterDescription: post.twitter_description ?? "",
+      twitterImage: post.twitter_image ?? "",
     });
     setImageState((prev) => {
       if (prev.previewUrl && prev.file) {
@@ -350,6 +425,26 @@ const BlogPostsPage = () => {
         ? prev.tagIds.filter((id) => id !== tagId)
         : [...prev.tagIds, tagId];
       return { ...prev, tagIds: nextTagIds };
+    });
+  };
+
+  const toggleOffer = (offerId: number) => {
+    setFormState((prev) => {
+      const exists = prev.offerIds.includes(offerId);
+      const nextOfferIds = exists
+        ? prev.offerIds.filter((id) => id !== offerId)
+        : [...prev.offerIds, offerId];
+      return { ...prev, offerIds: nextOfferIds };
+    });
+  };
+
+  const toggleFaq = (faqId: number) => {
+    setFormState((prev) => {
+      const exists = prev.faqIds.includes(faqId);
+      const nextFaqIds = exists
+        ? prev.faqIds.filter((id) => id !== faqId)
+        : [...prev.faqIds, faqId];
+      return { ...prev, faqIds: nextFaqIds };
     });
   };
 
@@ -403,10 +498,23 @@ const BlogPostsPage = () => {
       excerpt: formState.excerpt.trim() ? formState.excerpt.trim() : null,
       content: formState.content.trim() ? formState.content : null,
       tag_ids: tagIds,
+      offer_ids: formState.offerIds,
+      faq_ids: formState.faqIds,
       meta_title: formState.metaTitle.trim() ? formState.metaTitle.trim() : null,
       meta_description: formState.metaDescription.trim()
         ? formState.metaDescription.trim()
         : null,
+      og_type: formState.ogType.trim() ? formState.ogType.trim() : null,
+      og_title: formState.ogTitle.trim() ? formState.ogTitle.trim() : null,
+      og_description: formState.ogDescription.trim() ? formState.ogDescription.trim() : null,
+      og_image: formState.ogImage.trim() ? formState.ogImage.trim() : null,
+      og_url: formState.ogUrl.trim() ? formState.ogUrl.trim() : null,
+      twitter_card: formState.twitterCard.trim() ? formState.twitterCard.trim() : null,
+      twitter_title: formState.twitterTitle.trim() ? formState.twitterTitle.trim() : null,
+      twitter_description: formState.twitterDescription.trim()
+        ? formState.twitterDescription.trim()
+        : null,
+      twitter_image: formState.twitterImage.trim() ? formState.twitterImage.trim() : null,
     };
 
     if (formState.publishedAt.trim().length > 0) {
@@ -912,6 +1020,130 @@ const BlogPostsPage = () => {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-og-type">
+                    Tip Open Graph
+                  </label>
+                  <Input
+                    id="blog-post-og-type"
+                    value={formState.ogType}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, ogType: event.target.value }))}
+                    placeholder="Ex. website"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-og-title">
+                    Titlu Open Graph
+                  </label>
+                  <Input
+                    id="blog-post-og-title"
+                    value={formState.ogTitle}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, ogTitle: event.target.value }))}
+                    placeholder="Titlu pentru partajare socială"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="space-y-1">
+                  <label
+                    className="text-sm font-medium text-gray-700"
+                    htmlFor="blog-post-og-description"
+                  >
+                    Descriere Open Graph
+                  </label>
+                  <Textarea
+                    id="blog-post-og-description"
+                    value={formState.ogDescription}
+                    onChange={(event) =>
+                      setFormState((prev) => ({ ...prev, ogDescription: event.target.value }))
+                    }
+                    placeholder="Descriere pentru partajare socială"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-og-image">
+                    Imagine Open Graph
+                  </label>
+                  <Input
+                    id="blog-post-og-image"
+                    value={formState.ogImage}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, ogImage: event.target.value }))}
+                    placeholder="URL imagine 1200x630"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-og-url">
+                  URL Open Graph
+                </label>
+                <Input
+                  id="blog-post-og-url"
+                  value={formState.ogUrl}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, ogUrl: event.target.value }))}
+                  placeholder="https://dacars.ro/articol"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-twitter-card">
+                    Card Twitter
+                  </label>
+                  <Input
+                    id="blog-post-twitter-card"
+                    value={formState.twitterCard}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, twitterCard: event.target.value }))}
+                    placeholder="Ex. summary_large_image"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-twitter-title">
+                    Titlu Twitter
+                  </label>
+                  <Input
+                    id="blog-post-twitter-title"
+                    value={formState.twitterTitle}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, twitterTitle: event.target.value }))}
+                    placeholder="Titlu pentru Twitter"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="space-y-1">
+                  <label
+                    className="text-sm font-medium text-gray-700"
+                    htmlFor="blog-post-twitter-description"
+                  >
+                    Descriere Twitter
+                  </label>
+                  <Textarea
+                    id="blog-post-twitter-description"
+                    value={formState.twitterDescription}
+                    onChange={(event) =>
+                      setFormState((prev) => ({ ...prev, twitterDescription: event.target.value }))
+                    }
+                    placeholder="Descriere pentru Twitter"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-twitter-image">
+                    Imagine Twitter
+                  </label>
+                  <Input
+                    id="blog-post-twitter-image"
+                    value={formState.twitterImage}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, twitterImage: event.target.value }))}
+                    placeholder="URL imagine card Twitter"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-700">Etichete</p>
                 {tags.length === 0 ? (
@@ -933,6 +1165,65 @@ const BlogPostsPage = () => {
                             className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
                           />
                           <span>{tag.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">Oferte asociate</p>
+                {availableOffers.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Nu există oferte disponibile. Creează oferte în secțiunea dedicată din admin pentru a le atașa articolelor.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                    {availableOffers.map((offer) => {
+                      const checked = formState.offerIds.includes(offer.id);
+                      const inputId = `blog-offer-${offer.id}`;
+                      const label = offer.discount_label
+                        ? `${offer.title} (${offer.discount_label})`
+                        : offer.title;
+                      return (
+                        <label key={offer.id} htmlFor={inputId} className="flex items-center gap-2 text-sm">
+                          <input
+                            id={inputId}
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleOffer(offer.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+                          />
+                          <span>{label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">Întrebări frecvente asociate</p>
+                {availableFaqs.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Nu există întrebări frecvente disponibile. Creează FAQ-uri pentru a le recomanda lângă articol.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                    {availableFaqs.map((faq) => {
+                      const checked = formState.faqIds.includes(faq.id);
+                      const inputId = `blog-faq-${faq.id}`;
+                      return (
+                        <label key={faq.id} htmlFor={inputId} className="flex items-center gap-2 text-sm">
+                          <input
+                            id={inputId}
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleFaq(faq.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+                          />
+                          <span>{faq.question}</span>
                         </label>
                       );
                     })}
