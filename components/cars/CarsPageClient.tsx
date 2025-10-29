@@ -14,6 +14,7 @@ import { Popup } from "@/components/ui/popup";
 import { apiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { resolveMediaUrl } from "@/lib/media";
+import { getImageSizesPreset } from "@/lib/images/sizePresets";
 import { createVehicleItemListStructuredData } from "@/lib/seo/structuredData";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { useBooking } from "@/context/useBooking";
@@ -51,8 +52,6 @@ const parsePrice = (raw: unknown): number => {
     }
     try { return parsePrice(String(raw)); } catch { return 0; }
 };
-
-const CAR_CARD_IMAGE_SIZES = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
 
 const toNumberOrNull = (value: unknown): number | null => {
     const numeric = Number(value);
@@ -935,7 +934,9 @@ const FleetPage = () => {
                         alt={car.name}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-500"
-                        sizes={CAR_CARD_IMAGE_SIZES}
+                        sizes={getImageSizesPreset("carGridCard")}
+                        loading="lazy"
+                        quality={60}
                     />
                     <div className="absolute top-4 left-4 bg-jade text-white px-3 py-1 rounded-full text-sm font-dm-sans font-semibold">
                         {car.type}

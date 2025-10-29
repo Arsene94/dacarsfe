@@ -6,6 +6,7 @@ import { User } from "lucide-react";
 import { formatDate } from "@/lib/datetime";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveMediaUrl } from "@/lib/media";
+import { getImageSizesPreset } from "@/lib/images/sizePresets";
 import { getUserDisplayName } from "@/lib/users";
 import type { BlogPost } from "@/types/blog";
 import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
@@ -52,9 +53,10 @@ const BlogPostCard = ({
             src={imageUrl}
             alt={post.title}
             fill
-            sizes="(max-width: 767px) 320px, (max-width: 1023px) 50vw, 320px"
+            sizes={getImageSizesPreset("blogCard")}
             className="object-cover"
             priority={priority}
+            loading={priority ? "eager" : "lazy"}
           />
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-berkeley/20 via-jade/10 to-berkeley/25" />
