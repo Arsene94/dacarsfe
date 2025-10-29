@@ -5,7 +5,6 @@ import PageTransition from "../components/PageTransition";
 import ScrollPositionManager from "../components/ScrollPositionManager";
 import Script from "next/script";
 import type { ReactNode } from "react";
-import dynamic from "next/dynamic";
 import { headers } from "next/headers";
 import { BookingProvider } from "@/context/BookingProvider";
 import { AuthProvider } from "@/context/AuthContext";
@@ -19,28 +18,7 @@ import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale
 import TikTokPixelScript from "../components/TikTokPixelScript";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import LocaleHeadTags from "../components/LocaleHeadTags";
-import DeferredHydration from "@/components/DeferredHydration";
-
-const CampaignTrackingInitializer = dynamic(
-  () => import("../components/CampaignTrackingInitializer"),
-  { ssr: false, loading: () => null },
-);
-const MixpanelInitializer = dynamic(
-  () => import("../components/MixpanelInitializer"),
-  { ssr: false, loading: () => null },
-);
-const MetaPixel = dynamic(() => import("../components/MetaPixel"), {
-  ssr: false,
-  loading: () => null,
-});
-const MetaPixelServiceWorker = dynamic(
-  () => import("../components/MetaPixelServiceWorker"),
-  { ssr: false, loading: () => null },
-);
-const AnalyticsTracker = dynamic(
-  () => import("../components/AnalyticsTracker"),
-  { ssr: false, loading: () => null },
-);
+import AnalyticsHydrator from "@/components/AnalyticsHydrator";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -219,17 +197,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             </BookingProvider>
           </AuthProvider>
         </LocaleProvider>
-        <DeferredHydration timeout={2500}>
-          {() => (
-            <>
-              <CampaignTrackingInitializer />
-              <MixpanelInitializer />
-              <MetaPixel />
-              <MetaPixelServiceWorker />
-              <AnalyticsTracker />
-            </>
-          )}
-        </DeferredHydration>
+        <AnalyticsHydrator />
         <Script id="cookiescript-loader" strategy="lazyOnload">
           {`
             setTimeout(() => {
