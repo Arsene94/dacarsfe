@@ -8,7 +8,6 @@
       ],
       "numberOfRuns": 1,
       "settings": {
-        "preset": "mobile",
         "emulatedFormFactor": "mobile",
         "throttling": {
           "rttMs": 150,
