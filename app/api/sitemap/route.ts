@@ -1,27 +1,32 @@
+import type { MetadataRoute } from "next";
 import { NextResponse } from "next/server";
-import { absoluteUrl, siteMetadata } from "@/lib/seo/siteMetadata";
+import { generateLocalizedSitemap } from "@/lib/seo/sitemap";
 
-const siteUrl = siteMetadata.siteUrl;
+export const runtime = "nodejs";
 
-const ROUTES: Array<{ path: string; priority: string; changefreq: string }> = [
-    { path: "/", priority: "1.0", changefreq: "daily" },
-    { path: "/cars", priority: "0.9", changefreq: "daily" },
-];
+const buildSitemapXml = (entries: MetadataRoute.Sitemap): string => {
+    const urls = entries
+        .map(({ url, lastModified, changeFrequency, priority }) => {
+            const parts = ["  <url>", `    <loc>${url}</loc>`];
 
-const buildSitemapXml = (): string => {
-    const lastmod = new Date().toISOString();
+            if (lastModified) {
+                const lastModValue =
+                    typeof lastModified === "string" ? lastModified : lastModified.toISOString();
+                parts.push(`    <lastmod>${lastModValue}</lastmod>`);
+            }
 
-    const urls = ROUTES.map(({ path, priority, changefreq }) => {
-        const loc = path === "/" ? siteUrl : absoluteUrl(path);
-        return [
-            "  <url>",
-            `    <loc>${loc}</loc>`,
-            `    <lastmod>${lastmod}</lastmod>`,
-            `    <changefreq>${changefreq}</changefreq>`,
-            `    <priority>${priority}</priority>`,
-            "  </url>",
-        ].join("\n");
-    }).join("\n");
+            if (changeFrequency) {
+                parts.push(`    <changefreq>${changeFrequency}</changefreq>`);
+            }
+
+            if (typeof priority === "number") {
+                parts.push(`    <priority>${priority.toFixed(1)}</priority>`);
+            }
+
+            parts.push("  </url>");
+            return parts.join("\n");
+        })
+        .join("\n");
 
     return [
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
@@ -32,7 +37,9 @@ const buildSitemapXml = (): string => {
 };
 
 export async function GET() {
-    const body = buildSitemapXml();
+    const entries = await generateLocalizedSitemap();
+    const body = buildSitemapXml(entries);
+
     return new NextResponse(body, {
         headers: {
             "Content-Type": "application/xml; charset=utf-8",

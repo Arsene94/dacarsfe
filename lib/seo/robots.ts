@@ -5,29 +5,32 @@ export const ROBOTS_CONFIG: MetadataRoute.Robots = {
     rules: [
         {
             userAgent: "*",
-            allow: "/",
+            allow: ["/"],
             disallow: [
                 "/admin/",
                 "/account/",
                 "/form/",
                 "/cart/",
-                "/politica-de-confidentialitate",
-                "/politica-cookie",
+                "/checkout/",
+                "/api/",
+                "/*?*=&*",
                 "/*?*utm_*",
-            ]
+                "/*?*fbclid*",
+            ],
         },
         {
             userAgent: "GPTBot",
-            allow: "/"
+            allow: "/",
         },
         {
             userAgent: "CCBot",
-            allow: "/"
+            allow: "/",
         },
         {
             userAgent: "ClaudeBot",
-            allow: "/"
-        }
+            allow: "/",
+        },
     ],
-    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/sitemap-posts.xml`]
+    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/sitemap-posts.xml`],
+    host: SITE_URL,
 };
