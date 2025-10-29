@@ -2,7 +2,17 @@ import { apiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
-import { blog, blogPosting, breadcrumb, itemList, type JsonLd } from "@/lib/seo/jsonld";
+import {
+    blog,
+    blogPosting,
+    breadcrumb,
+    itemList,
+    buildFaqJsonLd,
+    offerCatalog,
+    type JsonLd,
+    type OfferInput,
+    type FaqEntry,
+} from "@/lib/seo/jsonld";
 import { resolveMediaUrl } from "@/lib/media";
 import { getUserDisplayName } from "@/lib/users";
 import type { BlogPost } from "@/types/blog";
@@ -486,6 +496,90 @@ const resolveBlogAuthorName = (post: BlogPost): string => {
     return SITE_NAME;
 };
 
+const sanitizeFaqEntries = (faqs: BlogPost["faqs"]): FaqEntry[] =>
+    (faqs ?? [])
+        .map((faq) => ({
+            question: faq?.question?.trim() ?? "",
+            answer: faq?.answer?.trim() ?? "",
+        }))
+        .filter((entry): entry is FaqEntry => entry.question.length > 0 && entry.answer.length > 0);
+
+const parseOfferPrice = (value: string | number | null | undefined): string | null => {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    if (typeof value === "number") {
+        return value.toString();
+    }
+
+    const match = value.match(/[0-9]+(?:[.,][0-9]+)?/);
+    return match ? match[0].replace(",", ".") : null;
+};
+
+const resolveOfferUrl = (offer: NonNullable<BlogPost["offers"]>[number]): string => {
+    const fallbackPath = offer.slug ? `/offers/${offer.slug}` : "/offers";
+    const fallbackUrl = `${SITE_URL}${fallbackPath}`;
+
+    if (offer.primary_cta_url) {
+        try {
+            return new URL(offer.primary_cta_url, SITE_URL).toString();
+        } catch (error) {
+            console.warn("Nu am putut normaliza URL-ul CTA pentru oferta", offer, error);
+        }
+    }
+
+    return fallbackUrl;
+};
+
+const normalizeShowOnSiteFlag = (value: boolean | number | null | undefined): boolean | null => {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    if (typeof value === "boolean") {
+        return value;
+    }
+
+    return value !== 0;
+};
+
+const mapOffersToJsonLdInputs = (offers: BlogPost["offers"]): OfferInput[] =>
+    (offers ?? [])
+        .map((offer) => {
+            if (!offer) {
+                return null;
+            }
+
+            const name = offer.title?.trim() ?? offer.slug?.trim();
+            if (!name) {
+                return null;
+            }
+
+            const rawPrice = offer.offer_value ?? offer.discount_label ?? null;
+            const price = parseOfferPrice(rawPrice) ?? "0";
+
+            const normalized: OfferInput = {
+                name,
+                url: resolveOfferUrl(offer),
+                priceCurrency: "EUR",
+                price,
+                description: offer.description ?? undefined,
+                validFrom: offer.starts_at ?? undefined,
+                validThrough: offer.ends_at ?? undefined,
+            };
+
+            const availability = normalizeShowOnSiteFlag(offer.show_on_site);
+            if (availability !== null) {
+                normalized.availability = availability
+                    ? "https://schema.org/InStock"
+                    : "https://schema.org/OutOfStock";
+            }
+
+            return normalized;
+        })
+        .filter((entry): entry is OfferInput => entry !== null);
+
 export const buildBlogPostStructuredData = (
     post: BlogPost,
     copy: BlogPostCopy,
@@ -494,7 +588,7 @@ export const buildBlogPostStructuredData = (
     const keywords = post.tags?.map((tag) => tag.name).filter(Boolean);
     const image = resolveMediaUrl(post.image ?? post.thumbnail ?? null) ?? undefined;
 
-    return [
+    const structuredData: JsonLd[] = [
         blogPosting({
             slug: post.slug,
             title: post.title,
@@ -511,6 +605,25 @@ export const buildBlogPostStructuredData = (
             { name: post.title, url: `${SITE_URL}/blog/${post.slug}` },
         ]),
     ];
+
+    const faqStructuredData = buildFaqJsonLd(sanitizeFaqEntries(post.faqs));
+    if (faqStructuredData) {
+        structuredData.push(faqStructuredData);
+    }
+
+    const offerInputs = mapOffersToJsonLdInputs(post.offers);
+    if (offerInputs.length > 0) {
+        structuredData.push(
+            offerCatalog({
+                name: `${SITE_NAME} offers for ${post.title}`,
+                description: summary || post.title,
+                url: `${SITE_URL}/blog/${post.slug}`,
+                offers: offerInputs,
+            }),
+        );
+    }
+
+    return structuredData;
 };
 
 export const loadBlogPosts = async (locale: Locale): Promise<BlogPost[]> => {
