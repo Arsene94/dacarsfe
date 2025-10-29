@@ -85,12 +85,7 @@ export interface BlogPostAuthor {
   [key: string]: unknown;
 }
 
-export type BlogPostStatus =
-  | "draft"
-  | "scheduled"
-  | "published"
-  | "archived"
-  | (string & {});
+export type BlogPostStatus = "draft" | "published" | (string & {});
 
 export interface BlogPost {
   id: number;
@@ -163,4 +158,5 @@ export interface BlogPostListParams {
   fields?: string;
   include?: string | readonly string[];
   search?: string;
+  language?: string | null;
 }

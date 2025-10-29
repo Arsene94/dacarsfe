@@ -57,15 +57,11 @@ const createEmptyImageState = (): BlogPostImageState => ({
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
   published: "Publicat",
-  scheduled: "Programat",
-  archived: "Arhivat",
 };
 
 const STATUS_OPTIONS: Array<{ value: BlogPostStatus; label: string }> = [
   { value: "draft", label: STATUS_LABELS.draft },
   { value: "published", label: STATUS_LABELS.published },
-  { value: "scheduled", label: STATUS_LABELS.scheduled },
-  { value: "archived", label: STATUS_LABELS.archived },
 ];
 
 const EMPTY_FORM: BlogPostFormState = {
@@ -211,7 +207,7 @@ const BlogPostsPage = () => {
       if (appliedSearch) {
         params.title = appliedSearch;
       }
-      const response = await apiClient.getBlogPosts(params);
+      const response = await apiClient.getAdminBlogPosts(params);
       const items = extractList(response);
       setPosts(items);
       setGlobalError(null);
@@ -516,10 +512,6 @@ const BlogPostsPage = () => {
           let tone = "bg-gray-100 text-gray-700";
           if (status === "published") {
             tone = "bg-jade/10 text-jade";
-          } else if (status === "scheduled") {
-            tone = "bg-blue-100 text-blue-700";
-          } else if (status === "archived") {
-            tone = "bg-amber-100 text-amber-700";
           }
           return <span className={`${baseClasses} ${tone}`}>{label}</span>;
         },

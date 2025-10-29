@@ -41,6 +41,7 @@ import type {
     ApiMessageResponse,
     ApiDeleteResponse,
     LookupRecord,
+    TranslationBatchStatus,
     UnknownRecord,
 } from "@/types/api";
 import type {
@@ -258,6 +259,80 @@ const appendOptionalLanguage = (basePath: string, language?: string | null): str
     }
 
     return `${basePath}/${encodeURIComponent(trimmed)}`;
+};
+
+const buildBlogPostSearchParams = (params: BlogPostListParams = {}): URLSearchParams => {
+    const searchParams = new URLSearchParams();
+    const { language, include, ...filters } = params;
+
+    void language;
+
+    if (typeof filters.page === "number" && Number.isFinite(filters.page)) {
+        searchParams.append("page", filters.page.toString());
+    }
+
+    const perPageCandidate =
+        typeof filters.perPage === "number" && Number.isFinite(filters.perPage)
+            ? filters.perPage
+            : typeof filters.per_page === "number" && Number.isFinite(filters.per_page)
+                ? filters.per_page
+                : undefined;
+    if (typeof perPageCandidate === "number" && Number.isFinite(perPageCandidate)) {
+        searchParams.append("per_page", perPageCandidate.toString());
+    }
+
+    if (typeof filters.limit === "number" && Number.isFinite(filters.limit)) {
+        searchParams.append("limit", filters.limit.toString());
+    }
+
+    if (
+        typeof filters.category_id !== "undefined" &&
+        filters.category_id !== null &&
+        String(filters.category_id).length > 0
+    ) {
+        searchParams.append("category_id", String(filters.category_id));
+    }
+
+    if (
+        typeof filters.author_id !== "undefined" &&
+        filters.author_id !== null &&
+        String(filters.author_id).trim().length > 0
+    ) {
+        searchParams.append("author_id", String(filters.author_id));
+    }
+
+    if (typeof filters.status === "string" && filters.status.trim().length > 0) {
+        searchParams.append("status", filters.status.trim());
+    }
+
+    if (typeof filters.slug === "string" && filters.slug.trim().length > 0) {
+        searchParams.append("slug", filters.slug.trim());
+    }
+
+    const titleCandidate =
+        typeof filters.title === "string" && filters.title.trim().length > 0
+            ? filters.title.trim()
+            : typeof filters.search === "string" && filters.search.trim().length > 0
+                ? filters.search.trim()
+                : null;
+    if (titleCandidate) {
+        searchParams.append("title", titleCandidate);
+    }
+
+    if (typeof filters.sort === "string" && filters.sort.trim().length > 0) {
+        searchParams.append("sort", filters.sort.trim());
+    }
+
+    if (typeof filters.fields === "string" && filters.fields.trim().length > 0) {
+        searchParams.append("fields", filters.fields.trim());
+    }
+
+    const includeValue = resolveIncludeParam(include);
+    if (includeValue) {
+        searchParams.append("include", includeValue);
+    }
+
+    return searchParams;
 };
 
 const appendAnalyticsRangeParams = (
@@ -1604,6 +1679,30 @@ export class ApiClient {
         });
     }
 
+    async queueFaqTranslations(): Promise<ApiItemResult<TranslationBatchStatus>> {
+        return this.request<ApiItemResult<TranslationBatchStatus>>(`/faqs/translate/batch`, {
+            method: 'POST',
+        });
+    }
+
+    async getFaqTranslationBatchStatus(
+        jobId: string | number,
+    ): Promise<ApiItemResult<TranslationBatchStatus>> {
+        const normalizedJobId =
+            typeof jobId === 'number' && Number.isFinite(jobId)
+                ? jobId.toString()
+                : typeof jobId === 'string'
+                    ? jobId.trim()
+                    : '';
+
+        if (!normalizedJobId) {
+            throw new Error('Identificatorul jobului de traducere FAQ este necesar.');
+        }
+
+        const encodedJobId = encodeURIComponent(normalizedJobId);
+        return this.request<ApiItemResult<TranslationBatchStatus>>(`/faqs/translate/batch/${encodedJobId}`);
+    }
+
     async getOffers(params: OfferListParams = {}): Promise<ApiListResult<Offer>> {
         const { language, include, ...rest } = params;
         const searchParams = new URLSearchParams();
@@ -2474,68 +2573,18 @@ export class ApiClient {
         });
     }
 
-    async getBlogPosts(
-        params: (BlogPostListParams & { language?: string }) = {},
-    ): Promise<ApiListResult<BlogPost>> {
-        const { include, language, ...filters } = params;
-        const searchParams = new URLSearchParams();
-        if (typeof filters.page === 'number' && Number.isFinite(filters.page)) {
-            searchParams.append('page', filters.page.toString());
-        }
-        const perPageCandidate =
-            typeof filters.perPage === 'number' && Number.isFinite(filters.perPage)
-                ? filters.perPage
-                : typeof filters.per_page === 'number' && Number.isFinite(filters.per_page)
-                    ? filters.per_page
-                    : undefined;
-        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
-            searchParams.append('per_page', perPageCandidate.toString());
-        }
-        if (typeof filters.limit === 'number' && Number.isFinite(filters.limit)) {
-            searchParams.append('limit', filters.limit.toString());
-        }
-        if (
-            typeof filters.category_id !== 'undefined' &&
-            filters.category_id !== null &&
-            String(filters.category_id).length > 0
-        ) {
-            searchParams.append('category_id', String(filters.category_id));
-        }
-        if (
-            typeof filters.author_id !== 'undefined' &&
-            filters.author_id !== null &&
-            String(filters.author_id).trim().length > 0
-        ) {
-            searchParams.append('author_id', String(filters.author_id));
-        }
-        if (typeof filters.status === 'string' && filters.status.trim().length > 0) {
-            searchParams.append('status', filters.status.trim());
-        }
-        if (typeof filters.slug === 'string' && filters.slug.trim().length > 0) {
-            searchParams.append('slug', filters.slug.trim());
-        }
-        const titleCandidate =
-            typeof filters.title === 'string' && filters.title.trim().length > 0
-                ? filters.title.trim()
-                : typeof filters.search === 'string' && filters.search.trim().length > 0
-                    ? filters.search.trim()
-                    : null;
-        if (titleCandidate) {
-            searchParams.append('title', titleCandidate);
-        }
-        if (typeof filters.sort === 'string' && filters.sort.trim().length > 0) {
-            searchParams.append('sort', filters.sort.trim());
-        }
-        if (typeof filters.fields === 'string' && filters.fields.trim().length > 0) {
-            searchParams.append('fields', filters.fields.trim());
-        }
-        const includeValue = resolveIncludeParam(include);
-        if (includeValue) {
-            searchParams.append('include', includeValue);
-        }
+    async getBlogPosts(params: BlogPostListParams = {}): Promise<ApiListResult<BlogPost>> {
+        const searchParams = buildBlogPostSearchParams(params);
         const query = searchParams.toString();
-        const basePath = appendOptionalLanguage(`/blog-posts`, this.resolveLanguage(language));
+        const basePath = appendOptionalLanguage(`/blog-posts`, this.resolveLanguage(params.language));
         return this.request<ApiListResult<BlogPost>>(query ? `${basePath}?${query}` : basePath);
+    }
+
+    async getAdminBlogPosts(params: BlogPostListParams = {}): Promise<ApiListResult<BlogPost>> {
+        const searchParams = buildBlogPostSearchParams(params);
+        const query = searchParams.toString();
+        const endpoint = `/admin/blog-posts`;
+        return this.request<ApiListResult<BlogPost>>(query ? `${endpoint}?${query}` : endpoint);
     }
 
     async getBlogPost(
@@ -2628,6 +2677,32 @@ export class ApiClient {
         return this.request<ApiDeleteResponse>(`/blog-posts/${id}/translations/${encodedLang}`, {
             method: 'DELETE',
         });
+    }
+
+    async queueBlogPostTranslations(): Promise<ApiItemResult<TranslationBatchStatus>> {
+        return this.request<ApiItemResult<TranslationBatchStatus>>(`/blog-posts/translate/batch`, {
+            method: 'POST',
+        });
+    }
+
+    async getBlogPostTranslationBatchStatus(
+        jobId: string | number,
+    ): Promise<ApiItemResult<TranslationBatchStatus>> {
+        const normalizedJobId =
+            typeof jobId === 'number' && Number.isFinite(jobId)
+                ? jobId.toString()
+                : typeof jobId === 'string'
+                    ? jobId.trim()
+                    : '';
+
+        if (!normalizedJobId) {
+            throw new Error('Identificatorul jobului de traducere este necesar.');
+        }
+
+        const encodedJobId = encodeURIComponent(normalizedJobId);
+        return this.request<ApiItemResult<TranslationBatchStatus>>(
+            `/blog-posts/translate/batch/${encodedJobId}`,
+        );
     }
 
     async getWheelOfFortunePeriods(

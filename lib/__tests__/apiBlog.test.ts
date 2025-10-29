@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClient } from '@/lib/api';
-import type { ApiDeleteResponse, ApiItemResult, ApiListResult } from '@/types/api';
+import type {
+  ApiDeleteResponse,
+  ApiItemResult,
+  ApiListResult,
+  TranslationBatchStatus,
+} from '@/types/api';
 import type {
   BlogCategory,
   BlogCategoryPayload,
@@ -410,10 +415,123 @@ describe('ApiClient admin blog management', () => {
       sort: ' -published_at ',
       fields: ' id,title ',
       include: [' author', 'category ', '', 'tags', 'author'],
+      language: 'ro',
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
       `${baseURL}/blog-posts/ro?page=3&per_page=15&limit=45&category_id=12&author_id=+9+&status=published&slug=top-destinatii-2024&title=road+trips&sort=-published_at&fields=id%2Ctitle&include=author%2Ccategory%2Ctags`,
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer admin-token',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+        credentials: 'omit',
+      }),
+    );
+
+    expect(result).toEqual(apiResponse);
+  });
+
+  it('lists blog posts via the admin endpoint', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('admin-token');
+
+    const apiResponse: ApiListResult<BlogPost> = {
+      data: [
+        { id: 9, title: 'Draft articol', slug: 'draft-articol', status: 'draft' },
+      ],
+    };
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.getAdminBlogPosts({
+      page: 2,
+      perPage: 50,
+      status: 'draft',
+      include: ['category', 'category'],
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseURL}/admin/blog-posts?page=2&per_page=50&status=draft&include=category`,
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer admin-token',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+        credentials: 'omit',
+      }),
+    );
+
+    expect(result).toEqual(apiResponse);
+  });
+
+  it('queues blog post translations', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('admin-token');
+
+    const apiResponse: ApiItemResult<TranslationBatchStatus> = {
+      data: {
+        id: 'job-123',
+        status: 'queued',
+        total: 45,
+      },
+    };
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 202,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.queueBlogPostTranslations();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseURL}/blog-posts/translate/batch`,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer admin-token',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+        credentials: 'omit',
+      }),
+    );
+
+    expect(result).toEqual(apiResponse);
+  });
+
+  it('retrieves blog post translation batch status', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('admin-token');
+
+    const apiResponse: ApiItemResult<TranslationBatchStatus> = {
+      data: {
+        id: 'job-123',
+        status: 'processing',
+        processed: { posts: 10 },
+      },
+    };
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.getBlogPostTranslationBatchStatus(' job-123 ');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseURL}/blog-posts/translate/batch/job-123`,
       expect.objectContaining({
         headers: expect.objectContaining({
           'Content-Type': 'application/json',
@@ -527,14 +645,14 @@ describe('ApiClient admin blog management', () => {
 
     const formData = new FormData();
     formData.append('title', 'Promoții vara 2024');
-    formData.append('status', 'scheduled');
+    formData.append('status', 'draft');
 
     const apiResponse: ApiItemResult<BlogPost> = {
       data: {
         id: 61,
         title: 'Promoții vara 2024',
         slug: 'promotii-vara-2024',
-        status: 'scheduled',
+        status: 'draft',
       },
     };
 
@@ -622,14 +740,14 @@ describe('ApiClient admin blog management', () => {
     client.setToken('admin-token');
 
     const formData = new FormData();
-    formData.append('status', 'archived');
+    formData.append('status', 'draft');
 
     const apiResponse: ApiItemResult<BlogPost> = {
       data: {
         id: 72,
         title: 'Promoții trecute',
         slug: 'promotii-trecute',
-        status: 'archived',
+        status: 'draft',
       },
     };
 

@@ -69,3 +69,16 @@ export interface LookupRecord extends UnknownRecord {
   title?: string | null;
   label?: string | null;
 }
+
+export interface TranslationBatchStatus extends UnknownRecord {
+  id?: string;
+  status?: string;
+  queued_at?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+  total?: number | Record<string, number> | null;
+  processed?: number | Record<string, number> | null;
+  pending?: number | Record<string, number> | null;
+  failed?: number | Record<string, number> | null;
+  message?: string | null;
+}
