@@ -40,8 +40,8 @@ export const HeroBackground = () => {
                 fill
                 priority
                 placeholder="blur"
-                sizes="(max-width: 767px) 100vw, (max-width: 1279px) 100vw, 1440px"
-                quality={70}
+                sizes="100vw"
+                quality={60}
                 className="object-cover"
             />
         </picture>

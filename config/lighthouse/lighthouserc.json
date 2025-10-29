@@ -1,0 +1,39 @@
+{
+  "ci": {
+    "collect": {
+      "url": [
+        "http://localhost:3000/",
+        "http://localhost:3000/offers",
+        "http://localhost:3000/blog"
+      ],
+      "numberOfRuns": 1,
+      "settings": {
+        "preset": "mobile",
+        "emulatedFormFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "cpuSlowdownMultiplier": 4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.56,
+          "uploadThroughputKbps": 675
+        }
+      }
+    },
+    "assert": {
+      "assertions": {
+        "largest-contentful-paint": [
+          "warn",
+          {
+            "maxNumericValue": 2500,
+            "aggregationMethod": "optimistic"
+          }
+        ]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": ".lighthouse"
+    }
+  }
+}
