@@ -181,8 +181,21 @@ export function middleware(request: NextRequest) {
     if (!response) {
       const rewriteUrl = request.nextUrl.clone();
       rewriteUrl.pathname = normalizedPathname;
-      response = NextResponse.rewrite(rewriteUrl);
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set("x-dacars-pathname", normalizedPathname);
+      requestHeaders.set("x-dacars-locale", localeInfo.locale);
+      response = NextResponse.rewrite(rewriteUrl, {
+        request: {
+          headers: requestHeaders,
+        },
+      });
     }
+
+    if (response) {
+      response.headers.set("x-dacars-pathname", normalizedPathname);
+      response.headers.set("x-dacars-locale", localeInfo.locale);
+    }
+
     setLocaleCookie(response, localeInfo.locale);
     return response;
   }

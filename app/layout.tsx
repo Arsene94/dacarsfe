@@ -6,6 +6,7 @@ import ScrollPositionManager from "../components/ScrollPositionManager";
 import Script from "next/script";
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
+import { headers } from "next/headers";
 import { BookingProvider } from "@/context/BookingProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { LocaleProvider } from "@/context/LocaleContext";
@@ -99,6 +100,26 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     ...localeBootstrapConfig,
     initialLocale,
   });
+  const headerList = headers();
+  const rawPathname =
+    headerList.get("x-dacars-pathname") ??
+    headerList.get("x-next-url") ??
+    headerList.get("next-url") ??
+    "/";
+
+  let normalizedPathname = "/";
+  if (rawPathname) {
+    try {
+      if (rawPathname.includes("://")) {
+        const url = new URL(rawPathname);
+        normalizedPathname = url.pathname || "/";
+      } else {
+        normalizedPathname = rawPathname.startsWith("/") ? rawPathname : `/${rawPathname}`;
+      }
+    } catch {
+      normalizedPathname = "/";
+    }
+  }
 
   return (
     <html
@@ -123,7 +144,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes"/>
         <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
         <meta httpEquiv="x-dns-prefetch-control" content="on"/>
-        <LocaleHeadTags locale={initialLocale} languages={supportedLocales} />
+        <LocaleHeadTags
+          locale={initialLocale}
+          languages={supportedLocales}
+          pathname={normalizedPathname}
+        />
     </head>
     <body className="min-h-screen bg-white">
         <Script id="prefill-locale" strategy="beforeInteractive">
