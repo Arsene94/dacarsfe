@@ -90,27 +90,10 @@ const formatOffer = (offer: OfferSummary): JsonLd => {
     return mapped;
 };
 
-const formatReview = (review: ReviewSummary): JsonLd => ({
-    "@type": "Review",
-    author: {
-        "@type": "Person",
-        name: review.author,
-        ...(review.profileUrl ? { sameAs: review.profileUrl } : {}),
-    },
-    datePublished: review.datePublished,
-    reviewBody: review.body,
-    reviewRating: {
-        "@type": "Rating",
-        ratingValue: review.rating,
-        bestRating: 5,
-        worstRating: 1,
-    },
-});
-
 export const buildLocalBusinessStructuredData = (
     offers: Offer[],
-    reviews: ReviewSummary[],
-    aggregateRating?: AggregateRatingInput,
+    _reviews: ReviewSummary[],
+    _aggregateRating?: AggregateRatingInput,
 ): JsonLd => {
     const businessImage = ensureAbsoluteUrl(siteMetadata.defaultSocialImage.src, SITE_URL);
 
@@ -162,23 +145,12 @@ export const buildLocalBusinessStructuredData = (
         ],
         openingHoursSpecification: OPENING_HOURS_SPECIFICATION,
         sameAs: siteMetadata.socialProfiles,
-        review: reviews.slice(0, 3).map(formatReview),
     };
 
     const offersToExpose = [...FALLBACK_OFFERS, ...mappedOffers];
 
     if (offersToExpose.length > 0) {
         data.makesOffer = offersToExpose.slice(0, 5);
-    }
-
-    if (aggregateRating) {
-        data.aggregateRating = {
-            "@type": "AggregateRating",
-            ratingValue: aggregateRating.ratingValue,
-            reviewCount: aggregateRating.reviewCount,
-            bestRating: aggregateRating.bestRating ?? 5,
-            worstRating: aggregateRating.worstRating ?? 1,
-        };
     }
 
     return data;

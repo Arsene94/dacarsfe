@@ -1390,6 +1390,29 @@ export class ApiClient {
             searchParams.append('name_like', filters.name_like.trim());
         }
 
+        if (
+            typeof filters.show_on_site !== 'undefined' &&
+            filters.show_on_site !== null
+        ) {
+            if (typeof filters.show_on_site === 'boolean') {
+                searchParams.append('show_on_site', filters.show_on_site ? '1' : '0');
+            } else if (
+                typeof filters.show_on_site === 'number' &&
+                Number.isFinite(filters.show_on_site)
+            ) {
+                searchParams.append('show_on_site', filters.show_on_site.toString());
+            } else {
+                const value = String(filters.show_on_site).trim();
+                if (value.length > 0) {
+                    searchParams.append('show_on_site', value);
+                }
+            }
+        }
+
+        if (typeof filters.audience === 'string' && filters.audience.trim().length > 0) {
+            searchParams.append('audience', filters.audience.trim());
+        }
+
         const includeParam = resolveIncludeParam(include);
         if (includeParam) {
             searchParams.append('include', includeParam);
@@ -1397,6 +1420,78 @@ export class ApiClient {
 
         const query = searchParams.toString();
         const basePath = appendOptionalLanguage(`/faq-categories`, this.resolveLanguage(language));
+        return this.request<ApiListResult<FaqCategory>>(
+            query.length > 0 ? `${basePath}?${query}` : basePath,
+        );
+    }
+
+    async getAdminFaqCategories(
+        params: (FaqCategoryListParams & { language?: string }) = {},
+    ): Promise<ApiListResult<FaqCategory>> {
+        const { language, include, ...filters } = params;
+        const searchParams = new URLSearchParams();
+
+        if (typeof filters.page === 'number' && Number.isFinite(filters.page)) {
+            searchParams.append('page', filters.page.toString());
+        }
+
+        const perPageCandidate =
+            typeof filters.perPage === 'number' && Number.isFinite(filters.perPage)
+                ? filters.perPage
+                : typeof filters.per_page === 'number' && Number.isFinite(filters.per_page)
+                    ? filters.per_page
+                    : undefined;
+
+        if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+
+        if (typeof filters.limit === 'number' && Number.isFinite(filters.limit)) {
+            searchParams.append('limit', filters.limit.toString());
+        }
+
+        if (typeof filters.status === 'string' && filters.status.trim().length > 0) {
+            searchParams.append('status', filters.status.trim());
+        }
+
+        if (typeof filters.order === 'string' && filters.order.trim().length > 0) {
+            searchParams.append('order', filters.order.trim());
+        }
+
+        if (typeof filters.name_like === 'string' && filters.name_like.trim().length > 0) {
+            searchParams.append('name_like', filters.name_like.trim());
+        }
+
+        if (
+            typeof filters.show_on_site !== 'undefined' &&
+            filters.show_on_site !== null
+        ) {
+            if (typeof filters.show_on_site === 'boolean') {
+                searchParams.append('show_on_site', filters.show_on_site ? '1' : '0');
+            } else if (
+                typeof filters.show_on_site === 'number' &&
+                Number.isFinite(filters.show_on_site)
+            ) {
+                searchParams.append('show_on_site', filters.show_on_site.toString());
+            } else {
+                const value = String(filters.show_on_site).trim();
+                if (value.length > 0) {
+                    searchParams.append('show_on_site', value);
+                }
+            }
+        }
+
+        if (typeof filters.audience === 'string' && filters.audience.trim().length > 0) {
+            searchParams.append('audience', filters.audience.trim());
+        }
+
+        const includeParam = resolveIncludeParam(include);
+        if (includeParam) {
+            searchParams.append('include', includeParam);
+        }
+
+        const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/admin/faq-categories`, this.resolveLanguage(language));
         return this.request<ApiListResult<FaqCategory>>(
             query.length > 0 ? `${basePath}?${query}` : basePath,
         );
@@ -1522,6 +1617,10 @@ export class ApiClient {
             searchParams.append('question_like', filters.question_like.trim());
         }
 
+        if (typeof filters.audience === 'string' && filters.audience.trim().length > 0) {
+            searchParams.append('audience', filters.audience.trim());
+        }
+
         const includeParam = resolveIncludeParam(include);
         if (includeParam) {
             searchParams.append('include', includeParam);
@@ -1631,6 +1730,25 @@ export class ApiClient {
             searchParams.append('status', rest.status.trim());
         }
 
+        if (
+            typeof rest.show_on_site !== 'undefined' &&
+            rest.show_on_site !== null
+        ) {
+            if (typeof rest.show_on_site === 'boolean') {
+                searchParams.append('show_on_site', rest.show_on_site ? '1' : '0');
+            } else if (
+                typeof rest.show_on_site === 'number' &&
+                Number.isFinite(rest.show_on_site)
+            ) {
+                searchParams.append('show_on_site', rest.show_on_site.toString());
+            } else {
+                const value = String(rest.show_on_site).trim();
+                if (value.length > 0) {
+                    searchParams.append('show_on_site', value);
+                }
+            }
+        }
+
         if (typeof rest.search === 'string' && rest.search.trim().length > 0) {
             searchParams.append('search', rest.search.trim());
         }
@@ -1650,6 +1768,76 @@ export class ApiClient {
 
         const query = searchParams.toString();
         const basePath = appendOptionalLanguage(`/offers`, this.resolveLanguage(language));
+        return this.request<ApiListResult<Offer>>(query ? `${basePath}?${query}` : basePath);
+    }
+
+    async getAdminOffers(params: OfferListParams = {}): Promise<ApiListResult<Offer>> {
+        const { language, include, ...rest } = params;
+        const searchParams = new URLSearchParams();
+
+        if (typeof rest.page === 'number' && Number.isFinite(rest.page)) {
+            searchParams.append('page', rest.page.toString());
+        }
+
+        const perPageCandidate =
+            typeof rest.perPage === 'number' && Number.isFinite(rest.perPage)
+                ? rest.perPage
+                : typeof (rest as { per_page?: number }).per_page === 'number' &&
+                        Number.isFinite((rest as { per_page?: number }).per_page)
+                    ? (rest as { per_page: number }).per_page
+                    : undefined;
+        if (typeof perPageCandidate === 'number') {
+            searchParams.append('per_page', perPageCandidate.toString());
+        }
+
+        if (typeof rest.limit === 'number' && Number.isFinite(rest.limit)) {
+            searchParams.append('limit', rest.limit.toString());
+        }
+
+        if (typeof rest.status === 'string' && rest.status.trim().length > 0) {
+            searchParams.append('status', rest.status.trim());
+        }
+
+        if (
+            typeof rest.show_on_site !== 'undefined' &&
+            rest.show_on_site !== null
+        ) {
+            if (typeof rest.show_on_site === 'boolean') {
+                searchParams.append('show_on_site', rest.show_on_site ? '1' : '0');
+            } else if (
+                typeof rest.show_on_site === 'number' &&
+                Number.isFinite(rest.show_on_site)
+            ) {
+                searchParams.append('show_on_site', rest.show_on_site.toString());
+            } else {
+                const value = String(rest.show_on_site).trim();
+                if (value.length > 0) {
+                    searchParams.append('show_on_site', value);
+                }
+            }
+        }
+
+        if (typeof rest.search === 'string' && rest.search.trim().length > 0) {
+            searchParams.append('search', rest.search.trim());
+        }
+
+        if (typeof rest.audience === 'string' && rest.audience.trim().length > 0) {
+            searchParams.append('audience', rest.audience.trim());
+        }
+
+        if (typeof rest.sort === 'string' && rest.sort.trim().length > 0) {
+            searchParams.append('sort', rest.sort.trim());
+        }
+
+        const includeParam = resolveIncludeParam(
+            include ?? (rest as { include?: string | readonly string[] }).include,
+        );
+        if (includeParam) {
+            searchParams.append('include', includeParam);
+        }
+
+        const query = searchParams.toString();
+        const basePath = appendOptionalLanguage(`/admin/offers`, this.resolveLanguage(language));
         return this.request<ApiListResult<Offer>>(query ? `${basePath}?${query}` : basePath);
     }
 
@@ -2474,67 +2662,91 @@ export class ApiClient {
         });
     }
 
-    async getBlogPosts(
-        params: (BlogPostListParams & { language?: string }) = {},
-    ): Promise<ApiListResult<BlogPost>> {
-        const { include, language, ...filters } = params;
+    private buildBlogPostListSearchParams(params: BlogPostListParams): URLSearchParams {
         const searchParams = new URLSearchParams();
-        if (typeof filters.page === 'number' && Number.isFinite(filters.page)) {
-            searchParams.append('page', filters.page.toString());
+
+        if (typeof params.page === 'number' && Number.isFinite(params.page)) {
+            searchParams.append('page', params.page.toString());
         }
+
         const perPageCandidate =
-            typeof filters.perPage === 'number' && Number.isFinite(filters.perPage)
-                ? filters.perPage
-                : typeof filters.per_page === 'number' && Number.isFinite(filters.per_page)
-                    ? filters.per_page
+            typeof params.perPage === 'number' && Number.isFinite(params.perPage)
+                ? params.perPage
+                : typeof params.per_page === 'number' && Number.isFinite(params.per_page)
+                    ? params.per_page
                     : undefined;
         if (typeof perPageCandidate === 'number' && Number.isFinite(perPageCandidate)) {
             searchParams.append('per_page', perPageCandidate.toString());
         }
-        if (typeof filters.limit === 'number' && Number.isFinite(filters.limit)) {
-            searchParams.append('limit', filters.limit.toString());
+
+        if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
+            searchParams.append('limit', params.limit.toString());
         }
+
         if (
-            typeof filters.category_id !== 'undefined' &&
-            filters.category_id !== null &&
-            String(filters.category_id).length > 0
+            typeof params.category_id !== 'undefined' &&
+            params.category_id !== null &&
+            String(params.category_id).length > 0
         ) {
-            searchParams.append('category_id', String(filters.category_id));
+            searchParams.append('category_id', String(params.category_id));
         }
+
         if (
-            typeof filters.author_id !== 'undefined' &&
-            filters.author_id !== null &&
-            String(filters.author_id).trim().length > 0
+            typeof params.author_id !== 'undefined' &&
+            params.author_id !== null &&
+            String(params.author_id).trim().length > 0
         ) {
-            searchParams.append('author_id', String(filters.author_id));
+            searchParams.append('author_id', String(params.author_id));
         }
-        if (typeof filters.status === 'string' && filters.status.trim().length > 0) {
-            searchParams.append('status', filters.status.trim());
+
+        if (typeof params.status === 'string' && params.status.trim().length > 0) {
+            searchParams.append('status', params.status.trim());
         }
-        if (typeof filters.slug === 'string' && filters.slug.trim().length > 0) {
-            searchParams.append('slug', filters.slug.trim());
+
+        if (typeof params.slug === 'string' && params.slug.trim().length > 0) {
+            searchParams.append('slug', params.slug.trim());
         }
+
         const titleCandidate =
-            typeof filters.title === 'string' && filters.title.trim().length > 0
-                ? filters.title.trim()
-                : typeof filters.search === 'string' && filters.search.trim().length > 0
-                    ? filters.search.trim()
+            typeof params.title === 'string' && params.title.trim().length > 0
+                ? params.title.trim()
+                : typeof params.search === 'string' && params.search.trim().length > 0
+                    ? params.search.trim()
                     : null;
         if (titleCandidate) {
             searchParams.append('title', titleCandidate);
         }
-        if (typeof filters.sort === 'string' && filters.sort.trim().length > 0) {
-            searchParams.append('sort', filters.sort.trim());
+
+        if (typeof params.sort === 'string' && params.sort.trim().length > 0) {
+            searchParams.append('sort', params.sort.trim());
         }
-        if (typeof filters.fields === 'string' && filters.fields.trim().length > 0) {
-            searchParams.append('fields', filters.fields.trim());
+
+        if (typeof params.fields === 'string' && params.fields.trim().length > 0) {
+            searchParams.append('fields', params.fields.trim());
         }
-        const includeValue = resolveIncludeParam(include);
+
+        const includeValue = resolveIncludeParam(params.include);
         if (includeValue) {
             searchParams.append('include', includeValue);
         }
+
+        return searchParams;
+    }
+
+    async getBlogPosts(
+        params: (BlogPostListParams & { language?: string }) = {},
+    ): Promise<ApiListResult<BlogPost>> {
+        const { language, ...filters } = params;
+        const searchParams = this.buildBlogPostListSearchParams(filters);
         const query = searchParams.toString();
         const basePath = appendOptionalLanguage(`/blog-posts`, this.resolveLanguage(language));
+        return this.request<ApiListResult<BlogPost>>(query ? `${basePath}?${query}` : basePath);
+    }
+
+    async getAdminBlogPosts(params: BlogPostListParams = {}): Promise<ApiListResult<BlogPost>> {
+        const searchParams = this.buildBlogPostListSearchParams(params);
+        const query = searchParams.toString();
+        const basePath = `/admin/blog-posts`;
         return this.request<ApiListResult<BlogPost>>(query ? `${basePath}?${query}` : basePath);
     }
 

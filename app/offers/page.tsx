@@ -32,12 +32,12 @@ const HREFLANG_LOCALES = ["ro", "en", "it", "es", "fr", "de"] as const;
 
 const OFFERS_SEO_COPY: Record<Locale, OffersSeoCopy> = {
   ro: {
-    pageTitle: "Oferte speciale DaCars",
+    pageTitle: "Oferte speciale DaCars pentru diaspora",
     pageDescription:
-      "Descoperă promoții active la închirieri auto DaCars: reduceri procentuale, pachete pentru grupuri și beneficii extra pentru clienți fideli.",
-    metaTitle: `Oferte și reduceri active | ${SITE_NAME}`,
+      "Descoperă promoții active la închirieri auto DaCars, cu reduceri pentru închiriere mașină România din străinătate și rent a car Aeroport Otopeni în română.",
+    metaTitle: `Oferte și reduceri active pentru diaspora | ${SITE_NAME}`,
     metaDescription:
-      "Activează economii flexibile, pachete sezoniere și beneficii dedicate clienților fideli DaCars.",
+      "Activează economii flexibile, pachete sezoniere și beneficii dedicate românilor din diaspora care rezervă un rent a car la Aeroportul Otopeni.",
     breadcrumbHome: "Acasă",
     breadcrumbOffers: "Oferte",
     promotionLabel: "Promoții active",

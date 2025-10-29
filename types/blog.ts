@@ -1,3 +1,6 @@
+import type { Faq } from "@/types/faq";
+import type { Offer } from "@/types/offer";
+
 export interface BlogCategory {
   id: number;
   name: string;
@@ -106,12 +109,25 @@ export interface BlogPost {
   category_id?: number | null;
   tags?: BlogTag[];
   tag_ids?: number[];
+  offers?: Offer[] | null;
+  offer_ids?: number[];
+  faqs?: Faq[] | null;
+  faq_ids?: number[];
   author?: BlogPostAuthor | null;
   author_id?: number | null;
   created_at?: string | null;
   updated_at?: string | null;
   meta_title?: string | null;
   meta_description?: string | null;
+  og_type?: string | null;
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
+  og_url?: string | null;
+  twitter_card?: string | null;
+  twitter_title?: string | null;
+  twitter_description?: string | null;
+  twitter_image?: string | null;
   translations?: BlogPostTranslation[];
   [key: string]: unknown;
 }
@@ -147,6 +163,19 @@ export type BlogPostPayload = Partial<{
   meta_title: string | null;
   meta_description: string | null;
   tag_ids: Array<number | string>;
+  offer_ids: Array<number | string>;
+  offers: Array<{ id: number | string }>;
+  faq_ids: Array<number | string>;
+  faqs: Array<{ id: number | string }>;
+  og_type: string | null;
+  og_title: string | null;
+  og_description: string | null;
+  og_image: string | null;
+  og_url: string | null;
+  twitter_card: string | null;
+  twitter_title: string | null;
+  twitter_description: string | null;
+  twitter_image: string | null;
 }> & Record<string, unknown>;
 
 export interface BlogPostListParams {

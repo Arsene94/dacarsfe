@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { JSX } from "react";
+import Script from "next/script";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -92,7 +93,9 @@ export function GlobalStyles(): JSX.Element | null {
         id={CRITICAL_STYLE_ID}
         dangerouslySetInnerHTML={{ __html: inlineTailwindCss }}
       />
-      <script
+      <Script
+        id="defer-tailwind"
+        strategy="afterInteractive"
         dangerouslySetInnerHTML={{ __html: loadDeferredTailwindScript }}
       />
       <noscript dangerouslySetInnerHTML={{ __html: noscriptStyles }} />

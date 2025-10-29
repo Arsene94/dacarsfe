@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
 import { NextResponse } from "next/server";
-import { ROBOTS_CONFIG } from "@/lib/seo/robots";
+import { generateRobotsConfig } from "@/lib/seo/robots";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 const stringifyRobotsRuleValue = (value?: string | string[]): string[] => {
     if (!value) {
@@ -22,12 +23,19 @@ const renderRobots = (config: MetadataRoute.Robots): string => {
         const agents = stringifyRobotsRuleValue(rule.userAgent);
         agents.forEach((agent) => {
             lines.push(`User-agent: ${agent}`);
-            stringifyRobotsRuleValue(rule.allow).forEach((allowPath) => {
-                lines.push(`Allow: ${allowPath}`);
-            });
-            stringifyRobotsRuleValue(rule.disallow).forEach((disallowPath) => {
-                lines.push(`Disallow: ${disallowPath}`);
-            });
+            const allowPaths = stringifyRobotsRuleValue(rule.allow);
+            if (allowPaths.length > 0) {
+                allowPaths.forEach((allowPath) => {
+                    lines.push(`Allow: ${allowPath} # follow`);
+                });
+            }
+
+            const disallowPaths = stringifyRobotsRuleValue(rule.disallow);
+            if (disallowPaths.length > 0) {
+                disallowPaths.forEach((disallowPath) => {
+                    lines.push(`Disallow: ${disallowPath} # nofollow`);
+                });
+            }
             lines.push("");
         });
     }
@@ -43,8 +51,9 @@ const renderRobots = (config: MetadataRoute.Robots): string => {
 /**
  * Expunem regulile robots.txt conform cerințelor de indexare și roboți AI.
  */
-export function GET() {
-    const body = renderRobots(ROBOTS_CONFIG);
+export async function GET() {
+    const config = await generateRobotsConfig();
+    const body = renderRobots(config);
     return new NextResponse(`${body}\n`, {
         headers: {
             "Content-Type": "text/plain; charset=utf-8",

@@ -11,6 +11,8 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 import { useBooking } from "@/context/useBooking";
+import type { OffersSectionProps } from "@/components/OffersSection";
+import type { Offer } from "@/types/offer";
 import type { WheelOfFortunePeriod } from "@/types/wheel";
 import { trackTikTokViewContent } from "@/lib/tiktokPixel";
 
@@ -22,7 +24,7 @@ const BenefitsSection = dynamic(() => import("@/components/BenefitsSection"), {
     loading: () => null,
 });
 
-const OffersSection = dynamic(() => import("@/components/OffersSection"), {
+const OffersSection = dynamic<OffersSectionProps>(() => import("@/components/OffersSection"), {
     loading: () => null,
 });
 
@@ -69,6 +71,10 @@ type TrackingModules = {
 
 let wheelHelpersPromise: Promise<WheelHelpers> | null = null;
 let trackingModulesPromise: Promise<TrackingModules> | null = null;
+
+type HomePageClientProps = {
+    initialOffers: Offer[];
+};
 
 const loadWheelHelpers = async (): Promise<WheelHelpers> => {
     if (!wheelHelpersPromise) {
@@ -216,7 +222,7 @@ const resolveMonthsInRange = (startIso: string, endIso: string): number[] => {
     return Array.from(new Set(months));
 };
 
-const HomePageClient = () => {
+const HomePageClient = ({ initialOffers }: HomePageClientProps) => {
     const { booking } = useBooking();
     const [activePeriod, setActivePeriod] = useState<WheelOfFortunePeriod | null>(null);
     const [isLoadingPeriod, setIsLoadingPeriod] = useState(false);
@@ -611,7 +617,7 @@ const HomePageClient = () => {
                 <InterlinkingSection />
             </LazyVisibleSection>
             <LazyVisibleSection intrinsicSize="820px">
-                <OffersSection />
+                <OffersSection initialOffers={initialOffers} />
             </LazyVisibleSection>
             {shouldRenderElfsight ? <ElfsightWidget /> : null}
             {/*<TestimonialsSection />*/}

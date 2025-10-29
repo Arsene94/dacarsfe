@@ -3,9 +3,9 @@ import { Clock, Shield, Star } from "lucide-react";
 import { HeroBackground } from "@/components/HeroBackground";
 import type { Locale } from "@/lib/i18n/config";
 
+import HeroBookingForm from "./HeroBookingForm";
 import type { HeroFeature } from "./hero/heroUtils";
 import type { LocationOption } from "./HeroBookingForm";
-import { HeroBookingFormLoader } from "./hero/HeroBookingFormLoader";
 
 const FEATURE_ICONS = [Clock, Shield, Star] as const;
 
@@ -60,7 +60,10 @@ const HeroSectionView = ({
                             <span className="text-jadeLight font-semibold">{subtitleHighlight}</span>
                         </p>
 
-                        <div className="hidden sm:grid sm:grid-cols-3 gap-6">
+                        <div
+                            className="hidden sm:grid sm:grid-cols-3 gap-6"
+                            style={{ contentVisibility: "auto", containIntrinsicSize: "240px" }}
+                        >
                             {features.map((feature, index) => {
                                 const Icon = FEATURE_ICONS[index] ?? Star;
 
@@ -81,7 +84,7 @@ const HeroSectionView = ({
                 </div>
 
                 <div className="mt-5">
-                    <HeroBookingFormLoader
+                    <HeroBookingForm
                         labels={form.labels}
                         placeholders={form.placeholders}
                         ariaLabels={form.ariaLabels}
