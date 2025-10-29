@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { cache } from "react";
 import BlogPostPageContent from "@/components/blog/BlogPostPageContent";
 import { SITE_NAME } from "@/lib/config";
 import { resolveRequestLocale } from "@/lib/i18n/server";
@@ -20,13 +19,11 @@ type BlogPostPageProps = {
     params: Promise<{ slug: string }>;
 };
 
-const fetchBlogPost = cache(loadBlogPost);
-
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
     const { slug } = await params;
     const locale = await resolveRequestLocale();
     const copy = getBlogPostCopy(locale);
-    const post = await fetchBlogPost(slug, locale);
+    const post = await loadBlogPost(slug, locale);
 
     if (!post) {
         return buildMetadata({
@@ -61,7 +58,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     const { slug } = await params;
     const locale = await resolveRequestLocale();
     const copy = getBlogPostCopy(locale);
-    const post = await fetchBlogPost(slug, locale);
+    const post = await loadBlogPost(slug, locale);
 
     if (!post) {
         notFound();

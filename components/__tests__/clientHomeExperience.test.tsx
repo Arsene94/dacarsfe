@@ -320,7 +320,7 @@ describe('ContactSection', () => {
 describe('HomePageClient', () => {
   it('deschide popup-ul roții norocului pentru rezervările eligibile și permite închiderea lui', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<HomePageClient />, {
+    renderWithProviders(<HomePageClient initialOffers={[]} />, {
       booking: {
         startDate: '2025-06-10T08:00',
         endDate: '2025-06-15T10:00',

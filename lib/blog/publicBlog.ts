@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { apiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
@@ -441,6 +442,9 @@ const BLOG_POST_PARAMS = {
     limit: 1 as const,
 };
 
+const BLOG_CACHE_TAG = "public-blog-posts" as const;
+const BLOG_CACHE_REVALIDATE_SECONDS = 300;
+
 const cleanText = (value?: string | null): string => {
     if (!value) {
         return "";
@@ -626,7 +630,7 @@ export const buildBlogPostStructuredData = (
     return structuredData;
 };
 
-export const loadBlogPosts = async (locale: Locale): Promise<BlogPost[]> => {
+const fetchBlogPostsInternal = async (locale: Locale): Promise<BlogPost[]> => {
     try {
         const response = await apiClient.getBlogPosts({ ...BLOG_LIST_PARAMS, language: locale });
         const posts = extractList<BlogPost>(response).map((post) => applyBlogPostTranslation(post, locale));
@@ -650,7 +654,7 @@ export const loadBlogPosts = async (locale: Locale): Promise<BlogPost[]> => {
     }
 };
 
-export const loadBlogPost = async (slug: string, locale: Locale): Promise<BlogPost | null> => {
+const fetchBlogPostInternal = async (slug: string, locale: Locale): Promise<BlogPost | null> => {
     try {
         const response = await apiClient.getBlogPosts({ ...BLOG_POST_PARAMS, slug, language: locale });
         const posts = extractList<BlogPost>(response).map((post) => applyBlogPostTranslation(post, locale));
@@ -674,3 +678,15 @@ export const loadBlogPost = async (slug: string, locale: Locale): Promise<BlogPo
         return null;
     }
 };
+
+export const loadBlogPosts = unstable_cache(
+    fetchBlogPostsInternal,
+    ["public-blog-posts"],
+    { tags: [BLOG_CACHE_TAG], revalidate: BLOG_CACHE_REVALIDATE_SECONDS },
+);
+
+export const loadBlogPost = unstable_cache(
+    fetchBlogPostInternal,
+    ["public-blog-post"],
+    { tags: [BLOG_CACHE_TAG], revalidate: BLOG_CACHE_REVALIDATE_SECONDS },
+);

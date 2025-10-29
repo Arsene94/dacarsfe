@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { Calendar, Gift, Heart, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ApplyOfferButton from "@/components/offers/ApplyOfferButton";
 import { formatOfferBadge } from "@/lib/offers";
-import apiClient from "@/lib/api";
-import { extractList } from "@/lib/apiResponse";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { cn } from "@/lib/utils";
 import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
@@ -174,66 +172,26 @@ const mapOfferToCard = (entry: Offer | Record<string, unknown>): OfferCard | nul
     };
 };
 
-const OffersSection = () => {
+export type OffersSectionProps = {
+    initialOffers?: Offer[];
+};
+
+const OffersSection = ({ initialOffers = [] }: OffersSectionProps) => {
     const { messages, t } = useTranslations("home");
     const buildLocaleHref = useLocaleHref();
     const offers = (messages.offers ?? {}) as OffersMessages;
     const cards = offers.cards ?? [];
     const secondaryButton = offers.cta?.secondaryButton ?? "Rezervă cu reducere";
 
-    const [remoteOffers, setRemoteOffers] = useState<OfferCard[]>([]);
-    const [remoteState, setRemoteState] = useState<"idle" | "loading" | "success" | "empty" | "error">(
-        "idle",
+    const remoteOffers = useMemo(
+        () =>
+            initialOffers
+                .map((item) => mapOfferToCard(item))
+                .filter((item): item is OfferCard => item !== null),
+        [initialOffers],
     );
 
-    useEffect(() => {
-        let cancelled = false;
-
-        const fetchOffers = async () => {
-            setRemoteState("loading");
-            try {
-                const response = await apiClient.getOffers({
-                    audience: "public",
-                    status: "published",
-                    limit: 4,
-                    sort: "-starts_at,-created_at",
-                });
-                if (cancelled) {
-                    return;
-                }
-                const rawList = extractList(response);
-                const mapped = rawList
-                    .map((item) => mapOfferToCard(item as Offer))
-                    .filter((item): item is OfferCard => item !== null);
-                if (mapped.length > 0) {
-                    setRemoteOffers(mapped);
-                    setRemoteState("success");
-                } else {
-                    setRemoteState("empty");
-                }
-            } catch (error) {
-                console.error("Nu am putut încărca ofertele publice", error);
-                if (!cancelled) {
-                    setRemoteState("error");
-                }
-            }
-        };
-
-        fetchOffers();
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    const hasRemoteOffers = remoteState === "success" && remoteOffers.length > 0;
-    const shouldUseFallback =
-        remoteState === "idle" || remoteState === "loading" || remoteState === "error";
-    const displayedCards = hasRemoteOffers
-        ? remoteOffers
-        : shouldUseFallback
-            ? cards
-            : [];
+    const displayedCards = remoteOffers.length > 0 ? remoteOffers : cards;
     const hasAnyOffer = displayedCards.length > 0;
 
     if (!hasAnyOffer) {

@@ -4,8 +4,8 @@ import HeroSection from "@/components/HeroSection";
 import StructuredData from "@/components/StructuredData";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
-import { apiClient } from "@/lib/api";
-import { extractList } from "@/lib/apiResponse";
+import { resolveRequestLocale } from "@/lib/i18n/server";
+import { loadFeaturedOffers } from "@/lib/offers/publicOffers";
 import { buildLocalBusinessStructuredData } from "@/lib/seo/localBusiness";
 import { buildMetadata } from "@/lib/seo/meta";
 import { breadcrumb, organization, website } from "@/lib/seo/jsonld";
@@ -71,21 +71,6 @@ export const metadata: Metadata = buildMetadata({
     locale: FALLBACK_LOCALE,
 });
 
-const fetchActiveOffers = async (): Promise<Offer[]> => {
-    try {
-        const response = await apiClient.getOffers({
-            audience: "public",
-            status: "published",
-            limit: 4,
-            sort: "-starts_at,-created_at",
-        });
-        return extractList(response) as Offer[];
-    } catch (error) {
-        console.error("Nu am putut încărca ofertele pentru schema LocalBusiness", error);
-        return [];
-    }
-};
-
 const LOCAL_BUSINESS_REVIEWS = [
     {
         author: "Mihai Popescu",
@@ -127,7 +112,8 @@ const computeAggregateRating = (ratings: Array<{ rating: number }>) => {
 };
 
 const HomePage = async () => {
-    const offers = await fetchActiveOffers();
+    const locale = await resolveRequestLocale();
+    const offers = await loadFeaturedOffers(locale);
     const aggregateRating = computeAggregateRating(LOCAL_BUSINESS_REVIEWS);
 
     const structuredData = [
@@ -149,7 +135,7 @@ const HomePage = async () => {
                 {/* Rendăm hero-ul ca secțiune server pentru a reduce JS-ul critic */}
                 <HeroSection />
             </div>
-            <HomePageClient />
+            <HomePageClient initialOffers={offers} />
         </>
     );
 };

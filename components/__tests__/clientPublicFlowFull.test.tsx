@@ -255,19 +255,19 @@ describe('Fluxul complet al clienților DaCars', () => {
       ],
     });
     apiClientMock.getHomePageCars.mockResolvedValue({ data: [homeCar] });
+    const featuredOffer = {
+      id: 44,
+      title: 'Reducere 10%',
+      description: 'Oferta test',
+      discount_label: '-10%',
+      offer_type: 'percentage_discount' as const,
+      offer_value: '10',
+      primary_cta_label: 'Aplică reducerea',
+      primary_cta_url: '/form',
+    };
+
     apiClientMock.getOffers.mockResolvedValue({
-      data: [
-        {
-          id: 44,
-          title: 'Reducere 10%',
-          description: 'Oferta test',
-          discount_label: '-10%',
-          offer_type: 'percentage_discount',
-          offer_value: '10',
-          primary_cta_label: 'Aplică reducerea',
-          primary_cta_url: '/form',
-        },
-      ],
+      data: [featuredOffer],
     });
     apiClientMock.getWheelOfFortunePeriods.mockResolvedValue({
       data: [
@@ -296,7 +296,7 @@ describe('Fluxul complet al clienților DaCars', () => {
     const { setBookingSpy } = renderWithProviders(
       <>
         <HeroSection />
-        <HomePageClient />
+        <HomePageClient initialOffers={[featuredOffer]} />
       </>,
       {
         booking: initialBooking,
@@ -305,7 +305,6 @@ describe('Fluxul complet al clienților DaCars', () => {
 
     await waitFor(() => expect(apiClientMock.setLanguage).toHaveBeenCalledWith('ro'));
     await waitFor(() => expect(apiClientMock.getHomePageCars).toHaveBeenCalled());
-    await waitFor(() => expect(apiClientMock.getOffers).toHaveBeenCalled());
 
     const pickupInput = await screen.findByLabelText('Data ridicare');
     const returnInput = await screen.findByLabelText('Data returnare');
