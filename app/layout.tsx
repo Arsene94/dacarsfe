@@ -18,6 +18,7 @@ import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale
 import TikTokPixelScript from "../components/TikTokPixelScript";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import LocaleHeadTags from "../components/LocaleHeadTags";
+import DeferredHydration from "@/components/DeferredHydration";
 
 const CampaignTrackingInitializer = dynamic(
   () => import("../components/CampaignTrackingInitializer"),
@@ -193,11 +194,17 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             </BookingProvider>
           </AuthProvider>
         </LocaleProvider>
-        <CampaignTrackingInitializer />
-        <MixpanelInitializer />
-        <MetaPixel />
-        <MetaPixelServiceWorker />
-        <AnalyticsTracker />
+        <DeferredHydration timeout={2500}>
+          {() => (
+            <>
+              <CampaignTrackingInitializer />
+              <MixpanelInitializer />
+              <MetaPixel />
+              <MetaPixelServiceWorker />
+              <AnalyticsTracker />
+            </>
+          )}
+        </DeferredHydration>
         <Script id="cookiescript-loader" strategy="lazyOnload">
           {`
             setTimeout(() => {

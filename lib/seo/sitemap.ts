@@ -1,6 +1,7 @@
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import type { MetadataRoute } from "next";
+import { unstable_cache } from "next/cache";
 import { createApiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { SITE_URL } from "@/lib/config";
@@ -34,6 +35,14 @@ const DEFAULT_CHANGE_FREQUENCY: ChangeFrequency = "monthly";
 const DEFAULT_PRIORITY = 0.5;
 const DEFAULT_EXCLUDES = ["/admin", "/api"] as const;
 const BLOG_SITEMAP_FETCH_LIMIT = 500;
+
+const STATIC_DISCOVERY_CACHE_TAG = "seo-static-pages" as const;
+const STATIC_DISCOVERY_REVALIDATE_SECONDS = 60 * 60; // 1 oră
+const BLOG_SITEMAP_CACHE_TAG = "seo-blog-sitemap" as const;
+const DYNAMIC_ENTRIES_CACHE_TAG = "seo-dynamic-pages" as const;
+const DYNAMIC_ENTRIES_REVALIDATE_SECONDS = 60 * 10; // 10 minute
+const SITEMAP_CACHE_TAG = "seo-sitemap-entries" as const;
+const SITEMAP_REVALIDATE_SECONDS = 60 * 10; // 10 minute
 const BLOG_SITEMAP_PARAMS = {
     status: "published" as const,
     sort: "-published_at,-id" as const,
@@ -265,6 +274,12 @@ const fetchBlogSitemapEntries = async (): Promise<SitemapEntry[]> => {
     }
 };
 
+const cachedFetchBlogSitemapEntries = unstable_cache(
+    fetchBlogSitemapEntries,
+    ["seo-fetch-blog-sitemap"],
+    { tags: [BLOG_SITEMAP_CACHE_TAG], revalidate: DYNAMIC_ENTRIES_REVALIDATE_SECONDS },
+);
+
 const collectDynamicEntries = async (): Promise<SitemapEntry[]> => {
     const docsEntries: SitemapEntry[] = STATIC_DOCS_PAGES.map((doc) => ({
         path: `/docs/${doc.slug}`,
@@ -273,7 +288,7 @@ const collectDynamicEntries = async (): Promise<SitemapEntry[]> => {
         priority: 0.7,
     }));
 
-    const blogEntries = await fetchBlogSitemapEntries();
+    const blogEntries = await cachedFetchBlogSitemapEntries();
 
     return [...docsEntries, ...blogEntries];
 };
@@ -369,14 +384,37 @@ export const buildLocalizedSitemapUrls = (
     return Array.from(urlMap.values());
 };
 
-export const generateSitemapEntries = async (): Promise<SitemapEntry[]> => {
+const cachedDiscoverStaticPages = unstable_cache(
+    async () => discoverStaticPages(),
+    ["seo-discover-static"],
+    { tags: [STATIC_DISCOVERY_CACHE_TAG], revalidate: STATIC_DISCOVERY_REVALIDATE_SECONDS },
+);
+
+const cachedCollectDynamicEntries = unstable_cache(
+    collectDynamicEntries,
+    ["seo-collect-dynamic"],
+    {
+        tags: [DYNAMIC_ENTRIES_CACHE_TAG, BLOG_SITEMAP_CACHE_TAG],
+        revalidate: DYNAMIC_ENTRIES_REVALIDATE_SECONDS,
+    },
+);
+
+const generateSitemapEntriesInternal = async (): Promise<SitemapEntry[]> => {
     const generatedAt = new Date().toISOString();
-    const staticPages = await discoverStaticPages();
+    const [staticPages, dynamicEntries] = await Promise.all([
+        cachedDiscoverStaticPages(),
+        cachedCollectDynamicEntries(),
+    ]);
     const baseEntries = applyOverrides(staticPages, generatedAt);
-    const dynamicEntries = await collectDynamicEntries();
 
     return dedupeSitemapEntries([...baseEntries, ...dynamicEntries]);
 };
+
+export const generateSitemapEntries = unstable_cache(
+    generateSitemapEntriesInternal,
+    ["seo-generate-entries"],
+    { tags: [SITEMAP_CACHE_TAG, STATIC_DISCOVERY_CACHE_TAG, DYNAMIC_ENTRIES_CACHE_TAG], revalidate: SITEMAP_REVALIDATE_SECONDS },
+);
 
 export const generateLocalizedSitemap = async (): Promise<MetadataRoute.Sitemap> => {
     const entries = await generateSitemapEntries();
