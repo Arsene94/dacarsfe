@@ -5,7 +5,7 @@ import PageTransition from "../components/PageTransition";
 import ScrollPositionManager from "../components/ScrollPositionManager";
 import Script from "next/script";
 import type { ReactNode } from "react";
-import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import { BookingProvider } from "@/context/BookingProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { LocaleProvider } from "@/context/LocaleContext";
@@ -15,14 +15,30 @@ import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { GlobalStyles } from "./global-styles";
 import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY } from "@/lib/i18n/config";
 import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale";
-import MixpanelInitializer from "../components/MixpanelInitializer";
 import TikTokPixelScript from "../components/TikTokPixelScript";
-import MetaPixel from "../components/MetaPixel";
-import MetaPixelServiceWorker from "../components/MetaPixelServiceWorker";
 import { GoogleAnalytics } from "@next/third-parties/google";
-import AnalyticsTracker from "../components/AnalyticsTracker";
-import CampaignTrackingInitializer from "../components/CampaignTrackingInitializer";
 import LocaleHeadTags from "../components/LocaleHeadTags";
+
+const CampaignTrackingInitializer = dynamic(
+  () => import("../components/CampaignTrackingInitializer"),
+  { ssr: false, loading: () => null },
+);
+const MixpanelInitializer = dynamic(
+  () => import("../components/MixpanelInitializer"),
+  { ssr: false, loading: () => null },
+);
+const MetaPixel = dynamic(() => import("../components/MetaPixel"), {
+  ssr: false,
+  loading: () => null,
+});
+const MetaPixelServiceWorker = dynamic(
+  () => import("../components/MetaPixelServiceWorker"),
+  { ssr: false, loading: () => null },
+);
+const AnalyticsTracker = dynamic(
+  () => import("../components/AnalyticsTracker"),
+  { ssr: false, loading: () => null },
+);
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -109,13 +125,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <LocaleHeadTags locale={initialLocale} languages={supportedLocales} />
     </head>
     <body className="min-h-screen bg-white">
-    <Suspense fallback={null}>
-        <CampaignTrackingInitializer />
-        <MixpanelInitializer/>
-        <MetaPixel />
-        <MetaPixelServiceWorker />
-        <AnalyticsTracker />
-        </Suspense>
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`
             (function() {
@@ -184,16 +193,21 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             </BookingProvider>
           </AuthProvider>
         </LocaleProvider>
-    <Script id="cookiescript-loader" strategy="lazyOnload">
-        {`
-          setTimeout(() => {
-            const s = document.createElement("script");
-            s.src = "https://cdn.cookie-script.com/s/1dbe1a6c3b981120922353311f510e1d.js";
-            s.async = true;
-            document.body.appendChild(s);
-          }, 3000);
-        `}
-    </Script>
+        <CampaignTrackingInitializer />
+        <MixpanelInitializer />
+        <MetaPixel />
+        <MetaPixelServiceWorker />
+        <AnalyticsTracker />
+        <Script id="cookiescript-loader" strategy="lazyOnload">
+          {`
+            setTimeout(() => {
+              const s = document.createElement("script");
+              s.src = "https://cdn.cookie-script.com/s/1dbe1a6c3b981120922353311f510e1d.js";
+              s.async = true;
+              document.body.appendChild(s);
+            }, 3000);
+          `}
+        </Script>
       </body>
     </html>
   );
