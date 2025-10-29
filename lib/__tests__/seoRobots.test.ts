@@ -6,6 +6,7 @@ vi.mock("@/lib/seo/sitemap", () => ({
     generateSitemapEntries: vi.fn(),
 }));
 
+import { GET as robotsHandler } from "@/app/api/robots/route";
 import { generateRobotsConfig } from "@/lib/seo/robots";
 import { generateSitemapEntries } from "@/lib/seo/sitemap";
 
@@ -53,5 +54,32 @@ describe("generateRobotsConfig", () => {
 
         expect(disallow).toContain("/*?*&*");
         expect(disallow).toContain("/admin/");
+    });
+});
+
+describe("GET /api/robots", () => {
+    beforeEach(() => {
+        sitemapEntriesMock.mockReset();
+    });
+
+    it("marchează rutele allow cu follow și cele disallow cu nofollow", async () => {
+        const entries: SitemapEntry[] = [
+            {
+                path: "/", 
+                lastModified: "2025-01-01T00:00:00.000Z",
+                changeFrequency: "daily",
+                priority: 1,
+            },
+        ];
+
+        sitemapEntriesMock.mockResolvedValue(entries);
+
+        const response = await robotsHandler();
+        const body = await response.text();
+
+        expect(body).toContain("# follow");
+        expect(body).toMatch(/Allow: \/$/m);
+        expect(body).toContain("# nofollow");
+        expect(body).toMatch(/Disallow: \/admin\//m);
     });
 });
