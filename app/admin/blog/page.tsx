@@ -27,7 +27,7 @@ import type {
 import type { User } from "@/types/auth";
 import { ensureUser } from "@/types/auth";
 import type { Offer } from "@/types/offer";
-import type { Faq } from "@/types/faq";
+import type { Faq, FaqCategorySummary } from "@/types/faq";
 
 type BlogPostFormState = {
   title: string;
@@ -42,15 +42,6 @@ type BlogPostFormState = {
   faqIds: number[];
   metaTitle: string;
   metaDescription: string;
-  ogType: string;
-  ogTitle: string;
-  ogDescription: string;
-  ogImage: string;
-  ogUrl: string;
-  twitterCard: string;
-  twitterTitle: string;
-  twitterDescription: string;
-  twitterImage: string;
 };
 
 type BlogPostImageState = {
@@ -94,15 +85,6 @@ const EMPTY_FORM: BlogPostFormState = {
   faqIds: [],
   metaTitle: "",
   metaDescription: "",
-  ogType: "",
-  ogTitle: "",
-  ogDescription: "",
-  ogImage: "",
-  ogUrl: "",
-  twitterCard: "",
-  twitterTitle: "",
-  twitterDescription: "",
-  twitterImage: "",
 };
 
 const sortByName = <T extends { name: string }>(entries: T[]): T[] =>
@@ -117,6 +99,8 @@ const BlogPostsPage = () => {
   const [authors, setAuthors] = useState<User[]>([]);
   const [availableOffers, setAvailableOffers] = useState<Offer[]>([]);
   const [availableFaqs, setAvailableFaqs] = useState<Faq[]>([]);
+  const [faqCategories, setFaqCategories] = useState<FaqCategorySummary[]>([]);
+  const [faqCategoryFilter, setFaqCategoryFilter] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -131,6 +115,13 @@ const BlogPostsPage = () => {
   const [searchValue, setSearchValue] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [imageState, setImageState] = useState<BlogPostImageState>(() => createEmptyImageState());
+
+  const filteredFaqs = useMemo(() => {
+    if (!faqCategoryFilter) {
+      return [];
+    }
+    return availableFaqs.filter((faq) => String(faq.category_id) === faqCategoryFilter);
+  }, [availableFaqs, faqCategoryFilter]);
 
   const resetImageState = useCallback(() => {
     setImageState((prev) => {
@@ -253,20 +244,22 @@ const BlogPostsPage = () => {
     const loadLookups = async () => {
       try {
         const [
-          categoryResponse,
+          blogCategoryResponse,
           tagResponse,
           authorResponse,
           offerResponse,
           faqResponse,
+          faqCategoryResponse,
         ] = await Promise.all([
           apiClient.getBlogCategories({ perPage: 200, sort: "name" }),
           apiClient.getBlogTags({ perPage: 200, sort: "name" }),
           apiClient.getUsers({ perPage: 200, sort: "first_name" }),
           apiClient.getOffers({ perPage: 200, audience: "admin", sort: "title" }),
-          apiClient.getFaqs({ per_page: 200, audience: "admin" }),
+          apiClient.getFaqs({ per_page: 200, audience: "admin", include: ["category"] }),
+          apiClient.getFaqCategories({ per_page: 200, audience: "admin" }),
         ]);
 
-        const categoryList = sortByName(extractList(categoryResponse));
+        const categoryList = sortByName(extractList(blogCategoryResponse));
         setCategories(categoryList);
 
         const tagList = sortByName(extractList(tagResponse));
@@ -301,6 +294,20 @@ const BlogPostsPage = () => {
             (a.question ?? "").localeCompare(b.question ?? "", "ro", { sensitivity: "base" }),
           );
         setAvailableFaqs(faqList);
+
+        const faqCategoryList = extractList(faqCategoryResponse)
+          .filter(
+            (category): category is FaqCategorySummary =>
+              typeof category?.id === "number" && typeof category?.name === "string",
+          )
+          .sort((a, b) => a.name.localeCompare(b.name, "ro", { sensitivity: "base" }));
+        setFaqCategories(faqCategoryList);
+        setFaqCategoryFilter((prev) => {
+          if (prev && faqCategoryList.some((category) => String(category.id) === prev)) {
+            return prev;
+          }
+          return faqCategoryList.length > 0 ? String(faqCategoryList[0].id) : "";
+        });
       } catch (error) {
         console.error("Nu am putut încărca datele auxiliare pentru blog", error);
         setGlobalError(
@@ -375,15 +382,6 @@ const BlogPostsPage = () => {
       faqIds,
       metaTitle: post.meta_title ?? "",
       metaDescription: post.meta_description ?? "",
-      ogType: post.og_type ?? "",
-      ogTitle: post.og_title ?? "",
-      ogDescription: post.og_description ?? "",
-      ogImage: post.og_image ?? "",
-      ogUrl: post.og_url ?? "",
-      twitterCard: post.twitter_card ?? "",
-      twitterTitle: post.twitter_title ?? "",
-      twitterDescription: post.twitter_description ?? "",
-      twitterImage: post.twitter_image ?? "",
     });
     setImageState((prev) => {
       if (prev.previewUrl && prev.file) {
@@ -504,17 +502,6 @@ const BlogPostsPage = () => {
       meta_description: formState.metaDescription.trim()
         ? formState.metaDescription.trim()
         : null,
-      og_type: formState.ogType.trim() ? formState.ogType.trim() : null,
-      og_title: formState.ogTitle.trim() ? formState.ogTitle.trim() : null,
-      og_description: formState.ogDescription.trim() ? formState.ogDescription.trim() : null,
-      og_image: formState.ogImage.trim() ? formState.ogImage.trim() : null,
-      og_url: formState.ogUrl.trim() ? formState.ogUrl.trim() : null,
-      twitter_card: formState.twitterCard.trim() ? formState.twitterCard.trim() : null,
-      twitter_title: formState.twitterTitle.trim() ? formState.twitterTitle.trim() : null,
-      twitter_description: formState.twitterDescription.trim()
-        ? formState.twitterDescription.trim()
-        : null,
-      twitter_image: formState.twitterImage.trim() ? formState.twitterImage.trim() : null,
     };
 
     if (formState.publishedAt.trim().length > 0) {
@@ -1020,130 +1007,6 @@ const BlogPostsPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-og-type">
-                    Tip Open Graph
-                  </label>
-                  <Input
-                    id="blog-post-og-type"
-                    value={formState.ogType}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, ogType: event.target.value }))}
-                    placeholder="Ex. website"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-og-title">
-                    Titlu Open Graph
-                  </label>
-                  <Input
-                    id="blog-post-og-title"
-                    value={formState.ogTitle}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, ogTitle: event.target.value }))}
-                    placeholder="Titlu pentru partajare socială"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="space-y-1">
-                  <label
-                    className="text-sm font-medium text-gray-700"
-                    htmlFor="blog-post-og-description"
-                  >
-                    Descriere Open Graph
-                  </label>
-                  <Textarea
-                    id="blog-post-og-description"
-                    value={formState.ogDescription}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, ogDescription: event.target.value }))
-                    }
-                    placeholder="Descriere pentru partajare socială"
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-og-image">
-                    Imagine Open Graph
-                  </label>
-                  <Input
-                    id="blog-post-og-image"
-                    value={formState.ogImage}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, ogImage: event.target.value }))}
-                    placeholder="URL imagine 1200x630"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-og-url">
-                  URL Open Graph
-                </label>
-                <Input
-                  id="blog-post-og-url"
-                  value={formState.ogUrl}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, ogUrl: event.target.value }))}
-                  placeholder="https://dacars.ro/articol"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-twitter-card">
-                    Card Twitter
-                  </label>
-                  <Input
-                    id="blog-post-twitter-card"
-                    value={formState.twitterCard}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, twitterCard: event.target.value }))}
-                    placeholder="Ex. summary_large_image"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-twitter-title">
-                    Titlu Twitter
-                  </label>
-                  <Input
-                    id="blog-post-twitter-title"
-                    value={formState.twitterTitle}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, twitterTitle: event.target.value }))}
-                    placeholder="Titlu pentru Twitter"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="space-y-1">
-                  <label
-                    className="text-sm font-medium text-gray-700"
-                    htmlFor="blog-post-twitter-description"
-                  >
-                    Descriere Twitter
-                  </label>
-                  <Textarea
-                    id="blog-post-twitter-description"
-                    value={formState.twitterDescription}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, twitterDescription: event.target.value }))
-                    }
-                    placeholder="Descriere pentru Twitter"
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="blog-post-twitter-image">
-                    Imagine Twitter
-                  </label>
-                  <Input
-                    id="blog-post-twitter-image"
-                    value={formState.twitterImage}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, twitterImage: event.target.value }))}
-                    placeholder="URL imagine card Twitter"
-                  />
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-700">Etichete</p>
                 {tags.length === 0 ? (
@@ -1204,14 +1067,37 @@ const BlogPostsPage = () => {
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">Întrebări frecvente asociate</p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-medium text-gray-700">Întrebări frecvente asociate</p>
+                  {faqCategories.length > 0 && (
+                    <Select
+                      id="blog-post-faq-category"
+                      value={faqCategoryFilter}
+                      onValueChange={(value) => setFaqCategoryFilter(value)}
+                    >
+                      {faqCategories.map((category) => (
+                        <option key={category.id} value={String(category.id)}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </div>
                 {availableFaqs.length === 0 ? (
                   <p className="text-sm text-gray-500">
                     Nu există întrebări frecvente disponibile. Creează FAQ-uri pentru a le recomanda lângă articol.
                   </p>
+                ) : faqCategories.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Nu există categorii de FAQ disponibile. Creează o categorie pentru a putea selecta întrebări.
+                  </p>
+                ) : filteredFaqs.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Categoria selectată nu are întrebări disponibile. Alege alta pentru a atașa FAQ-uri.
+                  </p>
                 ) : (
                   <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-                    {availableFaqs.map((faq) => {
+                    {filteredFaqs.map((faq) => {
                       const checked = formState.faqIds.includes(faq.id);
                       const inputId = `blog-faq-${faq.id}`;
                       return (
