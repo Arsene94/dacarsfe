@@ -6,6 +6,7 @@ export interface FaqCategorySummary {
     description?: string | null;
     order?: number | null;
     status?: FaqStatus | null;
+    show_on_site?: boolean | number | null;
 }
 
 export interface FaqCategory extends FaqCategorySummary {
@@ -54,6 +55,7 @@ export interface FaqCategoryPayload {
     description?: string | null;
     order?: number | null;
     status?: FaqStatus;
+    show_on_site?: boolean | number | null;
 }
 
 export interface FaqPayload {
@@ -72,6 +74,8 @@ export interface FaqCategoryListParams {
     order?: string;
     name_like?: string;
     include?: string | readonly string[];
+    show_on_site?: boolean | number | string;
+    audience?: "admin" | "public" | (string & {});
 }
 
 export interface FaqListParams {
@@ -83,4 +87,5 @@ export interface FaqListParams {
     category_id?: number | string;
     question_like?: string;
     include?: string | readonly string[];
+    audience?: "admin" | "public" | (string & {});
 }

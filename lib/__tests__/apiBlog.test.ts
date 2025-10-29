@@ -375,7 +375,7 @@ describe('ApiClient admin blog management', () => {
     expect(result).toEqual(apiResponse);
   });
 
-  it('lists blog posts with include parameters and filters', async () => {
+  it('lists admin blog posts with include parameters and filters', async () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');
 
@@ -397,7 +397,7 @@ describe('ApiClient admin blog management', () => {
       }),
     );
 
-    const result = await client.getBlogPosts({
+    const result = await client.getAdminBlogPosts({
       page: 3,
       perPage: 15,
       limit: 45,
@@ -413,7 +413,51 @@ describe('ApiClient admin blog management', () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${baseURL}/blog-posts/ro?page=3&per_page=15&limit=45&category_id=12&author_id=+9+&status=published&slug=top-destinatii-2024&title=road+trips&sort=-published_at&fields=id%2Ctitle&include=author%2Ccategory%2Ctags`,
+      `${baseURL}/admin/blog-posts?page=3&per_page=15&limit=45&category_id=12&author_id=+9+&status=published&slug=top-destinatii-2024&title=road+trips&sort=-published_at&fields=id%2Ctitle&include=author%2Ccategory%2Ctags`,
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer admin-token',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+        credentials: 'omit',
+      }),
+    );
+
+    expect(result).toEqual(apiResponse);
+  });
+
+  it('lists public blog posts with language override', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('admin-token');
+
+    const apiResponse: ApiListResult<BlogPost> = {
+      data: [
+        {
+          id: 91,
+          title: 'Roadtrip Balkan',
+          slug: 'roadtrip-balkan',
+          status: 'published',
+        },
+      ],
+    };
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.getBlogPosts({
+      page: 1,
+      perPage: 10,
+      include: ['category', 'category'],
+      language: 'en',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseURL}/blog-posts/en?page=1&per_page=10&include=category`,
       expect.objectContaining({
         headers: expect.objectContaining({
           'Content-Type': 'application/json',

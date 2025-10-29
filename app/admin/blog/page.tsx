@@ -211,7 +211,7 @@ const BlogPostsPage = () => {
       if (appliedSearch) {
         params.title = appliedSearch;
       }
-      const response = await apiClient.getBlogPosts(params);
+      const response = await apiClient.getAdminBlogPosts(params);
       const items = extractList(response);
       setPosts(items);
       setGlobalError(null);

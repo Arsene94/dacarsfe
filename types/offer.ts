@@ -29,6 +29,7 @@ export interface Offer extends UnknownRecord {
     primary_cta_label?: string | null;
     primary_cta_url?: string | null;
     status?: OfferStatus | null;
+    show_on_site?: boolean | number | null;
     starts_at?: string | null;
     ends_at?: string | null;
     created_at?: string | null;
@@ -51,6 +52,7 @@ export type OfferPayload = Partial<{
     primary_cta_label: string | null;
     primary_cta_url: string | null;
     status: OfferStatus | null;
+    show_on_site: boolean | number | null;
     starts_at: string | null;
     ends_at: string | null;
 }> &
@@ -66,4 +68,5 @@ export interface OfferListParams {
     audience?: "admin" | "public" | (string & {});
     sort?: string;
     language?: string | null;
+    show_on_site?: boolean | number | string;
 }
