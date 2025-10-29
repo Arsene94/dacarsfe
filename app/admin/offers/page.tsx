@@ -247,6 +247,28 @@ const parseClassName = (value: unknown): string | undefined => {
     return candidate ?? undefined;
 };
 
+const parseShowOnSite = (value: unknown): boolean => {
+    if (typeof value === "boolean") {
+        return value;
+    }
+
+    if (typeof value === "number") {
+        return value !== 0;
+    }
+
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === "false" || normalized === "0") {
+            return false;
+        }
+        if (normalized === "true" || normalized === "1") {
+            return true;
+        }
+    }
+
+    return true;
+};
+
 const normalizeOffer = (raw: unknown): AdminOffer | null => {
     if (!raw || typeof raw !== "object") {
         return null;
@@ -318,6 +340,9 @@ const normalizeOffer = (raw: unknown): AdminOffer | null => {
             source.primary_cta_url ?? (source as { primaryCtaUrl?: unknown }).primaryCtaUrl ?? (source as { cta_url?: unknown }).cta_url,
         ),
         status: parseStatus(source.status),
+        show_on_site: parseShowOnSite(
+            source.show_on_site ?? (source as { showOnSite?: unknown }).showOnSite,
+        ),
         starts_at: parseDate(source.starts_at ?? (source as { start_at?: unknown }).start_at ?? (source as { available_from?: unknown }).available_from),
         ends_at: parseDate(source.ends_at ?? (source as { end_at?: unknown }).end_at ?? (source as { available_until?: unknown }).available_until),
         created_at: parseDate(source.created_at),
@@ -377,6 +402,7 @@ const OffersAdminPage = () => {
     const [status, setStatus] = useState<AdminOffer["status"] | "">("draft");
     const [startsAt, setStartsAt] = useState("");
     const [endsAt, setEndsAt] = useState("");
+    const [showOnSite, setShowOnSite] = useState(true);
     const [formError, setFormError] = useState<string | null>(null);
 
     const discountAutofillRef = useRef(false);
@@ -436,6 +462,7 @@ const OffersAdminPage = () => {
         setStatus("draft");
         setStartsAt("");
         setEndsAt("");
+        setShowOnSite(true);
         setFormError(null);
         setEditingOffer(null);
         discountAutofillRef.current = false;
@@ -466,6 +493,7 @@ const OffersAdminPage = () => {
         setStatus(offer.status ?? "");
         setStartsAt(toLocalDatetimeInputValue(offer.starts_at));
         setEndsAt(toLocalDatetimeInputValue(offer.ends_at));
+        setShowOnSite(parseShowOnSite(offer.show_on_site));
         setFormError(null);
         setIsModalOpen(true);
     };
@@ -540,6 +568,7 @@ const OffersAdminPage = () => {
             primary_cta_label: ctaLabel.trim() ? ctaLabel.trim() : null,
             primary_cta_url: ctaUrl.trim() ? ctaUrl.trim() : null,
             status: selectedStatus ?? null,
+            show_on_site: showOnSite,
             starts_at: startsAtIso,
             ends_at: endsAtIso,
         };
@@ -585,6 +614,24 @@ const OffersAdminPage = () => {
                 accessor: (row) => row.status ?? "",
                 sortable: true,
                 cell: (row) => formatStatusLabel(row.status),
+            },
+            {
+                id: "visibility",
+                header: "Vizibil",
+                accessor: (row) => (parseShowOnSite(row.show_on_site) ? "1" : "0"),
+                sortable: true,
+                cell: (row) => (
+                    <span
+                        className={cn(
+                            "font-medium",
+                            parseShowOnSite(row.show_on_site)
+                                ? "text-emerald-600"
+                                : "text-amber-600",
+                        )}
+                    >
+                        {parseShowOnSite(row.show_on_site) ? "Da" : "Nu"}
+                    </span>
+                ),
             },
             {
                 id: "period",
@@ -652,6 +699,12 @@ const OffersAdminPage = () => {
                                     </div>
                                 ) : null;
                             })()}
+                            {!parseShowOnSite(offer.show_on_site) && (
+                                <p className="text-xs font-semibold text-amber-600">
+                                    Oferta este ascunsă din pagina publică, dar rămâne disponibilă pentru blog și campanii
+                                    dedicate.
+                                </p>
+                            )}
                             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
                                 {offer.primary_cta_label && (
                                     <span className="inline-flex items-center gap-1">
@@ -758,6 +811,25 @@ const OffersAdminPage = () => {
                                     </option>
                                 ))}
                             </Select>
+                        </div>
+                        <div className="lg:col-span-2">
+                            <div className="flex items-start gap-3 rounded-md border border-slate-200 p-4">
+                                <input
+                                    id="offer-show-on-site"
+                                    type="checkbox"
+                                    checked={showOnSite}
+                                    onChange={(event) => setShowOnSite(event.target.checked)}
+                                    className="mt-1 h-4 w-4 rounded border-gray-300 text-berkeley focus:ring-berkeley-500 focus:ring-offset-0"
+                                />
+                                <div className="space-y-1">
+                                    <Label htmlFor="offer-show-on-site" className="text-gray-900">
+                                        Afișează oferta în pagina publică
+                                    </Label>
+                                    <p className="text-xs text-slate-500">
+                                        Debifează pentru a păstra oferta exclusiv în campanii dedicate sau articole de blog.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <Label htmlFor="offer-icon">Pictogramă</Label>
