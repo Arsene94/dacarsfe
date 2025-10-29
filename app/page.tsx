@@ -63,13 +63,18 @@ export const dynamic = "force-static";
 
 const FALLBACK_COPY = HOME_SEO_COPY[FALLBACK_LOCALE];
 
-export const metadata: Metadata = buildMetadata({
-    title: FALLBACK_COPY.metaTitle,
-    description: FALLBACK_COPY.metaDescription,
-    path: "/",
-    hreflangLocales: HREFLANG_LOCALES,
-    locale: FALLBACK_LOCALE,
-});
+export async function generateMetadata(): Promise<Metadata> {
+    const locale = await resolveRequestLocale();
+    const copy = HOME_SEO_COPY[locale] ?? FALLBACK_COPY;
+
+    return buildMetadata({
+        title: copy.metaTitle,
+        description: copy.metaDescription,
+        path: "/",
+        hreflangLocales: HREFLANG_LOCALES,
+        locale,
+    });
+}
 
 const LOCAL_BUSINESS_REVIEWS = [
     {

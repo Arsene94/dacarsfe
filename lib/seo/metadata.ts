@@ -7,7 +7,7 @@ import {
     SITE_URL,
 } from "@/lib/config";
 import type { Locale } from "@/lib/i18n/config";
-import { canonical, hreflangLinks } from "@/lib/seo/url";
+import { canonical, hreflangLinks, resolveLocalizedPathname } from "@/lib/seo/url";
 
 export type BuildMetadataInput = {
     title: string;
@@ -70,8 +70,9 @@ export const buildMetadata = ({
     twitterTitle,
     locale,
 }: BuildMetadataInput): Metadata => {
-    const canonicalUrl = canonical(path);
-    const alternates = hreflangLinks(path, hreflangLocales ?? undefined);
+    const localizedPath = resolveLocalizedPathname(path, locale);
+    const canonicalUrl = canonical(localizedPath);
+    const alternates = hreflangLinks(localizedPath, hreflangLocales ?? undefined);
     const languages = alternates.reduce<Record<string, string>>((acc, entry) => {
         acc[entry.hrefLang] = entry.href;
         return acc;

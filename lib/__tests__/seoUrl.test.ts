@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { hreflangLinks } from "@/lib/seo/url";
+import { hreflangLinks, resolveLocalizedPathname } from "@/lib/seo/url";
 
 const extractHref = (entries: Array<{ hrefLang: string; href: string }>, lang: string) => {
     return entries.find((entry) => entry.hrefLang === lang)?.href;
@@ -34,5 +34,22 @@ describe("hreflangLinks", () => {
             { hrefLang: "en", href: "https://dacars.ro/en/oferta" },
             { hrefLang: "x-default", href: "https://dacars.ro/ro/oferta" },
         ]);
+    });
+});
+
+describe("resolveLocalizedPathname", () => {
+    it("adauga prefixul de limba pentru radacina", () => {
+        expect(resolveLocalizedPathname("/", "ro")).toBe("/ro");
+        expect(resolveLocalizedPathname(undefined, "en")).toBe("/en");
+    });
+
+    it("nu dubleaza prefixul deja prezent", () => {
+        expect(resolveLocalizedPathname("/ro/oferta", "ro")).toBe("/ro/oferta");
+    });
+
+    it("normalizeaza URL-urile absolute la limba ceruta", () => {
+        expect(resolveLocalizedPathname("https://dacars.ro/en/blog/articol", "it")).toBe(
+            "https://dacars.ro/it/blog/articol",
+        );
     });
 });

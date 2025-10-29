@@ -1,24 +1,23 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { buildMetadata } from "@/lib/seo/meta";
+import { resolveRequestLocale } from "@/lib/i18n/server";
 import checkoutMessagesRo from "@/messages/checkout/ro.json";
 
-type CheckoutMessages = typeof checkoutMessagesRo;
+const { metadata: checkoutMetadataMessages } = checkoutMessagesRo;
 
-const checkoutMessages: CheckoutMessages = checkoutMessagesRo;
-const { metadata: checkoutMetadataMessages } = checkoutMessages;
+export async function generateMetadata(): Promise<Metadata> {
+    const locale = await resolveRequestLocale();
 
-const checkoutMetadata = buildMetadata({
-    title: checkoutMetadataMessages.title,
-    description: checkoutMetadataMessages.description,
-    path: "/form",
-    openGraphTitle: checkoutMetadataMessages.openGraphTitle,
-    noIndex: true,
-});
-
-export const metadata: Metadata = {
-    ...checkoutMetadata,
-};
+    return buildMetadata({
+        title: checkoutMetadataMessages.title,
+        description: checkoutMetadataMessages.description,
+        path: "/form",
+        openGraphTitle: checkoutMetadataMessages.openGraphTitle,
+        noIndex: true,
+        locale,
+    });
+}
 
 const CheckoutLayout = ({ children }: { children: ReactNode }) => <>{children}</>;
 

@@ -1,8 +1,24 @@
 import { FALLBACK_HREFLANGS, SITE_URL } from "@/lib/config";
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE as DEFAULT_I18N_LOCALE } from "@/lib/i18n/config";
 
+const ABSOLUTE_URL_PATTERN = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i;
+
 const TRACKING_PREFIXES = ["utm_"];
 const TRACKING_KEYS = new Set(["gclid", "fbclid", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"]);
+
+const AVAILABLE_LOCALE_SLUGS = new Set(
+    Array.from(AVAILABLE_LOCALES, (entry) => entry.toLowerCase()),
+);
+
+const ensureLeadingSlash = (value: string): string => {
+    if (!value) {
+        return "/";
+    }
+
+    return value.startsWith("/") ? value : `/${value}`;
+};
+
+const isAbsoluteUrl = (value: string): boolean => ABSOLUTE_URL_PATTERN.test(value);
 
 const toAbsoluteUrl = (target: string | URL | undefined): URL => {
     if (!target) {
@@ -14,6 +30,89 @@ const toAbsoluteUrl = (target: string | URL | undefined): URL => {
     }
 
     return new URL(target, SITE_URL);
+};
+
+const normalizeLocaleSlug = (value: string): string => {
+    const trimmed = value.trim().toLowerCase();
+    if (!trimmed) {
+        return DEFAULT_I18N_LOCALE;
+    }
+
+    if (AVAILABLE_LOCALE_SLUGS.has(trimmed)) {
+        return trimmed;
+    }
+
+    const [language] = trimmed.split(/[-_]/);
+    if (language && AVAILABLE_LOCALE_SLUGS.has(language)) {
+        return language;
+    }
+
+    return language ?? DEFAULT_I18N_LOCALE;
+};
+
+const prefixLocaleToPathname = (pathname: string, locale: string | null | undefined): string => {
+    const normalizedPath = ensureLeadingSlash(pathname.trim());
+
+    if (!locale) {
+        return normalizedPath;
+    }
+
+    const normalizedLocale = normalizeLocaleSlug(locale);
+    if (!normalizedLocale) {
+        return normalizedPath;
+    }
+
+    const segments = normalizedPath
+        .split("/")
+        .map((segment) => segment.trim())
+        .filter((segment) => segment.length > 0);
+
+    if (segments.length > 0) {
+        const [first, ...rest] = segments;
+        const firstSlug = first.toLowerCase();
+        if (AVAILABLE_LOCALE_SLUGS.has(firstSlug)) {
+            if (firstSlug === normalizedLocale) {
+                return `/${[first, ...rest].join("/")}`;
+            }
+
+            return `/${[normalizedLocale, ...rest].join("/")}`;
+        }
+    }
+
+    if (normalizedPath === "/") {
+        return `/${normalizedLocale}`;
+    }
+
+    return `/${[normalizedLocale, ...segments].join("/")}`;
+};
+
+export const resolveLocalizedPathname = (
+    pathname: string | URL | undefined,
+    locale?: string | null,
+): string => {
+    if (!pathname) {
+        return locale ? `/${normalizeLocaleSlug(locale)}` : "/";
+    }
+
+    if (pathname instanceof URL) {
+        const clone = new URL(pathname.toString());
+        const localizedPath = prefixLocaleToPathname(clone.pathname, locale ?? undefined);
+        clone.pathname = localizedPath;
+        clone.search = "";
+        clone.hash = "";
+        return clone.toString();
+    }
+
+    if (isAbsoluteUrl(pathname)) {
+        const url = new URL(pathname, SITE_URL);
+        const localizedPath = prefixLocaleToPathname(url.pathname, locale ?? undefined);
+        url.pathname = localizedPath;
+        url.search = "";
+        url.hash = "";
+        return url.toString();
+    }
+
+    return prefixLocaleToPathname(pathname, locale ?? undefined);
 };
 
 const sanitizeSearch = (url: URL): void => {
@@ -46,28 +145,6 @@ export const canonical = (pathname: string | URL | undefined = "/"): string => {
 type NormalizedHrefLang = {
     hrefLang: string;
     slug: string;
-};
-
-const AVAILABLE_LOCALE_SLUGS = new Set(
-    Array.from(AVAILABLE_LOCALES, (entry) => entry.toLowerCase()),
-);
-
-const normalizeLocaleSlug = (value: string): string => {
-    const trimmed = value.trim().toLowerCase();
-    if (!trimmed) {
-        return DEFAULT_I18N_LOCALE;
-    }
-
-    if (AVAILABLE_LOCALE_SLUGS.has(trimmed)) {
-        return trimmed;
-    }
-
-    const [language] = trimmed.split(/[-_]/);
-    if (language && AVAILABLE_LOCALE_SLUGS.has(language)) {
-        return language;
-    }
-
-    return language ?? DEFAULT_I18N_LOCALE;
 };
 
 const normalizeHrefLangCandidate = (candidate: string): NormalizedHrefLang | null => {
