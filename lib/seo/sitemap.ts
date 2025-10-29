@@ -1,6 +1,8 @@
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import type { MetadataRoute } from "next";
+import { createApiClient } from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
 import { SITE_URL } from "@/lib/config";
 import {
     STATIC_BLOG_POSTS,
@@ -9,6 +11,7 @@ import {
 } from "@/lib/content/staticEntries";
 import { AVAILABLE_LOCALES, type Locale } from "@/lib/i18n/config";
 import { ensureLocalePath } from "@/lib/i18n/routing";
+import type { BlogPost } from "@/types/blog";
 
 type ChangeFrequency = MetadataRoute.Sitemap[0]["changeFrequency"];
 
@@ -30,6 +33,13 @@ const EXCLUDED_SEGMENTS = new Set(["api", "admin"]);
 const DEFAULT_CHANGE_FREQUENCY: ChangeFrequency = "monthly";
 const DEFAULT_PRIORITY = 0.5;
 const DEFAULT_EXCLUDES = ["/admin", "/api"] as const;
+const BLOG_SITEMAP_FETCH_LIMIT = 500;
+const BLOG_SITEMAP_PARAMS = {
+    status: "published" as const,
+    sort: "-published_at,-id" as const,
+    limit: BLOG_SITEMAP_FETCH_LIMIT as const,
+    fields: "id,slug,published_at,updated_at" as const,
+};
 
 const FREQUENCY_WEIGHT: Record<Exclude<ChangeFrequency, undefined>, number> = {
     always: 6,
@@ -183,7 +193,79 @@ const applyOverrides = (discovered: DiscoveredPage[], generatedAt: string): Site
     });
 };
 
-const collectDynamicEntries = (): SitemapEntry[] => {
+const normalizeIsoDate = (value?: string | null): string | null => {
+    if (!value) {
+        return null;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+
+    return parsed.toISOString();
+};
+
+type BlogSitemapSource = {
+    slug?: string | null;
+    publishedAt?: string | null;
+    updatedAt?: string | null;
+};
+
+const createBlogSitemapEntry = ({
+    slug,
+    publishedAt,
+    updatedAt,
+}: BlogSitemapSource): SitemapEntry | null => {
+    const normalizedSlug = typeof slug === "string" ? slug.trim() : "";
+    if (!normalizedSlug) {
+        return null;
+    }
+
+    const lastModified =
+        normalizeIsoDate(updatedAt) ??
+        normalizeIsoDate(publishedAt) ??
+        new Date().toISOString();
+
+    return {
+        path: `/blog/${normalizedSlug}`,
+        lastModified,
+        changeFrequency: "weekly",
+        priority: 0.6,
+    };
+};
+
+const fallbackBlogSitemapEntries = (): SitemapEntry[] =>
+    STATIC_BLOG_POSTS.map((post) =>
+        createBlogSitemapEntry({
+            slug: post.slug,
+            publishedAt: post.publishedAt,
+            updatedAt: post.updatedAt,
+        }),
+    ).filter((entry): entry is SitemapEntry => entry !== null);
+
+const fetchBlogSitemapEntries = async (): Promise<SitemapEntry[]> => {
+    try {
+        const client = createApiClient();
+        const response = await client.getBlogPosts(BLOG_SITEMAP_PARAMS);
+        const posts = extractList<BlogPost>(response);
+
+        return posts
+            .map((post) =>
+                createBlogSitemapEntry({
+                    slug: post.slug,
+                    publishedAt: post.published_at ?? null,
+                    updatedAt: post.updated_at ?? null,
+                }),
+            )
+            .filter((entry): entry is SitemapEntry => entry !== null);
+    } catch (error) {
+        console.error("Nu am putut încărca articolele pentru sitemap", error);
+        return fallbackBlogSitemapEntries();
+    }
+};
+
+const collectDynamicEntries = async (): Promise<SitemapEntry[]> => {
     const docsEntries: SitemapEntry[] = STATIC_DOCS_PAGES.map((doc) => ({
         path: `/docs/${doc.slug}`,
         lastModified: doc.lastUpdated,
@@ -191,12 +273,7 @@ const collectDynamicEntries = (): SitemapEntry[] => {
         priority: 0.7,
     }));
 
-    const blogEntries: SitemapEntry[] = STATIC_BLOG_POSTS.map((post) => ({
-        path: `/blog/${post.slug}`,
-        lastModified: post.updatedAt ?? post.publishedAt,
-        changeFrequency: "weekly",
-        priority: 0.6,
-    }));
+    const blogEntries = await fetchBlogSitemapEntries();
 
     return [...docsEntries, ...blogEntries];
 };
@@ -296,7 +373,7 @@ export const generateSitemapEntries = async (): Promise<SitemapEntry[]> => {
     const generatedAt = new Date().toISOString();
     const staticPages = await discoverStaticPages();
     const baseEntries = applyOverrides(staticPages, generatedAt);
-    const dynamicEntries = collectDynamicEntries();
+    const dynamicEntries = await collectDynamicEntries();
 
     return dedupeSitemapEntries([...baseEntries, ...dynamicEntries]);
 };
@@ -306,14 +383,8 @@ export const generateLocalizedSitemap = async (): Promise<MetadataRoute.Sitemap>
     return buildLocalizedSitemapUrls(entries);
 };
 
-export const generateLocalizedBlogPostSitemap = (): MetadataRoute.Sitemap => {
-    const blogEntries = STATIC_BLOG_POSTS.map<SitemapEntry>((post) => ({
-        path: `/blog/${post.slug}`,
-        lastModified: post.updatedAt ?? post.publishedAt,
-        changeFrequency: "weekly",
-        priority: 0.6,
-    }));
-
+export const generateLocalizedBlogPostSitemap = async (): Promise<MetadataRoute.Sitemap> => {
+    const blogEntries = await fetchBlogSitemapEntries();
     return buildLocalizedSitemapUrls(dedupeSitemapEntries(blogEntries));
 };
 

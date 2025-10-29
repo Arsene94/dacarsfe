@@ -3,7 +3,7 @@ import { generateLocalizedBlogPostSitemap } from "@/lib/seo/sitemap";
 
 export const dynamic = "force-static";
 
-const sitemapPosts = (): MetadataRoute.Sitemap => {
+const sitemapPosts = async (): Promise<MetadataRoute.Sitemap> => {
     return generateLocalizedBlogPostSitemap();
 };
 
