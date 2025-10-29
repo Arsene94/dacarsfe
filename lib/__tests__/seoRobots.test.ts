@@ -77,9 +77,7 @@ describe("GET /api/robots", () => {
         const response = await robotsHandler();
         const body = await response.text();
 
-        expect(body).toContain("# follow");
-        expect(body).toMatch(/Allow: \/$/m);
-        expect(body).toContain("# nofollow");
-        expect(body).toMatch(/Disallow: \/admin\//m);
+        expect(body).toMatch(/Allow: \/ # follow/m);
+        expect(body).toMatch(/Disallow: \/admin\/ # nofollow/m);
     });
 });

@@ -25,17 +25,15 @@ const renderRobots = (config: MetadataRoute.Robots): string => {
             lines.push(`User-agent: ${agent}`);
             const allowPaths = stringifyRobotsRuleValue(rule.allow);
             if (allowPaths.length > 0) {
-                lines.push(`# follow`);
                 allowPaths.forEach((allowPath) => {
-                    lines.push(`Allow: ${allowPath}`);
+                    lines.push(`Allow: ${allowPath} # follow`);
                 });
             }
 
             const disallowPaths = stringifyRobotsRuleValue(rule.disallow);
             if (disallowPaths.length > 0) {
-                lines.push(`# nofollow`);
                 disallowPaths.forEach((disallowPath) => {
-                    lines.push(`Disallow: ${disallowPath}`);
+                    lines.push(`Disallow: ${disallowPath} # nofollow`);
                 });
             }
             lines.push("");

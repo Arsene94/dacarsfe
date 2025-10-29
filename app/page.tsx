@@ -19,9 +19,9 @@ type HomeSeoCopy = {
 
 const HOME_SEO_COPY: Record<Locale, HomeSeoCopy> = {
     ro: {
-        metaTitle: `${SITE_NAME} — Închirieri auto fără stres & oferte personalizate`,
+        metaTitle: `${SITE_NAME} — Închiriere mașină în România din străinătate | Rent a car Otopeni`,
         metaDescription:
-            "Descoperă închirieri auto flexibile, oferte verificate și suport rapid pentru fiecare călătorie DaCars.",
+            "Închiriază online mașina potrivită în România chiar dacă locuiești în străinătate. Preluare rapidă la Aeroportul Otopeni, contract în limba română și oferte create pentru diaspora DaCars.",
         breadcrumbHome: "Acasă",
     },
     en: {

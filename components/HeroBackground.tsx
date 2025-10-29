@@ -36,7 +36,7 @@ export const HeroBackground = () => {
             />
             <Image
                 src={heroBackgroundDesktopLargeWebp}
-                alt="Fundal aeroport"
+                alt="Rent a car Aeroport Otopeni pentru românii din diaspora"
                 fill
                 priority
                 placeholder="blur"
