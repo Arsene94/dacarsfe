@@ -1105,7 +1105,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     (data && typeof data === "object"
                         ? (data as QuotePriceResponse)
                         : null);
-                setQuoteRawResponse(resolvedQuote ?? data);
+                setQuoteRawResponse(data);
                 setQuote(resolvedQuote);
                 updateBookingInfo((prev) => {
                     const quoteData = normalizedData ?? resolvedQuote;
