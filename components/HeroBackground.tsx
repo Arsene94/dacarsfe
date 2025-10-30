@@ -10,6 +10,7 @@ export const HeroBackground = () => {
             src={heroBackgroundDesktop}
             alt="Rent a car Aeroport Otopeni pentru românii din diaspora"
             fill
+            fetchPriority={"high"}
             priority
             placeholder="blur"
             sizes={getImageSizesPreset("heroBackground")}
