@@ -8,7 +8,7 @@ const blogCardImageSizes =
     `(max-width: 639px) calc(100vw - ${MOBILE_GUTTER}), (max-width: 1023px) calc((100vw - ${TABLET_GUTTER}) / 2), 320px` as const;
 
 const carGridImageSizes =
-    `(max-width: 639px) calc(100vw - ${MOBILE_GUTTER}), (max-width: 1023px) calc((100vw - ${TABLET_GUTTER}) / 2), (max-width: 1439px) calc((100vw - ${DESKTOP_GUTTER}) / 3), 360px` as const;
+    `(max-width: 639px) calc(100vw - ${MOBILE_GUTTER}), (max-width: 1023px) calc((100vw - ${TABLET_GUTTER}) / 2), (max-width: 1439px) calc((100vw - ${DESKTOP_GUTTER}) / 4), 320px` as const;
 
 export const IMAGE_SIZE_PRESETS = {
     heroBackground: heroBackgroundSizes,

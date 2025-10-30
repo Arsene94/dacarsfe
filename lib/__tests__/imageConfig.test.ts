@@ -14,6 +14,6 @@ describe("image optimisation configuration", () => {
     it("provides consistent responsive size presets", () => {
         expect(IMAGE_SIZE_PRESETS.heroBackground).toBe("100vw");
         expect(getImageSizesPreset("blogCard")).toMatch(/320px$/);
-        expect(getImageSizesPreset("carGridCard")).toMatch(/360px$/);
+        expect(getImageSizesPreset("carGridCard")).toMatch(/320px$/);
     });
 });
