@@ -13,7 +13,7 @@
     "audit:lcp": "lhci autorun --config=./config/lighthouse/lighthouserc.json"
   },
   "dependencies": {
-    "@builder.io/partytown": "^0.10.3",
+    "@qwik.dev/partytown": "^0.11.2",
     "@codemirror/lang-html": "^6.4.10",
     "@codemirror/language": "^6.11.3",
     "@codemirror/theme-one-dark": "^6.1.3",

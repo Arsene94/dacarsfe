@@ -25,7 +25,7 @@
       "@/locales/*": ["./messages/*"],
       "@ckeditor/ckeditor5-react": ["./lib/vendors/ckeditor/react"],
       "@ckeditor/ckeditor5-build-classic": ["./lib/vendors/ckeditor/classic-editor"],
-      "@builder.io/partytown/react": ["./types/@builder.io/partytown/react"]
+      "@qwik.dev/partytown/react": ["./types/@qwik.dev/partytown/react"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.d.ts", ".next/types/**/*.ts"],
