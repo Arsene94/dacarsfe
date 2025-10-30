@@ -65,7 +65,44 @@ const pickForwardHeaders = (req: NextRequest): HeadersInit => {
     return headers;
 };
 
-export async function GET(req: NextRequest, context: any) {
+type RouteContext = { params?: { resource?: string } };
+
+const PASS_THROUGH_HEADERS = [
+    "content-length",
+    "content-encoding",
+    "last-modified",
+    "vary",
+];
+
+const buildResponseFromUpstream = (upstream: Response, contentType?: string) => {
+    const response = new NextResponse(upstream.body, {
+        status: upstream.status,
+    });
+
+    if (contentType) {
+        response.headers.set("Content-Type", contentType);
+    }
+
+    PASS_THROUGH_HEADERS.forEach((header) => {
+        const value = upstream.headers.get(header);
+
+        if (value) {
+            response.headers.set(header, value);
+        }
+    });
+
+    const etag = upstream.headers.get("etag");
+
+    if (etag) {
+        response.headers.set("ETag", etag);
+    }
+
+    response.headers.set("Cache-Control", CACHE_CONTROL_HEADER);
+
+    return response;
+};
+
+export async function GET(req: NextRequest, context: RouteContext) {
     const key = normalizeResourceKey(context?.params?.resource);
 
     if (!key) {
@@ -100,7 +137,7 @@ export async function GET(req: NextRequest, context: any) {
         });
     }
 
-    if (!upstream.ok) {
+    if (!upstream.ok || !upstream.body) {
         console.error("Răspuns invalid de la furnizorul extern", {
             targetUrl,
             status: upstream.status,
@@ -112,20 +149,16 @@ export async function GET(req: NextRequest, context: any) {
         });
     }
 
-    const body = await upstream.arrayBuffer();
-    const contentType = config.contentType ?? upstream.headers.get("content-type");
-    const response = new NextResponse(body);
+    const contentType = config.contentType ?? upstream.headers.get("content-type") ?? "application/javascript; charset=utf-8";
 
-    if (contentType) {
-        response.headers.set("Content-Type", contentType);
-    }
+    return buildResponseFromUpstream(upstream, contentType);
+}
 
-    const etag = upstream.headers.get("etag");
-    if (etag) {
-        response.headers.set("ETag", etag);
-    }
+export async function HEAD(req: NextRequest, context: RouteContext) {
+    const response = await GET(req, context);
 
-    response.headers.set("Cache-Control", CACHE_CONTROL_HEADER);
-
-    return response;
+    return new NextResponse(null, {
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+    });
 }
