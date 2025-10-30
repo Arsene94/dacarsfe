@@ -1747,16 +1747,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
     const subtotalLeiDisplay = formatLeiAmount(subtotalEuro);
     const totalLeiDisplay = formatLeiAmount(totalEuro);
     const rentalRateLeiDisplay = formatLeiAmount(rentalRateEuro);
-    const discountSubtotalLeiDisplay = formatLeiAmount(discountSubtotalEuro);
-    const discountTotalLeiDisplay = formatLeiAmount(discountTotalEuro);
+    const discountSubtotalLeiDisplay = formatLeiAmount((discountSubtotalEuro ?? 0) - (advancePaymentEuro ?? 0));
+    const discountTotalLeiDisplay = formatLeiAmount((discountTotalEuro ?? 0 ) - (advancePaymentEuro ?? 0));
     const totalServicesLeiDisplay = formatLeiAmount(totalServicesEuro);
 
     const basePriceEuroDisplay = formatEuroAmount(basePriceEuro);
     const subtotalEuroDisplay = formatEuroAmount(subtotalEuro);
     const totalEuroDisplay = formatEuroAmount(totalEuro);
     const rentalRateEuroDisplay = formatEuroAmount(rentalRateEuro);
-    const discountSubtotalEuroDisplay = formatEuroAmount(discountSubtotalEuro);
-    const discountTotalEuroDisplay = formatEuroAmount(discountTotalEuro);
+    const discountSubtotalEuroDisplay = formatEuroAmount((discountSubtotalEuro ?? 0) - (advancePaymentEuro ?? 0));
+    const discountTotalEuroDisplay = formatEuroAmount((discountTotalEuro ?? 0)- (advancePaymentEuro ?? 0));
     const totalServicesEuroDisplay = formatEuroAmount(totalServicesEuro);
     const showAdvancePayment =
         typeof advancePaymentEuro === "number" &&
@@ -1764,7 +1764,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         advancePaymentEuro !== 0;
     const remainingBalanceEuro =
         showAdvancePayment && typeof totalEuro === "number" && Number.isFinite(totalEuro)
-            ? Math.round((totalEuro - (advancePaymentEuro as number)) * 100) / 100
+            ? Math.round(totalEuro * 100) / 100
             : null;
     const advancePaymentLeiDisplay = formatLeiAmount(advancePaymentEuro);
     const remainingBalanceLeiDisplay = formatLeiAmount(remainingBalanceEuro);
