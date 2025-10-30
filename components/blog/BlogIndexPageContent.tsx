@@ -135,8 +135,6 @@ const BlogIndexPageContent = ({
                 <p className="mt-3 max-w-3xl text-base text-white/80">{copy.pageDescription}</p>
             </header>
 
-            {interlinkCopy && <InterlinkingSection copy={interlinkCopy} className="py-12" />}
-
             <section className="grid gap-8 md:grid-cols-2" aria-busy={isLoading}>
                 {showEmptyState ? (
                     <div className="col-span-full rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center shadow-sm">
@@ -155,6 +153,9 @@ const BlogIndexPageContent = ({
                     ))
                 )}
             </section>
+
+            {interlinkCopy && <InterlinkingSection copy={interlinkCopy} className="py-12" />}
+
         </main>
     );
 };
