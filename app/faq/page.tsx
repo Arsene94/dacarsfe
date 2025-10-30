@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import FaqPageContent from "@/components/faq/FaqPageContent";
-import { createApiClient } from "@/lib/api";
+import {
+    createApiClient,
+    isApiNetworkError,
+    shouldBypassApiDuringStaticBuild,
+} from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { type Locale } from "@/lib/i18n/config";
 import { resolveRequestLocale } from "@/lib/i18n/server";
@@ -16,6 +20,13 @@ import {
 } from "@/lib/faq/publicFaq";
 
 const fetchFaqCategories = async (locale: Locale): Promise<NormalizedFaqCategory[]> => {
+    if (shouldBypassApiDuringStaticBuild()) {
+        console.info(
+            "Sărim peste încărcarea FAQ-urilor publice din API în timpul build-ului static; folosim fallback-ul gol.",
+        );
+        return [];
+    }
+
     try {
         const client = createApiClient();
         client.setLanguage(locale);
@@ -28,7 +39,11 @@ const fetchFaqCategories = async (locale: Locale): Promise<NormalizedFaqCategory
         const categories = extractList<FaqCategory>(response);
         return normalizeFaqCategories(categories);
     } catch (error) {
-        console.error("Nu am putut încărca FAQ-urile", error);
+        if (isApiNetworkError(error)) {
+            console.warn("Nu am putut încărca FAQ-urile din API; continuăm fără ele.", error);
+        } else {
+            console.error("Nu am putut încărca FAQ-urile", error);
+        }
         return [];
     }
 };

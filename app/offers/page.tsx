@@ -4,7 +4,11 @@ import { Calendar, Gift, Heart, Sparkles, Users } from "lucide-react";
 import StructuredData from "@/components/StructuredData";
 import { Button } from "@/components/ui/button";
 import ApplyOfferButton from "@/components/offers/ApplyOfferButton";
-import { ApiClient } from "@/lib/api";
+import {
+  createApiClient,
+  isApiNetworkError,
+  shouldBypassApiDuringStaticBuild,
+} from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { formatDate } from "@/lib/datetime";
 import { formatOfferBadge } from "@/lib/offers";
@@ -349,19 +353,32 @@ const OffersPage = async () => {
     locale,
     availableLocales: SUPPORTED_LOCALES,
   });
-  const api = new ApiClient(getApiBaseUrl());
+  const api = createApiClient(getApiBaseUrl());
   let rawOffers: unknown[] = [];
-  try {
-    const response = await api.getOffers({
-      audience: "public",
-      status: "published",
-      sort: "-starts_at,-created_at",
-      limit: 20,
-    });
-    rawOffers = extractList(response);
-  } catch (error) {
-    console.error("Nu s-au putut încărca ofertele publice", error);
-    rawOffers = [];
+  if (shouldBypassApiDuringStaticBuild()) {
+    console.info(
+      "Sărim peste încărcarea ofertelor publice din API în timpul build-ului static; folosim fallback-ul gol.",
+    );
+  } else {
+    try {
+      const response = await api.getOffers({
+        audience: "public",
+        status: "published",
+        sort: "-starts_at,-created_at",
+        limit: 20,
+      });
+      rawOffers = extractList(response);
+    } catch (error) {
+      if (isApiNetworkError(error)) {
+        console.warn(
+          "Nu s-au putut încărca ofertele publice din API; continuăm fără ele.",
+          error,
+        );
+      } else {
+        console.error("Nu s-au putut încărca ofertele publice", error);
+      }
+      rawOffers = [];
+    }
   }
   const offers = rawOffers
     .map((offer) => normalizeOffer(offer as Offer))
