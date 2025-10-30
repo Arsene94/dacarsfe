@@ -538,7 +538,6 @@ const BlogPostsPage = () => {
 
         if (Array.isArray(value)) {
           if (value.length === 0) {
-            formData.append(key, "");
             return;
           }
           value.forEach((item) => appendValue(`${key}[]`, item));
