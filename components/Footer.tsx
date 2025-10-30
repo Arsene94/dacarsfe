@@ -9,6 +9,8 @@ import InterlinkingSection from "@/components/interlinking/InterlinkingSection";
 import { getSiteInterlinkingCopy } from "@/lib/interlinking/publicInterlinking";
 import type { Locale } from "@/lib/i18n/config";
 import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
+import { usePublicOffersAvailability } from "@/lib/offers/usePublicOffersAvailability";
+import { isOffersHref } from "@/lib/navigation/isOffersHref";
 
 type FooterLink = { label?: string; href?: string; aria?: string };
 
@@ -23,6 +25,8 @@ type FooterMessages = {
 const Footer = () => {
     const { messages, locale } = useTranslations("layout");
     const footer = (messages.footer ?? {}) as FooterMessages;
+    const { hasOffers } = usePublicOffersAvailability();
+    const shouldHideOffersLinks = hasOffers === false;
     const pathname = usePathname();
     const normalizedPath = pathname?.split("?")[0] ?? "/";
     const interlinkingCopy = getSiteInterlinkingCopy(locale as Locale, {
@@ -30,7 +34,9 @@ const Footer = () => {
     });
     const showInterlinking = !pathname?.startsWith("/admin");
 
-    const quickLinks = footer.quickLinks?.links?.filter((item) => item?.label) ?? [];
+    const quickLinks = (footer.quickLinks?.links?.filter((item) => item?.label) ?? []).filter((item) =>
+        shouldHideOffersLinks ? !isOffersHref(item.href) : true,
+    );
     const bottomLinks = footer.bottom?.links?.filter((item) => item?.label) ?? [];
     const buildLocaleHref = useLocaleHref();
 
