@@ -5,7 +5,7 @@ import PageTransition from "../components/PageTransition";
 import ScrollPositionManager from "../components/ScrollPositionManager";
 import Script from "next/script";
 import type { ReactNode } from "react";
-import { Suspense } from "react";
+import { headers } from "next/headers";
 import { BookingProvider } from "@/context/BookingProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { LocaleProvider } from "@/context/LocaleContext";
@@ -15,14 +15,10 @@ import { siteMetadata } from "@/lib/seo/siteMetadata";
 import { GlobalStyles } from "./global-styles";
 import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY } from "@/lib/i18n/config";
 import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale";
-import MixpanelInitializer from "../components/MixpanelInitializer";
 import TikTokPixelScript from "../components/TikTokPixelScript";
-import MetaPixel from "../components/MetaPixel";
-import MetaPixelServiceWorker from "../components/MetaPixelServiceWorker";
 import { GoogleAnalytics } from "@next/third-parties/google";
-import AnalyticsTracker from "../components/AnalyticsTracker";
-import CampaignTrackingInitializer from "../components/CampaignTrackingInitializer";
 import LocaleHeadTags from "../components/LocaleHeadTags";
+import AnalyticsHydrator from "@/components/AnalyticsHydrator";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -82,6 +78,26 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     ...localeBootstrapConfig,
     initialLocale,
   });
+  const headerList = await headers();
+  const rawPathname =
+    headerList.get("x-dacars-pathname") ??
+    headerList.get("x-next-url") ??
+    headerList.get("next-url") ??
+    "/";
+
+  let normalizedPathname = "/";
+  if (rawPathname) {
+    try {
+      if (rawPathname.includes("://")) {
+        const url = new URL(rawPathname);
+        normalizedPathname = url.pathname || "/";
+      } else {
+        normalizedPathname = rawPathname.startsWith("/") ? rawPathname : `/${rawPathname}`;
+      }
+    } catch {
+      normalizedPathname = "/";
+    }
+  }
 
   return (
     <html
@@ -106,16 +122,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes"/>
         <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
         <meta httpEquiv="x-dns-prefetch-control" content="on"/>
-        <LocaleHeadTags locale={initialLocale} languages={supportedLocales} />
+        <LocaleHeadTags
+          locale={initialLocale}
+          languages={supportedLocales}
+          pathname={normalizedPathname}
+        />
     </head>
     <body className="min-h-screen bg-white">
-    <Suspense fallback={null}>
-        <CampaignTrackingInitializer />
-        <MixpanelInitializer/>
-        <MetaPixel />
-        <MetaPixelServiceWorker />
-        <AnalyticsTracker />
-        </Suspense>
         <Script id="prefill-locale" strategy="beforeInteractive">
           {`
             (function() {
@@ -184,16 +197,17 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             </BookingProvider>
           </AuthProvider>
         </LocaleProvider>
-    <Script id="cookiescript-loader" strategy="lazyOnload">
-        {`
-          setTimeout(() => {
-            const s = document.createElement("script");
-            s.src = "https://cdn.cookie-script.com/s/1dbe1a6c3b981120922353311f510e1d.js";
-            s.async = true;
-            document.body.appendChild(s);
-          }, 3000);
-        `}
-    </Script>
+        <AnalyticsHydrator />
+        <Script id="cookiescript-loader" strategy="lazyOnload">
+          {`
+            setTimeout(() => {
+              const s = document.createElement("script");
+              s.src = "https://cdn.cookie-script.com/s/1dbe1a6c3b981120922353311f510e1d.js";
+              s.async = true;
+              document.body.appendChild(s);
+            }, 3000);
+          `}
+        </Script>
       </body>
     </html>
   );

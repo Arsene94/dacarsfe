@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
-import { ROBOTS_CONFIG } from "@/lib/seo/robots";
+import { generateRobotsConfig } from "@/lib/seo/robots";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
-const robotsRoute = (): MetadataRoute.Robots => ROBOTS_CONFIG;
+const robotsRoute = async (): Promise<MetadataRoute.Robots> => generateRobotsConfig();
 
 export default robotsRoute;

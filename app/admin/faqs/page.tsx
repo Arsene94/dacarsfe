@@ -12,6 +12,7 @@ import CKEditor from "@/lib/vendors/ckeditor/react";
 import ClassicEditor from "@/lib/vendors/ckeditor/classic-editor";
 import apiClient from "@/lib/api";
 import { extractItem, extractList } from "@/lib/apiResponse";
+import { cn } from "@/lib/utils";
 import type {
     FaqCategory,
     FaqCategoryPayload,
@@ -37,6 +38,7 @@ type CategoryOption = {
     label: string;
     status: FaqStatus;
     order: number;
+    showOnSite: boolean;
 };
 
 type NormalizedFaqRecord = {
@@ -60,6 +62,7 @@ type NormalizedCategory = {
     faqCount: number;
     createdAt: string | null;
     updatedAt: string | null;
+    showOnSite: boolean;
 };
 
 type CategoryFormState = {
@@ -68,6 +71,7 @@ type CategoryFormState = {
     description: string;
     order: string;
     status: FaqStatus;
+    showOnSite: boolean;
 };
 
 type FaqFormState = {
@@ -106,6 +110,7 @@ const createEmptyCategoryForm = (): CategoryFormState => ({
     description: "",
     order: "",
     status: DEFAULT_STATUS,
+    showOnSite: true,
 });
 
 const isFaqStatus = (value: unknown): value is FaqStatus =>
@@ -135,6 +140,28 @@ const parseOrderValue = (value: unknown): number => {
         }
     }
     return Number.MAX_SAFE_INTEGER;
+};
+
+const parseShowOnSite = (value: unknown): boolean => {
+    if (typeof value === "boolean") {
+        return value;
+    }
+
+    if (typeof value === "number") {
+        return value !== 0;
+    }
+
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === "false" || normalized === "0") {
+            return false;
+        }
+        if (normalized === "true" || normalized === "1") {
+            return true;
+        }
+    }
+
+    return true;
 };
 
 const extractPlainText = (value: string): string =>
@@ -194,17 +221,25 @@ const AdminFaqPage = () => {
                 typeof category.order === "number" && Number.isFinite(category.order)
                     ? category.order
                     : Number.MAX_SAFE_INTEGER,
+            showOnSite: category.showOnSite,
         }));
     }, [categoryRecords]);
 
     const formattedCategoryOptions = useMemo(() => {
-        return categoryOptions.map((category) => ({
-            ...category,
-            label:
-                category.status !== "published"
-                    ? `${category.label} (${statusLabels[category.status]})`
-                    : category.label,
-        }));
+        return categoryOptions.map((category) => {
+            const flags: string[] = [];
+            if (category.status !== "published") {
+                flags.push(statusLabels[category.status]);
+            }
+            if (!category.showOnSite) {
+                flags.push("Ascuns din site");
+            }
+
+            return {
+                ...category,
+                label: flags.length > 0 ? `${category.label} (${flags.join(" • ")})` : category.label,
+            };
+        });
     }, [categoryOptions]);
 
     const isEditingCategory = categoryFormState.id !== null;
@@ -235,7 +270,10 @@ const AdminFaqPage = () => {
             setCategoryError(null);
             setCategoryManagementError(null);
             try {
-                const response = await apiClient.getFaqCategories({ limit: 200, include: "faqs" });
+                const response = await apiClient.getAdminFaqCategories({
+                    limit: 200,
+                    include: "faqs",
+                });
                 const rawCategories = extractList<FaqCategory>(response);
                 const mapped = rawCategories
                     .map((category): NormalizedCategory | null => {
@@ -316,6 +354,9 @@ const AdminFaqPage = () => {
                             typeof category.created_at === "string" ? category.created_at : null;
                         const updatedAt =
                             typeof category.updated_at === "string" ? category.updated_at : null;
+                        const showOnSite = parseShowOnSite(
+                            (category as { show_on_site?: unknown }).show_on_site,
+                        );
 
                         return {
                             id: Number(idValue),
@@ -327,6 +368,7 @@ const AdminFaqPage = () => {
                             faqCount,
                             createdAt,
                             updatedAt,
+                            showOnSite,
                         } satisfies NormalizedCategory;
                     })
                     .filter((item): item is NormalizedCategory => item !== null)
@@ -444,6 +486,7 @@ const AdminFaqPage = () => {
                                 ? match.order.toString()
                                 : "",
                         status: match.status,
+                        showOnSite: match.showOnSite,
                     } satisfies CategoryFormState;
                 });
             } catch (error) {
@@ -514,6 +557,7 @@ const AdminFaqPage = () => {
                     ? category.order.toString()
                     : "",
             status: category.status,
+            showOnSite: category.showOnSite,
         });
         setCategoryFormError(null);
         setCategoryFormSuccess(null);
@@ -564,6 +608,7 @@ const AdminFaqPage = () => {
             description: trimmedDescription.length > 0 ? trimmedDescription : null,
             order: typeof orderValue === "number" ? orderValue : null,
             status: statusValue,
+            show_on_site: categoryFormState.showOnSite,
         };
 
         setCategorySaving(true);
@@ -819,6 +864,7 @@ const AdminFaqPage = () => {
                                         <th className="px-4 py-3 text-left font-semibold text-gray-700">Nume</th>
                                         <th className="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
                                         <th className="px-4 py-3 text-left font-semibold text-gray-700">Ordine</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Vizibil public</th>
                                         <th className="px-4 py-3 text-left font-semibold text-gray-700">FAQ-uri</th>
                                         <th className="px-4 py-3 text-right font-semibold text-gray-700">Acțiuni</th>
                                     </tr>
@@ -832,14 +878,24 @@ const AdminFaqPage = () => {
                                             <td className="whitespace-nowrap px-4 py-3 text-gray-600">
                                                 {statusLabels[category.status]}
                                             </td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-gray-600">
-                                                {typeof category.order === "number" && Number.isFinite(category.order)
-                                                    ? category.order
-                                                    : "–"}
-                                            </td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-gray-600">
-                                                {category.faqCount}
-                                            </td>
+                                    <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                                        {typeof category.order === "number" && Number.isFinite(category.order)
+                                            ? category.order
+                                            : "–"}
+                                    </td>
+                                    <td className="whitespace-nowrap px-4 py-3">
+                                        <span
+                                            className={cn(
+                                                "font-medium",
+                                                category.showOnSite ? "text-emerald-600" : "text-amber-600",
+                                            )}
+                                        >
+                                            {category.showOnSite ? "Da" : "Nu"}
+                                        </span>
+                                    </td>
+                                    <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                                        {category.faqCount}
+                                    </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-wrap justify-end gap-2">
                                                     <Button
@@ -931,6 +987,29 @@ const AdminFaqPage = () => {
                                         </option>
                                     ))}
                                 </Select>
+                            </div>
+                            <div className="md:col-span-2">
+                                <div className="flex items-start gap-3">
+                                    <input
+                                        id="faq-category-show-on-site"
+                                        type="checkbox"
+                                        checked={categoryFormState.showOnSite}
+                                        onChange={(event) =>
+                                            updateCategoryFormField("showOnSite", event.target.checked)
+                                        }
+                                        disabled={categorySaving}
+                                        className="mt-1 h-4 w-4 rounded border-gray-300 text-berkeley focus:ring-berkeley-500 focus:ring-offset-0"
+                                    />
+                                    <div className="space-y-1">
+                                        <Label htmlFor="faq-category-show-on-site" className="text-gray-900">
+                                            Afișează categoria în pagina publică
+                                        </Label>
+                                        <p className="text-xs text-gray-500">
+                                            Debifează dacă vrei să păstrezi categoria doar pentru articolele de blog sau în
+                                            consola de administrare.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                             <div className="space-y-2 md:col-span-2">
                                 <Label htmlFor="faq-category-description">Descriere</Label>

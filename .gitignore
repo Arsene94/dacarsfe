@@ -26,3 +26,4 @@ out
 *.sln
 *.sw?
 .env
+.lighthouse

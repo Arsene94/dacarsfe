@@ -40,3 +40,11 @@ vi.mock('next/image', () => ({
   },
 }));
 
+vi.mock('next/cache', () => ({
+  unstable_cache: <Args extends any[], Result>(fn: (...args: Args) => Result) => {
+    return (...args: Args) => fn(...args);
+  },
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+}));
+

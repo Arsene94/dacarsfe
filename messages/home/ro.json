@@ -1,15 +1,15 @@
 {
   "hero": {
-    "badge": "Te ținem aproape de casă",
-    "title": "Închiriere auto București - Otopeni",
+    "badge": "Perfect pentru românii din diaspora",
+    "title": "Închiriere mașină în România din străinătate",
     "subtitle": {
-      "lead": "Predare în aeroport în sub 5 minute.",
-      "highlight": "Fără taxe ascunse."
+      "lead": "Rent a car Aeroport Otopeni în română, cu predare în sub 5 minute.",
+      "highlight": "Fără taxe ascunse și contract simplu."
     },
     "features": [
-      { "title": "Sub 5 min", "description": "Predare rapidă" },
-      { "title": "Fără taxe", "description": "Preț transparent" },
-      { "title": "24/7", "description": "Disponibil non-stop" }
+      { "title": "Sub 5 min", "description": "Preluare rapidă la Otopeni" },
+      { "title": "Fără taxe", "description": "Preț transparent pentru diaspora" },
+      { "title": "24/7", "description": "Suport în limba română" }
     ],
     "form": {
       "labels": {
@@ -39,7 +39,7 @@
       "main": "Flota noastră",
       "highlight": "premium"
     },
-    "description": "Mașini moderne, verificate și întreținute cu grijă pentru confortul și siguranța ta.",
+    "description": "Mașini moderne, pregătite pentru drumuri lungi în toată România, ideale când revii din străinătate și vrei un rent a car sigur la Aeroportul Otopeni.",
     "labels": {
       "seatsSuffix": "persoane"
     },
@@ -61,8 +61,12 @@
       "main": "De ce să alegi",
       "highlight": "DaCars"
     },
-    "description": "Serviciu de încredere, creat special pentru românii care călătoresc și au nevoie de o mașină la întoarcerea acasă.",
+    "description": "Serviciu de închiriere auto gândit pentru românii care locuiesc în diaspora și caută o închiriere mașină România din străinătate, fără stres la sosirea în țară.",
     "items": [
+      {
+        "title": "Ghid complet pentru întoarcere",
+        "description": "Îți explicăm pas cu pas ce acte îți trebuie pentru a închiria o mașină în România și cum pregătești rezervarea înainte să zbori."
+      },
       {
         "title": "Fără birocrație",
         "description": "Proces simplu și rapid, fără acte complicate sau așteptare lungă."
@@ -92,7 +96,7 @@
       "main": "Conectează-te rapid la",
       "highlight": "paginile utile"
     },
-    "description": "Distribuie autoritatea SEO către secțiunile esențiale DaCars și finalizează rezervarea având toate informațiile importante la îndemână.",
+    "description": "Găsește rapid paginile care te ajută să finalizezi rezervarea: flotă actualizată, rent a car Aeroport Otopeni în română, oferte pentru diaspora și ghiduri utile.",
     "ariaLabel": "Legături interne către paginile principale DaCars",
     "linkPrefix": "Descoperă",
     "linkCta": "Vezi detalii",
@@ -192,7 +196,7 @@
       "main": "Contactează-ne",
       "highlight": "oricând"
     },
-    "description": "Suntem aici să te ajutăm 24/7. Ia legătura cu noi prin oricare dintre metodele de mai jos.",
+    "description": "Suntem aici să te ajutăm 24/7, inclusiv cu detalii despre ce acte îți trebuie pentru a închiria o mașină în România și cum rezervi rapid un rent a car Otopeni din străinătate.",
     "quickLinks": {
       "title": "Linkuri rapide",
       "offers": "Promoții active",

@@ -170,10 +170,11 @@ export const buildFallbackCategory = (copy: FaqSeoCopy): NormalizedFaqCategory =
 export const FAQ_SEO_COPY: Record<Locale, FaqSeoCopy> = {
     ro: {
         pageTitle: "Întrebări frecvente DaCars",
-        pageDescription: "Răspunsuri clare despre rezervări, garanție și suport pentru clienții DaCars.",
-        metaTitle: "Întrebări frecvente DaCars | Suport clienți",
+        pageDescription:
+            "Răspunsuri clare despre rezervări, garanție și suport pentru românii din diaspora care caută închiriere mașină România din străinătate.",
+        metaTitle: "Întrebări frecvente DaCars | Suport clienți diaspora",
         metaDescription:
-            "Găsește rapid răspunsuri despre modificarea rezervărilor, documente, garanții și asistență rutieră DaCars.",
+            "Găsește rapid răspunsuri despre modificarea rezervărilor, ce acte îți trebuie pentru a închiria o mașină în România și cum funcționează garanțiile DaCars.",
         items: [
             {
                 question: "Cum pot modifica perioada unei rezervări existente?",

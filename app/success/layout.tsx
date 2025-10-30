@@ -1,24 +1,23 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { buildMetadata } from "@/lib/seo/meta";
+import { resolveRequestLocale } from "@/lib/i18n/server";
 import successMessagesRo from "@/messages/success/ro.json";
 
-type SuccessMessages = typeof successMessagesRo;
+const { metadata: successMetadataMessages } = successMessagesRo;
 
-const successMessages: SuccessMessages = successMessagesRo;
-const { metadata: successMetadataMessages } = successMessages;
+export async function generateMetadata(): Promise<Metadata> {
+    const locale = await resolveRequestLocale();
 
-const successMetadata = buildMetadata({
-    title: successMetadataMessages.title,
-    description: successMetadataMessages.description,
-    path: "/success",
-    openGraphTitle: successMetadataMessages.openGraphTitle,
-    noIndex: true,
-});
-
-export const metadata: Metadata = {
-    ...successMetadata,
-};
+    return buildMetadata({
+        title: successMetadataMessages.title,
+        description: successMetadataMessages.description,
+        path: "/success",
+        openGraphTitle: successMetadataMessages.openGraphTitle,
+        noIndex: true,
+        locale,
+    });
+}
 
 const SuccessLayout = ({ children }: { children: ReactNode }) => <>{children}</>;
 

@@ -1,5 +1,8 @@
-import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { headers } from "next/headers";
+
+import { AVAILABLE_LOCALES, type Locale } from "@/lib/i18n/config";
 import { resolveOpenGraphLocale } from "@/lib/seo/metadata";
+import { buildCanonicalUrl, hreflangLinks, resolveLocalizedPathname } from "@/lib/seo/url";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 
 const LANGUAGE_NAMES: Record<Locale, string> = {
@@ -20,34 +23,80 @@ const CONTENT_LANGUAGE_MAP: Record<Locale, string> = {
   de: "de-DE",
 };
 
-const trimTrailingSlash = (url: string): string => url.replace(/\/+$/, "");
-const buildLocaleHref = (baseUrl: string, locale: Locale): string => {
-  const normalizedBase = baseUrl ? trimTrailingSlash(baseUrl) : baseUrl;
-  return `${normalizedBase}/${locale}`;
+const uniqueLocales = (locales: readonly Locale[]): Locale[] => Array.from(new Set(locales));
+
+const ensureLeadingSlash = (value: string): string => {
+  if (!value) {
+    return "/";
+  }
+
+  return value.startsWith("/") ? value : `/${value}`;
 };
 
-const uniqueLocales = (locales: readonly Locale[]): Locale[] => Array.from(new Set(locales));
+const resolveRequestPathname = async (explicitPath?: string): Promise<string> => {
+  if (explicitPath && explicitPath.trim().length > 0) {
+    return ensureLeadingSlash(explicitPath.trim());
+  }
+
+  try {
+    const headerList = await headers();
+    const headerCandidates = [
+      headerList.get("x-dacars-pathname"),
+      headerList.get("x-next-url"),
+      headerList.get("next-url"),
+    ];
+
+    for (const candidate of headerCandidates) {
+      if (!candidate) {
+        continue;
+      }
+
+      try {
+        if (candidate.includes("://")) {
+          const url = new URL(candidate);
+          return url.pathname || "/";
+        }
+
+        return ensureLeadingSlash(candidate);
+      } catch {
+        continue;
+      }
+    }
+  } catch {
+    // Ignorăm erorile și cădem pe fallback.
+  }
+
+  return "/";
+};
 
 type LocaleHeadTagsProps = {
   locale: Locale;
   languages?: readonly Locale[];
+  pathname?: string;
 };
 
-const LocaleHeadTags = ({ locale, languages = AVAILABLE_LOCALES }: LocaleHeadTagsProps) => {
+const LocaleHeadTags = async ({
+  locale,
+  languages = AVAILABLE_LOCALES,
+  pathname,
+}: LocaleHeadTagsProps): Promise<JSX.Element> => {
   const dedupedLocales = uniqueLocales([locale, ...languages]);
-  const baseUrl = trimTrailingSlash(siteMetadata.siteUrl);
-
   const languageName = LANGUAGE_NAMES[locale] ?? locale;
   const contentLanguage = CONTENT_LANGUAGE_MAP[locale] ?? locale;
   const openGraphLocale = resolveOpenGraphLocale(locale);
-
   const alternateLocales = dedupedLocales.filter((candidate) => candidate !== locale);
+  const requestPathname = await resolveRequestPathname(pathname);
+  const localizedPath = resolveLocalizedPathname(requestPathname, locale);
+  const canonicalHref = buildCanonicalUrl(localizedPath);
+  const alternates = hreflangLinks(localizedPath, dedupedLocales);
+  const normalizedSiteUrl = siteMetadata.siteUrl.replace(/\/+$/, "");
 
   return (
     <>
       <meta name="language" content={languageName} />
       <meta httpEquiv="content-language" content={contentLanguage} />
       <meta property="og:locale" content={openGraphLocale} />
+      <link rel="canonical" href={canonicalHref} />
       {alternateLocales.map((alternate) => (
         <meta
           key={`og-alternate-${alternate}`}
@@ -55,15 +104,20 @@ const LocaleHeadTags = ({ locale, languages = AVAILABLE_LOCALES }: LocaleHeadTag
           content={resolveOpenGraphLocale(alternate)}
         />
       ))}
-      <link rel="alternate" hrefLang="x-default" href={buildLocaleHref(baseUrl, DEFAULT_LOCALE)} />
-      {dedupedLocales.map((entry) => (
-        <link
-          key={`alternate-${entry}`}
-          rel="alternate"
-          hrefLang={CONTENT_LANGUAGE_MAP[entry] ?? entry}
-          href={buildLocaleHref(baseUrl, entry)}
-        />
-      ))}
+      {alternates.map((alternate) => {
+        const href = alternate.href.startsWith("http")
+          ? alternate.href
+          : `${normalizedSiteUrl}${ensureLeadingSlash(alternate.href)}`;
+
+        return (
+          <link
+            key={`alternate-${alternate.hrefLang}`}
+            rel="alternate"
+            hrefLang={alternate.hrefLang}
+            href={href}
+          />
+        );
+      })}
     </>
   );
 };

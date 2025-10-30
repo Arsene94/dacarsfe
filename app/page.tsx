@@ -4,8 +4,8 @@ import HeroSection from "@/components/HeroSection";
 import StructuredData from "@/components/StructuredData";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
-import { apiClient } from "@/lib/api";
-import { extractList } from "@/lib/apiResponse";
+import { resolveRequestLocale } from "@/lib/i18n/server";
+import { loadFeaturedOffers } from "@/lib/offers/publicOffers";
 import { buildLocalBusinessStructuredData } from "@/lib/seo/localBusiness";
 import { buildMetadata } from "@/lib/seo/meta";
 import { breadcrumb, organization, website } from "@/lib/seo/jsonld";
@@ -19,9 +19,9 @@ type HomeSeoCopy = {
 
 const HOME_SEO_COPY: Record<Locale, HomeSeoCopy> = {
     ro: {
-        metaTitle: `${SITE_NAME} — Închirieri auto fără stres & oferte personalizate`,
+        metaTitle: `${SITE_NAME} — Închiriere mașină în România din străinătate | Rent a car Otopeni`,
         metaDescription:
-            "Descoperă închirieri auto flexibile, oferte verificate și suport rapid pentru fiecare călătorie DaCars.",
+            "Închiriază online mașina potrivită în România chiar dacă locuiești în străinătate. Preluare rapidă la Aeroportul Otopeni, contract în limba română și oferte create pentru diaspora DaCars.",
         breadcrumbHome: "Acasă",
     },
     en: {
@@ -63,28 +63,18 @@ export const dynamic = "force-static";
 
 const FALLBACK_COPY = HOME_SEO_COPY[FALLBACK_LOCALE];
 
-export const metadata: Metadata = buildMetadata({
-    title: FALLBACK_COPY.metaTitle,
-    description: FALLBACK_COPY.metaDescription,
-    path: "/",
-    hreflangLocales: HREFLANG_LOCALES,
-    locale: FALLBACK_LOCALE,
-});
+export async function generateMetadata(): Promise<Metadata> {
+    const locale = await resolveRequestLocale();
+    const copy = HOME_SEO_COPY[locale] ?? FALLBACK_COPY;
 
-const fetchActiveOffers = async (): Promise<Offer[]> => {
-    try {
-        const response = await apiClient.getOffers({
-            audience: "public",
-            status: "published",
-            limit: 4,
-            sort: "-starts_at,-created_at",
-        });
-        return extractList(response) as Offer[];
-    } catch (error) {
-        console.error("Nu am putut încărca ofertele pentru schema LocalBusiness", error);
-        return [];
-    }
-};
+    return buildMetadata({
+        title: copy.metaTitle,
+        description: copy.metaDescription,
+        path: "/",
+        hreflangLocales: HREFLANG_LOCALES,
+        locale,
+    });
+}
 
 const LOCAL_BUSINESS_REVIEWS = [
     {
@@ -127,7 +117,8 @@ const computeAggregateRating = (ratings: Array<{ rating: number }>) => {
 };
 
 const HomePage = async () => {
-    const offers = await fetchActiveOffers();
+    const locale = await resolveRequestLocale();
+    const offers = await loadFeaturedOffers(locale);
     const aggregateRating = computeAggregateRating(LOCAL_BUSINESS_REVIEWS);
 
     const structuredData = [
@@ -149,7 +140,7 @@ const HomePage = async () => {
                 {/* Rendăm hero-ul ca secțiune server pentru a reduce JS-ul critic */}
                 <HeroSection />
             </div>
-            <HomePageClient />
+            <HomePageClient initialOffers={offers} />
         </>
     );
 };

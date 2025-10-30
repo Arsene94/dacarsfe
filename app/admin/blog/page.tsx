@@ -11,7 +11,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
-import { extractItem, extractList } from "@/lib/apiResponse";
+import { extractList } from "@/lib/apiResponse";
 import { formatDateTime, toIsoStringFromInput, toLocalDatetimeInputValue } from "@/lib/datetime";
 import { resolveMediaUrl } from "@/lib/media";
 import { getUserDisplayName } from "@/lib/users";
@@ -26,6 +26,8 @@ import type {
 } from "@/types/blog";
 import type { User } from "@/types/auth";
 import { ensureUser } from "@/types/auth";
+import type { Offer } from "@/types/offer";
+import type { Faq, FaqCategorySummary } from "@/types/faq";
 
 type BlogPostFormState = {
   title: string;
@@ -36,6 +38,8 @@ type BlogPostFormState = {
   excerpt: string;
   content: string;
   tagIds: number[];
+  offerIds: number[];
+  faqIds: number[];
   metaTitle: string;
   metaDescription: string;
 };
@@ -77,6 +81,8 @@ const EMPTY_FORM: BlogPostFormState = {
   excerpt: "",
   content: "",
   tagIds: [],
+  offerIds: [],
+  faqIds: [],
   metaTitle: "",
   metaDescription: "",
 };
@@ -91,6 +97,10 @@ const BlogPostsPage = () => {
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [tags, setTags] = useState<BlogTag[]>([]);
   const [authors, setAuthors] = useState<User[]>([]);
+  const [availableOffers, setAvailableOffers] = useState<Offer[]>([]);
+  const [availableFaqs, setAvailableFaqs] = useState<Faq[]>([]);
+  const [faqCategories, setFaqCategories] = useState<FaqCategorySummary[]>([]);
+  const [faqCategoryFilter, setFaqCategoryFilter] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -105,6 +115,13 @@ const BlogPostsPage = () => {
   const [searchValue, setSearchValue] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [imageState, setImageState] = useState<BlogPostImageState>(() => createEmptyImageState());
+
+  const filteredFaqs = useMemo(() => {
+    if (!faqCategoryFilter) {
+      return [];
+    }
+    return availableFaqs.filter((faq) => String(faq.category_id) === faqCategoryFilter);
+  }, [availableFaqs, faqCategoryFilter]);
 
   const resetImageState = useCallback(() => {
     setImageState((prev) => {
@@ -199,7 +216,7 @@ const BlogPostsPage = () => {
     try {
       const params: BlogPostListParams = {
         perPage: 100,
-        include: ["category", "tags", "author"],
+        include: ["category", "tags", "author", "offers", "faqs"],
         sort: "-published_at,-id",
       };
       if (filters.status !== "all") {
@@ -211,7 +228,7 @@ const BlogPostsPage = () => {
       if (appliedSearch) {
         params.title = appliedSearch;
       }
-      const response = await apiClient.getBlogPosts(params);
+      const response = await apiClient.getAdminBlogPosts(params);
       const items = extractList(response);
       setPosts(items);
       setGlobalError(null);
@@ -226,13 +243,23 @@ const BlogPostsPage = () => {
   useEffect(() => {
     const loadLookups = async () => {
       try {
-        const [categoryResponse, tagResponse, authorResponse] = await Promise.all([
+        const [
+          blogCategoryResponse,
+          tagResponse,
+          authorResponse,
+          offerResponse,
+          faqResponse,
+          faqCategoryResponse,
+        ] = await Promise.all([
           apiClient.getBlogCategories({ perPage: 200, sort: "name" }),
           apiClient.getBlogTags({ perPage: 200, sort: "name" }),
           apiClient.getUsers({ perPage: 200, sort: "first_name" }),
+          apiClient.getAdminOffers({ perPage: 200, audience: "admin", sort: "title" }),
+          apiClient.getFaqs({ per_page: 200, audience: "admin", include: ["category"] }),
+          apiClient.getAdminFaqCategories({ per_page: 200, audience: "admin" }),
         ]);
 
-        const categoryList = sortByName(extractList(categoryResponse));
+        const categoryList = sortByName(extractList(blogCategoryResponse));
         setCategories(categoryList);
 
         const tagList = sortByName(extractList(tagResponse));
@@ -253,9 +280,39 @@ const BlogPostsPage = () => {
             getUserDisplayName(a).localeCompare(getUserDisplayName(b), "ro", { sensitivity: "base" }),
           );
         setAuthors(normalizedAuthors);
+
+        const offerList = extractList(offerResponse)
+          .filter((offer): offer is Offer => typeof offer?.id === "number")
+          .sort((a, b) =>
+            (a.title ?? "").localeCompare(b.title ?? "", "ro", { sensitivity: "base" }),
+          );
+        setAvailableOffers(offerList);
+
+        const faqList = extractList(faqResponse)
+          .filter((faq): faq is Faq => typeof faq?.id === "number")
+          .sort((a, b) =>
+            (a.question ?? "").localeCompare(b.question ?? "", "ro", { sensitivity: "base" }),
+          );
+        setAvailableFaqs(faqList);
+
+        const faqCategoryList = extractList(faqCategoryResponse)
+          .filter(
+            (category): category is FaqCategorySummary =>
+              typeof category?.id === "number" && typeof category?.name === "string",
+          )
+          .sort((a, b) => a.name.localeCompare(b.name, "ro", { sensitivity: "base" }));
+        setFaqCategories(faqCategoryList);
+        setFaqCategoryFilter((prev) => {
+          if (prev && faqCategoryList.some((category) => String(category.id) === prev)) {
+            return prev;
+          }
+          return faqCategoryList.length > 0 ? String(faqCategoryList[0].id) : "";
+        });
       } catch (error) {
         console.error("Nu am putut încărca datele auxiliare pentru blog", error);
-        setGlobalError("Nu am putut încărca listele de categorii, etichete sau autori.");
+        setGlobalError(
+          "Nu am putut încărca listele de categorii, etichete, autori, oferte sau întrebări frecvente.",
+        );
       }
     };
 
@@ -296,6 +353,20 @@ const BlogPostsPage = () => {
           .map((tag) => (typeof tag?.id === "number" ? tag.id : null))
           .filter((id): id is number => id !== null)
       : [];
+    const offerIds = Array.isArray(post.offers)
+      ? post.offers
+          .map((offer) => (typeof offer?.id === "number" ? offer.id : null))
+          .filter((id): id is number => id !== null)
+      : Array.isArray(post.offer_ids)
+        ? post.offer_ids.filter((id): id is number => typeof id === "number")
+        : [];
+    const faqIds = Array.isArray(post.faqs)
+      ? post.faqs
+          .map((faq) => (typeof faq?.id === "number" ? faq.id : null))
+          .filter((id): id is number => id !== null)
+      : Array.isArray(post.faq_ids)
+        ? post.faq_ids.filter((id): id is number => typeof id === "number")
+        : [];
 
     setEditing(post);
     setFormState({
@@ -307,6 +378,8 @@ const BlogPostsPage = () => {
       excerpt: post.excerpt ?? "",
       content: post.content ?? "",
       tagIds,
+      offerIds,
+      faqIds,
       metaTitle: post.meta_title ?? "",
       metaDescription: post.meta_description ?? "",
     });
@@ -350,6 +423,26 @@ const BlogPostsPage = () => {
         ? prev.tagIds.filter((id) => id !== tagId)
         : [...prev.tagIds, tagId];
       return { ...prev, tagIds: nextTagIds };
+    });
+  };
+
+  const toggleOffer = (offerId: number) => {
+    setFormState((prev) => {
+      const exists = prev.offerIds.includes(offerId);
+      const nextOfferIds = exists
+        ? prev.offerIds.filter((id) => id !== offerId)
+        : [...prev.offerIds, offerId];
+      return { ...prev, offerIds: nextOfferIds };
+    });
+  };
+
+  const toggleFaq = (faqId: number) => {
+    setFormState((prev) => {
+      const exists = prev.faqIds.includes(faqId);
+      const nextFaqIds = exists
+        ? prev.faqIds.filter((id) => id !== faqId)
+        : [...prev.faqIds, faqId];
+      return { ...prev, faqIds: nextFaqIds };
     });
   };
 
@@ -403,6 +496,8 @@ const BlogPostsPage = () => {
       excerpt: formState.excerpt.trim() ? formState.excerpt.trim() : null,
       content: formState.content.trim() ? formState.content : null,
       tag_ids: tagIds,
+      offer_ids: formState.offerIds,
+      faq_ids: formState.faqIds,
       meta_title: formState.metaTitle.trim() ? formState.metaTitle.trim() : null,
       meta_description: formState.metaDescription.trim()
         ? formState.metaDescription.trim()
@@ -933,6 +1028,88 @@ const BlogPostsPage = () => {
                             className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
                           />
                           <span>{tag.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">Oferte asociate</p>
+                {availableOffers.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Nu există oferte disponibile. Creează oferte în secțiunea dedicată din admin pentru a le atașa articolelor.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                    {availableOffers.map((offer) => {
+                      const checked = formState.offerIds.includes(offer.id);
+                      const inputId = `blog-offer-${offer.id}`;
+                      const label = offer.discount_label
+                        ? `${offer.title} (${offer.discount_label})`
+                        : offer.title;
+                      return (
+                        <label key={offer.id} htmlFor={inputId} className="flex items-center gap-2 text-sm">
+                          <input
+                            id={inputId}
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleOffer(offer.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+                          />
+                          <span>{label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-medium text-gray-700">Întrebări frecvente asociate</p>
+                  {faqCategories.length > 0 && (
+                    <Select
+                      id="blog-post-faq-category"
+                      value={faqCategoryFilter}
+                      onValueChange={(value) => setFaqCategoryFilter(value)}
+                    >
+                      {faqCategories.map((category) => (
+                        <option key={category.id} value={String(category.id)}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </div>
+                {availableFaqs.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Nu există întrebări frecvente disponibile. Creează FAQ-uri pentru a le recomanda lângă articol.
+                  </p>
+                ) : faqCategories.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Nu există categorii de FAQ disponibile. Creează o categorie pentru a putea selecta întrebări.
+                  </p>
+                ) : filteredFaqs.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Categoria selectată nu are întrebări disponibile. Alege alta pentru a atașa FAQ-uri.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                    {filteredFaqs.map((faq) => {
+                      const checked = formState.faqIds.includes(faq.id);
+                      const inputId = `blog-faq-${faq.id}`;
+                      return (
+                        <label key={faq.id} htmlFor={inputId} className="flex items-center gap-2 text-sm">
+                          <input
+                            id={inputId}
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleFaq(faq.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+                          />
+                          <span>{faq.question}</span>
                         </label>
                       );
                     })}
