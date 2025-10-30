@@ -78,7 +78,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     ...localeBootstrapConfig,
     initialLocale,
   });
-  const headerList = headers();
+  const headerList = await headers();
   const rawPathname =
     headerList.get("x-dacars-pathname") ??
     headerList.get("x-next-url") ??

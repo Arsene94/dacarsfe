@@ -33,13 +33,13 @@ const ensureLeadingSlash = (value: string): string => {
   return value.startsWith("/") ? value : `/${value}`;
 };
 
-const resolveRequestPathname = (explicitPath?: string): string => {
+const resolveRequestPathname = async (explicitPath?: string): Promise<string> => {
   if (explicitPath && explicitPath.trim().length > 0) {
     return ensureLeadingSlash(explicitPath.trim());
   }
 
   try {
-    const headerList = headers();
+    const headerList = await headers();
     const headerCandidates = [
       headerList.get("x-dacars-pathname"),
       headerList.get("x-next-url"),
@@ -75,13 +75,17 @@ type LocaleHeadTagsProps = {
   pathname?: string;
 };
 
-const LocaleHeadTags = ({ locale, languages = AVAILABLE_LOCALES, pathname }: LocaleHeadTagsProps) => {
+const LocaleHeadTags = async ({
+  locale,
+  languages = AVAILABLE_LOCALES,
+  pathname,
+}: LocaleHeadTagsProps): Promise<JSX.Element> => {
   const dedupedLocales = uniqueLocales([locale, ...languages]);
   const languageName = LANGUAGE_NAMES[locale] ?? locale;
   const contentLanguage = CONTENT_LANGUAGE_MAP[locale] ?? locale;
   const openGraphLocale = resolveOpenGraphLocale(locale);
   const alternateLocales = dedupedLocales.filter((candidate) => candidate !== locale);
-  const requestPathname = resolveRequestPathname(pathname);
+  const requestPathname = await resolveRequestPathname(pathname);
   const localizedPath = resolveLocalizedPathname(requestPathname, locale);
   const canonicalHref = buildCanonicalUrl(localizedPath);
   const alternates = hreflangLinks(localizedPath, dedupedLocales);

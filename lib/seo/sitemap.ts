@@ -44,11 +44,11 @@ const DYNAMIC_ENTRIES_REVALIDATE_SECONDS = 60 * 10; // 10 minute
 const SITEMAP_CACHE_TAG = "seo-sitemap-entries" as const;
 const SITEMAP_REVALIDATE_SECONDS = 60 * 10; // 10 minute
 const BLOG_SITEMAP_PARAMS = {
-    status: "published" as const,
-    sort: "-published_at,-id" as const,
-    limit: BLOG_SITEMAP_FETCH_LIMIT as const,
-    fields: "id,slug,published_at,updated_at" as const,
-};
+    status: "published",
+    sort: "-published_at,-id",
+    limit: BLOG_SITEMAP_FETCH_LIMIT,
+    fields: "id,slug,published_at,updated_at",
+} as const;
 
 const FREQUENCY_WEIGHT: Record<Exclude<ChangeFrequency, undefined>, number> = {
     always: 6,
@@ -184,12 +184,16 @@ const discoverStaticPages = async (
 };
 
 const applyOverrides = (discovered: DiscoveredPage[], generatedAt: string): SitemapEntry[] => {
-    const overrides = new Map(
-        [
-            ...STATIC_PAGES.map((page) => [page.path, page] as const),
-            ["/blog", { changeFrequency: "daily" as ChangeFrequency, priority: 0.7 } as const],
-        ],
-    );
+    const overrides = new Map<string, { changeFrequency?: ChangeFrequency; priority?: number }>([
+        ...STATIC_PAGES.map(
+            (page) =>
+                [
+                    page.path,
+                    { changeFrequency: page.changeFrequency, priority: page.priority },
+                ] as const,
+        ),
+        ["/blog", { changeFrequency: "daily", priority: 0.7 }],
+    ]);
 
     return discovered.map((page) => {
         const override = overrides.get(page.path);
