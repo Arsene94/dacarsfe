@@ -34,6 +34,18 @@ type CacheEntry = {
     structuredData: JsonLdPayload[];
 };
 
+const isFaqStructuredData = (entry: JsonLdPayload): boolean => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return false;
+    }
+
+    const type = Reflect.get(entry, "@type");
+    return type === "FAQPage";
+};
+
+const stripFaqStructuredData = (entries: JsonLdPayload[]): JsonLdPayload[] =>
+    entries.filter((entry) => !isFaqStructuredData(entry));
+
 const BlogPostPageContent = ({
     slug,
     initialLocale,
@@ -47,23 +59,33 @@ const BlogPostPageContent = ({
     const [copy, setCopy] = useState(initialCopy);
     const [post, setPost] = useState<BlogPost>(initialPost);
     const [summary, setSummary] = useState(initialSummary);
-    const [structuredData, setStructuredData] = useState<JsonLdPayload[]>(initialStructuredData);
+    const [structuredData, setStructuredData] = useState<JsonLdPayload[]>(stripFaqStructuredData(initialStructuredData));
     const [isLoading, setIsLoading] = useState(false);
 
     const cacheRef = useRef<Map<Locale, CacheEntry>>(
-        new Map([[initialLocale, { post: initialPost, summary: initialSummary, structuredData: initialStructuredData }]]),
+        new Map([
+            [
+                initialLocale,
+                {
+                    post: initialPost,
+                    summary: initialSummary,
+                    structuredData: stripFaqStructuredData(initialStructuredData),
+                },
+            ],
+        ]),
     );
 
     useEffect(() => {
+        const sanitizedStructuredData = stripFaqStructuredData(initialStructuredData);
         cacheRef.current.set(initialLocale, {
             post: initialPost,
             summary: initialSummary,
-            structuredData: initialStructuredData,
+            structuredData: sanitizedStructuredData,
         });
         setCopy(initialCopy);
         setPost(initialPost);
         setSummary(initialSummary);
-        setStructuredData(initialStructuredData);
+        setStructuredData(sanitizedStructuredData);
     }, [initialCopy, initialLocale, initialPost, initialStructuredData, initialSummary]);
 
     useEffect(() => {
@@ -92,27 +114,29 @@ const BlogPostPageContent = ({
                 if (!fetchedPost) {
                     const fallbackSummary = extractBlogSummary(initialPost);
                     const fallbackStructuredData = buildBlogPostStructuredData(initialPost, nextCopy, fallbackSummary);
+                    const sanitizedStructuredData = stripFaqStructuredData(fallbackStructuredData);
                     cacheRef.current.set(locale, {
                         post: initialPost,
                         summary: fallbackSummary,
-                        structuredData: fallbackStructuredData,
+                        structuredData: sanitizedStructuredData,
                     });
                     setPost(initialPost);
                     setSummary(fallbackSummary);
-                    setStructuredData(fallbackStructuredData);
+                    setStructuredData(sanitizedStructuredData);
                     return;
                 }
 
                 const fetchedSummary = extractBlogSummary(fetchedPost);
                 const fetchedStructuredData = buildBlogPostStructuredData(fetchedPost, nextCopy, fetchedSummary);
+                const sanitizedStructuredData = stripFaqStructuredData(fetchedStructuredData);
                 cacheRef.current.set(locale, {
                     post: fetchedPost,
                     summary: fetchedSummary,
-                    structuredData: fetchedStructuredData,
+                    structuredData: sanitizedStructuredData,
                 });
                 setPost(fetchedPost);
                 setSummary(fetchedSummary);
-                setStructuredData(fetchedStructuredData);
+                setStructuredData(sanitizedStructuredData);
             } catch (error) {
                 console.error("Nu am putut reîncărca articolul de blog pentru noua limbă", error);
                 if (!isActive) {
@@ -120,14 +144,15 @@ const BlogPostPageContent = ({
                 }
                 const fallbackSummary = extractBlogSummary(initialPost);
                 const fallbackStructuredData = buildBlogPostStructuredData(initialPost, nextCopy, fallbackSummary);
+                const sanitizedStructuredData = stripFaqStructuredData(fallbackStructuredData);
                 cacheRef.current.set(locale, {
                     post: initialPost,
                     summary: fallbackSummary,
-                    structuredData: fallbackStructuredData,
+                    structuredData: sanitizedStructuredData,
                 });
                 setPost(initialPost);
                 setSummary(fallbackSummary);
-                setStructuredData(fallbackStructuredData);
+                setStructuredData(sanitizedStructuredData);
             } finally {
                 if (isActive) {
                     setIsLoading(false);

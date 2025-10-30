@@ -12,6 +12,8 @@ import {
 } from "@/lib/blog/publicBlog";
 import { resolveMediaUrl } from "@/lib/media";
 import { buildMetadata } from "@/lib/seo/meta";
+import { buildFaqJsonLd, type JsonLd } from "@/lib/seo/jsonld";
+import type { BlogPost } from "@/types/blog";
 
 export const revalidate = 300;
 
@@ -66,15 +68,46 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
     const summary = extractBlogSummary(post);
     const structuredData = buildBlogPostStructuredData(post, copy, summary);
+    const faqStructuredData = buildFaqJsonLd(extractFaqEntries(post));
+    const sanitizedStructuredData = faqStructuredData
+        ? structuredData.filter((entry) => !isFaqStructuredData(entry))
+        : structuredData;
+    const faqJson = faqStructuredData ? JSON.stringify(faqStructuredData) : null;
 
     return (
-        <BlogPostPageContent
-            slug={slug}
-            initialLocale={locale}
-            initialCopy={copy}
-            initialPost={post}
-            initialSummary={summary}
-            initialStructuredData={structuredData}
-        />
+        <>
+            {faqJson ? (
+                <script
+                    id="blog-post-faq-structured-data"
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: faqJson }}
+                />
+            ) : null}
+            <BlogPostPageContent
+                slug={slug}
+                initialLocale={locale}
+                initialCopy={copy}
+                initialPost={post}
+                initialSummary={summary}
+                initialStructuredData={sanitizedStructuredData}
+            />
+        </>
     );
 }
+
+const isFaqStructuredData = (entry: JsonLd): boolean => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return false;
+    }
+
+    const type = Reflect.get(entry, "@type");
+    return type === "FAQPage";
+};
+
+const extractFaqEntries = (post: BlogPost) =>
+    (post.faqs ?? [])
+        .map((faq) => ({
+            question: faq?.question?.trim() ?? "",
+            answer: faq?.answer?.trim() ?? "",
+        }))
+        .filter((entry) => entry.question.length > 0 && entry.answer.length > 0);
