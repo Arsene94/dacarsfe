@@ -23,13 +23,53 @@ if (isProduction) {
 const noscriptStyles = '<link rel="stylesheet" href="/tailwind.css" />';
 const CRITICAL_STYLE_ID = "critical-tailwind";
 const TAILWIND_HREF = "/tailwind.css";
+const INLINE_CACHE_MARKER = "tailwind-inline-cache";
 
 const loadDeferredTailwindScript = `
   (function() {
     var href = '${TAILWIND_HREF}';
-    var marker = 'tailwind-inline-cache';
-    var existing = document.querySelector('link[data-inline-cache="' + marker + '"]');
-    if (existing) {
+    var marker = '${INLINE_CACHE_MARKER}';
+    var critical = document.getElementById('${CRITICAL_STYLE_ID}');
+
+    var activateStylesheet = function(link) {
+      if (!link) {
+        return;
+      }
+
+      var finalize = function() {
+        link.media = 'all';
+        if (critical && critical.parentNode) {
+          critical.parentNode.removeChild(critical);
+        }
+      };
+
+      if (link.rel === 'preload') {
+        link.rel = 'stylesheet';
+        link.media = 'print';
+
+        if (link.sheet) {
+          finalize();
+          return;
+        }
+
+        link.addEventListener('load', finalize, { once: true });
+        link.addEventListener('error', finalize, { once: true });
+        return;
+      }
+
+      link.addEventListener('load', finalize, { once: true });
+    };
+
+    var existingStylesheet = document.querySelector('link[rel="stylesheet"][data-inline-cache="' + marker + '"]');
+    if (existingStylesheet) {
+      activateStylesheet(existingStylesheet);
+      return;
+    }
+
+    var preloadLink = document.querySelector('link[rel="preload"][as="style"][href="' + href + '"]');
+    if (preloadLink) {
+      preloadLink.setAttribute('data-inline-cache', marker);
+      activateStylesheet(preloadLink);
       return;
     }
 
@@ -40,14 +80,7 @@ const loadDeferredTailwindScript = `
       link.media = 'print';
       link.setAttribute('data-inline-cache', marker);
 
-      var critical = document.getElementById('${CRITICAL_STYLE_ID}');
-
-      link.addEventListener('load', function() {
-        link.media = 'all';
-        if (critical && critical.parentNode) {
-          critical.parentNode.removeChild(critical);
-        }
-      }, { once: true });
+      activateStylesheet(link);
 
       if (critical && critical.parentNode) {
         critical.parentNode.insertBefore(link, critical.nextSibling);
@@ -56,22 +89,12 @@ const loadDeferredTailwindScript = `
       }
     };
 
-    var schedule = function() {
-      if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(function() {
-          inject();
-        }, { timeout: 3000 });
-      } else {
-        window.setTimeout(inject, 500);
-      }
-    };
-
     if (document.readyState === 'complete') {
-      schedule();
+      inject();
       return;
     }
 
-    window.addEventListener('load', schedule, { once: true });
+    window.addEventListener('load', inject, { once: true });
   })();
 `.trim();
 
@@ -92,6 +115,13 @@ export function GlobalStyles(): JSX.Element | null {
       <style
         id={CRITICAL_STYLE_ID}
         dangerouslySetInnerHTML={{ __html: inlineTailwindCss }}
+      />
+      {/* Preload foaia completă pentru a începe descărcarea cât timp documentul este încă analizat */}
+      <link
+        rel="preload"
+        as="style"
+        href={TAILWIND_HREF}
+        data-inline-cache={INLINE_CACHE_MARKER}
       />
       <Script
         id="defer-tailwind"

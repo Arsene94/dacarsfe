@@ -36,6 +36,12 @@ const nextConfig = {
         } : false,
     },
 
+    experimental: {
+        // Compile and bundle exclusively for browsere moderne, fără polyfill-uri ES5
+        legacyBrowsers: false,
+        browsersListForSwc: true,
+    },
+
     turbopack: {
         rules: {
             '*.svg': {
