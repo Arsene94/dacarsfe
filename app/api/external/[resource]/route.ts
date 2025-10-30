@@ -48,6 +48,23 @@ const buildTargetUrl = (req: NextRequest, config: ResourceConfig): string => {
     return config.url;
 };
 
+const pickForwardHeaders = (req: NextRequest): HeadersInit => {
+    const headers = new Headers();
+    const FORWARDED_HEADER_KEYS = ["user-agent", "accept-language", "referer", "origin"];
+
+    FORWARDED_HEADER_KEYS.forEach((key) => {
+        const value = req.headers.get(key);
+
+        if (value) {
+            headers.set(key, value);
+        }
+    });
+
+    headers.set("Accept", "application/javascript, text/javascript, */*;q=0.1");
+
+    return headers;
+};
+
 export async function GET(req: NextRequest, context: any) {
     const key = normalizeResourceKey(context?.params?.resource);
 
@@ -74,22 +91,24 @@ export async function GET(req: NextRequest, context: any) {
     try {
         upstream = await fetch(targetUrl, {
             cache: "no-store",
-            headers: {
-                Accept: "application/javascript, text/javascript, */*;q=0.1",
-            },
+            headers: pickForwardHeaders(req),
         });
     } catch (error) {
         console.error("Nu am putut descărca resursa externă", { targetUrl, error });
-        return NextResponse.json({ error: "Nu am putut descărca resursa externă" }, {
-            status: 502,
-            headers: { "Cache-Control": "no-store" },
+        return NextResponse.redirect(targetUrl, {
+            status: 307,
         });
     }
 
     if (!upstream.ok) {
-        return NextResponse.json({ error: "Răspuns invalid de la furnizorul extern" }, {
+        console.error("Răspuns invalid de la furnizorul extern", {
+            targetUrl,
             status: upstream.status,
-            headers: { "Cache-Control": "no-store" },
+            statusText: upstream.statusText,
+        });
+
+        return NextResponse.redirect(targetUrl, {
+            status: 307,
         });
     }
 
