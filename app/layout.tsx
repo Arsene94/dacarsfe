@@ -5,7 +5,7 @@ import PageTransition from "../components/PageTransition";
 import ScrollPositionManager from "../components/ScrollPositionManager";
 import Script from "next/script";
 import type { ReactNode } from "react";
-import { Partytown } from "@builder.io/partytown/react";
+import { Partytown } from "@qwik.dev/partytown/react";
 import { headers } from "next/headers";
 import { BookingProvider } from "@/context/BookingProvider";
 import { AuthProvider } from "@/context/AuthContext";

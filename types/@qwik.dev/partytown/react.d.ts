@@ -1,6 +1,6 @@
 import type { FunctionComponent, ReactNode } from "react";
 
-declare module "@builder.io/partytown/react" {
+declare module "@qwik.dev/partytown/react" {
     type ForwardProperty = string | readonly string[];
 
     interface PartytownProps {
