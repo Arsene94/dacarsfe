@@ -12,6 +12,7 @@ import {
 } from "@/lib/blog/publicBlog";
 import { resolveMediaUrl } from "@/lib/media";
 import { buildMetadata } from "@/lib/seo/meta";
+import type { JsonLd } from "@/lib/seo/jsonld";
 
 export const revalidate = 300;
 
@@ -66,15 +67,53 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
     const summary = extractBlogSummary(post);
     const structuredData = buildBlogPostStructuredData(post, copy, summary);
+    let faqStructuredData: JsonLd | null = null;
+    const sanitizedStructuredData = structuredData.filter((entry) => {
+        if (isFaqStructuredData(entry)) {
+            if (!faqStructuredData) {
+                faqStructuredData = entry;
+            }
+            return false;
+        }
+        return true;
+    });
+    const faqJson = faqStructuredData ? safeJsonStringify(faqStructuredData) : null;
 
     return (
-        <BlogPostPageContent
-            slug={slug}
-            initialLocale={locale}
-            initialCopy={copy}
-            initialPost={post}
-            initialSummary={summary}
-            initialStructuredData={structuredData}
-        />
+        <>
+            {faqJson ? (
+                <script
+                    id="blog-post-faq-structured-data"
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: faqJson }}
+                />
+            ) : null}
+            <BlogPostPageContent
+                slug={slug}
+                initialLocale={locale}
+                initialCopy={copy}
+                initialPost={post}
+                initialSummary={summary}
+                initialStructuredData={sanitizedStructuredData}
+            />
+        </>
     );
 }
+
+const isFaqStructuredData = (entry: JsonLd): boolean => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return false;
+    }
+
+    const type = Reflect.get(entry, "@type");
+    return type === "FAQPage";
+};
+
+const safeJsonStringify = (value: JsonLd): string | null => {
+    try {
+        return JSON.stringify(value);
+    } catch (error) {
+        console.error("Nu am putut serializa schema FAQ pentru blog", error);
+        return null;
+    }
+};
