@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import "./admin.css";
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/AdminSidebar";
 import { FORBIDDEN_EVENT } from "@/lib/api";

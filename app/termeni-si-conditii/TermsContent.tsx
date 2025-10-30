@@ -1,7 +1,5 @@
 "use client";
 
-import "./terms-content.css";
-
 import { useEffect, useMemo, useState } from "react";
 
 import { useLocale } from "@/context/LocaleContext";

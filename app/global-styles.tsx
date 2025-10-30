@@ -89,12 +89,38 @@ const loadDeferredTailwindScript = `
       }
     };
 
-    if (document.readyState === 'complete') {
-      inject();
-      return;
-    }
+    var scheduleInjection = function() {
+      var run = function() {
+        var start = function() {
+          if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(inject);
+            return;
+          }
 
-    window.addEventListener('load', inject, { once: true });
+          inject();
+        };
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(function() { start(); }, { timeout: 1200 });
+          return;
+        }
+
+        start();
+      };
+
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        run();
+        return;
+      }
+
+      var handleReady = function() {
+        document.removeEventListener('DOMContentLoaded', handleReady);
+        run();
+      };
+
+      document.addEventListener('DOMContentLoaded', handleReady, { once: true });
+    };
+
+    scheduleInjection();
   })();
 `.trim();
 

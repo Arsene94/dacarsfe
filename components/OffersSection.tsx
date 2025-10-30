@@ -6,6 +6,7 @@ import { Calendar, Gift, Heart, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ApplyOfferButton from "@/components/offers/ApplyOfferButton";
 import { formatOfferBadge } from "@/lib/offers";
+import { usePublicOffersAvailability } from "@/lib/offers/usePublicOffersAvailability";
 import { useTranslations } from "@/lib/i18n/useTranslations";
 import { cn } from "@/lib/utils";
 import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
@@ -182,6 +183,7 @@ const OffersSection = ({ initialOffers = [] }: OffersSectionProps) => {
     const offers = (messages.offers ?? {}) as OffersMessages;
     const cards = offers.cards ?? [];
     const secondaryButton = offers.cta?.secondaryButton ?? "Rezervă cu reducere";
+    const { hasOffers } = usePublicOffersAvailability();
 
     const remoteOffers = useMemo(
         () =>
@@ -191,7 +193,7 @@ const OffersSection = ({ initialOffers = [] }: OffersSectionProps) => {
         [initialOffers],
     );
 
-    const displayedCards = remoteOffers.length > 0 ? remoteOffers : cards;
+    const displayedCards = remoteOffers.length > 0 ? remoteOffers : hasOffers === false ? [] : cards;
     const hasAnyOffer = displayedCards.length > 0;
 
     if (!hasAnyOffer) {
