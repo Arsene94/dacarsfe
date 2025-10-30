@@ -12,8 +12,7 @@ import {
 } from "@/lib/blog/publicBlog";
 import { resolveMediaUrl } from "@/lib/media";
 import { buildMetadata } from "@/lib/seo/meta";
-import { buildFaqJsonLd, type JsonLd } from "@/lib/seo/jsonld";
-import type { BlogPost } from "@/types/blog";
+import type { JsonLd } from "@/lib/seo/jsonld";
 
 export const revalidate = 300;
 
@@ -68,11 +67,17 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
     const summary = extractBlogSummary(post);
     const structuredData = buildBlogPostStructuredData(post, copy, summary);
-    const faqStructuredData = buildFaqJsonLd(extractFaqEntries(post));
-    const sanitizedStructuredData = faqStructuredData
-        ? structuredData.filter((entry) => !isFaqStructuredData(entry))
-        : structuredData;
-    const faqJson = faqStructuredData ? JSON.stringify(faqStructuredData) : null;
+    let faqStructuredData: JsonLd | null = null;
+    const sanitizedStructuredData = structuredData.filter((entry) => {
+        if (isFaqStructuredData(entry)) {
+            if (!faqStructuredData) {
+                faqStructuredData = entry;
+            }
+            return false;
+        }
+        return true;
+    });
+    const faqJson = faqStructuredData ? safeJsonStringify(faqStructuredData) : null;
 
     return (
         <>
@@ -104,10 +109,11 @@ const isFaqStructuredData = (entry: JsonLd): boolean => {
     return type === "FAQPage";
 };
 
-const extractFaqEntries = (post: BlogPost) =>
-    (post.faqs ?? [])
-        .map((faq) => ({
-            question: faq?.question?.trim() ?? "",
-            answer: faq?.answer?.trim() ?? "",
-        }))
-        .filter((entry) => entry.question.length > 0 && entry.answer.length > 0);
+const safeJsonStringify = (value: JsonLd): string | null => {
+    try {
+        return JSON.stringify(value);
+    } catch (error) {
+        console.error("Nu am putut serializa schema FAQ pentru blog", error);
+        return null;
+    }
+};
