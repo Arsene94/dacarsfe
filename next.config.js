@@ -9,6 +9,20 @@ const nextConfig = {
     compress: true,
     poweredByHeader: false,
 
+    async headers() {
+        return [
+            {
+                source: '/scripts/:path*',
+                headers: [
+                    {
+                        key: 'Cache-Control',
+                        value: 'public, max-age=31536000, immutable',
+                    },
+                ],
+            },
+        ];
+    },
+
     // Compiler optimizations with modern JS target
     compiler: {
         // Remove console logs in production
