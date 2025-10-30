@@ -2,7 +2,11 @@ import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import type { MetadataRoute } from "next";
 import { unstable_cache } from "next/cache";
-import { createApiClient } from "@/lib/api";
+import {
+    createApiClient,
+    isApiNetworkError,
+    shouldBypassApiDuringStaticBuild,
+} from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { SITE_URL } from "@/lib/config";
 import {
@@ -258,6 +262,13 @@ const fallbackBlogSitemapEntries = (): SitemapEntry[] =>
     ).filter((entry): entry is SitemapEntry => entry !== null);
 
 const fetchBlogSitemapEntries = async (): Promise<SitemapEntry[]> => {
+    if (shouldBypassApiDuringStaticBuild()) {
+        console.info(
+            "Omit încărcarea articolelor dinamice pentru sitemap în timpul build-ului static; folosim fallback-ul predefinit.",
+        );
+        return fallbackBlogSitemapEntries();
+    }
+
     try {
         const client = createApiClient();
         const response = await client.getBlogPosts(BLOG_SITEMAP_PARAMS);
@@ -273,7 +284,16 @@ const fetchBlogSitemapEntries = async (): Promise<SitemapEntry[]> => {
             )
             .filter((entry): entry is SitemapEntry => entry !== null);
     } catch (error) {
-        console.error("Nu am putut încărca articolele pentru sitemap", error);
+        if (isApiNetworkError(error) && shouldBypassApiDuringStaticBuild()) {
+            console.info(
+                "Nu am putut încărca articolele pentru sitemap din API în timpul build-ului static; folosim fallback-ul local.",
+                error,
+            );
+        } else if (isApiNetworkError(error)) {
+            console.warn("Nu am putut încărca articolele pentru sitemap", error);
+        } else {
+            console.error("Nu am putut încărca articolele pentru sitemap", error);
+        }
         return fallbackBlogSitemapEntries();
     }
 };

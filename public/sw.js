@@ -1,6 +1,6 @@
 const META_PIXEL_HOSTNAME = "connect.facebook.net";
 const META_PIXEL_PATH_SUFFIX = "/fbevents.js";
-const META_PIXEL_LOCAL_PATH = "/scripts/fbevents.js";
+const META_PIXEL_LOCAL_PATH = "/api/external/meta-pixel.js";
 const META_PIXEL_FALLBACK_SCRIPT = `/* Meta Pixel indisponibil: răspuns fallback din service worker */\nif (typeof self !== 'undefined' && !self.fbq) {\n  const queue = [];\n  const fbqFallback = function fbqFallback() {\n    queue.push(Array.prototype.slice.call(arguments));\n  };\n  fbqFallback.loaded = false;\n  fbqFallback.version = '2.0';\n  fbqFallback.queue = queue;\n  self.fbq = fbqFallback;\n}`;
 
 self.addEventListener("install", (event) => {

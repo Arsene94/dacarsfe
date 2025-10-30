@@ -5,6 +5,7 @@ import PageTransition from "../components/PageTransition";
 import ScrollPositionManager from "../components/ScrollPositionManager";
 import Script from "next/script";
 import type { ReactNode } from "react";
+import { Partytown } from "@builder.io/partytown/react";
 import { headers } from "next/headers";
 import { BookingProvider } from "@/context/BookingProvider";
 import { AuthProvider } from "@/context/AuthContext";
@@ -78,6 +79,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     ...localeBootstrapConfig,
     initialLocale,
   });
+  const localeBootstrapScript = `(()=>{try{const c=${bootstrapPayload};const list=(values)=>Array.isArray(values)?values.map((value)=>String(value||"").toLowerCase()).filter(Boolean):[];const supported=list(c.supportedLocales);const normalize=(raw)=>{if(!raw)return"";const lowered=String(raw).trim().toLowerCase();if(!lowered)return"";if(supported.includes(lowered))return lowered;const base=lowered.split(/[-_]/)[0];return supported.includes(base)?base:"";};const apply=(locale)=>{if(!locale)return;document.documentElement.lang=locale;document.documentElement.setAttribute("data-locale",locale);};const stored=window.localStorage.getItem(c.storageKey);const cookieMatch=document.cookie.match(new RegExp("(?:^|; )"+c.cookiePattern+"=([^;]+)"));const cookie=cookieMatch?decodeURIComponent(cookieMatch[1]):"";const nav=normalize(window.navigator.language||window.navigator.userLanguage);const fallback=normalize(c.fallbackLocale)||"${FALLBACK_LOCALE}";const preferred=normalize(c.initialLocale)||normalize(stored)||normalize(cookie)||nav||fallback;apply(preferred);if(preferred&&normalize(stored)!==preferred){try{window.localStorage.setItem(c.storageKey,preferred);}catch(e){}}if(!preferred){apply(fallback);}}catch(error){document.documentElement.setAttribute("data-locale","${FALLBACK_LOCALE}");document.documentElement.lang="${FALLBACK_LOCALE}";}})();`;
   const headerList = await headers();
   const rawPathname =
     headerList.get("x-dacars-pathname") ??
@@ -108,6 +110,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     >
     <head>
         <GlobalStyles/>
+        <Partytown
+          debug={false}
+          forward={["fbq", "ttq.track", "ttq.identify"]}
+        />
         <TikTokPixelScript/>
         <GoogleAnalytics gaId="G-R1B5YS77GK"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -129,62 +135,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         />
     </head>
     <body className="min-h-screen bg-white">
-        <Script id="prefill-locale" strategy="beforeInteractive">
-          {`
-            (function() {
-              var payload = ${bootstrapPayload};
-              try {
-                var config = typeof payload === 'string' ? JSON.parse(payload) : payload;
-                var supported = Array.isArray(config.supportedLocales) ? config.supportedLocales : [];
-                var isSupported = function(locale) {
-                  if (typeof locale !== 'string' || locale.trim().length === 0) {
-                    return false;
-                  }
-                  var lower = locale.toLowerCase();
-                  if (supported.indexOf(lower) !== -1) {
-                    return true;
-                  }
-                  var base = lower.split(/[-_]/)[0];
-                  return supported.indexOf(base) !== -1;
-                };
-                var normalize = function(locale) {
-                  if (!locale) return '';
-                  var trimmed = locale.trim();
-                  if (!trimmed) return '';
-                  var lower = trimmed.toLowerCase();
-                  if (isSupported(lower)) return lower;
-                  var base = lower.split(/[-_]/)[0];
-                  if (isSupported(base)) return base;
-                  return '';
-                };
-                var stored = window.localStorage.getItem(config.storageKey);
-                var cookieMatch = document.cookie.match(new RegExp('(?:^|; )' + config.cookiePattern + '=([^;]+)'));
-                var cookieLocale = cookieMatch ? decodeURIComponent(cookieMatch[1]) : '';
-                var navigatorLocale = normalize(window.navigator.language || window.navigator.userLanguage || '');
-                var initial = normalize(config.initialLocale);
-                var preferred = normalize(stored) || normalize(cookieLocale) || navigatorLocale || initial || config.fallbackLocale;
-                if (preferred) {
-                  document.documentElement.lang = preferred;
-                  document.documentElement.setAttribute('data-locale', preferred);
-                  if (!stored || normalize(stored) !== preferred) {
-                    try {
-                      window.localStorage.setItem(config.storageKey, preferred);
-                    } catch (storageError) {
-                      console.warn('Nu am putut salva limba preferată în localStorage', storageError);
-                    }
-                  }
-                  return;
-                }
-              } catch (error) {
-                console.warn('Nu am putut citi limba salvată înainte de hidratare', error);
-              }
-              if (!document.documentElement.getAttribute('data-locale')) {
-                document.documentElement.setAttribute('data-locale', '${FALLBACK_LOCALE}');
-                document.documentElement.lang = '${FALLBACK_LOCALE}';
-              }
-            })();
-          `}
-        </Script>
+        <Script
+          id="prefill-locale"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: localeBootstrapScript }}
+        />
         <LocaleProvider initialLocale={initialLocale}>
           <AuthProvider>
             <BookingProvider>
@@ -202,7 +157,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {`
             setTimeout(() => {
               const s = document.createElement("script");
-              s.src = "https://cdn.cookie-script.com/s/1dbe1a6c3b981120922353311f510e1d.js";
+              s.src = "/api/external/cookie-script.js";
               s.async = true;
               document.body.appendChild(s);
             }, 3000);

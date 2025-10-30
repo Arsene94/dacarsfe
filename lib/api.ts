@@ -207,6 +207,70 @@ type RolePayload = {
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+const STATIC_BUILD_PHASE = 'phase-production-build' as const;
+const FORCE_API_FETCH_FLAG = 'DACARS_FORCE_API_FETCH' as const;
+const TRANSIENT_ERROR_CODES = new Set([
+    'ECONNREFUSED',
+    'ECONNRESET',
+    'ENOTFOUND',
+    'EAI_AGAIN',
+    'ETIMEDOUT',
+]);
+
+const readErrorCode = (value: unknown): string | null => {
+    if (!value || typeof value !== 'object') {
+        return null;
+    }
+
+    const withCode = value as { code?: unknown; cause?: unknown };
+    if (typeof withCode.code === 'string') {
+        return withCode.code;
+    }
+
+    if (withCode.cause) {
+        return readErrorCode(withCode.cause);
+    }
+
+    return null;
+};
+
+export const isApiNetworkError = (error: unknown): boolean => {
+    if (!(error instanceof Error)) {
+        return false;
+    }
+
+    const errorCode = readErrorCode(error);
+    if (errorCode && TRANSIENT_ERROR_CODES.has(errorCode)) {
+        return true;
+    }
+
+    if (error instanceof TypeError) {
+        const normalizedMessage = error.message?.toLowerCase() ?? '';
+        if (normalizedMessage.includes('fetch failed') || normalizedMessage.includes('network request failed')) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+export const shouldBypassApiDuringStaticBuild = (): boolean => {
+    if (process.env[FORCE_API_FETCH_FLAG] === '1') {
+        return false;
+    }
+
+    if (process.env.NEXT_PHASE !== STATIC_BUILD_PHASE) {
+        return false;
+    }
+
+    const configuredBase = process.env.NEXT_PUBLIC_API_URL;
+    if (typeof configuredBase === 'string' && configuredBase.trim().length > 0) {
+        return false;
+    }
+
+    return true;
+};
+
 export const FORBIDDEN_EVENT = "dacars:api:forbidden";
 const FORBIDDEN_MESSAGE = "Forbidden";
 
@@ -478,7 +542,18 @@ export class ApiClient {
             }
             return {} as T;
         } catch (error) {
-            console.error('API request failed:', error);
+            if (isApiNetworkError(error)) {
+                if (shouldBypassApiDuringStaticBuild()) {
+                    console.info(
+                        'Cererea către API a eșuat în timpul build-ului static și vom folosi datele fallback.',
+                        error,
+                    );
+                } else {
+                    console.warn('API request failed:', error);
+                }
+            } else {
+                console.error('API request failed:', error);
+            }
             throw error;
         }
     }
