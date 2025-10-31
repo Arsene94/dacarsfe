@@ -67,39 +67,23 @@ const pickForwardHeaders = (req: NextRequest): HeadersInit => {
 
 type RouteContext = { params?: { resource?: string } };
 
-const PASS_THROUGH_HEADERS = [
-    "content-length",
-    "content-encoding",
-    "last-modified",
-    "vary",
-];
-
 const buildResponseFromUpstream = (upstream: Response, contentType?: string) => {
-    const response = new NextResponse(upstream.body, {
-        status: upstream.status,
-    });
+    const headers = new Headers(upstream.headers);
 
     if (contentType) {
-        response.headers.set("Content-Type", contentType);
+        headers.set("content-type", contentType);
     }
 
-    PASS_THROUGH_HEADERS.forEach((header) => {
-        const value = upstream.headers.get(header);
+    headers.set("cache-control", CACHE_CONTROL_HEADER);
 
-        if (value) {
-            response.headers.set(header, value);
-        }
+    // Streaming responses should not advertise the upstream content length to avoid mismatches when
+    // Next.js re-chunks the readable stream. Browsers will happily accept chunked transfer encoding.
+    headers.delete("content-length");
+
+    return new Response(upstream.body, {
+        status: upstream.status,
+        headers,
     });
-
-    const etag = upstream.headers.get("etag");
-
-    if (etag) {
-        response.headers.set("ETag", etag);
-    }
-
-    response.headers.set("Cache-Control", CACHE_CONTROL_HEADER);
-
-    return response;
 };
 
 export async function GET(req: NextRequest, context: RouteContext) {
