@@ -110,11 +110,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     >
     <head>
         <GlobalStyles/>
+        <TikTokPixelScript/>
         <Partytown
           debug={false}
           forward={["fbq", "ttq.track", "ttq.identify"]}
         />
-        <TikTokPixelScript/>
         <GoogleAnalytics gaId="G-R1B5YS77GK"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
         <link
