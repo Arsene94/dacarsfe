@@ -17,7 +17,7 @@ const DeferredHydration = ({ children, timeout = DEFAULT_TIMEOUT }: DeferredHydr
     const [isReady, setIsReady] = useState(false);
 
     useEffect(() => {
-        if (typeof window === "undefined") {
+        if (isReady || typeof window === "undefined") {
             return;
         }
 
@@ -47,7 +47,7 @@ const DeferredHydration = ({ children, timeout = DEFAULT_TIMEOUT }: DeferredHydr
             }
             window.clearTimeout(timeoutHandle);
         };
-    }, [timeout]);
+    }, [isReady, timeout]);
 
     const content = useMemo(() => {
         if (!isReady) {
@@ -57,7 +57,11 @@ const DeferredHydration = ({ children, timeout = DEFAULT_TIMEOUT }: DeferredHydr
         return typeof children === "function" ? children() : children;
     }, [children, isReady]);
 
-    return <>{content}</>;
+    return (
+        <span data-deferred-hydration="" suppressHydrationWarning>
+            {content}
+        </span>
+    );
 };
 
 export default DeferredHydration;
