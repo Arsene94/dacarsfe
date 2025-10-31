@@ -5,7 +5,6 @@ import PageTransition from "../components/PageTransition";
 import ScrollPositionManager from "../components/ScrollPositionManager";
 import Script from "next/script";
 import type { ReactNode } from "react";
-import { Partytown } from "@qwik.dev/partytown/react";
 import { headers } from "next/headers";
 import { BookingProvider } from "@/context/BookingProvider";
 import { AuthProvider } from "@/context/AuthContext";
@@ -17,6 +16,7 @@ import { GlobalStyles } from "./global-styles";
 import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY } from "@/lib/i18n/config";
 import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale";
 import TikTokPixelScript from "../components/TikTokPixelScript";
+import MetaPixelHeadScripts from "../components/MetaPixelHeadScripts";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import LocaleHeadTags from "../components/LocaleHeadTags";
 import AnalyticsHydrator from "@/components/AnalyticsHydrator";
@@ -110,11 +110,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     >
     <head>
         <GlobalStyles/>
-        <Partytown
-          debug={false}
-          forward={["fbq", "ttq.track", "ttq.identify"]}
-        />
         <TikTokPixelScript/>
+        <MetaPixelHeadScripts/>
         <GoogleAnalytics gaId="G-R1B5YS77GK"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
         <link
@@ -157,7 +154,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {`
             setTimeout(() => {
               const s = document.createElement("script");
-              s.src = "/api/external/cookie-script.js";
+              s.src = "https://cdn.cookie-script.com/s/1dbe1a6c3b981120922353311f510e1d.js";
               s.async = true;
               document.body.appendChild(s);
             }, 3000);

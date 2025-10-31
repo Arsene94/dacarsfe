@@ -11,12 +11,45 @@ declare global {
 
 const isBrowser = typeof window !== "undefined";
 
+const bootstrapTikTokQueue = (): TikTokQueue | null => {
+    if (!isBrowser) {
+        return null;
+    }
+
+    if (window.ttq && typeof window.ttq === "object") {
+        return window.ttq;
+    }
+
+    const queue = [] as unknown[] & TikTokQueue;
+    const slice = Array.prototype.slice;
+
+    const enqueue = (method: string, args: unknown[]): void => {
+        queue.push([method, ...args]);
+    };
+
+    queue.track = function track() {
+        enqueue("track", slice.call(arguments));
+    };
+
+    queue.identify = function identify() {
+        enqueue("identify", slice.call(arguments));
+    };
+
+    (queue as unknown as { page?: (...args: unknown[]) => void }).page =
+        function page() {
+            enqueue("page", slice.call(arguments));
+        };
+
+    window.ttq = queue;
+    return queue;
+};
+
 export const resolveTikTokQueue = (): TikTokQueue | null => {
     if (!isBrowser) {
         return null;
     }
 
-    return window.ttq ?? null;
+    return bootstrapTikTokQueue();
 };
 
 const dispatchTikTokEvent = (
