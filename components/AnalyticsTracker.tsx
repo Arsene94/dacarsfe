@@ -831,19 +831,31 @@ const useUnloadFlush = (enabled: boolean, onBeforeUnload?: () => void) => {
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === "hidden") {
-                void flushAnalyticsQueue({ useBeacon: true });
+                void flushAnalyticsQueue({ useBeacon: true }).catch(() => {
+                    // Ignorăm erorile la flush pentru a nu afecta UX
+                });
             }
         };
 
         const handleBeforeUnload = () => {
             onBeforeUnload?.();
-            void flushAnalyticsQueue({ useBeacon: true });
+            void flushAnalyticsQueue({ useBeacon: true }).catch(() => {
+                // Ignorăm erorile la flush final
+            });
         };
+
+        // Flush periodic pentru a preveni acumularea
+        const periodicFlushInterval = window.setInterval(() => {
+            void flushAnalyticsQueue({ useBeacon: false }).catch(() => {
+                // Ignorăm erorile la flush periodic
+            });
+        }, 30000); // La fiecare 30 secunde
 
         document.addEventListener("visibilitychange", handleVisibilityChange);
         window.addEventListener("beforeunload", handleBeforeUnload);
 
         return () => {
+            window.clearInterval(periodicFlushInterval);
             document.removeEventListener("visibilitychange", handleVisibilityChange);
             window.removeEventListener("beforeunload", handleBeforeUnload);
         };

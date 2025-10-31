@@ -9,6 +9,17 @@ const MIXPANEL_CONFIG: Partial<MixpanelConfig> = {
     autocapture: true,
     record_sessions_percent: 100,
     api_host: "https://api-eu.mixpanel.com",
+    batch_requests: true,
+    batch_size: 50,
+    batch_flush_interval_ms: 5000,
+    ignore_dnt: false,
+    ip: false,
+    property_blacklist: ['$device_id'],
+    opt_out_tracking_by_default: false,
+    opt_out_tracking_persistence_type: 'localStorage',
+    persistence: 'localStorage',
+    cross_subdomain_cookie: false,
+    secure_cookie: true,
 };
 
 export const MIXPANEL_EVENTS = {
