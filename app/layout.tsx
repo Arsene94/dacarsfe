@@ -17,6 +17,7 @@ import { GlobalStyles } from "./global-styles";
 import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY } from "@/lib/i18n/config";
 import { resolveRequestLocale, getFallbackLocale } from "@/lib/i18n/serverLocale";
 import TikTokPixelScript from "../components/TikTokPixelScript";
+import MetaPixelHeadScripts from "../components/MetaPixelHeadScripts";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import LocaleHeadTags from "../components/LocaleHeadTags";
 import AnalyticsHydrator from "@/components/AnalyticsHydrator";
@@ -111,6 +112,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <head>
         <GlobalStyles/>
         <TikTokPixelScript/>
+        <MetaPixelHeadScripts/>
         <Partytown
           debug={false}
           forward={["fbq", "ttq.track", "ttq.identify"]}
