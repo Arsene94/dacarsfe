@@ -60,16 +60,23 @@ const MetaPixel = () => {
 
     const noscriptSrc = `https://www.facebook.com/tr?id=${PIXEL_ID}&ev=PageView&noscript=1`;
 
+    const bootstrapSnippet =
+        "(()=>{try{var context=typeof window!=='undefined'?window:typeof globalThis!=='undefined'?globalThis:null;if(!context){return;}var fbq=context.fbq;if(typeof fbq!=='function'){var queue=[];var placeholder=function(){placeholder.callMethod?placeholder.callMethod.apply(placeholder,arguments):placeholder.queue.push(arguments);};placeholder.queue=queue;placeholder.push=placeholder;placeholder.loaded=false;placeholder.version='2.0';placeholder.callMethod=function(){placeholder.queue.push(arguments);};context.fbq=placeholder;context._fbq=placeholder;fbq=placeholder;}if(!fbq.queue||!Array.isArray(fbq.queue)){fbq.queue=fbq.queue&&Array.isArray(fbq.queue)?fbq.queue:[];}if(typeof fbq.callMethod!=='function'){fbq.callMethod=function(){fbq.queue.push(arguments);};}if(typeof fbq.push!=='function'){fbq.push=function(){fbq.queue.push(arguments);};}}catch(error){}})();";
+    const loaderSnippet =
+        "(()=>{try{var context=typeof window!=='undefined'?window:typeof globalThis!=='undefined'?globalThis:null;if(!context){return;}var doc=typeof context.document!=='undefined'?context.document:null;if(!doc){return;}var tag='script';var script=doc.createElement(tag);script.async=!0;script.src='/api/external/meta-pixel.js';var firstScript=doc.getElementsByTagName?doc.getElementsByTagName(tag)[0]:null;if(firstScript&&firstScript.parentNode){firstScript.parentNode.insertBefore(script,firstScript);}else{(doc.head||doc.documentElement||doc.body||doc).appendChild(script);}}catch(error){}})();";
+
     return (
         <>
+            <script dangerouslySetInnerHTML={{ __html: bootstrapSnippet }} />
             <Script
                 id="meta-pixel"
                 strategy="worker"
                 dangerouslySetInnerHTML={{
                     __html:
-                        "!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod? n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window, document,'script','/api/external/meta-pixel.js');fbq('init','" +
+                        loaderSnippet +
+                        ";(function(){try{fbq('init','" +
                         PIXEL_ID +
-                        "');fbq('track','PageView');",
+                        "');fbq('track','PageView');}catch(error){}})();",
                 }}
             />
             <noscript>
