@@ -57,11 +57,7 @@ const DeferredHydration = ({ children, timeout = DEFAULT_TIMEOUT }: DeferredHydr
         return typeof children === "function" ? children() : children;
     }, [children, isReady]);
 
-    return (
-        <span data-deferred-hydration="" suppressHydrationWarning>
-            {content}
-        </span>
-    );
+    return <>{content}</>;
 };
 
 export default DeferredHydration;
