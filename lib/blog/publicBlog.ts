@@ -1,4 +1,3 @@
-import { unstable_cache } from "next/cache";
 import { apiClient } from "@/lib/api";
 import { extractList } from "@/lib/apiResponse";
 import { SITE_NAME, SITE_URL } from "@/lib/config";
@@ -442,8 +441,6 @@ const BLOG_POST_PARAMS = {
     limit: 1 as const,
 };
 
-const BLOG_CACHE_TAG = "public-blog-posts" as const;
-const BLOG_CACHE_REVALIDATE_SECONDS = 300;
 
 const cleanText = (value?: string | null): string => {
     if (!value) {
@@ -679,14 +676,6 @@ const fetchBlogPostInternal = async (slug: string, locale: Locale): Promise<Blog
     }
 };
 
-export const loadBlogPosts = unstable_cache(
-    fetchBlogPostsInternal,
-    ["public-blog-posts"],
-    { tags: [BLOG_CACHE_TAG], revalidate: BLOG_CACHE_REVALIDATE_SECONDS },
-);
+export const loadBlogPosts = (locale: Locale) => fetchBlogPostsInternal(locale);
 
-export const loadBlogPost = unstable_cache(
-    fetchBlogPostInternal,
-    ["public-blog-post"],
-    { tags: [BLOG_CACHE_TAG], revalidate: BLOG_CACHE_REVALIDATE_SECONDS },
-);
+export const loadBlogPost = (slug: string, locale: Locale) => fetchBlogPostInternal(slug, locale);
