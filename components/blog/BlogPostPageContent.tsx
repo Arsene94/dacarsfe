@@ -16,11 +16,12 @@ import {
     type BlogPostCopy,
 } from "@/lib/blog/publicBlog";
 import type { JsonLd as JsonLdPayload } from "@/lib/seo/jsonld";
-import type { Locale } from "@/lib/i18n/config";
+import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getUserDisplayName } from "@/lib/users";
 import type { BlogPost } from "@/types/blog";
 import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
 import type { LucideProps } from "lucide-react";
+import { ensureLocalePath } from "@/lib/i18n/routing";
 
 type BlogPostPageContentProps = {
     slug: string;
@@ -228,10 +229,15 @@ const BlogPostPageContent = ({
 
     const hasPublishedDate = publishedLabel !== "—";
 
-    const shareUrl = useMemo(
-        () => createAbsoluteUrl(buildLocaleHref(`/blog/${post.slug}`)),
-        [buildLocaleHref, post.slug],
-    );
+    const shareUrl = useMemo(() => {
+        const localizedPath = ensureLocalePath({
+            href: `/blog/${post.slug}`,
+            locale: DEFAULT_LOCALE,
+            availableLocales: AVAILABLE_LOCALES,
+        });
+
+        return createAbsoluteUrl(localizedPath);
+    }, [post.slug]);
 
     const shareOptions = useMemo<ShareOption[]>(() => {
         const encodedUrl = encodeURIComponent(shareUrl);
