@@ -39,6 +39,10 @@ export type BlogPostCopy = {
     authorLabel: string;
     shareTitle: string;
     shareDescription: string;
+    shareFacebookLabel: string;
+    shareTikTokLabel: string;
+    shareInstagramLabel: string;
+    shareTwitterLabel: string;
     notFoundTitle: string;
     notFoundDescription: string;
 };
@@ -364,6 +368,10 @@ export const BLOG_POST_COPY: Record<Locale, BlogPostCopy> = {
         shareTitle: "Ți-a plăcut articolul?",
         shareDescription:
             "Distribuie-l colegilor din flotă și revino pe blog pentru noi actualizări despre mobilitatea DaCars.",
+        shareFacebookLabel: "Distribuie pe Facebook",
+        shareTikTokLabel: "Distribuie pe TikTok",
+        shareInstagramLabel: "Distribuie pe Instagram",
+        shareTwitterLabel: "Distribuie pe Twitter",
         notFoundTitle: "Articolul nu a fost găsit | DaCars",
         notFoundDescription: "Articolul căutat nu mai este disponibil sau a fost mutat.",
     },
@@ -375,6 +383,10 @@ export const BLOG_POST_COPY: Record<Locale, BlogPostCopy> = {
         shareTitle: "Enjoyed the article?",
         shareDescription:
             "Share it with your team and come back soon for fresh DaCars mobility updates and guides.",
+        shareFacebookLabel: "Share on Facebook",
+        shareTikTokLabel: "Share on TikTok",
+        shareInstagramLabel: "Share on Instagram",
+        shareTwitterLabel: "Share on Twitter",
         notFoundTitle: "Article not found | DaCars",
         notFoundDescription: "The requested article is no longer available or may have been moved.",
     },
@@ -386,6 +398,10 @@ export const BLOG_POST_COPY: Record<Locale, BlogPostCopy> = {
         shareTitle: "Ti è piaciuto l'articolo?",
         shareDescription:
             "Condividilo con il tuo team e torna sul blog per nuove guide e aggiornamenti sulla mobilità DaCars.",
+        shareFacebookLabel: "Condividi su Facebook",
+        shareTikTokLabel: "Condividi su TikTok",
+        shareInstagramLabel: "Condividi su Instagram",
+        shareTwitterLabel: "Condividi su Twitter",
         notFoundTitle: "Articolo non trovato | DaCars",
         notFoundDescription: "L'articolo richiesto non è più disponibile oppure è stato spostato.",
     },
@@ -397,6 +413,10 @@ export const BLOG_POST_COPY: Record<Locale, BlogPostCopy> = {
         shareTitle: "¿Te gustó el artículo?",
         shareDescription:
             "Compártelo con tu equipo y vuelve pronto para más novedades y guías sobre la movilidad DaCars.",
+        shareFacebookLabel: "Compartir en Facebook",
+        shareTikTokLabel: "Compartir en TikTok",
+        shareInstagramLabel: "Compartir en Instagram",
+        shareTwitterLabel: "Compartir en Twitter",
         notFoundTitle: "Artículo no encontrado | DaCars",
         notFoundDescription: "El artículo solicitado ya no está disponible o se ha movido.",
     },
@@ -408,6 +428,10 @@ export const BLOG_POST_COPY: Record<Locale, BlogPostCopy> = {
         shareTitle: "Vous avez aimé l'article ?",
         shareDescription:
             "Partagez-le avec votre équipe et revenez bientôt pour d'autres actualités sur la mobilité DaCars.",
+        shareFacebookLabel: "Partager sur Facebook",
+        shareTikTokLabel: "Partager sur TikTok",
+        shareInstagramLabel: "Partager sur Instagram",
+        shareTwitterLabel: "Partager sur X (Twitter)",
         notFoundTitle: "Article introuvable | DaCars",
         notFoundDescription: "L'article demandé n'est plus disponible ou a été déplacé.",
     },
@@ -419,6 +443,10 @@ export const BLOG_POST_COPY: Record<Locale, BlogPostCopy> = {
         shareTitle: "Hat dir der Artikel gefallen?",
         shareDescription:
             "Teile ihn mit deinem Team und schau bald wieder vorbei für neue Updates zur DaCars-Mobilität.",
+        shareFacebookLabel: "Auf Facebook teilen",
+        shareTikTokLabel: "Auf TikTok teilen",
+        shareInstagramLabel: "Auf Instagram teilen",
+        shareTwitterLabel: "Auf X (Twitter) teilen",
         notFoundTitle: "Artikel nicht gefunden | DaCars",
         notFoundDescription: "Der gewünschte Artikel ist nicht mehr verfügbar oder wurde verschoben.",
     },
@@ -581,13 +609,26 @@ const mapOffersToJsonLdInputs = (offers: BlogPost["offers"]): OfferInput[] =>
         })
         .filter((entry): entry is OfferInput => entry !== null);
 
+export const resolveBlogPostPreviewImage = (post: BlogPost): string | null => {
+    const candidates = [post.og_image, post.twitter_image, post.image, post.thumbnail];
+
+    for (const candidate of candidates) {
+        const resolved = resolveMediaUrl(candidate ?? null, { proxyRemote: false });
+        if (resolved) {
+            return resolved;
+        }
+    }
+
+    return null;
+};
+
 export const buildBlogPostStructuredData = (
     post: BlogPost,
     copy: BlogPostCopy,
     summary: string,
 ): JsonLd[] => {
     const keywords = post.tags?.map((tag) => tag.name).filter(Boolean);
-    const image = resolveMediaUrl(post.image ?? post.thumbnail ?? null) ?? undefined;
+    const image = resolveBlogPostPreviewImage(post) ?? undefined;
 
     const structuredData: JsonLd[] = [
         blogPosting({
