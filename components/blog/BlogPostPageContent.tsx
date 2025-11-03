@@ -16,7 +16,7 @@ import {
     type BlogPostCopy,
 } from "@/lib/blog/publicBlog";
 import type { JsonLd as JsonLdPayload } from "@/lib/seo/jsonld";
-import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import type { Locale } from "@/lib/i18n/config";
 import { getUserDisplayName } from "@/lib/users";
 import type { BlogPost } from "@/types/blog";
 import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
@@ -106,7 +106,7 @@ const BlogPostPageContent = ({
     initialSummary,
     initialStructuredData,
 }: BlogPostPageContentProps) => {
-    const { locale } = useLocale();
+    const { locale, availableLocales } = useLocale();
     const buildLocaleHref = useLocaleHref();
     const [copy, setCopy] = useState(initialCopy);
     const [post, setPost] = useState<BlogPost>(initialPost);
@@ -232,12 +232,12 @@ const BlogPostPageContent = ({
     const shareUrl = useMemo(() => {
         const localizedPath = ensureLocalePath({
             href: `/blog/${post.slug}`,
-            locale: DEFAULT_LOCALE,
-            availableLocales: AVAILABLE_LOCALES,
+            locale,
+            availableLocales,
         });
 
         return createAbsoluteUrl(localizedPath);
-    }, [post.slug]);
+    }, [availableLocales, locale, post.slug]);
 
     const shareOptions = useMemo<ShareOption[]>(() => {
         const encodedUrl = encodeURIComponent(shareUrl);
