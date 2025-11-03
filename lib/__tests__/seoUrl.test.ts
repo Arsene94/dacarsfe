@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { hreflangLinks, resolveLocalizedPathname } from "@/lib/seo/url";
+import { canonical, hreflangLinks, resolveLocalizedPathname } from "@/lib/seo/url";
 
 const extractHref = (entries: Array<{ hrefLang: string; href: string }>, lang: string) => {
     return entries.find((entry) => entry.hrefLang === lang)?.href;
@@ -53,3 +53,26 @@ describe("resolveLocalizedPathname", () => {
         );
     });
 });
+
+describe("canonical", () => {
+    it("removes non-whitelisted query parameters", () => {
+        expect(canonical("https://dacars.ro/cars?plan_type=casco")).toBe("https://dacars.ro/cars");
+        expect(canonical("https://dacars.ro/cars?start_date=2025-10-05&end_date=2025-10-05")).toBe(
+            "https://dacars.ro/cars",
+        );
+    });
+
+    it("keeps pagination parameters above the first page", () => {
+        expect(canonical("https://dacars.ro/cars?page=2")).toBe("https://dacars.ro/cars?page=2");
+        expect(canonical("https://dacars.ro/cars?page=1")).toBe("https://dacars.ro/cars");
+    });
+
+    it("drops tracking parameters while keeping canonical ones", () => {
+        expect(canonical("https://dacars.ro/cars?page=3&utm_source=google")).toBe("https://dacars.ro/cars?page=3");
+    });
+
+    it("normalizes relative paths with extraneous parameters", () => {
+        expect(canonical("/cars/opel-astra?plan_type=casco")).toBe("https://dacars.ro/cars/opel-astra");
+    });
+});
+

@@ -6,6 +6,8 @@ const ABSOLUTE_URL_PATTERN = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i;
 const TRACKING_PREFIXES = ["utm_"];
 const TRACKING_KEYS = new Set(["gclid", "fbclid", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"]);
 
+const CANONICAL_ALLOWED_QUERY_KEYS = new Set(["page"]);
+
 const AVAILABLE_LOCALE_SLUGS = new Set(
     Array.from(AVAILABLE_LOCALES, (entry) => entry.toLowerCase()),
 );
@@ -115,18 +117,45 @@ export const resolveLocalizedPathname = (
     return prefixLocaleToPathname(pathname, locale ?? undefined);
 };
 
+const shouldPreserveCanonicalParam = (key: string, value: string): boolean => {
+    if (!CANONICAL_ALLOWED_QUERY_KEYS.has(key)) {
+        return false;
+    }
+
+    if (key === "page") {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return false;
+        }
+
+        const parsed = Number(trimmed);
+        if (!Number.isFinite(parsed)) {
+            return false;
+        }
+
+        return parsed > 1;
+    }
+
+    return false;
+};
+
 const sanitizeSearch = (url: URL): void => {
-    const removals: string[] = [];
-    url.searchParams.forEach((_value, key) => {
-        const normalized = key.toLowerCase();
-        if (TRACKING_KEYS.has(normalized) || TRACKING_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
-            removals.push(key);
+    const next = new URLSearchParams();
+
+    url.searchParams.forEach((rawValue, rawKey) => {
+        const key = rawKey.toLowerCase();
+        if (TRACKING_KEYS.has(key) || TRACKING_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+            return;
+        }
+
+        const value = rawValue ?? "";
+        if (shouldPreserveCanonicalParam(key, value)) {
+            next.append(rawKey, value.trim());
         }
     });
 
-    removals.forEach((key) => {
-        url.searchParams.delete(key);
-    });
+    const serialized = next.toString();
+    url.search = serialized ? `?${serialized}` : "";
 };
 
 const normalizePathname = (url: URL): void => {
