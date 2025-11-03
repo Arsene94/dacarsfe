@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo, useId } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useId, useCallback } from 'react';
 import { ChevronDown, Search, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { countries } from '@/lib/phone-countries';
@@ -25,6 +25,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [phoneNumber, setPhoneNumber] = useState(countries[0].prefix);
   const [isValid, setIsValid] = useState(true);
+  const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -40,30 +41,43 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
     [searchTerm],
   );
 
-  const validatePhoneNumber = (number: string, country: Country) => {
-    if (!number.trim()) return true;
+  const extractLocalDigits = useCallback((number: string, country: Country) => {
     const cleanNumber = number.replace(/\D/g, '');
-    if (country.pattern) {
-      return country.pattern.test(number) || country.pattern.test(cleanNumber);
-    }
-    const prefix = country.prefix.replace('+', '');
-    const withoutPrefix = cleanNumber.startsWith(prefix)
-      ? cleanNumber.slice(prefix.length)
+    const prefixDigits = country.prefix.replace('+', '');
+    return cleanNumber.startsWith(prefixDigits)
+      ? cleanNumber.slice(prefixDigits.length)
       : cleanNumber;
-    return withoutPrefix.length >= 7 && withoutPrefix.length <= 15;
-  };
+  }, []);
+
+  const validatePhoneNumber = useCallback(
+    (
+      number: string,
+      country: Country,
+      isFieldRequired: boolean,
+    ) => {
+      const withoutPrefix = extractLocalDigits(number, country);
+
+      if (withoutPrefix.length === 0) {
+        return !isFieldRequired;
+      }
+
+      if (!number.trim()) return !isFieldRequired;
+
+      if (country.pattern) {
+        const cleanNumber = number.replace(/\D/g, '');
+        return country.pattern.test(number) || country.pattern.test(cleanNumber);
+      }
+
+      return withoutPrefix.length >= 7 && withoutPrefix.length <= 15;
+    },
+    [extractLocalDigits],
+  );
 
   const handlePhoneChange = (inputValue: string) => {
     const prefix = selectedCountry.prefix;
-    const digits = inputValue.replace(/\D/g, '');
-    const prefixDigits = prefix.replace('+', '');
-    const withoutPrefix = digits.startsWith(prefixDigits)
-      ? digits.slice(prefixDigits.length)
-      : digits;
+    const withoutPrefix = extractLocalDigits(inputValue, selectedCountry);
     const newValue = `${prefix}${withoutPrefix}`;
     setPhoneNumber(newValue);
-    const valid = validatePhoneNumber(newValue, selectedCountry);
-    setIsValid(valid);
     onChange(newValue, selectedCountry.code);
   };
 
@@ -71,7 +85,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
     setSelectedCountry(country);
     setIsDropdownOpen(false);
     setSearchTerm('');
-    const cleanNumber = phoneNumber.replace(/^\+?\d*/, '').replace(/\D/g, '');
+    const cleanNumber = extractLocalDigits(phoneNumber, selectedCountry);
     const newFullNumber = `${country.prefix}${cleanNumber}`;
     setPhoneNumber(newFullNumber);
     onChange(newFullNumber, country.code);
@@ -114,6 +128,22 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
 
   const resolvedInvalidMessage = invalidFormatMessage(selectedCountry.name);
   const resolvedExampleLabel = exampleLabel(selectedCountry.prefix);
+
+  useEffect(() => {
+    const valid = validatePhoneNumber(phoneNumber, selectedCountry, required);
+    setIsValid(valid);
+    if (inputRef.current) {
+      inputRef.current.setCustomValidity(
+        valid ? '' : invalidFormatMessage(selectedCountry.name),
+      );
+    }
+  }, [
+    phoneNumber,
+    selectedCountry,
+    required,
+    invalidFormatMessage,
+    validatePhoneNumber,
+  ]);
 
   return (
     <div className={cn('relative', className)}>
@@ -187,6 +217,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
         <input
           id={inputId}
           type="tel"
+          ref={inputRef}
           value={phoneNumber}
           onChange={(e) => handlePhoneChange(e.target.value)}
           onKeyDown={handleKeyDown}
