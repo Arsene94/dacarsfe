@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { IconType } from "react-icons";
+import {
+    FaFacebookF,
+    FaInstagram,
+    FaTiktok,
+    FaXTwitter,
+} from "react-icons/fa6";
 import JsonLd from "@/components/seo/JsonLd";
 import { useLocale } from "@/context/LocaleContext";
-import { SITE_NAME } from "@/lib/config";
+import { SITE_NAME, SITE_TWITTER, SITE_URL } from "@/lib/config";
 import { formatDate } from "@/lib/datetime";
 import {
     buildBlogPostStructuredData,
@@ -18,6 +25,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { getUserDisplayName } from "@/lib/users";
 import type { BlogPost } from "@/types/blog";
 import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
+import { cn } from "@/lib/utils";
 
 type BlogPostPageContentProps = {
     slug: string;
@@ -33,6 +41,19 @@ type CacheEntry = {
     summary: string;
     structuredData: JsonLdPayload[];
 };
+
+type ShareButton = {
+    id: string;
+    label: string;
+    href: string;
+    icon: IconType;
+    className: string;
+};
+
+const SHARE_BUTTON_BASE_CLASS =
+    "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white";
+
+const SHARE_ICON_CLASS = "h-4 w-4";
 
 const isFaqStructuredData = (entry: JsonLdPayload): boolean => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
@@ -177,6 +198,72 @@ const BlogPostPageContent = ({
 
     const hasPublishedDate = publishedLabel !== "—";
 
+    const sharePath = useMemo(() => buildLocaleHref(`/blog/${post.slug}`), [buildLocaleHref, post.slug]);
+
+    const shareUrl = useMemo(() => {
+        try {
+            return new URL(sharePath, SITE_URL).toString();
+        } catch (error) {
+            console.error("Nu am putut construi URL-ul absolut pentru distribuirea articolului", error);
+            const normalizedSiteUrl = SITE_URL.endsWith("/") ? SITE_URL.slice(0, -1) : SITE_URL;
+            return `${normalizedSiteUrl}${sharePath}`;
+        }
+    }, [sharePath]);
+
+    const shareTitle = useMemo(() => {
+        if (post.meta_title && post.meta_title.trim().length > 0) {
+            return post.meta_title;
+        }
+        return `${post.title} | ${SITE_NAME}`;
+    }, [post.meta_title, post.title]);
+
+    const { shareFacebookLabel, shareInstagramLabel, shareTikTokLabel, shareTwitterLabel } = copy;
+
+    const shareButtons = useMemo<ShareButton[]>(() => {
+        const encodedShareUrl = encodeURIComponent(shareUrl);
+        const encodedShareTitle = encodeURIComponent(shareTitle);
+
+        const twitterUrl = new URL("https://twitter.com/intent/tweet");
+        twitterUrl.searchParams.set("url", shareUrl);
+        twitterUrl.searchParams.set("text", shareTitle);
+
+        const normalizedTwitterHandle = SITE_TWITTER.replace(/^@/, "").trim();
+        if (normalizedTwitterHandle.length > 0) {
+            twitterUrl.searchParams.set("via", normalizedTwitterHandle);
+        }
+
+        return [
+            {
+                id: "facebook",
+                label: shareFacebookLabel,
+                href: `https://www.facebook.com/sharer/sharer.php?u=${encodedShareUrl}`,
+                icon: FaFacebookF,
+                className: "bg-[#1877F2] text-white hover:bg-[#166FE5] focus-visible:ring-[#1877F2]",
+            },
+            {
+                id: "tiktok",
+                label: shareTikTokLabel,
+                href: `https://www.tiktok.com/share/url?url=${encodedShareUrl}&text=${encodedShareTitle}`,
+                icon: FaTiktok,
+                className: "bg-[#010101] text-white hover:bg-[#111111] focus-visible:ring-[#010101]",
+            },
+            {
+                id: "instagram",
+                label: shareInstagramLabel,
+                href: `https://www.instagram.com/?url=${encodedShareUrl}`,
+                icon: FaInstagram,
+                className: "bg-[#E4405F] text-white hover:bg-[#d73756] focus-visible:ring-[#E4405F]",
+            },
+            {
+                id: "twitter",
+                label: shareTwitterLabel,
+                href: twitterUrl.toString(),
+                icon: FaXTwitter,
+                className: "bg-[#1DA1F2] text-white hover:bg-[#1A94DA] focus-visible:ring-[#1DA1F2]",
+            },
+        ];
+    }, [shareFacebookLabel, shareInstagramLabel, shareTikTokLabel, shareTitle, shareTwitterLabel, shareUrl]);
+
     return (
         <article className="mx-auto max-w-3xl space-y-8 px-6 py-12" aria-busy={isLoading}>
             <JsonLd data={structuredData} id="blog-post-structured-data" />
@@ -223,6 +310,22 @@ const BlogPostPageContent = ({
             <footer className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-gray-900">{copy.shareTitle}</h2>
                 <p className="mt-2 text-sm text-gray-600">{copy.shareDescription}</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                    {shareButtons.map(({ id, label, href, icon: Icon, className }) => (
+                        <a
+                            key={id}
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn(SHARE_BUTTON_BASE_CLASS, className)}
+                            aria-label={label}
+                            title={label}
+                        >
+                            <Icon aria-hidden="true" className={SHARE_ICON_CLASS} />
+                            <span>{label}</span>
+                        </a>
+                    ))}
+                </div>
             </footer>
         </article>
     );

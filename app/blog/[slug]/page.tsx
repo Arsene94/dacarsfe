@@ -9,8 +9,8 @@ import {
     extractBlogSummary,
     getBlogPostCopy,
     loadBlogPost,
+    resolveBlogPostPreviewImage,
 } from "@/lib/blog/publicBlog";
-import { resolveMediaUrl } from "@/lib/media";
 import { buildMetadata } from "@/lib/seo/meta";
 import type { JsonLd } from "@/lib/seo/jsonld";
 
@@ -39,19 +39,19 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
 
     const summary = extractBlogSummary(post);
     const resolvedTitle = post.meta_title?.trim().length ? post.meta_title : `${post.title} | ${SITE_NAME}`;
-    const ogImage = resolveMediaUrl(post.image ?? post.thumbnail ?? null) ?? undefined;
+    const ogImage = resolveBlogPostPreviewImage(post) ?? undefined;
     const keywords = post.tags?.map((tag) => tag.name).filter(Boolean);
 
     return buildMetadata({
         title: resolvedTitle,
-        description: summary || post.title,
+        description: post.meta_description?.trim().length ? post.meta_description : summary || post.title,
         path: `/blog/${post.slug}`,
         ogImage,
         hreflangLocales: BLOG_HREFLANG_LOCALES,
         locale,
         keywords,
-        openGraphTitle: resolvedTitle,
-        twitterTitle: resolvedTitle,
+        openGraphTitle: post.og_title?.trim().length ? post.og_title : resolvedTitle,
+        twitterTitle: post.twitter_title?.trim().length ? post.twitter_title : resolvedTitle,
     });
 }
 

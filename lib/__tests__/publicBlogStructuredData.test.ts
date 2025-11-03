@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildBlogPostStructuredData, type BlogPostCopy } from '@/lib/blog/publicBlog';
+import {
+  buildBlogPostStructuredData,
+  resolveBlogPostPreviewImage,
+  type BlogPostCopy,
+} from '@/lib/blog/publicBlog';
 import type { BlogPost } from '@/types/blog';
 
 const copy: BlogPostCopy = {
@@ -10,6 +14,10 @@ const copy: BlogPostCopy = {
   authorLabel: 'Autor',
   shareTitle: 'Distribuie',
   shareDescription: 'Împarte articolul cu colegii tăi.',
+  shareFacebookLabel: 'Distribuie pe Facebook',
+  shareTikTokLabel: 'Distribuie pe TikTok',
+  shareInstagramLabel: 'Distribuie pe Instagram',
+  shareTwitterLabel: 'Distribuie pe Twitter',
   notFoundTitle: 'Articol indisponibil',
   notFoundDescription: 'Nu am găsit articolul solicitat.',
 };
@@ -79,5 +87,24 @@ describe('buildBlogPostStructuredData', () => {
     expect(structuredData.some((entry) => entry['@type'] === 'FAQPage')).toBe(false);
     expect(structuredData.some((entry) => entry['@type'] === 'OfferCatalog')).toBe(false);
     expect(structuredData).toHaveLength(2);
+  });
+
+  it('normalizează imaginea de previzualizare folosind ordinea câmpurilor dedicate', () => {
+    const post: BlogPost = {
+      ...basePost,
+      og_image: 'blog/og-preview.webp',
+      image: 'blog/main.webp',
+    };
+
+    const previewImage = resolveBlogPostPreviewImage(post);
+
+    expect(previewImage).toBe('https://backend.dacars.ro/storage/blog/og-preview.webp');
+
+    const structuredData = buildBlogPostStructuredData(post, copy, 'Descriere articol.');
+    const blogPostingEntry = structuredData.find(
+      (entry) => entry['@type'] === 'BlogPosting'
+    ) as Record<string, unknown> | undefined;
+
+    expect(blogPostingEntry?.image).toBe('https://backend.dacars.ro/storage/blog/og-preview.webp');
   });
 });
