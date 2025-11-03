@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Facebook, Instagram, Tiktok, Twitter, type LucideIcon } from "lucide-react";
+import type { IconType } from "react-icons";
+import {
+    FaFacebookF,
+    FaInstagram,
+    FaTiktok,
+    FaXTwitter,
+} from "react-icons/fa6";
 import JsonLd from "@/components/seo/JsonLd";
 import { useLocale } from "@/context/LocaleContext";
 import { SITE_NAME, SITE_TWITTER, SITE_URL } from "@/lib/config";
@@ -40,7 +46,7 @@ type ShareButton = {
     id: string;
     label: string;
     href: string;
-    icon: LucideIcon;
+    icon: IconType;
     className: string;
 };
 
@@ -231,28 +237,28 @@ const BlogPostPageContent = ({
                 id: "facebook",
                 label: shareFacebookLabel,
                 href: `https://www.facebook.com/sharer/sharer.php?u=${encodedShareUrl}`,
-                icon: Facebook,
+                icon: FaFacebookF,
                 className: "bg-[#1877F2] text-white hover:bg-[#166FE5] focus-visible:ring-[#1877F2]",
             },
             {
                 id: "tiktok",
                 label: shareTikTokLabel,
                 href: `https://www.tiktok.com/share/url?url=${encodedShareUrl}&text=${encodedShareTitle}`,
-                icon: Tiktok,
+                icon: FaTiktok,
                 className: "bg-[#010101] text-white hover:bg-[#111111] focus-visible:ring-[#010101]",
             },
             {
                 id: "instagram",
                 label: shareInstagramLabel,
                 href: `https://www.instagram.com/?url=${encodedShareUrl}`,
-                icon: Instagram,
+                icon: FaInstagram,
                 className: "bg-[#E4405F] text-white hover:bg-[#d73756] focus-visible:ring-[#E4405F]",
             },
             {
                 id: "twitter",
                 label: shareTwitterLabel,
                 href: twitterUrl.toString(),
-                icon: Twitter,
+                icon: FaXTwitter,
                 className: "bg-[#1DA1F2] text-white hover:bg-[#1A94DA] focus-visible:ring-[#1DA1F2]",
             },
         ];
