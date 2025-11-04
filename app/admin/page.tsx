@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import {
     AlertCircle,
     Calendar,
+    CalendarPlus,
     Car,
     Clock,
     Eye,
+    Loader2,
     Newspaper,
     Phone,
     Plane,
@@ -34,6 +36,7 @@ import {
     createEmptyBookingForm,
 } from "@/types/admin";
 import type {
+    BookingExtendPayload,
     CouponTotalDiscountDetails,
     ReservationAppliedOffer,
 } from "@/types/reservation";
@@ -112,6 +115,62 @@ const shortDateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
     hour: "2-digit",
     minute: "2-digit",
 });
+
+const formatTimeLabel = (iso?: string | null): string | undefined => {
+    if (!iso) return undefined;
+    const trimmed = iso.trim();
+    if (!trimmed) return undefined;
+
+    const normalized = trimmed.replace(" ", "T").replace(/\.\d+/, "");
+    const directMatch = normalized.match(/T(\d{2}):(\d{2})(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?$/);
+    if (directMatch) {
+        const [, hours, minutes] = directMatch;
+        return `${hours}:${minutes}`;
+    }
+
+    const parsed = new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) return undefined;
+    return parsed.toISOString().slice(11, 16);
+};
+
+const resolveOutstandingExtensionAmount = (
+    extension: AdminBookingExtension | null | undefined,
+    reservationRemaining: number | null | undefined,
+): number | null => {
+    if (!extension || extension.paid) {
+        return null;
+    }
+
+    if (
+        typeof extension.remainingPayment === "number" &&
+        Number.isFinite(extension.remainingPayment) &&
+        extension.remainingPayment > 0
+    ) {
+        return extension.remainingPayment;
+    }
+
+    if (
+        typeof reservationRemaining === "number" &&
+        Number.isFinite(reservationRemaining) &&
+        reservationRemaining > 0
+    ) {
+        return reservationRemaining;
+    }
+
+    return null;
+};
+
+const formatEuro = (value: number | string | null | undefined): string => {
+    if (typeof value === "string") {
+        const parsed = parseOptionalNumber(value);
+        if (typeof parsed === "number") {
+            return `${euroFormatter.format(parsed)}€`;
+        }
+        return "—";
+    }
+    if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+    return `${euroFormatter.format(value)}€`;
+};
 
 type AdminReservationRow = AdminReservation & {
     remainingBalance?: number | null;
@@ -331,14 +390,21 @@ const mapActivityStatus = (status: string): AdminReservation["status"] => {
 
 const mapActivityReservationToAdmin = (
     reservation: ActivityReservation,
-): AdminReservationRow => ({
-    id: String(reservation.id) || reservation.booking_number,
-    bookingNumber: reservation.booking_number,
-    customerName: reservation.customer_name ?? "",
-    phone: reservation.customer_phone ?? "",
-    carId: reservation.car_id,
-    carName: reservation.car?.name ?? "",
-    carLicensePlate: reservation.car?.license_plate,
+): AdminReservationRow => {
+    const normalizedId =
+        reservation.id != null ? String(reservation.id).trim() : "";
+    const normalizedBookingNumber =
+        reservation.booking_number != null ? String(reservation.booking_number).trim() : "";
+    const resolvedId = normalizedId || normalizedBookingNumber;
+
+    return {
+        id: resolvedId,
+        bookingNumber: reservation.booking_number,
+        customerName: reservation.customer_name ?? "",
+        phone: reservation.customer_phone ?? "",
+        carId: reservation.car_id,
+        carName: reservation.car?.name ?? "",
+        carLicensePlate: reservation.car?.license_plate,
     startDate: reservation.rental_start_date ?? "",
     endDate: reservation.rental_end_date ?? "",
     plan: reservation.with_deposit ? 1 : 2,
@@ -367,7 +433,8 @@ const mapActivityReservationToAdmin = (
                 (reservation as { remainingBalance?: unknown }).remainingBalance,
         ) ?? null,
     extension: normalizeReservationExtension(reservation.extension),
-});
+    };
+};
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -683,6 +750,14 @@ const AdminDashboard = () => {
     const [contractReservation, setContractReservation] = useState<
         AdminReservationRow | null
     >(null);
+    const [extendPopupOpen, setExtendPopupOpen] = useState(false);
+    const [extendReservation, setExtendReservation] = useState<AdminReservationRow | null>(null);
+    const [extendDate, setExtendDate] = useState("");
+    const [extendTime, setExtendTime] = useState("");
+    const [extendPrice, setExtendPrice] = useState("");
+    const [extendPaid, setExtendPaid] = useState(false);
+    const [extendLoading, setExtendLoading] = useState(false);
+    const [extendError, setExtendError] = useState<string | null>(null);
     const [bookingsTodayCount, setBookingsTodayCount] = useState<number>(0);
     const [availableCarsCount, setAvailableCarsCount] = useState<number>(0);
     const [bookingsTotalCount, setBookingsTotalCount] = useState<number>(0);
@@ -713,6 +788,66 @@ const AdminDashboard = () => {
         setPopupOpen(true);
     };
 
+    const resetExtendState = useCallback(() => {
+        setExtendPopupOpen(false);
+        setExtendReservation(null);
+        setExtendDate("");
+        setExtendTime("");
+        setExtendPrice("");
+        setExtendPaid(false);
+        setExtendError(null);
+    }, []);
+
+    const handleCloseExtendPopup = useCallback(() => {
+        if (extendLoading) {
+            return;
+        }
+        resetExtendState();
+    }, [extendLoading, resetExtendState]);
+
+    const handleOpenExtendReservation = useCallback((reservation: AdminReservationRow) => {
+        const extension = reservation.extension ?? null;
+        const baseDateTime = toLocalDateTimeInput(
+            extension?.to ?? reservation.endDate ?? "",
+        );
+
+        let datePart = "";
+        let timePart = "";
+        if (baseDateTime) {
+            const [dateValue, timeValue = ""] = baseDateTime.split("T");
+            datePart = dateValue;
+            timePart = timeValue;
+        }
+
+        if (!timePart) {
+            timePart =
+                formatTimeLabel(extension?.to ?? reservation.endDate) ??
+                reservation.dropoffTime ??
+                "";
+        }
+
+        const priceSource =
+            typeof extension?.pricePerDay === "number" && Number.isFinite(extension.pricePerDay)
+                ? extension.pricePerDay
+                : parseOptionalNumber(extension?.pricePerDay ?? reservation.pricePerDay);
+
+        setExtendReservation({
+            ...reservation,
+            id: reservation.id.trim(),
+        });
+        setExtendDate(datePart);
+        setExtendTime(timePart ?? "");
+        setExtendPrice(
+            typeof priceSource === "number" && Number.isFinite(priceSource)
+                ? String(priceSource)
+                : "",
+        );
+        setExtendPaid(extension?.paid ?? false);
+        setExtendError(null);
+        setExtendLoading(false);
+        setExtendPopupOpen(true);
+    }, []);
+
     const loadActivity = useCallback(async () => {
         try {
             const res = await apiClient.fetchWidgetActivity(carActivityDay);
@@ -727,6 +862,108 @@ const AdminDashboard = () => {
     useEffect(() => {
         loadActivity();
     }, [loadActivity]);
+
+    const handleSubmitExtend = useCallback(async () => {
+        if (!extendReservation) {
+            return;
+        }
+
+        const normalizedDate = extendDate.trim();
+        if (!normalizedDate) {
+            setExtendError("Selectează data de retur pentru prelungire.");
+            return;
+        }
+
+        const normalizedId = extendReservation.id.trim();
+        const normalizedBookingNumber =
+            typeof extendReservation.bookingNumber === "string"
+                ? extendReservation.bookingNumber.trim()
+                : typeof extendReservation.bookingNumber === "number"
+                    ? String(extendReservation.bookingNumber)
+                    : "";
+
+        const lookupId = normalizedId || normalizedBookingNumber;
+        if (!lookupId) {
+            setExtendError("Nu am putut identifica rezervarea pentru prelungire.");
+            return;
+        }
+
+        const payload: BookingExtendPayload = {
+            paid: extendPaid,
+            extended_until_date: normalizedDate,
+        };
+
+        if (extendTime.trim()) {
+            payload.extended_until_time = extendTime.trim();
+        }
+
+        const priceValue = parseOptionalNumber(extendPrice);
+        if (typeof priceValue === "number") {
+            payload.price_per_day = priceValue;
+        }
+
+        setExtendLoading(true);
+        setExtendError(null);
+
+        try {
+            const requestId = /^(?:\d+)$/.test(lookupId) ? Number(lookupId) : lookupId;
+            const response = await apiClient.extendBooking(requestId, payload);
+            const updated = extractItem(response);
+            if (updated) {
+                const normalizedExtension = normalizeReservationExtension(updated.extension);
+                setActivityDetails((prev) => {
+                    if (!prev) return prev;
+                    const prevIdStr = String(prev.id ?? "").trim();
+                    const targetIds = new Set<string>();
+                    if (normalizedId) targetIds.add(normalizedId);
+                    if (normalizedBookingNumber) targetIds.add(normalizedBookingNumber);
+                    if (!targetIds.has(prevIdStr)) return prev;
+                    const updatedReturnDate =
+                        typeof updated.rental_end_date === "string"
+                            ? updated.rental_end_date.slice(0, 10)
+                            : prev.returnDate;
+                    const updatedReturnTime =
+                        formatTimeLabel(updated.rental_end_date ?? null) ?? prev.returnTime;
+                    const updatedRemainingBalance =
+                        parseOptionalNumber(
+                            updated.remaining_balance ??
+                                (updated as { remainingBalance?: unknown }).remainingBalance,
+                        );
+                    return {
+                        ...prev,
+                        returnDate: updatedReturnDate,
+                        returnTime: updatedReturnTime,
+                        remainingBalance:
+                            typeof updatedRemainingBalance === "number"
+                                ? updatedRemainingBalance
+                                : prev.remainingBalance,
+                        extension: normalizedExtension,
+                    };
+                });
+            }
+
+            await loadActivity();
+
+            resetExtendState();
+        } catch (error) {
+            console.error("Nu am putut prelungi rezervarea", error);
+            if (error instanceof Error && error.message.trim().length > 0) {
+                setExtendError(error.message);
+            } else {
+                setExtendError("Nu am putut prelungi rezervarea. Încearcă din nou.");
+            }
+        } finally {
+            setExtendLoading(false);
+        }
+    }, [
+        extendReservation,
+        extendDate,
+        extendTime,
+        extendPrice,
+        extendPaid,
+        loadActivity,
+        resetExtendState,
+    ]);
 
     useEffect(() => {
         const loadMetrics = async () => {
@@ -1067,6 +1304,15 @@ const AdminDashboard = () => {
         }
     }
 
+    const extendOutstandingExtensionAmount = resolveOutstandingExtensionAmount(
+        extendReservation?.extension ?? null,
+        extendReservation?.remainingBalance ?? null,
+    );
+    const extendOutstandingExtensionLabel =
+        extendOutstandingExtensionAmount != null
+            ? formatEuro(extendOutstandingExtensionAmount)
+            : null;
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
@@ -1285,6 +1531,11 @@ const AdminDashboard = () => {
                                                 const outstandingExtensionBalance = hasUnpaidExtension
                                                     ? extensionRemainingPayment ?? remainingBalanceValue ?? null
                                                     : null;
+                                                const adminReservationRow = mapActivityReservationToAdmin(r);
+                                                const isExtending =
+                                                    extendLoading &&
+                                                    extendReservation?.id.trim() ===
+                                                        adminReservationRow.id.trim();
                                                 return (
                                                     <div
                                                         key={r.id + (isDeparture ? 'start' : 'end')}
@@ -1404,11 +1655,23 @@ const AdminDashboard = () => {
                                                                 >
                                                                     <Eye className="h-4 w-4" />
                                                                 </button>
+                                                                <button
+                                                                    onClick={() =>
+                                                                        handleOpenExtendReservation(
+                                                                            adminReservationRow,
+                                                                        )
+                                                                    }
+                                                                    className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    aria-label="Prelungește rezervarea"
+                                                                    disabled={isExtending}
+                                                                >
+                                                                    <CalendarPlus className="h-4 w-4" />
+                                                                </button>
 
                                                                 {isDeparture && (<button
                                                                     onClick={() => {
                                                                         setContractReservation(
-                                                                            mapActivityReservationToAdmin(r),
+                                                                            adminReservationRow,
                                                                         );
                                                                         setContractOpen(true);
                                                                     }}
@@ -1487,6 +1750,161 @@ const AdminDashboard = () => {
                     </div>
                 </div>
             </div>
+            {extendReservation && (
+                <Popup
+                    open={extendPopupOpen}
+                    onClose={handleCloseExtendPopup}
+                    className="max-w-xl"
+                >
+                    <div className="space-y-6">
+                        <div>
+                            <h3 className="text-lg font-poppins font-semibold text-berkeley">
+                                Prelungește rezervarea {extendReservation.bookingNumber ?? extendReservation.id}
+                            </h3>
+                            <p className="mt-1 text-sm font-dm-sans text-gray-600">
+                                Returnare curentă:{" "}
+                                <span className="font-semibold text-gray-900">
+                                    {formatDateTime(extendReservation.endDate) ?? "—"}
+                                </span>
+                            </p>
+                            {extendReservation.extension && (
+                                <div
+                                    className={`mt-4 rounded-lg border px-3 py-2 ${
+                                        extendReservation.extension.paid
+                                            ? "border-emerald-200 bg-emerald-50"
+                                            : "border-amber-200 bg-amber-50"
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-dm-sans font-semibold text-gray-800">
+                                            Prelungire existentă
+                                            {typeof extendReservation.extension.days === "number"
+                                                ? ` (+${extendReservation.extension.days} zile)`
+                                                : ""}
+                                        </span>
+                                        <span
+                                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                                extendReservation.extension.paid
+                                                    ? "bg-emerald-100 text-emerald-700"
+                                                    : "bg-amber-100 text-amber-700"
+                                            }`}
+                                        >
+                                            {extendReservation.extension.paid ? "Achitată" : "Neachitată"}
+                                        </span>
+                                    </div>
+                                    <div className="mt-2 space-y-1 text-sm text-gray-700">
+                                        <div>
+                                            Interval:{" "}
+                                            <span className="font-medium text-gray-900">
+                                                {formatDateTime(extendReservation.extension.from) ?? "—"}
+                                            </span>{" "}
+                                            →{" "}
+                                            <span className="font-medium text-gray-900">
+                                                {formatDateTime(extendReservation.extension.to) ?? "—"}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            Tarif extindere:{" "}
+                                            <span className="font-medium text-gray-900">
+                                                {formatEuro(extendReservation.extension.pricePerDay)}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            Total extindere:{" "}
+                                            <span className="font-medium text-gray-900">
+                                                {formatEuro(extendReservation.extension.total)}
+                                            </span>
+                                        </div>
+                                        {extendOutstandingExtensionLabel && (
+                                            <div className="font-dm-sans font-semibold text-amber-700">
+                                                Rest de plată extindere: {extendOutstandingExtensionLabel}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="grid gap-4">
+                            <div>
+                                <Label htmlFor={`extend-date-${extendReservation.id}`}>
+                                    Dată retur extinsă
+                                </Label>
+                                <Input
+                                    id={`extend-date-${extendReservation.id}`}
+                                    type="date"
+                                    value={extendDate}
+                                    onChange={(event) => setExtendDate(event.target.value)}
+                                    disabled={extendLoading}
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor={`extend-time-${extendReservation.id}`}>
+                                    Oră retur extinsă
+                                </Label>
+                                <Input
+                                    id={`extend-time-${extendReservation.id}`}
+                                    type="time"
+                                    value={extendTime}
+                                    onChange={(event) => setExtendTime(event.target.value)}
+                                    disabled={extendLoading}
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor={`extend-price-${extendReservation.id}`}>
+                                    Tarif extindere (€/zi)
+                                </Label>
+                                <Input
+                                    id={`extend-price-${extendReservation.id}`}
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={extendPrice}
+                                    onChange={(event) => setExtendPrice(event.target.value)}
+                                    placeholder="Lasă gol pentru tariful curent"
+                                    disabled={extendLoading}
+                                />
+                                <p className="mt-1 text-xs font-dm-sans text-gray-500">
+                                    Dacă nu introduci un tarif nou, folosim prețul standard al rezervării.
+                                </p>
+                            </div>
+                            <label className="flex items-center gap-2 text-sm font-dm-sans text-gray-700">
+                                <input
+                                    type="checkbox"
+                                    checked={extendPaid}
+                                    onChange={(event) => setExtendPaid(event.target.checked)}
+                                    disabled={extendLoading}
+                                />
+                                Marchează prelungirea ca achitată
+                            </label>
+                        </div>
+
+                        {extendError && (
+                            <p className="text-sm font-dm-sans text-red-600">{extendError}</p>
+                        )}
+
+                        <div className="flex items-center justify-end gap-3">
+                            <Button variant="outline" onClick={handleCloseExtendPopup} disabled={extendLoading}>
+                                Renunță
+                            </Button>
+                            <Button onClick={handleSubmitExtend} disabled={extendLoading}>
+                                {extendLoading ? (
+                                    <span className="flex items-center gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Salvăm...
+                                    </span>
+                                ) : (
+                                    "Salvează prelungirea"
+                                )}
+                            </Button>
+                        </div>
+
+                        <p className="text-xs font-dm-sans text-gray-500">
+                            Prelungirile marcate ca neachitate sunt incluse automat în soldul rezervării din listă și dashboard.
+                        </p>
+                    </div>
+                </Popup>
+            )}
             {activityDetails && (
                 <Popup
                     open={popupOpen}
