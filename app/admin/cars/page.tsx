@@ -199,6 +199,35 @@ const createUploadedImageAsset = (file: File): CarImageAsset => {
   };
 };
 
+type SerializedImageUpload = {
+  name: string;
+  type: string;
+  size: number;
+  data: string;
+};
+
+const readFileAsBase64 = async (file: File): Promise<string> =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const { result } = reader;
+      if (typeof result !== "string") {
+        reject(new Error("Nu am putut citi conținutul fișierului."));
+        return;
+      }
+
+      const [, base64 = result] = result.split(",", 2);
+      resolve(base64);
+    };
+
+    reader.onerror = () => {
+      reject(reader.error ?? new Error("Citirea fișierului a eșuat."));
+    };
+
+    reader.readAsDataURL(file);
+  });
+
 const releaseImagePreview = (image: CarImageAsset) => {
   if (!image.file) return;
   if (!image.previewUrl) return;
@@ -777,7 +806,7 @@ const mapAdminCarToFormState = (car: AdminCar): CarFormState => {
   };
 };
 
-const buildCarPayload = (form: CarFormState) => {
+const buildCarPayload = async (form: CarFormState) => {
   const payload: Record<string, unknown> = {
     name: form.name.trim(),
     license_plate: form.license_plate.trim(),
@@ -874,11 +903,9 @@ const buildCarPayload = (form: CarFormState) => {
     type: "file" | "existing";
     value: File | string;
   }> = [];
-  let hasUploads = false;
 
   form.images.forEach((image) => {
     if (image.file) {
-      hasUploads = true;
       orderedImages.push({ type: "file", value: image.file });
       return;
     }
@@ -891,44 +918,38 @@ const buildCarPayload = (form: CarFormState) => {
     }
   });
 
-  if (!hasUploads) {
-    if (orderedImages.length > 0) {
-      payload.images = orderedImages.map((entry) => entry.value as string);
-    }
+  if (orderedImages.length === 0) {
     return payload;
   }
 
-  const formData = new FormData();
-  const appendValue = (key: string, value: unknown) => {
-    if (value == null) return;
+  const existingImages: string[] = [];
+  const uploads: SerializedImageUpload[] = [];
 
-    if (Array.isArray(value)) {
-      value.forEach((item) => appendValue(`${key}[]`, item));
-      return;
+  for (const entry of orderedImages) {
+    if (entry.type === "existing") {
+      existingImages.push(entry.value as string);
+      continue;
     }
 
-    if (typeof value === "boolean") {
-      formData.append(key, value ? "1" : "0");
-      return;
-    }
+    const file = entry.value as File;
+    const base64 = await readFileAsBase64(file);
+    uploads.push({
+      name: file.name || "imagine",
+      type: file.type || "application/octet-stream",
+      size: typeof file.size === "number" ? file.size : 0,
+      data: base64,
+    });
+  }
 
-    formData.append(key, String(value));
-  };
+  if (existingImages.length > 0) {
+    payload.images = existingImages;
+  }
 
-  Object.entries(payload).forEach(([key, value]) => {
-    appendValue(key, value);
-  });
+  if (uploads.length > 0) {
+    payload.image_uploads = uploads;
+  }
 
-  orderedImages.forEach((entry) => {
-    if (entry.type === "file") {
-      const file = entry.value as File;
-      formData.append("images[]", file, file.name);
-    } else {
-      formData.append("images[]", entry.value as string);
-    }
-  });
-
-  return formData;
+  return payload;
 };
 
 const CarsPage = () => {
@@ -1673,7 +1694,7 @@ const CarsPage = () => {
     }
 
     try {
-      const payload = buildCarPayload(carForm);
+      const payload = await buildCarPayload(carForm);
       const response =
         modalMode === "edit" && carForm.id
           ? await apiClient.updateCar(carForm.id, payload)

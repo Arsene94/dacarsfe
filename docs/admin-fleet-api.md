@@ -26,6 +26,7 @@ Accepted fields (all optional unless marked *required*):
 - `description` – string.
 - `content` – string (HTML/Markdown).
 - `images` – stringified JSON/CSV (the accessor `images_array` parses it for responses).
+- `image_uploads` – listă de obiecte `{ name, type, size, data }` unde `data` conține fișierul codificat Base64 (fără prefixul `data:`). Poți combina acest câmp cu `images` pentru a păstra imaginile existente și a atașa unele noi într-o singură cerere JSON.
 - `license_plate` – string, max 15.
 - `make_id` – FK into `dacars_car_makes`.
 - `status` – `available`, `pending`, or `unavailable`.
@@ -47,6 +48,14 @@ Accepted fields (all optional unless marked *required*):
   "name": "Skoda Octavia Combi Style",
   "description": "Break spațios cu portbagaj de 640L.",
   "images": "[\"cars/21/main.webp\", \"cars/21/detail-dashboard.webp\"]",
+  "image_uploads": [
+    {
+      "name": "detaliu-interior.webp",
+      "type": "image/webp",
+      "size": 384522,
+      "data": "UklGRnwAAABXRUJQVlA4WAoAAAAQAAAAMgAA..."
+    }
+  ],
   "license_plate": "B-55-SKO",
   "make_id": 7,
   "vehicle_type_id": 4,
