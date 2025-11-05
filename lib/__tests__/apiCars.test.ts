@@ -156,6 +156,92 @@ describe('ApiClient cars management', () => {
     expect(result).toEqual(apiResponse);
   });
 
+  it('updates a car via PATCH when requested', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('admin-token');
+
+    const payload = {
+      status: 'maintenance',
+    } satisfies Record<string, unknown>;
+
+    const apiResponse: ApiItemResult<UnknownRecord> = {
+      data: {
+        id: 12,
+        status: 'maintenance',
+      },
+    };
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.updateCar(12, payload, { method: 'PATCH' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseURL}/cars/12`,
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: 'maintenance',
+        }),
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer admin-token',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+        credentials: 'omit',
+      }),
+    );
+
+    expect(result).toEqual(apiResponse);
+  });
+
+  it('sends FormData without overriding the content type when updating a car', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('admin-token');
+
+    const formData = new FormData();
+    formData.append('status', 'available');
+
+    const apiResponse: ApiItemResult<UnknownRecord> = {
+      data: {
+        id: 35,
+        status: 'available',
+      },
+    };
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.updateCar(35, formData);
+
+    const [, options] = fetchMock.mock.calls.at(-1) ?? [];
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseURL}/cars/35`,
+      expect.objectContaining({
+        method: 'PUT',
+        body: formData,
+        headers: expect.objectContaining({
+          Authorization: 'Bearer admin-token',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+        credentials: 'omit',
+      }),
+    );
+
+    const headers = (options?.headers ?? {}) as Record<string, string>;
+    expect(headers).not.toHaveProperty('Content-Type');
+    expect(result).toEqual(apiResponse);
+  });
+
   it('filters cars using the provided listing query parameters', async () => {
     const client = new ApiClient(baseURL);
 

@@ -661,21 +661,23 @@ export class ApiClient {
         });
     }
 
-    async updateCar(id: number, payload: Record<string, unknown> | FormData): Promise<ApiItemResult<UnknownRecord>> {
+    async updateCar(
+        id: number,
+        payload: Record<string, unknown> | FormData,
+        options: { method?: 'PUT' | 'PATCH' } = {},
+    ): Promise<ApiItemResult<UnknownRecord>> {
+        const method = options.method ?? 'PUT';
+
         if (typeof FormData !== 'undefined' && payload instanceof FormData) {
             return this.request<ApiItemResult<UnknownRecord>>(`/cars/${id}`, {
-                method: 'PUT',
+                method,
                 body: payload,
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                }
             });
         }
 
         const cleanPayload = JSON.parse(JSON.stringify(payload)) as Record<string, unknown>;
         return this.request<ApiItemResult<UnknownRecord>>(`/cars/${id}`, {
-            method: 'PUT',
+            method,
             body: JSON.stringify(cleanPayload),
             headers: {
                 'Content-Type': 'application/json',
