@@ -13,6 +13,7 @@ Sistemul de loguri urmărește orice modificare a datelor din backend și oferă
 | Method | URL | Descriere | Auth | Permisiune |
 | --- | --- | --- | --- | --- |
 | GET | `/api/activity-logs` | Listează logurile cu căutare full-text și filtre. | Bearer token | `activity_logs.view` |
+| GET | `/api/activity-logs/actions` | Returnează toate acțiunile distincte care pot fi folosite în filtre. | Bearer token | `activity_logs.view` |
 | POST | `/api/activity-logs` | Creează un log manual (pentru sisteme externe). | Bearer token | `activity_logs.create` |
 | DELETE | `/api/activity-logs/{id}` | Șterge un log existent (doar user ID 1). | Bearer token | `activity_logs.delete` + user ID 1 |
 
@@ -118,6 +119,42 @@ Authorization: Bearer <token>
   }
 }
 ```
+
+---
+
+## GET `/api/activity-logs/actions`
+Returnează lista completă de acțiuni unice existente în tabela `activity_logs`. Endpoint-ul este folosit de consola admin pentru a
+popula dropdown-ul de filtrare „Acțiune” și trebuie să acopere toate valorile posibile indiferent de pagina curentă a logurilor.
+
+- **Auth:** Bearer token
+- **Permisiune:** `activity_logs.view`
+- **Caching recomandat:** 5 minute (poate fi servit din cache deoarece setul de acțiuni se schimbă rar)
+
+### Comportament
+- întoarce doar valori de tip string distincte din coloana `action`, fără duplicate și fără spații la început/sfârșit;
+- rezultatul trebuie sortat alfabetic (locale `ro_RO`, insensibil la case) pentru a fi ușor de parcurs în UI;
+- poate suporta ulterior memoizare la nivel de aplicație (ex. cache în Redis) — documentați orice TTL configurat;
+- nu acceptă parametri suplimentari în prezent.
+
+### Exemplu răspuns (200)
+```json
+{
+  "data": [
+    "booking.cancelled",
+    "booking.created",
+    "booking.updated",
+    "fleet.imported",
+    "user.logged_in"
+  ]
+}
+```
+
+### Detalii de implementare backend
+1. Faceți un query `SELECT DISTINCT action FROM activity_logs WHERE action IS NOT NULL` și normalizați rezultatul în cod (trim &
+   filtrare valori goale).
+2. Sortați lista înainte de răspuns (folosiți `localeCompare`/`Str::of()->lower()` pentru ordine alfabetică în limba română).
+3. Întoarceți structura `{"data": [ ... ]}` conform convențiilor API existente.
+4. Adăugați test de integrare care verifică că răspunsul este ordonat, fără dubluri și respectă permisiunile.
 
 ---
 
