@@ -346,7 +346,9 @@ const ActivityLogsPage = () => {
   const [perPage, setPerPage] = useState(25);
   const [meta, setMeta] = useState<ApiMeta | null>(null);
   const [searchInput, setSearchInput] = useState("");
-  const [actionInput, setActionInput] = useState("");
+  const [availableActions, setAvailableActions] = useState<string[]>([]);
+  const [selectedAction, setSelectedAction] = useState<string | null>(null);
+  const [actionSearch, setActionSearch] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue>(createDefaultDateRange);
   const [showCalendar, setShowCalendar] = useState(false);
   const [users, setUsers] = useState<UserOption[]>([]);
@@ -360,7 +362,7 @@ const ActivityLogsPage = () => {
   }, [filters.search]);
 
   useEffect(() => {
-    setActionInput(filters.action);
+    setSelectedAction(filters.action ? filters.action : null);
   }, [filters.action]);
 
   useEffect(() => {
@@ -444,6 +446,19 @@ const ActivityLogsPage = () => {
         .map((item) => mapActivityLog(item))
         .filter((item): item is NormalizedActivityLog => item !== null);
       setLogs(mapped);
+      setAvailableActions((previous) => {
+        const actionSet = new Set(previous);
+        mapped.forEach((log) => {
+          if (log.action && log.action !== "—") {
+            actionSet.add(log.action);
+          }
+        });
+        const actions = Array.from(actionSet);
+        actions.sort((a, b) =>
+          a.localeCompare(b, "ro", { sensitivity: "base" }),
+        );
+        return actions;
+      });
 
       if (response && typeof response === "object") {
         const metaValue = (response as Record<string, unknown>).meta;
@@ -547,17 +562,28 @@ const ActivityLogsPage = () => {
   const lastPage = getMetaNumber(meta, ["last_page", "lastPage"]) ?? 1;
   const totalItems = getMetaNumber(meta, ["total", "count"]) ?? logs.length;
 
-  const knownActions = useMemo(() => {
-    const set = new Set<string>();
-    logs.forEach((log) => {
-      if (log.action && log.action !== "—") {
-        set.add(log.action);
-      }
-    });
-    return Array.from(set).sort((a, b) =>
-      a.localeCompare(b, "ro", { sensitivity: "base" }),
+  const actionOptions = useMemo(() => {
+    const actionSet = new Set(availableActions);
+    if (filters.action) {
+      actionSet.add(filters.action);
+    }
+    if (selectedAction) {
+      actionSet.add(selectedAction);
+    }
+    const actions = Array.from(actionSet);
+    actions.sort((a, b) => a.localeCompare(b, "ro", { sensitivity: "base" }));
+    return actions;
+  }, [availableActions, filters.action, selectedAction]);
+
+  const filteredActions = useMemo(() => {
+    const query = actionSearch.trim().toLowerCase();
+    if (!query) {
+      return actionOptions;
+    }
+    return actionOptions.filter((action) =>
+      action.toLowerCase().includes(query),
     );
-  }, [logs]);
+  }, [actionOptions, actionSearch]);
 
   const hasActiveFilters =
     Boolean(filters.search) ||
@@ -569,7 +595,7 @@ const ActivityLogsPage = () => {
   const handleApplyFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const nextSearch = searchInput.trim();
-    const nextAction = actionInput.trim();
+    const nextAction = selectedAction ? selectedAction.trim() : "";
     setFilters((prev) => ({
       ...prev,
       search: nextSearch,
@@ -580,7 +606,8 @@ const ActivityLogsPage = () => {
 
   const handleResetSearchFilters = () => {
     setSearchInput("");
-    setActionInput("");
+    setSelectedAction(null);
+    setActionSearch("");
     setFilters((prev) => ({
       ...prev,
       search: "",
@@ -637,7 +664,8 @@ const ActivityLogsPage = () => {
   const handleResetFilters = () => {
     setFilters(createDefaultFilters());
     setSearchInput("");
-    setActionInput("");
+    setSelectedAction(null);
+    setActionSearch("");
     setSelectedUser(null);
     setUserSearch("");
     setDateRange(createDefaultDateRange());
@@ -775,20 +803,24 @@ const ActivityLogsPage = () => {
           <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="activity-log-action">
             Acțiune
           </label>
-          <Input
+          <SearchSelect<string>
             id="activity-log-action"
-            value={actionInput}
-            onChange={(event) => setActionInput(event.target.value)}
-            placeholder="Ex: booking.updated sau booking"
-            list="activity-log-actions"
+            value={selectedAction}
+            search={actionSearch}
+            items={filteredActions}
+            onSearch={setActionSearch}
+            onSelect={(action) => {
+              setSelectedAction(action);
+              setActionSearch("");
+            }}
+            placeholder="Selectează acțiunea"
+            renderItem={(action) => (
+              <span className="text-sm font-medium text-gray-900">{action}</span>
+            )}
+            renderValue={(action) => (
+              <span className="truncate text-sm font-medium text-gray-900">{action}</span>
+            )}
           />
-          {knownActions.length > 0 && (
-            <datalist id="activity-log-actions">
-              {knownActions.map((action) => (
-                <option key={action} value={action} />
-              ))}
-            </datalist>
-          )}
         </div>
         <div className="flex items-center gap-2 md:col-span-2">
           <Button type="submit" size="sm">
@@ -926,7 +958,8 @@ const ActivityLogsPage = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setActionInput("");
+                  setSelectedAction(null);
+                  setActionSearch("");
                   setFilters((prev) => ({ ...prev, action: "" }));
                   setPage(1);
                 }}
