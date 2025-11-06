@@ -366,6 +366,39 @@ const ActivityLogsPage = () => {
   }, [filters.action]);
 
   useEffect(() => {
+    let canceled = false;
+    const loadActions = async () => {
+      try {
+        const response = await apiClient.getActivityLogActions();
+        if (canceled) {
+          return;
+        }
+        setAvailableActions((previous) => {
+          const actionSet = new Set(previous);
+          response.forEach((action) => {
+            if (typeof action === "string" && action.trim().length > 0) {
+              actionSet.add(action.trim());
+            }
+          });
+          const actions = Array.from(actionSet);
+          actions.sort((a, b) =>
+            a.localeCompare(b, "ro", { sensitivity: "base" }),
+          );
+          return actions;
+        });
+      } catch (err) {
+        console.error("Failed to fetch activity log actions", err);
+      }
+    };
+
+    void loadActions();
+
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const nextRange = filters.from || filters.to
       ? {
           startDate: parseDateInput(filters.from),

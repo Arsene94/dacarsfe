@@ -167,4 +167,40 @@ describe('ApiClient activity logs', () => {
     expect(url.search).toBe('');
     expect(result).toEqual(apiResponse);
   });
+
+  it('fetches available activity log actions', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('admin-token');
+
+    const apiResponse = {
+      data: ['booking.created', 'booking.updated', ' car.deleted '],
+    };
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(apiResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.getActivityLogActions();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [requestUrl, requestInit] = fetchMock.mock.calls[0];
+    const url = new URL(requestUrl as string);
+
+    expect(url.pathname).toBe('/activity-logs/actions');
+    expect(requestInit).toEqual(
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer admin-token',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+        credentials: 'omit',
+      }),
+    );
+
+    expect(result).toEqual(['booking.created', 'booking.updated', 'car.deleted']);
+  });
 });

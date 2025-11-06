@@ -1262,6 +1262,19 @@ export class ApiClient {
         );
     }
 
+    async getActivityLogActions(): Promise<string[]> {
+        const response = await this.request<ApiListResult<string>>(
+            `/activity-logs/actions`,
+        );
+        const actions = extractList<string>(response)
+            .map((action) => (typeof action === 'string' ? action.trim() : ''))
+            .filter((action) => action.length > 0);
+
+        const unique = Array.from(new Set(actions));
+        unique.sort((a, b) => a.localeCompare(b, 'ro', { sensitivity: 'base' }));
+        return unique;
+    }
+
     async getRoles(
         params: {
             page?: number;
