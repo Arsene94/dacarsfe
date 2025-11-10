@@ -152,7 +152,7 @@ import type {
     AdminReportQuarterlyResponse,
     AdminReportWeeklyParams,
     AdminReportWeeklyResponse,
-} from '@/types/reports';
+} from "@/types/reports";
 import type {
     AdminAnalyticsCountriesParams,
     AdminAnalyticsCountriesResponse,
@@ -167,13 +167,67 @@ import type {
     AdminAnalyticsVisitorDetailResponse,
     AdminAnalyticsVisitorsParams,
     AdminAnalyticsVisitorsResponse,
-} from '@/types/analytics';
+} from "@/types/analytics";
 import type {
     WheelOfFortunePeriod,
     WheelOfFortunePrizePayload,
     WheelOfFortunePrizeWinner,
     WheelPrize,
 } from "@/types/wheel";
+
+export const DEFAULT_API_BASE_URL = 'http://localhost:8000/api/v1';
+const LOCAL_FRONTEND_HOSTS = new Set(['localhost', '127.0.0.1']);
+const LOCAL_FRONTEND_PORTS = new Set(['3000', '3001']);
+const API_PATH_PATTERN = /\/api(?:\/|$)/i;
+
+const normalizePathname = (pathname: string): string => {
+    if (!pathname || pathname === '/') {
+        return '';
+    }
+
+    return pathname.replace(/\/+$/, '');
+};
+
+const shouldFallbackToDefault = (url: URL): boolean => {
+    const hostname = url.hostname.toLowerCase();
+    const port = url.port || (url.protocol === 'https:' ? '443' : '80');
+    const lacksApiSegment = !API_PATH_PATTERN.test(url.pathname);
+
+    if (!lacksApiSegment) {
+        return false;
+    }
+
+    return LOCAL_FRONTEND_HOSTS.has(hostname) && LOCAL_FRONTEND_PORTS.has(port);
+};
+
+export const resolveApiBaseUrl = (candidate?: string | null): string => {
+    if (typeof candidate !== 'string') {
+        return DEFAULT_API_BASE_URL;
+    }
+
+    const trimmed = candidate.trim();
+    if (trimmed.length === 0) {
+        return DEFAULT_API_BASE_URL;
+    }
+
+    try {
+        const url = new URL(trimmed);
+        if (shouldFallbackToDefault(url)) {
+            if (process.env.NODE_ENV !== 'production') {
+                console.warn(
+                    `[api] NEXT_PUBLIC_API_URL="${trimmed}" pare să indice serverul frontend (${url.host}). Folosim baza implicită ${DEFAULT_API_BASE_URL}.`,
+                );
+            }
+            return DEFAULT_API_BASE_URL;
+        }
+
+        return `${url.origin}${normalizePathname(url.pathname)}`;
+    } catch (error) {
+        return trimmed;
+    }
+};
+
+export const API_BASE_URL = resolveApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 type CategoryPriceCalendarPayload = Omit<
     CategoryPriceCalendar,
@@ -205,7 +259,6 @@ type RolePayload = {
     permissions?: string[];
 } & Record<string, unknown>;
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 const STATIC_BUILD_PHASE = 'phase-production-build' as const;
 const FORCE_API_FETCH_FLAG = 'DACARS_FORCE_API_FETCH' as const;
@@ -376,7 +429,7 @@ export class ApiClient {
     private language: string | null = DEFAULT_LOCALE;
 
     constructor(baseURL: string) {
-        this.baseURL = baseURL;
+        this.baseURL = resolveApiBaseUrl(baseURL);
 
         // Get token from localStorage if available
         if (typeof window !== 'undefined') {
