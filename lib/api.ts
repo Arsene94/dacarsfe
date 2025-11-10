@@ -177,8 +177,17 @@ import type {
 
 export const DEFAULT_API_BASE_URL = 'http://localhost:8000/api/v1';
 const LOCAL_FRONTEND_HOSTS = new Set(['localhost', '127.0.0.1']);
-const LOCAL_FRONTEND_PORTS = new Set(['3000', '3001']);
-const API_PATH_PATTERN = /\/api(?:\/|$)/i;
+const LOCAL_FRONTEND_PORTS = new Set(['3000', '3001', '3002', '3003', '3004']);
+
+if (typeof process !== 'undefined') {
+    const devPort = process.env.PORT;
+    if (typeof devPort === 'string') {
+        const trimmedPort = devPort.trim();
+        if (trimmedPort.length > 0) {
+            LOCAL_FRONTEND_PORTS.add(trimmedPort);
+        }
+    }
+}
 
 const normalizePathname = (pathname: string): string => {
     if (!pathname || pathname === '/') {
@@ -191,13 +200,12 @@ const normalizePathname = (pathname: string): string => {
 const shouldFallbackToDefault = (url: URL): boolean => {
     const hostname = url.hostname.toLowerCase();
     const port = url.port || (url.protocol === 'https:' ? '443' : '80');
-    const lacksApiSegment = !API_PATH_PATTERN.test(url.pathname);
 
-    if (!lacksApiSegment) {
+    if (!LOCAL_FRONTEND_HOSTS.has(hostname)) {
         return false;
     }
 
-    return LOCAL_FRONTEND_HOSTS.has(hostname) && LOCAL_FRONTEND_PORTS.has(port);
+    return LOCAL_FRONTEND_PORTS.has(port);
 };
 
 export const resolveApiBaseUrl = (candidate?: string | null): string => {

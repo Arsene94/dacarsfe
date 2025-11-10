@@ -24,8 +24,26 @@ describe("resolveApiBaseUrl", () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
+  it("leaves remote API hosts untouched", () => {
+    const candidate = "https://dacars.ro/api/v1";
+    expect(resolveApiBaseUrl(candidate)).toBe("https://dacars.ro/api/v1");
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   it("falls back to the default base when pointing to the local frontend server", () => {
     const candidate = "http://127.0.0.1:3000/admin";
+    expect(resolveApiBaseUrl(candidate)).toBe(DEFAULT_API_BASE_URL);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back even dacă URL-ul include un segment /api pe frontendul local", () => {
+    const candidate = "http://localhost:3000/api/v1";
+    expect(resolveApiBaseUrl(candidate)).toBe(DEFAULT_API_BASE_URL);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("tratază și porturile alternative ale serverului Next.js local drept frontend", () => {
+    const candidate = "http://localhost:3002/app";
     expect(resolveApiBaseUrl(candidate)).toBe(DEFAULT_API_BASE_URL);
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
