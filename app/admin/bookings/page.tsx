@@ -918,6 +918,7 @@ const ReservationsPage = () => {
   const [extendPaid, setExtendPaid] = useState(false);
   const [extendLoading, setExtendLoading] = useState(false);
   const [extendError, setExtendError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const formatEuro = (value: number | string | null | undefined) => {
     if (typeof value === "string") {
@@ -1158,6 +1159,38 @@ const ReservationsPage = () => {
       return [];
     }
   }, [currentPage, perPage, searchTerm, statusFilter, startDateFilter, endDateFilter]);
+
+  const handleExportBookings = useCallback(async () => {
+    if (isExporting) {
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      const { blob, fileName } = await apiClient.exportAdminBookingsCsv();
+      const fallbackName = (() => {
+        const timestamp = new Date()
+          .toISOString()
+          .replace(/[-:]/g, "")
+          .replace(/\..+$/, "");
+        return `bookings-${timestamp}.csv`;
+      })();
+      const downloadName = pickNonEmptyString(fileName) ?? fallbackName;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = downloadName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export rezervări eșuat", error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [isExporting]);
 
   const handleSubmitExtend = useCallback(async () => {
     if (!extendReservation) {
@@ -1988,11 +2021,19 @@ const ReservationsPage = () => {
                 Crează rezervare
               </Button>
               <button
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                onClick={handleExportBookings}
+                disabled={isExporting}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 aria-label="Exportă rezervări"
               >
-                <Download className="h-4 w-4 text-gray-600" />
-                <span className="font-dm-sans text-gray-600">Export</span>
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 text-gray-600 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 text-gray-600" />
+                )}
+                <span className="font-dm-sans text-gray-600">
+                  {isExporting ? "Se generează…" : "Export"}
+                </span>
               </button>
             </div>
           </div>
