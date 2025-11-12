@@ -446,10 +446,10 @@ export class ApiClient {
         window.dispatchEvent(new CustomEvent(FORBIDDEN_EVENT, { detail }));
     }
 
-    private async request<T>(
+    private async performRequest(
         endpoint: string,
-        options: RequestInit = {}
-    ): Promise<T> {
+        options: RequestInit = {},
+    ): Promise<Response> {
         const url = `${this.baseURL}${endpoint}`;
 
         const isFormData =
@@ -533,14 +533,7 @@ export class ApiClient {
                 throw apiError;
             }
 
-            const contentType = response.headers.get('content-type');
-            if (contentType?.includes('application/json')) {
-                return await response.json();
-            }
-            if (contentType?.includes('application/pdf')) {
-                return await response.blob() as T;
-            }
-            return {} as T;
+            return response;
         } catch (error) {
             if (isApiNetworkError(error)) {
                 if (shouldBypassApiDuringStaticBuild()) {
@@ -556,6 +549,28 @@ export class ApiClient {
             }
             throw error;
         }
+    }
+
+    private async request<T>(
+        endpoint: string,
+        options: RequestInit = {},
+    ): Promise<T> {
+        const response = await this.performRequest(endpoint, options);
+
+        const contentType = response.headers.get('content-type');
+        if (contentType?.includes('application/json')) {
+            return await response.json();
+        }
+        if (contentType?.includes('application/pdf')) {
+            return (await response.blob()) as T;
+        }
+        if (contentType?.includes('text/csv')) {
+            return (await response.blob()) as T;
+        }
+        if (response.status === 204) {
+            return {} as T;
+        }
+        return {} as T;
     }
 
     async getCars(params: {
@@ -2531,6 +2546,38 @@ export class ApiClient {
         return this.request<ApiListResult<AdminBookingResource>>(
             `/bookings${query ? `?${query}` : ''}`,
         );
+    }
+
+    async exportAdminBookingsCsv(): Promise<{ blob: Blob; fileName: string | null }> {
+        const response = await this.performRequest(`/admin/bookings/export`, {
+            headers: {
+                Accept: 'text/csv',
+            },
+            cache: 'no-store',
+        });
+
+        const blob = await response.blob();
+        const disposition = response.headers.get('content-disposition');
+        let fileName: string | null = null;
+
+        if (typeof disposition === 'string' && disposition.length > 0) {
+            const utfFilenameMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+            if (utfFilenameMatch?.[1]) {
+                try {
+                    fileName = decodeURIComponent(utfFilenameMatch[1]);
+                } catch (error) {
+                    console.warn('Nu am putut decoda numele fișierului din Content-Disposition.', error);
+                    fileName = utfFilenameMatch[1];
+                }
+            } else {
+                const asciiFilenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+                if (asciiFilenameMatch?.[1]) {
+                    fileName = asciiFilenameMatch[1];
+                }
+            }
+        }
+
+        return { blob, fileName };
     }
 
     async deleteBooking(id: number | string): Promise<ApiDeleteResponse> {
