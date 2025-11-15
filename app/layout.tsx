@@ -20,6 +20,7 @@ import MetaPixelHeadScripts from "../components/MetaPixelHeadScripts";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import LocaleHeadTags from "../components/LocaleHeadTags";
 import AnalyticsHydrator from "@/components/AnalyticsHydrator";
+import { Analytics } from "@vercel/analytics/next"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -144,6 +145,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               <Header />
               <main className="mt-12">
                 <PageTransition>{children}</PageTransition>
+                  <Analytics/>
               </main>
               <Footer />
             </BookingProvider>
