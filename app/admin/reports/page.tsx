@@ -20,11 +20,19 @@ import {
 import type { BarSeries } from "@/components/admin/reports/ChartPrimitives";
 import { SimpleBarChart } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
-import { formatCurrency } from "@/components/admin/reports/formatting";
+import {
+  formatCurrency,
+  formatSecondaryCurrency,
+} from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
   `${(value * 100).toFixed(fractionDigits)}%`;
+
+const buildSecondaryFootnote = (value?: number | null, currency?: string) => {
+  const formatted = formatSecondaryCurrency(value, currency);
+  return formatted ? `≈ ${formatted}` : undefined;
+};
 
 const buildQuarterOptions = () => {
   const options: string[] = [];
@@ -136,6 +144,8 @@ export default function AdminReportsOverviewPage() {
       label: point.label,
       current: point.current,
       previous: point.previous,
+      current_ron: point.current_ron,
+      previous_ron: point.previous_ron,
     }));
   }, [data]);
 
@@ -275,6 +285,10 @@ export default function AdminReportsOverviewPage() {
                 data.week.revenue.previous,
                 "săptămâna precedentă",
               )}
+              footer={buildSecondaryFootnote(
+                data.week.revenue.current_ron,
+                data.week.currency_secondary,
+              )}
             />
             <MetricCard
               title="Rezervări confirmate"
@@ -303,6 +317,13 @@ export default function AdminReportsOverviewPage() {
                 data.week.currency,
               )}
               subtitle="Calculează ARPU săptămânal"
+              footer={buildSecondaryFootnote(
+                data.week.revenue.current_ron != null
+                  ? data.week.revenue.current_ron /
+                    Math.max(data.week.bookings.current, 1)
+                  : null,
+                data.week.currency_secondary,
+              )}
             />
           </StatGrid>
 
@@ -317,9 +338,29 @@ export default function AdminReportsOverviewPage() {
                   xKey="label"
                   series={quarterChartSeries}
                   yTickFormatter={formatThousands}
-                  valueFormatter={(value, name) =>
-                    `${name}: ${formatCurrency(value, data.week.currency)}`
-                  }
+                  valueFormatter={(value, name, payload) => {
+                    const base = formatCurrency(value, data.week.currency);
+                    const record = (payload as Record<string, unknown>) ?? {};
+                    let ronValue: number | undefined;
+                    if (
+                      typeof record.current === "number" &&
+                      record.current === value
+                    ) {
+                      ronValue = record.current_ron as number | undefined;
+                    } else if (
+                      typeof record.previous === "number" &&
+                      record.previous === value
+                    ) {
+                      ronValue = record.previous_ron as number | undefined;
+                    }
+                    const secondary = formatSecondaryCurrency(
+                      ronValue,
+                      data.week.currency_secondary,
+                    );
+                    return secondary
+                      ? `${name}: ${base} (${secondary})`
+                      : `${name}: ${base}`;
+                  }}
                 />
               ) : null}
             </ChartContainer>

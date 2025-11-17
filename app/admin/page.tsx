@@ -340,9 +340,16 @@ const toLocalDateTimeInput = (iso?: string | null): string => {
 
 const mapServiceSummaries = (
     services: unknown,
+    fallback?: unknown,
 ): Array<{ id: number; name: string }> => {
-    if (!Array.isArray(services)) return [];
-    return services
+    const source =
+        Array.isArray(services) && services.length > 0
+            ? services
+            : Array.isArray(fallback) && fallback.length > 0
+                ? fallback
+                : null;
+    if (!Array.isArray(source)) return [];
+    return source
         .map((service) => {
             if (!isRecord(service)) return null;
             const id =
@@ -396,6 +403,12 @@ const mapActivityReservationToAdmin = (
     const normalizedBookingNumber =
         reservation.booking_number != null ? String(reservation.booking_number).trim() : "";
     const resolvedId = normalizedId || normalizedBookingNumber;
+    const discountValue =
+        parseOptionalNumber(
+            reservation.discount ??
+                (reservation as { discount?: unknown }).discount ??
+                reservation.coupon_amount,
+        ) ?? undefined;
 
     return {
         id: resolvedId,
@@ -405,34 +418,35 @@ const mapActivityReservationToAdmin = (
         carId: reservation.car_id,
         carName: reservation.car?.name ?? "",
         carLicensePlate: reservation.car?.license_plate,
-    startDate: reservation.rental_start_date ?? "",
-    endDate: reservation.rental_end_date ?? "",
-    plan: reservation.with_deposit ? 1 : 2,
-    status: mapActivityStatus(reservation.status ?? ""),
-    total: reservation.total ?? 0,
-    pricePerDay: reservation.price_per_day ?? undefined,
-    servicesPrice: reservation.total_services ?? undefined,
-    discount: reservation.coupon_amount ?? undefined,
-    totalBeforeWheelPrize: null,
-    wheelPrizeDiscount: null,
-    wheelPrize: null,
-    email: undefined,
-    days: reservation.days ?? undefined,
-    pickupTime: reservation.start_hour_group ?? undefined,
-    dropoffTime: reservation.end_hour_group ?? undefined,
-    location: undefined,
-    discountCode: reservation.coupon_type ?? undefined,
-    notes: reservation.note ?? undefined,
-    createdAt: undefined,
-    couponAmount: reservation.coupon_amount ?? 0,
-    subTotal: reservation.sub_total ?? 0,
-    taxAmount: 0,
-    remainingBalance:
-        parseOptionalNumber(
-            reservation.remaining_balance ??
-                (reservation as { remainingBalance?: unknown }).remainingBalance,
-        ) ?? null,
-    extension: normalizeReservationExtension(reservation.extension),
+        startDate: reservation.rental_start_date ?? "",
+        endDate: reservation.rental_end_date ?? "",
+        plan: reservation.with_deposit ? 1 : 2,
+        status: mapActivityStatus(reservation.status ?? ""),
+        total: reservation.total ?? 0,
+        pricePerDay: reservation.price_per_day ?? undefined,
+        servicesPrice: reservation.total_services ?? undefined,
+        discount: discountValue,
+        totalBeforeWheelPrize: null,
+        wheelPrizeDiscount: null,
+        wheelPrize: null,
+        email: undefined,
+        days: reservation.days ?? undefined,
+        pickupTime: reservation.start_hour_group ?? undefined,
+        dropoffTime: reservation.end_hour_group ?? undefined,
+        location: undefined,
+        discountCode: reservation.coupon_type ?? undefined,
+        notes: reservation.note ?? undefined,
+        createdAt: undefined,
+        couponAmount: reservation.coupon_amount ?? 0,
+        subTotal: reservation.sub_total ?? 0,
+        taxAmount: 0,
+        remainingBalance:
+            parseOptionalNumber(
+                reservation.remaining_balance ??
+                    (reservation as { remainingBalance?: unknown }).remainingBalance,
+            ) ?? null,
+        extension: normalizeReservationExtension(reservation.extension),
+        advance_payment: parseOptionalNumber(reservation.advance_payment) ?? undefined,
     };
 };
 
@@ -732,7 +746,8 @@ const AdminDashboard = () => {
         services: { id:number, name: string }[];
         total_services: number;
         coupon_amount: number;
-        coupon_type: string;
+        coupon_type: string | null;
+        discountValue: number | null;
         with_deposit: boolean;
         note: string | null;
         arrivalDate: string;
@@ -741,6 +756,7 @@ const AdminDashboard = () => {
         returnTime: string;
         remainingBalance: number | null;
         extension: AdminBookingExtension | null;
+        advancePayment: number | null;
     } | null>(null);
     const [editPopupOpen, setEditPopupOpen] = useState(false);
     const [bookingInfo, setBookingInfo] = useState<AdminBookingFormValues | null>(
@@ -774,7 +790,8 @@ const AdminDashboard = () => {
         services: {  id: number, name: string }[];
         total_services: number;
         coupon_amount: number;
-        coupon_type: string;
+        coupon_type: string | null;
+        discountValue: number | null;
         with_deposit: boolean;
         note: string | null;
         arrivalDate: string;
@@ -783,6 +800,7 @@ const AdminDashboard = () => {
         returnTime: string;
         remainingBalance: number | null;
         extension: AdminBookingExtension | null;
+        advancePayment: number | null;
     }) => {
         setActivityDetails(details);
         setPopupOpen(true);
@@ -1531,11 +1549,27 @@ const AdminDashboard = () => {
                                                 const outstandingExtensionBalance = hasUnpaidExtension
                                                     ? extensionRemainingPayment ?? remainingBalanceValue ?? null
                                                     : null;
-                                                const adminReservationRow = mapActivityReservationToAdmin(r);
-                                                const isExtending =
-                                                    extendLoading &&
-                                                    extendReservation?.id.trim() ===
-                                                        adminReservationRow.id.trim();
+                                            const adminReservationRow = mapActivityReservationToAdmin(r);
+                                            const serviceSummaries = mapServiceSummaries(
+                                                r.services,
+                                                (r as { services_list?: unknown }).services_list,
+                                            );
+                                            const discountValue =
+                                                parseOptionalNumber(
+                                                    r.discount ??
+                                                        (r as { discount?: unknown }).discount ??
+                                                        null,
+                                                ) ?? null;
+                                            const advancePayment =
+                                                parseOptionalNumber(
+                                                    r.advance_payment ??
+                                                        (r as { advancePayment?: unknown }).advancePayment ??
+                                                        null,
+                                                ) ?? null;
+                                            const isExtending =
+                                                extendLoading &&
+                                                extendReservation?.id.trim() ===
+                                                    adminReservationRow.id.trim();
                                                 return (
                                                     <div
                                                         key={r.id + (isDeparture ? 'start' : 'end')}
@@ -1634,10 +1668,11 @@ const AdminDashboard = () => {
                                                                             price_per_day: r.price_per_day,
                                                                             sub_total: r.sub_total,
                                                                             total: r.total,
-                                                                            services: mapServiceSummaries(r.services),
+                                                                            services: serviceSummaries,
                                                                             total_services: r.total_services,
                                                                             coupon_amount: r.coupon_amount,
-                                                                            coupon_type: r.coupon_type,
+                                                                            coupon_type: r.coupon_type ?? null,
+                                                                            discountValue,
                                                                             with_deposit: r.with_deposit,
                                                                             note: r.note ?? null,
                                                                             arrivalDate: r.rental_start_date.slice(0, 10),
@@ -1649,6 +1684,7 @@ const AdminDashboard = () => {
                                                                                 remainingBalanceValue ??
                                                                                 null,
                                                                             extension: extensionDetails,
+                                                                            advancePayment,
                                                                         })
                                                                     }
                                                                     className="p-2 text-gray-400 hover:text-berkeley hover:bg-gray-100 rounded-lg transition-colors duration-200"
@@ -1927,8 +1963,27 @@ const AdminDashboard = () => {
                                 </ul>
                             </div>
                         )}
-                        {activityDetails.services.length > 0 && (<div className="text-sm font-dm-sans"><span className="font-semibold">Preț servicii:</span> {activityDetails.total_services}€</div>)}
-                        {activityDetails.coupon_amount > 0 && (<div className="text-sm font-dm-sans"><span className="font-semibold">Discount:</span> {activityDetails.coupon_amount}€</div>)}
+                        {activityDetails.services.length > 0 && (
+                            <div className="text-sm font-dm-sans">
+                                <span className="font-semibold">Preț servicii:</span> {activityDetails.total_services}€
+                            </div>
+                        )}
+                        {typeof activityDetails.advancePayment === 'number' && activityDetails.advancePayment > 0 && (
+                            <div className="text-sm font-dm-sans text-emerald-700">
+                                <span className="font-semibold">Avans încasat:</span> {euroFormatter.format(activityDetails.advancePayment)}€
+                            </div>
+                        )}
+                        {typeof activityDetails.discountValue === 'number' && activityDetails.discountValue > 0 && (
+                            <div className="text-sm font-dm-sans text-emerald-700">
+                                <span className="font-semibold">Discount aplicat:</span> {euroFormatter.format(activityDetails.discountValue)}€
+                            </div>
+                        )}
+                        {activityDetails.coupon_amount > 0 && (
+                            <div className="text-sm font-dm-sans">
+                                <span className="font-semibold">Discount configurat:</span> {activityDetails.coupon_amount}
+                                {activityDetails.coupon_type ? ` (${activityDetails.coupon_type})` : ''}
+                            </div>
+                        )}
                         <div className="text-sm font-dm-sans"><span className="font-semibold">Total:</span> {activityDetails.total}€</div>
                         {typeof activityDetails.remainingBalance === 'number' && activityDetails.remainingBalance > 0 && (
                             <div className="text-sm font-dm-sans text-amber-700">

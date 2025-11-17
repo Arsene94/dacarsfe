@@ -36,3 +36,27 @@ export const formatCurrency = (value: number, currency?: string) => {
   }
 };
 
+export const formatSecondaryCurrency = (
+  value?: number | null,
+  currency?: string,
+): string | null => {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+  return formatCurrency(value, currency);
+};
+
+export const formatCurrencyPair = (
+  primaryValue: number,
+  primaryCurrency?: string,
+  secondaryValue?: number | null,
+  secondaryCurrency?: string,
+) => {
+  const primary = formatCurrency(primaryValue, primaryCurrency);
+  const secondary = formatSecondaryCurrency(secondaryValue, secondaryCurrency);
+  if (!secondary) {
+    return primary;
+  }
+  return `${primary} (${secondary})`;
+};
+

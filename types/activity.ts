@@ -29,8 +29,9 @@ export interface ActivityReservation {
   remaining_balance?: number | string | null;
   total_services: number;
   coupon_amount: number;
-  coupon_type: string;
+  coupon_type: string | null;
   discount?: number | string | null;
+  advance_payment?: number | string | null;
   with_deposit: boolean;
   customer_id: number | null;
   rental_start_date: string;

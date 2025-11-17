@@ -25,7 +25,10 @@ import {
   RadarChart,
 } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
-import { formatCurrency } from "@/components/admin/reports/formatting";
+import {
+  formatCurrency,
+  formatSecondaryCurrency,
+} from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
@@ -36,6 +39,11 @@ const comparisonOptions = [
   { value: "same_week_last_year", label: "Aceeași săptămână a anului trecut" },
   { value: "custom", label: "Interval personalizat" },
 ] as const;
+
+const buildSecondaryFootnote = (value?: number | null, currency?: string) => {
+  const formatted = formatSecondaryCurrency(value, currency);
+  return formatted ? `≈ ${formatted}` : undefined;
+};
 
 export default function AdminWeeklyReportPage() {
   const [data, setData] = useState<AdminReportWeeklyResponse | null>(null);
@@ -155,6 +163,8 @@ export default function AdminWeeklyReportPage() {
       label: point.label,
       current: point.current,
       previous: point.previous,
+      current_ron: point.current_ron,
+      previous_ron: point.previous_ron,
     }));
   }, [data]);
 
@@ -332,6 +342,10 @@ export default function AdminWeeklyReportPage() {
                 data.totals.revenue.previous,
                 comparisonLabel,
               )}
+              footer={buildSecondaryFootnote(
+                data.totals.revenue.current_ron,
+                data.totals.currency_secondary,
+              )}
             />
             <MetricCard
               title="Rezervări"
@@ -366,24 +380,44 @@ export default function AdminWeeklyReportPage() {
             />
           </StatGrid>
 
-          <ReportSection
-            title="Evoluție zilnică a veniturilor"
-            description="Compară trendul zilnic cu intervalul de referință."
-          >
-            <ChartContainer>
-              {revenueChartData ? (
-                <LineChart
-                  data={revenueChartData}
-                  xKey="label"
-                  series={revenueChartSeries}
-                  yTickFormatter={formatThousands}
-                  valueFormatter={(value, name) =>
-                    `${name}: ${formatCurrency(value, data.totals.currency)}`
-                  }
-                />
-              ) : null}
-            </ChartContainer>
-          </ReportSection>
+            <ReportSection
+              title="Evoluție zilnică a veniturilor"
+              description="Compară trendul zilnic cu intervalul de referință."
+            >
+              <ChartContainer>
+                {revenueChartData ? (
+                  <LineChart
+                    data={revenueChartData}
+                    xKey="label"
+                    series={revenueChartSeries}
+                    yTickFormatter={formatThousands}
+                  valueFormatter={(value, name, payload) => {
+                    const base = formatCurrency(value, data.totals.currency);
+                    const record = (payload as Record<string, unknown>) ?? {};
+                    let ronValue: number | undefined;
+                    if (
+                      typeof record.current === "number" &&
+                      record.current === value
+                    ) {
+                      ronValue = record.current_ron as number | undefined;
+                    } else if (
+                      typeof record.previous === "number" &&
+                      record.previous === value
+                    ) {
+                      ronValue = record.previous_ron as number | undefined;
+                    }
+                    const secondary = formatSecondaryCurrency(
+                      ronValue,
+                      data.totals.currency_secondary,
+                    );
+                    return secondary
+                      ? `${name}: ${base} (${secondary})`
+                      : `${name}: ${base}`;
+                  }}
+                  />
+                ) : null}
+              </ChartContainer>
+            </ReportSection>
 
           <div className="grid gap-6 lg:grid-cols-2">
             <ReportSection
@@ -460,6 +494,13 @@ export default function AdminWeeklyReportPage() {
                 </p>
                 <p className="mt-1 text-xs text-slate-600">
                   Impact estimat: {formatCurrency(data.risk_indicators.late_returns_value, data.totals.currency)}
+                  {(() => {
+                    const secondary = formatSecondaryCurrency(
+                      data.risk_indicators.late_returns_value_ron,
+                      data.totals.currency_secondary,
+                    );
+                    return secondary ? ` (${secondary})` : "";
+                  })()}
                 </p>
               </div>
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">

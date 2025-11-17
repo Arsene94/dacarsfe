@@ -25,7 +25,10 @@ import {
   SimpleBarChart,
 } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
-import { formatCurrency } from "@/components/admin/reports/formatting";
+import {
+  formatCurrency,
+  formatSecondaryCurrency,
+} from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
@@ -36,6 +39,11 @@ const comparisonOptions = [
   { value: "same_month_last_year", label: "Aceeași lună a anului trecut" },
   { value: "custom", label: "Lună personalizată" },
 ] as const;
+
+const buildSecondaryFootnote = (value?: number | null, currency?: string) => {
+  const formatted = formatSecondaryCurrency(value, currency);
+  return formatted ? `≈ ${formatted}` : undefined;
+};
 
 export default function AdminMonthlyReportPage() {
   const [data, setData] = useState<AdminReportMonthlyResponse | null>(null);
@@ -142,6 +150,8 @@ export default function AdminMonthlyReportPage() {
       label: item.label,
       revenue: item.revenue,
       profit: item.profit,
+      revenue_ron: item.revenue_ron,
+      profit_ron: item.profit_ron,
     }));
   }, [data]);
 
@@ -193,21 +203,29 @@ export default function AdminMonthlyReportPage() {
         label: "Flotă",
         current: data.cost_structure.fleet.current,
         previous: data.cost_structure.fleet.previous,
+        current_ron: data.cost_structure.fleet.current_ron,
+        previous_ron: data.cost_structure.fleet.previous_ron,
       },
       {
         label: "Operațiuni",
         current: data.cost_structure.operations.current,
         previous: data.cost_structure.operations.previous,
+        current_ron: data.cost_structure.operations.current_ron,
+        previous_ron: data.cost_structure.operations.previous_ron,
       },
       {
         label: "Marketing",
         current: data.cost_structure.marketing.current,
         previous: data.cost_structure.marketing.previous,
+        current_ron: data.cost_structure.marketing.current_ron,
+        previous_ron: data.cost_structure.marketing.previous_ron,
       },
       {
         label: "Alte costuri",
         current: data.cost_structure.other.current,
         previous: data.cost_structure.other.previous,
+        current_ron: data.cost_structure.other.current_ron,
+        previous_ron: data.cost_structure.other.previous_ron,
       },
     ];
   }, [data]);
@@ -332,6 +350,10 @@ export default function AdminMonthlyReportPage() {
                 data.financials.revenue.previous,
                 data.period.comparison.label,
               )}
+              footer={buildSecondaryFootnote(
+                data.financials.revenue.current_ron,
+                data.financials.currency_secondary,
+              )}
             />
             <MetricCard
               title="Profit net"
@@ -342,6 +364,10 @@ export default function AdminMonthlyReportPage() {
                 data.financials.net_profit.previous,
                 data.period.comparison.label,
               )}
+              footer={buildSecondaryFootnote(
+                data.financials.net_profit.current_ron,
+                data.financials.currency_secondary,
+              )}
             />
             <MetricCard
               title="Tarif mediu zilnic"
@@ -351,6 +377,10 @@ export default function AdminMonthlyReportPage() {
                 data.financials.avg_daily_rate.current,
                 data.financials.avg_daily_rate.previous,
                 data.period.comparison.label,
+              )}
+              footer={buildSecondaryFootnote(
+                data.financials.avg_daily_rate.current_ron,
+                data.financials.currency_secondary,
               )}
             />
             <MetricCard
@@ -376,9 +406,29 @@ export default function AdminMonthlyReportPage() {
                   xKey="label"
                   series={trendSeries}
                   yTickFormatter={formatThousands}
-                  valueFormatter={(value, name) =>
-                    `${name}: ${formatCurrency(value, data.financials.currency)}`
-                  }
+                  valueFormatter={(value, name, payload) => {
+                    const base = formatCurrency(value, data.financials.currency);
+                    const record = (payload as Record<string, unknown>) ?? {};
+                    let ronValue: number | undefined;
+                    if (
+                      typeof record.revenue === "number" &&
+                      record.revenue === value
+                    ) {
+                      ronValue = record.revenue_ron as number | undefined;
+                    } else if (
+                      typeof record.profit === "number" &&
+                      record.profit === value
+                    ) {
+                      ronValue = record.profit_ron as number | undefined;
+                    }
+                    const secondary = formatSecondaryCurrency(
+                      ronValue,
+                      data.financials.currency_secondary,
+                    );
+                    return secondary
+                      ? `${name}: ${base} (${secondary})`
+                      : `${name}: ${base}`;
+                  }}
                 />
               ) : null}
             </ChartContainer>
@@ -429,9 +479,29 @@ export default function AdminMonthlyReportPage() {
                     series={costStructureSeries}
                     layout="vertical"
                     yTickFormatter={formatThousands}
-                    valueFormatter={(value, name) =>
-                      `${name}: ${formatCurrency(value, data.financials.currency)}`
-                    }
+                    valueFormatter={(value, name, payload) => {
+                      const base = formatCurrency(value, data.financials.currency);
+                      const record = (payload as Record<string, unknown>) ?? {};
+                      let ronValue: number | undefined;
+                      if (
+                        typeof record.current === "number" &&
+                        record.current === value
+                      ) {
+                        ronValue = record.current_ron as number | undefined;
+                      } else if (
+                        typeof record.previous === "number" &&
+                        record.previous === value
+                      ) {
+                        ronValue = record.previous_ron as number | undefined;
+                      }
+                      const secondary = formatSecondaryCurrency(
+                        ronValue,
+                        data.financials.currency_secondary,
+                      );
+                      return secondary
+                        ? `${name}: ${base} (${secondary})`
+                        : `${name}: ${base}`;
+                    }}
                   />
                 ) : null}
               </ChartContainer>

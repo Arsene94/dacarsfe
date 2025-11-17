@@ -17,11 +17,20 @@ import {
 import type { BarSeries, DoughnutSlice } from "@/components/admin/reports/ChartPrimitives";
 import { DoughnutChart, SimpleBarChart } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
-import { formatCurrency } from "@/components/admin/reports/formatting";
+import {
+  formatCurrency,
+  formatCurrencyPair,
+  formatSecondaryCurrency,
+} from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
   `${(value * 100).toFixed(fractionDigits)}%`;
+
+const buildSecondaryFootnote = (value?: number | null, currency?: string) => {
+  const formatted = formatSecondaryCurrency(value, currency);
+  return formatted ? `≈ ${formatted}` : undefined;
+};
 
 const comparisonOptions = [
   { value: "same_quarter_last_year", label: "Același trimestru anul trecut" },
@@ -151,6 +160,8 @@ export default function AdminQuarterlyReportPage() {
       label: item.label,
       current: item.current,
       previous: item.previous,
+      current_ron: item.current_ron,
+      previous_ron: item.previous_ron,
     }));
   }, [data]);
 
@@ -183,6 +194,8 @@ export default function AdminQuarterlyReportPage() {
       segment: item.segment,
       current: item.current,
       previous: item.previous,
+      current_ron: item.current_ron,
+      previous_ron: item.previous_ron,
     }));
   }, [data]);
 
@@ -347,6 +360,10 @@ export default function AdminQuarterlyReportPage() {
                 data.kpi.revenue.previous,
                 data.period.comparison.label,
               )}
+              footer={buildSecondaryFootnote(
+                data.kpi.revenue.current_ron,
+                data.kpi.currency_secondary,
+              )}
             />
             <MetricCard
               title="Profit net"
@@ -356,6 +373,10 @@ export default function AdminQuarterlyReportPage() {
                 data.kpi.net_profit.current,
                 data.kpi.net_profit.previous,
                 data.period.comparison.label,
+              )}
+              footer={buildSecondaryFootnote(
+                data.kpi.net_profit.current_ron,
+                data.kpi.currency_secondary,
               )}
             />
             <MetricCard
@@ -391,9 +412,29 @@ export default function AdminQuarterlyReportPage() {
                   xKey="label"
                   series={revenueSeries}
                   yTickFormatter={formatThousands}
-                  valueFormatter={(value, name) =>
-                    `${name}: ${formatCurrency(value, data.kpi.currency)}`
-                  }
+                  valueFormatter={(value, name, payload) => {
+                    const base = formatCurrency(value, data.kpi.currency);
+                    const record = (payload as Record<string, unknown>) ?? {};
+                    let ronValue: number | undefined;
+                    if (
+                      typeof record.current === "number" &&
+                      record.current === value
+                    ) {
+                      ronValue = record.current_ron as number | undefined;
+                    } else if (
+                      typeof record.previous === "number" &&
+                      record.previous === value
+                    ) {
+                      ronValue = record.previous_ron as number | undefined;
+                    }
+                    const secondary = formatSecondaryCurrency(
+                      ronValue,
+                      data.kpi.currency_secondary,
+                    );
+                    return secondary
+                      ? `${name}: ${base} (${secondary})`
+                      : `${name}: ${base}`;
+                  }}
                 />
               ) : null}
             </ChartContainer>
@@ -412,9 +453,29 @@ export default function AdminQuarterlyReportPage() {
                     series={profitBySegmentSeries}
                     layout="vertical"
                     yTickFormatter={formatThousands}
-                    valueFormatter={(value, name) =>
-                      `${name}: ${formatCurrency(value, data.kpi.currency)}`
-                    }
+                    valueFormatter={(value, name, payload) => {
+                      const base = formatCurrency(value, data.kpi.currency);
+                      const record = (payload as Record<string, unknown>) ?? {};
+                      let ronValue: number | undefined;
+                      if (
+                        typeof record.current === "number" &&
+                        record.current === value
+                      ) {
+                        ronValue = record.current_ron as number | undefined;
+                      } else if (
+                        typeof record.previous === "number" &&
+                        record.previous === value
+                      ) {
+                        ronValue = record.previous_ron as number | undefined;
+                      }
+                      const secondary = formatSecondaryCurrency(
+                        ronValue,
+                        data.kpi.currency_secondary,
+                      );
+                      return secondary
+                        ? `${name}: ${base} (${secondary})`
+                        : `${name}: ${base}`;
+                    }}
                   />
                 ) : null}
               </ChartContainer>
@@ -458,9 +519,11 @@ export default function AdminQuarterlyReportPage() {
                 </div>
                 <p className="mt-3">
                   {topProfitSegment && primaryAvailability
-                    ? `Segmentul cu cea mai mare contribuție este ${topProfitSegment.segment}, cu ${formatCurrency(
+                    ? `Segmentul cu cea mai mare contribuție este ${topProfitSegment.segment}, cu ${formatCurrencyPair(
                         topProfitSegment.current,
                         data.kpi.currency,
+                        topProfitSegment.current_ron,
+                        data.kpi.currency_secondary,
                       )} profit și o disponibilitate activă de ${formatPercent(
                         primaryAvailability.current_percent / 100,
                       )}.`

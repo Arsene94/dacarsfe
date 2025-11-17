@@ -8,9 +8,12 @@ export interface AdminReportWeekKpi {
   start: string;
   end: string;
   currency: string;
+  currency_secondary?: string;
   revenue: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   bookings: {
     current: number;
@@ -26,6 +29,8 @@ export interface AdminReportQuarterChartPoint {
   label: string;
   current: number;
   previous: number;
+  current_ron?: number;
+  previous_ron?: number;
 }
 
 export interface AdminReportOverviewQuarter {
@@ -62,9 +67,12 @@ export interface AdminReportWeeklyPeriod {
 
 export interface AdminReportWeeklyTotals {
   currency: string;
+  currency_secondary?: string;
   revenue: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   bookings: {
     current: number;
@@ -89,6 +97,8 @@ export interface AdminReportWeeklyDailyRevenuePoint {
   label: string;
   current: number;
   previous: number;
+  current_ron?: number;
+  previous_ron?: number;
 }
 
 export interface AdminReportWeeklyChannelMixItem {
@@ -107,6 +117,7 @@ export interface AdminReportWeeklyRiskIndicators {
   cancellation_rate: number;
   late_returns_count: number;
   late_returns_value: number;
+  late_returns_value_ron?: number;
 }
 
 export interface AdminReportWeeklyResponse {
@@ -137,17 +148,24 @@ export interface AdminReportMonthlyPeriod {
 
 export interface AdminReportMonthlyFinancials {
   currency: string;
+  currency_secondary?: string;
   revenue: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   net_profit: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   avg_daily_rate: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   fleet_utilization: {
     current: number;
@@ -175,6 +193,8 @@ export interface AdminReportMonthlyTrendPoint {
   label: string;
   revenue: number;
   profit: number;
+  revenue_ron?: number;
+  profit_ron?: number;
 }
 
 export interface AdminReportMonthlyCustomerMixItem {
@@ -187,18 +207,26 @@ export interface AdminReportMonthlyCostStructure {
   fleet: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   operations: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   marketing: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   other: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
 }
 
@@ -230,13 +258,18 @@ export interface AdminReportQuarterlyPeriod {
 
 export interface AdminReportQuarterlyKpi {
   currency: string;
+  currency_secondary?: string;
   revenue: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   net_profit: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   ebitda_margin: {
     current: number;
@@ -252,12 +285,16 @@ export interface AdminReportQuarterlyRevenuePoint {
   label: string;
   current: number;
   previous: number;
+  current_ron?: number;
+  previous_ron?: number;
 }
 
 export interface AdminReportQuarterlyProfitSegment {
   segment: string;
   current: number;
   previous: number;
+  current_ron?: number;
+  previous_ron?: number;
 }
 
 export interface AdminReportQuarterlyFleetAvailabilityItem {
@@ -293,13 +330,18 @@ export interface AdminReportAnnualPeriod {
 
 export interface AdminReportAnnualExecutiveSummary {
   currency: string;
+  currency_secondary?: string;
   revenue: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   net_profit: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   bookings: {
     current: number;
@@ -308,10 +350,14 @@ export interface AdminReportAnnualExecutiveSummary {
   average_booking_value: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   average_daily_rate: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   fleet_utilization: {
     current: number;
@@ -335,11 +381,15 @@ export interface AdminReportAnnualQuarterBreakdownItem {
     current: number;
     previous: number;
     growth_ratio: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   net_profit: {
     current: number;
     previous: number;
     growth_ratio: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   bookings: {
     current: number;
@@ -350,6 +400,8 @@ export interface AdminReportAnnualQuarterBreakdownItem {
   average_daily_rate: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
 }
 
@@ -358,11 +410,15 @@ export interface AdminReportAnnualSegmentPerformanceItem {
   revenue: {
     current: number;
     previous: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   net_profit: {
     current: number;
     previous: number;
     growth_ratio: number;
+    current_ron?: number;
+    previous_ron?: number;
   };
   share: number;
 }
@@ -371,7 +427,9 @@ export interface AdminReportAnnualSegmentPerformance {
   segments: AdminReportAnnualSegmentPerformanceItem[];
   totals: {
     revenue: number;
+    revenue_ron?: number;
     net_profit: number;
+    net_profit_ron?: number;
   };
 }
 

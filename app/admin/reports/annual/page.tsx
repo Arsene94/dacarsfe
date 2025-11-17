@@ -25,11 +25,19 @@ import {
   SimpleBarChart,
 } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
-import { formatCurrency } from "@/components/admin/reports/formatting";
+import {
+  formatCurrency,
+  formatSecondaryCurrency,
+} from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
   `${(value * 100).toFixed(fractionDigits)}%`;
+
+const buildSecondaryFootnote = (value?: number | null, currency?: string) => {
+  const formatted = formatSecondaryCurrency(value, currency);
+  return formatted ? `≈ ${formatted}` : undefined;
+};
 
 const comparisonOptions = [
   { value: "previous_year", label: "Anul precedent" },
@@ -152,6 +160,8 @@ export default function AdminAnnualReportPage() {
       label: item.label,
       current: item.revenue.current,
       previous: item.revenue.previous,
+      current_ron: item.revenue.current_ron,
+      previous_ron: item.revenue.previous_ron,
     }));
   }, [data]);
 
@@ -184,6 +194,8 @@ export default function AdminAnnualReportPage() {
       segment: item.segment,
       current: item.revenue.current,
       previous: item.revenue.previous,
+      current_ron: item.revenue.current_ron,
+      previous_ron: item.revenue.previous_ron,
     }));
   }, [data]);
 
@@ -361,6 +373,10 @@ export default function AdminAnnualReportPage() {
                 data.executive_summary.revenue.previous,
                 data.period.comparison.label,
               )}
+              footer={buildSecondaryFootnote(
+                data.executive_summary.revenue.current_ron,
+                data.executive_summary.currency_secondary,
+              )}
             />
             <MetricCard
               title="Profit net"
@@ -370,6 +386,10 @@ export default function AdminAnnualReportPage() {
                 data.executive_summary.net_profit.current,
                 data.executive_summary.net_profit.previous,
                 data.period.comparison.label,
+              )}
+              footer={buildSecondaryFootnote(
+                data.executive_summary.net_profit.current_ron,
+                data.executive_summary.currency_secondary,
               )}
             />
             <MetricCard
@@ -394,6 +414,10 @@ export default function AdminAnnualReportPage() {
                 data.executive_summary.average_daily_rate.previous,
                 data.period.comparison.label,
               )}
+              footer={buildSecondaryFootnote(
+                data.executive_summary.average_daily_rate.current_ron,
+                data.executive_summary.currency_secondary,
+              )}
             />
           </StatGrid>
 
@@ -408,9 +432,32 @@ export default function AdminAnnualReportPage() {
                   xKey="label"
                   series={quarterTrendSeries}
                   yTickFormatter={formatThousands}
-                  valueFormatter={(value, name) =>
-                    `${name}: ${formatCurrency(value, data.executive_summary.currency)}`
-                  }
+                  valueFormatter={(value, name, payload) => {
+                    const base = formatCurrency(
+                      value,
+                      data.executive_summary.currency,
+                    );
+                    const record = (payload as Record<string, unknown>) ?? {};
+                    let ronValue: number | undefined;
+                    if (
+                      typeof record.current === "number" &&
+                      record.current === value
+                    ) {
+                      ronValue = record.current_ron as number | undefined;
+                    } else if (
+                      typeof record.previous === "number" &&
+                      record.previous === value
+                    ) {
+                      ronValue = record.previous_ron as number | undefined;
+                    }
+                    const secondary = formatSecondaryCurrency(
+                      ronValue,
+                      data.executive_summary.currency_secondary,
+                    );
+                    return secondary
+                      ? `${name}: ${base} (${secondary})`
+                      : `${name}: ${base}`;
+                  }}
                 />
               ) : null}
             </ChartContainer>
@@ -429,9 +476,32 @@ export default function AdminAnnualReportPage() {
                     series={segmentPerformanceSeries}
                     layout="vertical"
                     yTickFormatter={formatThousands}
-                    valueFormatter={(value, name) =>
-                      `${name}: ${formatCurrency(value, data.executive_summary.currency)}`
-                    }
+                    valueFormatter={(value, name, payload) => {
+                      const base = formatCurrency(
+                        value,
+                        data.executive_summary.currency,
+                      );
+                      const record = (payload as Record<string, unknown>) ?? {};
+                      let ronValue: number | undefined;
+                      if (
+                        typeof record.current === "number" &&
+                        record.current === value
+                      ) {
+                        ronValue = record.current_ron as number | undefined;
+                      } else if (
+                        typeof record.previous === "number" &&
+                        record.previous === value
+                      ) {
+                        ronValue = record.previous_ron as number | undefined;
+                      }
+                      const secondary = formatSecondaryCurrency(
+                        ronValue,
+                        data.executive_summary.currency_secondary,
+                      );
+                      return secondary
+                        ? `${name}: ${base} (${secondary})`
+                        : `${name}: ${base}`;
+                    }}
                   />
                 ) : null}
               </ChartContainer>
