@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-import type { CampaignTrackingData } from '@/lib/marketing/campaignTracking';
+import type { CampaignTrackingData } from '@/types/campaign-tracking';
 
 const normalize = (value: string | null): string | null => {
     if (typeof value !== 'string') {
