@@ -147,7 +147,7 @@ The performance dashboards consume a dedicated set of reporting endpoints. They 
 
 - Indicatorii de volum și operaționali (număr rezervări, durată medie, utilizarea flotei, mix de canale) se calculează în continuare din rezervările existente în sistem și iau în considerare doar statusurile `reserved` și `completed` pentru a reflecta volume confirmate sau finalizate.
 - Veniturile și costurile aferente rapoartelor provin exclusiv din `CarCashflow` (înregistrările de tip `income` și `expense`). Sumele sunt salvate în RON și sunt convertite în EUR în răspunsuri la un curs fix 1 EUR = 5 RON; ambele valori sunt returnate prin câmpuri dedicate (`currency_secondary`, respectiv perechile `*_ron`).
-- Tipurile de cheltuieli din `CarCashflow` sunt agregate pe patru categorii în rapoarte: `car`, `fuel` și `parking_wash` intră în bucket-ul „fleet”, `company_operations`, `salary` și `house` în „operations”, `marketing` rămâne dedicat, iar `other` acoperă restul. Înregistrările mai vechi fără `expense_type` sunt încadrate implicit la „other”.
+- Tipurile de cheltuieli din `CarCashflow` sunt agregate pe patru categorii în rapoarte: `car`, `fuel` și `parking_wash` intră în bucket-ul „fleet”, `company_operations`, `salary` și `house` în „operations”, `marketing` rămâne dedicat, iar `other` acoperă restul. Înregistrările mai vechi fără `expense_type` folosesc în continuare câmpul `category` pentru mapare retroactivă.
 - În analizele pe mașini și segmente sunt contabilizate doar cheltuielile cu `expense_type = car` (sau cele moștenite fără tip dar cu mașină atașată), pentru a evita distribuirea costurilor generale pe flota întreagă.
 - Mixul de clienți și canale reutilizează aceeași clasificare pentru fiecare rezervare: `Direct` (cont client sau rezervare creată manual), `Corporate` (contracte/discount-uri corporate identificate prin codurile de cupon, ofertele aplicate sau detaliile firmei din profil), `OTA` (Online Travel Agencies precum Booking.com, Expedia, Trip.com, detectate după coduri dedicate, note sau domeniul adresei de e-mail) și `Agenții` pentru parteneri offline tradiționali marcați în note, cupon sau oferte.
 
@@ -626,6 +626,10 @@ Provides the strategic, year-long dashboard rendered in `/admin/reports/annual`.
       "current_ron": 364.0,
       "previous_ron": 350.5
     },
+    "average_daily_rate_per_car": [
+      { "car_id": 12, "car_name": "Dacia Duster 2024", "average_daily_rate": 83.5 },
+      { "car_id": 5, "car_name": "VW Golf", "average_daily_rate": 71.3 }
+    ],
     "fleet_utilization": { "current": 0.79, "previous": 0.74 },
     "cancellation_rate": { "current": 0.061, "previous": 0.074 },
     "lead_time_days": { "average": 6.4, "median": 4.8, "p90": 12.0 }
@@ -655,7 +659,11 @@ Provides the strategic, year-long dashboard rendered in `/admin/reports/annual`.
         "previous": 68.9,
         "current_ron": 357.0,
         "previous_ron": 344.5
-      }
+      },
+      "average_daily_rate_per_car": [
+        { "car_id": 12, "car_name": "Dacia Duster 2024", "average_daily_rate": 82.1 },
+        { "car_id": 5, "car_name": "VW Golf", "average_daily_rate": 70.8 }
+      ]
     },
     {
       "quarter": "2025-Q2",
