@@ -6,6 +6,7 @@ const withMDX = require('@next/mdx')({
 
 const nextConfig = {
     // Performance optimizations
+    allowedDevOrigins: ['127.0.0.1', 'localhost'],
     compress: true,
     poweredByHeader: false,
 
