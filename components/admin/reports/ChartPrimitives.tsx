@@ -24,7 +24,12 @@ import {
 
 export type DataRecord = Record<string, string | number>;
 
-type ValueFormatter = (value: number, name: string, payload?: DataRecord) => string;
+type ValueFormatter = (
+  value: number,
+  name: string,
+  payload?: DataRecord,
+  dataKey?: string,
+) => string;
 type LabelFormatter = (label: string | number) => string;
 type TickFormatter = (value: number | string) => string;
 
@@ -137,7 +142,12 @@ export function SimpleBarChart({
         <Tooltip
           cursor={{ fill: "rgba(79, 111, 164, 0.08)" }}
           formatter={(value, name, props) =>
-            valueFormatter(Number(value), String(name), props?.payload as DataRecord)
+            valueFormatter(
+              Number(value),
+              String(name),
+              props?.payload as DataRecord,
+              props?.dataKey ? String(props.dataKey) : undefined,
+            )
           }
           labelFormatter={labelFormatter}
         />
@@ -206,7 +216,12 @@ export function LineChart({
         <Tooltip
           cursor={{ stroke: "#CBD5F5", strokeWidth: 2, strokeDasharray: "4 4" }}
           formatter={(value, name, props) =>
-            valueFormatter(Number(value), String(name), props?.payload as DataRecord)
+            valueFormatter(
+              Number(value),
+              String(name),
+              props?.payload as DataRecord,
+              props?.dataKey ? String(props.dataKey) : undefined,
+            )
           }
           labelFormatter={labelFormatter}
         />
@@ -266,7 +281,12 @@ export function DoughnutChart({
       <PieChart>
         <Tooltip
           formatter={(value, name, props) =>
-            valueFormatter(Number(value), String(name), props?.payload as DataRecord)
+            valueFormatter(
+              Number(value),
+              String(name),
+              props?.payload as DataRecord,
+              props?.dataKey ? String(props.dataKey) : undefined,
+            )
           }
           labelFormatter={labelFormatter}
         />
@@ -331,7 +351,12 @@ export function RadarChart({
         />
         <Tooltip
           formatter={(value, name, props) =>
-            valueFormatter(Number(value), String(name), props?.payload as DataRecord)
+            valueFormatter(
+              Number(value),
+              String(name),
+              props?.payload as DataRecord,
+              props?.dataKey ? String(props.dataKey) : undefined,
+            )
           }
         />
         {!hideLegend ? <Legend align={legendAlign} verticalAlign="bottom" /> : null}

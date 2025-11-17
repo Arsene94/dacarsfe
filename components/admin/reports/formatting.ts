@@ -36,3 +36,33 @@ export const formatCurrency = (value: number, currency?: string) => {
   }
 };
 
+export const formatCurrencyWithSecondary = (
+  primary: number,
+  currency?: string,
+  secondary?: number | null,
+  secondaryCurrency?: string,
+  options?: { separator?: string; secondaryPrefix?: string },
+) => {
+  const primaryLabel = formatCurrency(primary, currency);
+  if (typeof secondary !== "number" || Number.isNaN(secondary)) {
+    return primaryLabel;
+  }
+
+  const separator = options?.separator ?? " · ";
+  const prefix = options?.secondaryPrefix ?? "";
+  const secondaryLabel = formatCurrency(secondary, secondaryCurrency);
+  return `${primaryLabel}${separator}${prefix}${secondaryLabel}`;
+};
+
+export const formatSecondaryCurrencyFootnote = (
+  value?: number | null,
+  currency?: string,
+  options?: { prefix?: string },
+): string | null => {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return null;
+  }
+  const prefix = options?.prefix ?? "≈ ";
+  return `${prefix}${formatCurrency(value, currency)}`;
+};
+

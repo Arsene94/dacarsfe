@@ -396,6 +396,11 @@ const mapActivityReservationToAdmin = (
     const normalizedBookingNumber =
         reservation.booking_number != null ? String(reservation.booking_number).trim() : "";
     const resolvedId = normalizedId || normalizedBookingNumber;
+    const couponAmountValue = parseOptionalNumber(reservation.coupon_amount);
+    const appliedDiscountValue =
+        parseOptionalNumber(
+            reservation.discount ?? (reservation as { discountValue?: unknown }).discountValue,
+        ) ?? couponAmountValue ?? undefined;
 
     return {
         id: resolvedId,
@@ -405,34 +410,34 @@ const mapActivityReservationToAdmin = (
         carId: reservation.car_id,
         carName: reservation.car?.name ?? "",
         carLicensePlate: reservation.car?.license_plate,
-    startDate: reservation.rental_start_date ?? "",
-    endDate: reservation.rental_end_date ?? "",
-    plan: reservation.with_deposit ? 1 : 2,
-    status: mapActivityStatus(reservation.status ?? ""),
-    total: reservation.total ?? 0,
-    pricePerDay: reservation.price_per_day ?? undefined,
-    servicesPrice: reservation.total_services ?? undefined,
-    discount: reservation.coupon_amount ?? undefined,
-    totalBeforeWheelPrize: null,
-    wheelPrizeDiscount: null,
-    wheelPrize: null,
-    email: undefined,
-    days: reservation.days ?? undefined,
-    pickupTime: reservation.start_hour_group ?? undefined,
-    dropoffTime: reservation.end_hour_group ?? undefined,
-    location: undefined,
-    discountCode: reservation.coupon_type ?? undefined,
-    notes: reservation.note ?? undefined,
-    createdAt: undefined,
-    couponAmount: reservation.coupon_amount ?? 0,
-    subTotal: reservation.sub_total ?? 0,
-    taxAmount: 0,
-    remainingBalance:
-        parseOptionalNumber(
-            reservation.remaining_balance ??
-                (reservation as { remainingBalance?: unknown }).remainingBalance,
-        ) ?? null,
-    extension: normalizeReservationExtension(reservation.extension),
+        startDate: reservation.rental_start_date ?? "",
+        endDate: reservation.rental_end_date ?? "",
+        plan: reservation.with_deposit ? 1 : 2,
+        status: mapActivityStatus(reservation.status ?? ""),
+        total: reservation.total ?? 0,
+        pricePerDay: reservation.price_per_day ?? undefined,
+        servicesPrice: reservation.total_services ?? undefined,
+        discount: appliedDiscountValue,
+        totalBeforeWheelPrize: null,
+        wheelPrizeDiscount: null,
+        wheelPrize: null,
+        email: undefined,
+        days: reservation.days ?? undefined,
+        pickupTime: reservation.start_hour_group ?? undefined,
+        dropoffTime: reservation.end_hour_group ?? undefined,
+        location: undefined,
+        discountCode: reservation.coupon_type ?? undefined,
+        notes: reservation.note ?? undefined,
+        createdAt: undefined,
+        couponAmount: couponAmountValue ?? 0,
+        subTotal: reservation.sub_total ?? 0,
+        taxAmount: 0,
+        remainingBalance:
+            parseOptionalNumber(
+                reservation.remaining_balance ??
+                    (reservation as { remainingBalance?: unknown }).remainingBalance,
+            ) ?? null,
+        extension: normalizeReservationExtension(reservation.extension),
     };
 };
 
@@ -732,6 +737,7 @@ const AdminDashboard = () => {
         services: { id:number, name: string }[];
         total_services: number;
         coupon_amount: number;
+        discountValue: number;
         coupon_type: string;
         with_deposit: boolean;
         note: string | null;
@@ -1531,6 +1537,13 @@ const AdminDashboard = () => {
                                                 const outstandingExtensionBalance = hasUnpaidExtension
                                                     ? extensionRemainingPayment ?? remainingBalanceValue ?? null
                                                     : null;
+                                                const couponAmountValue =
+                                                    parseOptionalNumber(r.coupon_amount) ?? 0;
+                                                const appliedDiscountValue =
+                                                    parseOptionalNumber(
+                                                        r.discount ??
+                                                            (r as { discountValue?: unknown }).discountValue,
+                                                    ) ?? couponAmountValue;
                                                 const adminReservationRow = mapActivityReservationToAdmin(r);
                                                 const isExtending =
                                                     extendLoading &&
@@ -1636,7 +1649,8 @@ const AdminDashboard = () => {
                                                                             total: r.total,
                                                                             services: mapServiceSummaries(r.services),
                                                                             total_services: r.total_services,
-                                                                            coupon_amount: r.coupon_amount,
+                                                                            coupon_amount: couponAmountValue,
+                                                                            discountValue: appliedDiscountValue,
                                                                             coupon_type: r.coupon_type,
                                                                             with_deposit: r.with_deposit,
                                                                             note: r.note ?? null,
@@ -1927,8 +1941,22 @@ const AdminDashboard = () => {
                                 </ul>
                             </div>
                         )}
-                        {activityDetails.services.length > 0 && (<div className="text-sm font-dm-sans"><span className="font-semibold">Preț servicii:</span> {activityDetails.total_services}€</div>)}
-                        {activityDetails.coupon_amount > 0 && (<div className="text-sm font-dm-sans"><span className="font-semibold">Discount:</span> {activityDetails.coupon_amount}€</div>)}
+                        {activityDetails.services.length > 0 && (
+                            <div className="text-sm font-dm-sans">
+                                <span className="font-semibold">Preț servicii:</span> {activityDetails.total_services}€
+                            </div>
+                        )}
+                        {activityDetails.discountValue > 0 && (
+                            <div className="text-sm font-dm-sans">
+                                <span className="font-semibold">Discount aplicat:</span> {activityDetails.discountValue}€
+                            </div>
+                        )}
+                        {activityDetails.coupon_amount > 0 &&
+                            activityDetails.coupon_amount !== activityDetails.discountValue && (
+                                <div className="text-xs font-dm-sans text-gray-500">
+                                    Valoare manuală: {activityDetails.coupon_amount}€
+                                </div>
+                            )}
                         <div className="text-sm font-dm-sans"><span className="font-semibold">Total:</span> {activityDetails.total}€</div>
                         {typeof activityDetails.remainingBalance === 'number' && activityDetails.remainingBalance > 0 && (
                             <div className="text-sm font-dm-sans text-amber-700">

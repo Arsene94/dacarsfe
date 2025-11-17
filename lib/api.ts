@@ -3449,16 +3449,25 @@ export class ApiClient {
         });
     }
 
-    async fetchWidgetActivity(period: string, paginate = 20): Promise<WidgetActivityResponse> {
-        return this.request<WidgetActivityResponse>(`/widgets/activity/${period}?paginate=${paginate}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                Authorization: `Bearer ${this.token}`
+    async fetchWidgetActivity(period?: string, paginate = 20): Promise<WidgetActivityResponse> {
+        const normalizedPeriod =
+            typeof period === 'string' && period.trim().length > 0 ? period.trim() : 'azi';
+        const safePaginate =
+            typeof paginate === 'number' && Number.isFinite(paginate)
+                ? Math.max(1, Math.floor(paginate))
+                : 20;
+        return this.request<WidgetActivityResponse>(
+            `/widgets/activity/${normalizedPeriod}?paginate=${safePaginate}`,
+            {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${this.token}`
+                },
+                cache: 'no-cache',
             },
-            cache: 'no-cache',
-        });
+        );
     }
 
     async fetchAdminBookingsToday(
