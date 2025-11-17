@@ -67,7 +67,10 @@ const buildCampaignData = (
 const useCampaignTracking = () => {
     const params = useSearchParams();
 
-    const serializedParams = params?.toString() ?? '';
+    const serializedParams =
+        params && typeof params.toString === 'function'
+            ? params.toString()
+            : '';
     const paramsSnapshot = useMemo(
         () => new URLSearchParams(serializedParams),
         [serializedParams],
