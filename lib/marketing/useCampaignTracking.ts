@@ -1,12 +1,9 @@
-'use client';
+"use client";
 
 import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-import {
-    type CampaignTrackingData,
-    storeCampaignTrackingData,
-} from '@/lib/marketing/campaignTracking';
+import type { CampaignTrackingData } from '@/lib/marketing/campaignTracking';
 
 const normalize = (value: string | null): string | null => {
     if (typeof value !== 'string') {
@@ -83,7 +80,16 @@ const useCampaignTracking = () => {
 
         const referrer = typeof document !== 'undefined' ? document.referrer || null : null;
         const campaignData = buildCampaignData(paramsSnapshot, referrer);
-        storeCampaignTrackingData(campaignData);
+
+        void import('@/lib/marketing/campaignTracking')
+            .then((module) => {
+                if (typeof module.storeCampaignTrackingData === 'function') {
+                    module.storeCampaignTrackingData(campaignData);
+                }
+            })
+            .catch((error) => {
+                console.warn('Nu am putut salva datele campaniei dinamic', error);
+            });
     }, [paramsSnapshot]);
 };
 
