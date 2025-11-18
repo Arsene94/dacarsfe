@@ -114,6 +114,21 @@ Tokenul de autentificare este setat prin `apiClient.setToken` după login și sa
 6. **Linting**: `npm run lint` pentru a valida regulile ESLint/TypeScript.
 7. **Optimizare imagini**: `npm run images:webp` rulează scriptul `scripts/convert-images.cjs` care convertește întreg directorul `public/` în WebP (acceptă opțiuni precum `--quality`, `--effort`, `--lossless`) și actualizează manifestul `config/webp-manifest.json` folosit de middleware pentru rescrierea automată în format WebP. Pentru URL-urile dinamice sau remote necontrolate, endpoint-ul `app/api/images/webp/route.ts` face conversia la cerere, folosind allowlist-ul din `config/image-proxy.json` și extensia `resolveMediaUrl` din `lib/media.ts`.
 
+### Depanare pentru `npm run build`
+În mediile corporate sau CI unde variabilele de mediu setează `npm_config_http_proxy`/`npm_config_https_proxy`, `npm run build` poate afișa avertismentul:
+
+```
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+```
+
+Mesajul provine din CLI-ul npm înainte ca scriptul de build să pornească și nu este legat de codul aplicației. Pentru un build curat, rulați comanda de mai jos (dezactivează doar variabilele respective pe durata procesului):
+
+```bash
+env -u npm_config_http_proxy -u npm_config_https_proxy npm run build
+```
+
+Aceeași tehnică se poate aplica și altor scripturi npm dacă infrastructura impune variabile de proxy cu nume depricate.
+
 > **Sfat:** în mediile CI setați `CI=1` înainte de `npm run lint` pentru a opri fix-urile interactive.
 
 ## Calitate și testare

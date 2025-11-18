@@ -240,6 +240,50 @@ export interface AdminReportMonthlyResponse {
   focus_areas: string[];
 }
 
+export interface AdminReportMonthlyCarUsageParams {
+  month?: string;
+  car_id?: number;
+  timezone?: string;
+}
+
+export interface AdminReportMonthlyCarUsageSummary {
+  total_days_rented: number;
+  total_revenue: {
+    eur: number;
+    ron: number;
+  };
+  average_daily_rate: {
+    eur: number;
+    ron: number;
+  };
+}
+
+export interface AdminReportMonthlyCarUsageCar {
+  car_id: number;
+  car_name: string;
+  license_plate: string;
+  days_rented: number;
+  bookings_count: number;
+  total_revenue: number;
+  total_revenue_ron: number;
+  average_daily_rate: number;
+  average_daily_rate_ron: number;
+}
+
+export interface AdminReportMonthlyCarUsageResponse {
+  period: {
+    month: string;
+    label: string;
+  };
+  filters: {
+    car_id: number | null;
+  };
+  currency: string;
+  currency_secondary?: string;
+  summary: AdminReportMonthlyCarUsageSummary;
+  cars: AdminReportMonthlyCarUsageCar[];
+}
+
 export interface AdminReportQuarterlyParams {
   quarter: string;
   compare_with?: "previous_quarter" | "same_quarter_last_year" | "custom";

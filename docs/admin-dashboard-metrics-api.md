@@ -156,6 +156,7 @@ The performance dashboards consume a dedicated set of reporting endpoints. They 
 | `GET /api/admin/reports/overview` | Populează pagina `/admin/reports` cu rezumatul săptămânal și graficul trimestrial. | Acceptă filtrare pe săptămână de referință și cod de trimestru. |
 | `GET /api/admin/reports/weekly` | Alimentează raportul `/admin/reports/weekly`. | Permite comparație cu săptămâna precedentă, anul anterior sau un interval custom. |
 | `GET /api/admin/reports/monthly` | Randează raportul `/admin/reports/monthly`. | Suportă comparații cu luna anterioară, același interval din anul trecut sau un alt input. |
+| `GET /api/admin/reports/monthly/cars` | Drill-down pentru `/admin/reports/monthly`. | Returnează utilizarea pe fiecare mașină, inclusiv zile închiriate și venituri facturate. |
 | `GET /api/admin/reports/quarterly` | Rapoarte consolidate pentru `/admin/reports/quarterly`. | Returnează KPI-uri QoQ/YoY și profit pe segmente. |
 | `GET /api/admin/reports/annual` | Construiește dashboard-ul `/admin/reports/annual`. | Include breakdown-uri pe trimestre, segmente, orașe, canale și recomandări strategice. |
 
@@ -467,6 +468,144 @@ Feeds the `/admin/reports/monthly` dashboard with financial and customer insight
     "Veniturile totale au crescut cu 6.2% față de perioada comparată (221 300 EUR vs 208 400 EUR). Continuă campaniile cu tracțiune ridicată.",
     "Utilizarea flotei a urcat la 81.0% (+4.0 pp). Menține rotația pe segmentele cu cerere ridicată.",
     "Cheltuielile marketing au scăzut la 18 600 EUR (- 2 800 EUR față de perioada comparată). Evaluează impactul asupra operațiunilor."
+  ]
+}
+```
+
+### Monthly car usage report (`GET /api/admin/reports/monthly/cars`)
+
+Livrează breakdown-ul pe mașini folosit de drill-down-ul din `/admin/reports/monthly`, cu zile închiriate, ADR și venituri nete pe fiecare vehicul.
+
+| Query parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `month` | `YYYY-MM` | No | Luna analizată. Când este omisă se folosește luna curentă în funcție de `timezone`. |
+| `car_id` | Integer | No | Filtrează răspunsul la o singură mașină. |
+| `timezone` | Olson string | No | Controlează granițele lunii și label-ul perioadei. Implicit `Europe/Bucharest`. |
+
+**Response**
+
+```json
+{
+  "period": { "month": "2025-03", "label": "Martie 2025" },
+  "filters": { "car_id": null },
+  "currency": "EUR",
+  "currency_secondary": "RON",
+  "summary": {
+    "total_days_rented": 412,
+    "total_revenue": { "eur": 287400, "ron": 1437000 },
+    "average_daily_rate": { "eur": 697.57, "ron": 3487.86 }
+  },
+  "cars": [
+    {
+      "car_id": 12,
+      "car_name": "Dacia Duster 4x4",
+      "license_plate": "B-23-ABC",
+      "days_rented": 22,
+      "bookings_count": 6,
+      "total_revenue": 18240,
+      "total_revenue_ron": 91200,
+      "average_daily_rate": 829.09,
+      "average_daily_rate_ron": 4145.45
+    },
+    {
+      "car_id": 14,
+      "car_name": "VW Tiguan R-Line",
+      "license_plate": "CJ-44-XYZ",
+      "days_rented": 18,
+      "bookings_count": 5,
+      "total_revenue": 13460,
+      "total_revenue_ron": 67300,
+      "average_daily_rate": 747.78,
+      "average_daily_rate_ron": 3738.89
+    },
+    {
+      "car_id": 21,
+      "car_name": "Renault Austral E-Tech",
+      "license_plate": "CJ-55-LUP",
+      "days_rented": 55,
+      "bookings_count": 12,
+      "total_revenue": 37290,
+      "total_revenue_ron": 186450,
+      "average_daily_rate": 678,
+      "average_daily_rate_ron": 3390
+    },
+    {
+      "car_id": 22,
+      "car_name": "Toyota RAV4 Plug-in",
+      "license_plate": "B-88-TYT",
+      "days_rented": 48,
+      "bookings_count": 11,
+      "total_revenue": 33024,
+      "total_revenue_ron": 165120,
+      "average_daily_rate": 688,
+      "average_daily_rate_ron": 3440
+    },
+    {
+      "car_id": 24,
+      "car_name": "BMW X3 M Sport",
+      "license_plate": "IF-08-BMW",
+      "days_rented": 62,
+      "bookings_count": 14,
+      "total_revenue": 43680,
+      "total_revenue_ron": 218400,
+      "average_daily_rate": 704.52,
+      "average_daily_rate_ron": 3522.58
+    },
+    {
+      "car_id": 27,
+      "car_name": "Audi Q5 Quattro",
+      "license_plate": "B-66-AQD",
+      "days_rented": 45,
+      "bookings_count": 10,
+      "total_revenue": 31590,
+      "total_revenue_ron": 157950,
+      "average_daily_rate": 702,
+      "average_daily_rate_ron": 3510
+    },
+    {
+      "car_id": 28,
+      "car_name": "Skoda Karoq Style",
+      "license_plate": "SB-12-SKD",
+      "days_rented": 38,
+      "bookings_count": 9,
+      "total_revenue": 24840,
+      "total_revenue_ron": 124200,
+      "average_daily_rate": 653.68,
+      "average_daily_rate_ron": 3268.42
+    },
+    {
+      "car_id": 33,
+      "car_name": "Mercedes GLC AMG Line",
+      "license_plate": "B-77-MBZ",
+      "days_rented": 32,
+      "bookings_count": 7,
+      "total_revenue": 22156,
+      "total_revenue_ron": 110780,
+      "average_daily_rate": 692.38,
+      "average_daily_rate_ron": 3461.88
+    },
+    {
+      "car_id": 35,
+      "car_name": "Hyundai Tucson N Line",
+      "license_plate": "CJ-34-HTN",
+      "days_rented": 44,
+      "bookings_count": 8,
+      "total_revenue": 29520,
+      "total_revenue_ron": 147600,
+      "average_daily_rate": 670.91,
+      "average_daily_rate_ron": 3354.55
+    },
+    {
+      "car_id": 40,
+      "car_name": "Ford Kuga Titanium",
+      "license_plate": "B-45-KGA",
+      "days_rented": 48,
+      "bookings_count": 9,
+      "total_revenue": 33600,
+      "total_revenue_ron": 168000,
+      "average_daily_rate": 700,
+      "average_daily_rate_ron": 3500
+    }
   ]
 }
 ```
