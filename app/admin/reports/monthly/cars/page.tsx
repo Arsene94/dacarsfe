@@ -197,6 +197,42 @@ export default function AdminMonthlyCarUsageReportPage() {
     query.carId !== "all"
       ? availableCars.find((car) => String(car.id) === query.carId)
       : null;
+  const carMetricsMap = useMemo(() => {
+    const map = new Map<number, AdminReportMonthlyCarUsageCar>();
+    (data?.cars ?? []).forEach((car) => {
+      map.set(car.car_id, car);
+    });
+    return map;
+  }, [data?.cars]);
+  const performanceRows = useMemo<AdminReportMonthlyCarUsageCar[]>(() => {
+    if (!data) {
+      return [];
+    }
+    if (availableCars.length === 0) {
+      return data.cars;
+    }
+    return availableCars.map((car) => {
+      const metrics = carMetricsMap.get(car.id);
+      if (!metrics) {
+        return {
+          car_id: car.id,
+          car_name: car.name,
+          license_plate: car.licensePlate ?? "Nespecificat",
+          days_rented: 0,
+          bookings_count: 0,
+          total_revenue: 0,
+          total_revenue_ron: 0,
+          average_daily_rate: 0,
+          average_daily_rate_ron: 0,
+        } satisfies AdminReportMonthlyCarUsageCar;
+      }
+      return {
+        ...metrics,
+        car_name: car.name,
+        license_plate: car.licensePlate ?? metrics.license_plate,
+      } satisfies AdminReportMonthlyCarUsageCar;
+    });
+  }, [availableCars, carMetricsMap, data]);
   const bookingsCount = useMemo(
     () => data?.cars.reduce((total, car) => total + car.bookings_count, 0) ?? 0,
     [data?.cars],
@@ -444,7 +480,7 @@ export default function AdminMonthlyCarUsageReportPage() {
             description="Folosește tabelul pentru a identifica rapid mașinile cu grad mare de utilizare."
           >
             <DataTable
-              data={data.cars}
+              data={performanceRows}
               columns={columns}
               pageSize={8}
             />
