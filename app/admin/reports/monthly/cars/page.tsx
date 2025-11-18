@@ -11,6 +11,7 @@ import type {
   AdminReportMonthlyCarUsageCar,
   AdminReportMonthlyCarUsageResponse,
 } from "@/types/reports";
+import type { ApiCar } from "@/types/car";
 import {
   ReportSection,
   StatGrid,
@@ -21,6 +22,8 @@ import {
   formatCurrency,
   formatSecondaryCurrencyFootnote,
 } from "@/components/admin/reports/formatting";
+import { apiClient } from "@/lib/api";
+import { extractList } from "@/lib/apiResponse";
 
 const DEFAULT_TIMEZONE = "Europe/Bucharest";
 
@@ -40,6 +43,21 @@ type QueryState = {
   month: string;
   timezone: string;
   carId: string;
+};
+
+type CarOption = {
+  id: number;
+  name: string;
+  licensePlate: string | null;
+};
+
+const coerceNonEmptyString = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 };
 
 const buildQueryString = (query: QueryState) => {
@@ -70,7 +88,7 @@ export default function AdminMonthlyCarUsageReportPage() {
   const [data, setData] = useState<AdminReportMonthlyCarUsageResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [carCatalog, setCarCatalog] = useState<AdminReportMonthlyCarUsageCar[]>([]);
+  const [carCatalog, setCarCatalog] = useState<CarOption[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -87,16 +105,6 @@ export default function AdminMonthlyCarUsageReportPage() {
         );
       }
       setData(payload as AdminReportMonthlyCarUsageResponse);
-      setCarCatalog((prev) => {
-        const map = new Map<number, AdminReportMonthlyCarUsageCar>();
-        prev.forEach((car) => map.set(car.car_id, car));
-        (payload as AdminReportMonthlyCarUsageResponse).cars.forEach((car) => {
-          map.set(car.car_id, car);
-        });
-        return Array.from(map.values()).sort((a, b) =>
-          a.car_name.localeCompare(b.car_name, "ro"),
-        );
-      });
     } catch (err) {
       setError(
         err instanceof Error
@@ -111,6 +119,48 @@ export default function AdminMonthlyCarUsageReportPage() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const loadCarCatalog = useCallback(async () => {
+    try {
+      const response = await apiClient.getCars({ perPage: 200 });
+      const list = extractList<ApiCar>(response);
+      const normalized = list
+        .map((car) => {
+          if (typeof car?.id !== "number") {
+            return null;
+          }
+
+          const record = car as Record<string, unknown>;
+          const name =
+            coerceNonEmptyString(car.name) ??
+            coerceNonEmptyString(record.title) ??
+            coerceNonEmptyString(record.label) ??
+            `Mașină #${car.id}`;
+          const licensePlate =
+            coerceNonEmptyString(car.license_plate) ??
+            coerceNonEmptyString(car.licensePlate) ??
+            coerceNonEmptyString(car.plate) ??
+            coerceNonEmptyString(record.licensePlate) ??
+            coerceNonEmptyString(record.plate) ??
+            null;
+
+          return {
+            id: car.id,
+            name,
+            licensePlate,
+          } satisfies CarOption;
+        })
+        .filter((car): car is CarOption => car !== null)
+        .sort((a, b) => a.name.localeCompare(b.name, "ro"));
+      setCarCatalog(normalized);
+    } catch (err) {
+      console.error("Nu am putut încărca lista de mașini", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCarCatalog();
+  }, [loadCarCatalog]);
 
   const handleSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
@@ -135,10 +185,17 @@ export default function AdminMonthlyCarUsageReportPage() {
     });
   }, []);
 
-  const availableCars = carCatalog.length > 0 ? carCatalog : data?.cars ?? [];
+  const availableCars: CarOption[] =
+    carCatalog.length > 0
+      ? carCatalog
+      : (data?.cars ?? []).map((car) => ({
+          id: car.car_id,
+          name: car.car_name,
+          licensePlate: car.license_plate,
+        }));
   const selectedCar =
     query.carId !== "all"
-      ? availableCars.find((car) => String(car.car_id) === query.carId)
+      ? availableCars.find((car) => String(car.id) === query.carId)
       : null;
   const bookingsCount = useMemo(
     () => data?.cars.reduce((total, car) => total + car.bookings_count, 0) ?? 0,
@@ -292,8 +349,9 @@ export default function AdminMonthlyCarUsageReportPage() {
             >
               <option value="all">Toată flota</option>
               {availableCars.map((car) => (
-                <option key={car.car_id} value={car.car_id}>
-                  {car.car_name} ({car.license_plate})
+                <option key={car.id} value={car.id}>
+                  {car.name}
+                  {car.licensePlate ? ` (${car.licensePlate})` : ""}
                 </option>
               ))}
             </Select>
@@ -361,7 +419,9 @@ export default function AdminMonthlyCarUsageReportPage() {
             title="Contextul ferestrei analizate"
             description={`Filtru curent: ${
               selectedCar
-                ? `${selectedCar.car_name} (${selectedCar.license_plate})`
+                ? `${selectedCar.name}${
+                    selectedCar.licensePlate ? ` (${selectedCar.licensePlate})` : ""
+                  }`
                 : "toată flota"
             } · Fus orar ${
               timezoneOptions.find((option) => option.value === query.timezone)?.label ||
@@ -398,7 +458,7 @@ export default function AdminMonthlyCarUsageReportPage() {
               icon={<Target className="h-4 w-4" />}
               items={[
                 selectedCar
-                  ? `Monitorizează variația ADR pentru ${selectedCar.car_name} față de media flotei (${formatCurrency(
+                  ? `Monitorizează variația ADR pentru ${selectedCar.name} față de media flotei (${formatCurrency(
                       data.summary.average_daily_rate.eur,
                       data.currency,
                     )}).`
