@@ -25,7 +25,11 @@ import {
   SimpleBarChart,
 } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
-import { formatCurrency } from "@/components/admin/reports/formatting";
+import {
+  formatCurrency,
+  formatCurrencyWithSecondary,
+  formatSecondaryCurrencyFootnote,
+} from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
@@ -152,6 +156,8 @@ export default function AdminAnnualReportPage() {
       label: item.label,
       current: item.revenue.current,
       previous: item.revenue.previous,
+      current_ron: item.revenue.current_ron,
+      previous_ron: item.revenue.previous_ron,
     }));
   }, [data]);
 
@@ -184,6 +190,8 @@ export default function AdminAnnualReportPage() {
       segment: item.segment,
       current: item.revenue.current,
       previous: item.revenue.previous,
+      current_ron: item.revenue.current_ron,
+      previous_ron: item.revenue.previous_ron,
     }));
   }, [data]);
 
@@ -356,6 +364,10 @@ export default function AdminAnnualReportPage() {
               title="Venit total"
               value={formatCurrency(data.executive_summary.revenue.current, data.executive_summary.currency)}
               subtitle={data.period.label}
+              footer={formatSecondaryCurrencyFootnote(
+                data.executive_summary.revenue.current_ron,
+                data.executive_summary.currency_secondary,
+              )}
               {...describeRelativeChange(
                 data.executive_summary.revenue.current,
                 data.executive_summary.revenue.previous,
@@ -366,6 +378,10 @@ export default function AdminAnnualReportPage() {
               title="Profit net"
               value={formatCurrency(data.executive_summary.net_profit.current, data.executive_summary.currency)}
               subtitle="După toate costurile"
+              footer={formatSecondaryCurrencyFootnote(
+                data.executive_summary.net_profit.current_ron,
+                data.executive_summary.currency_secondary,
+              )}
               {...describeRelativeChange(
                 data.executive_summary.net_profit.current,
                 data.executive_summary.net_profit.previous,
@@ -389,6 +405,10 @@ export default function AdminAnnualReportPage() {
                 data.executive_summary.currency,
               )}
               subtitle="Tarif mediu zilnic"
+              footer={formatSecondaryCurrencyFootnote(
+                data.executive_summary.average_daily_rate.current_ron,
+                data.executive_summary.currency_secondary,
+              )}
               {...describeRelativeChange(
                 data.executive_summary.average_daily_rate.current,
                 data.executive_summary.average_daily_rate.previous,
@@ -408,9 +428,23 @@ export default function AdminAnnualReportPage() {
                   xKey="label"
                   series={quarterTrendSeries}
                   yTickFormatter={formatThousands}
-                  valueFormatter={(value, name) =>
-                    `${name}: ${formatCurrency(value, data.executive_summary.currency)}`
-                  }
+                  valueFormatter={(value, name, payload, dataKey) => {
+                    const ronKey = dataKey === "current"
+                      ? "current_ron"
+                      : dataKey === "previous"
+                        ? "previous_ron"
+                        : undefined;
+                    const secondaryValue =
+                      ronKey && typeof payload?.[ronKey] === "number"
+                        ? (payload?.[ronKey] as number)
+                        : null;
+                    return formatCurrencyWithSecondary(
+                      value,
+                      data.executive_summary.currency,
+                      secondaryValue,
+                      data.executive_summary.currency_secondary,
+                    );
+                  }}
                 />
               ) : null}
             </ChartContainer>
@@ -423,18 +457,32 @@ export default function AdminAnnualReportPage() {
             >
               <ChartContainer heightClass="h-80">
                 {segmentPerformanceData ? (
-                  <SimpleBarChart
-                    data={segmentPerformanceData}
-                    xKey="segment"
-                    series={segmentPerformanceSeries}
-                    layout="vertical"
-                    yTickFormatter={formatThousands}
-                    valueFormatter={(value, name) =>
-                      `${name}: ${formatCurrency(value, data.executive_summary.currency)}`
-                    }
-                  />
-                ) : null}
-              </ChartContainer>
+                <SimpleBarChart
+                  data={segmentPerformanceData}
+                  xKey="segment"
+                  series={segmentPerformanceSeries}
+                  layout="vertical"
+                  yTickFormatter={formatThousands}
+                  valueFormatter={(value, name, payload, dataKey) => {
+                    const ronKey = dataKey === "current"
+                      ? "current_ron"
+                      : dataKey === "previous"
+                        ? "previous_ron"
+                        : undefined;
+                    const secondaryValue =
+                      ronKey && typeof payload?.[ronKey] === "number"
+                        ? (payload?.[ronKey] as number)
+                        : null;
+                    return formatCurrencyWithSecondary(
+                      value,
+                      data.executive_summary.currency,
+                      secondaryValue,
+                      data.executive_summary.currency_secondary,
+                    );
+                  }}
+                />
+              ) : null}
+            </ChartContainer>
               <div className="grid gap-2 pt-4 text-sm text-slate-600">
                 {data.segment_performance.segments.map((segment) => (
                   <div key={segment.segment} className="flex justify-between">

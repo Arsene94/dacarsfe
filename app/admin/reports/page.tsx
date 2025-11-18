@@ -20,7 +20,11 @@ import {
 import type { BarSeries } from "@/components/admin/reports/ChartPrimitives";
 import { SimpleBarChart } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
-import { formatCurrency } from "@/components/admin/reports/formatting";
+import {
+  formatCurrency,
+  formatCurrencyWithSecondary,
+  formatSecondaryCurrencyFootnote,
+} from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
@@ -136,6 +140,8 @@ export default function AdminReportsOverviewPage() {
       label: point.label,
       current: point.current,
       previous: point.previous,
+      current_ron: point.current_ron,
+      previous_ron: point.previous_ron,
     }));
   }, [data]);
 
@@ -270,6 +276,10 @@ export default function AdminReportsOverviewPage() {
               title="Venit săptămânal"
               value={formatCurrency(data.week.revenue.current, data.week.currency)}
               subtitle={`Săptămâna ${data.week.start} – ${data.week.end}`}
+              footer={formatSecondaryCurrencyFootnote(
+                data.week.revenue.current_ron,
+                data.week.currency_secondary,
+              )}
               {...describeRelativeChange(
                 data.week.revenue.current,
                 data.week.revenue.previous,
@@ -303,6 +313,12 @@ export default function AdminReportsOverviewPage() {
                 data.week.currency,
               )}
               subtitle="Calculează ARPU săptămânal"
+              footer={formatSecondaryCurrencyFootnote(
+                typeof data.week.revenue.current_ron === "number"
+                  ? data.week.revenue.current_ron / Math.max(data.week.bookings.current, 1)
+                  : null,
+                data.week.currency_secondary,
+              )}
             />
           </StatGrid>
 
@@ -317,9 +333,23 @@ export default function AdminReportsOverviewPage() {
                   xKey="label"
                   series={quarterChartSeries}
                   yTickFormatter={formatThousands}
-                  valueFormatter={(value, name) =>
-                    `${name}: ${formatCurrency(value, data.week.currency)}`
-                  }
+                  valueFormatter={(value, name, payload, dataKey) => {
+                    const ronKey = dataKey === "current"
+                      ? "current_ron"
+                      : dataKey === "previous"
+                        ? "previous_ron"
+                        : undefined;
+                    const secondaryValue =
+                      ronKey && typeof payload?.[ronKey] === "number"
+                        ? (payload?.[ronKey] as number)
+                        : null;
+                    return formatCurrencyWithSecondary(
+                      value,
+                      data.week.currency,
+                      secondaryValue,
+                      data.week.currency_secondary,
+                    );
+                  }}
                 />
               ) : null}
             </ChartContainer>

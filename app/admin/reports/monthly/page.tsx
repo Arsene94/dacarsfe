@@ -25,7 +25,11 @@ import {
   SimpleBarChart,
 } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
-import { formatCurrency } from "@/components/admin/reports/formatting";
+import {
+  formatCurrency,
+  formatCurrencyWithSecondary,
+  formatSecondaryCurrencyFootnote,
+} from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
@@ -142,6 +146,8 @@ export default function AdminMonthlyReportPage() {
       label: item.label,
       revenue: item.revenue,
       profit: item.profit,
+      revenue_ron: item.revenue_ron,
+      profit_ron: item.profit_ron,
     }));
   }, [data]);
 
@@ -193,21 +199,29 @@ export default function AdminMonthlyReportPage() {
         label: "Flotă",
         current: data.cost_structure.fleet.current,
         previous: data.cost_structure.fleet.previous,
+        current_ron: data.cost_structure.fleet.current_ron,
+        previous_ron: data.cost_structure.fleet.previous_ron,
       },
       {
         label: "Operațiuni",
         current: data.cost_structure.operations.current,
         previous: data.cost_structure.operations.previous,
+        current_ron: data.cost_structure.operations.current_ron,
+        previous_ron: data.cost_structure.operations.previous_ron,
       },
       {
         label: "Marketing",
         current: data.cost_structure.marketing.current,
         previous: data.cost_structure.marketing.previous,
+        current_ron: data.cost_structure.marketing.current_ron,
+        previous_ron: data.cost_structure.marketing.previous_ron,
       },
       {
         label: "Alte costuri",
         current: data.cost_structure.other.current,
         previous: data.cost_structure.other.previous,
+        current_ron: data.cost_structure.other.current_ron,
+        previous_ron: data.cost_structure.other.previous_ron,
       },
     ];
   }, [data]);
@@ -327,6 +341,10 @@ export default function AdminMonthlyReportPage() {
               title="Venituri"
               value={formatCurrency(data.financials.revenue.current, data.financials.currency)}
               subtitle={data.period.label}
+              footer={formatSecondaryCurrencyFootnote(
+                data.financials.revenue.current_ron,
+                data.financials.currency_secondary,
+              )}
               {...describeRelativeChange(
                 data.financials.revenue.current,
                 data.financials.revenue.previous,
@@ -337,6 +355,10 @@ export default function AdminMonthlyReportPage() {
               title="Profit net"
               value={formatCurrency(data.financials.net_profit.current, data.financials.currency)}
               subtitle="Marjă după costuri"
+              footer={formatSecondaryCurrencyFootnote(
+                data.financials.net_profit.current_ron,
+                data.financials.currency_secondary,
+              )}
               {...describeRelativeChange(
                 data.financials.net_profit.current,
                 data.financials.net_profit.previous,
@@ -347,6 +369,10 @@ export default function AdminMonthlyReportPage() {
               title="Tarif mediu zilnic"
               value={formatCurrency(data.financials.avg_daily_rate.current, data.financials.currency)}
               subtitle="ADR"
+              footer={formatSecondaryCurrencyFootnote(
+                data.financials.avg_daily_rate.current_ron,
+                data.financials.currency_secondary,
+              )}
               {...describeRelativeChange(
                 data.financials.avg_daily_rate.current,
                 data.financials.avg_daily_rate.previous,
@@ -376,9 +402,23 @@ export default function AdminMonthlyReportPage() {
                   xKey="label"
                   series={trendSeries}
                   yTickFormatter={formatThousands}
-                  valueFormatter={(value, name) =>
-                    `${name}: ${formatCurrency(value, data.financials.currency)}`
-                  }
+                  valueFormatter={(value, name, payload, dataKey) => {
+                    const ronKey = dataKey === "revenue"
+                      ? "revenue_ron"
+                      : dataKey === "profit"
+                        ? "profit_ron"
+                        : undefined;
+                    const secondaryValue =
+                      ronKey && typeof payload?.[ronKey] === "number"
+                        ? (payload?.[ronKey] as number)
+                        : null;
+                    return formatCurrencyWithSecondary(
+                      value,
+                      data.financials.currency,
+                      secondaryValue,
+                      data.financials.currency_secondary,
+                    );
+                  }}
                 />
               ) : null}
             </ChartContainer>
@@ -429,9 +469,23 @@ export default function AdminMonthlyReportPage() {
                     series={costStructureSeries}
                     layout="vertical"
                     yTickFormatter={formatThousands}
-                    valueFormatter={(value, name) =>
-                      `${name}: ${formatCurrency(value, data.financials.currency)}`
-                    }
+                    valueFormatter={(value, name, payload, dataKey) => {
+                      const ronKey = dataKey === "current"
+                        ? "current_ron"
+                        : dataKey === "previous"
+                          ? "previous_ron"
+                          : undefined;
+                      const secondaryValue =
+                        ronKey && typeof payload?.[ronKey] === "number"
+                          ? (payload?.[ronKey] as number)
+                          : null;
+                      return formatCurrencyWithSecondary(
+                        value,
+                        data.financials.currency,
+                        secondaryValue,
+                        data.financials.currency_secondary,
+                      );
+                    }}
                   />
                 ) : null}
               </ChartContainer>
