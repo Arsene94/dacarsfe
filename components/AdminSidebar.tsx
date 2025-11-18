@@ -401,6 +401,16 @@ const menuItems: readonly AdminSidebarItem[] = [
         ]),
       },
       {
+        name: "Utilizare flotă (lunar)",
+        href: "/admin/reports/monthly/cars",
+        icon: Car,
+        requiredPermissions: buildPermissionList("reports-monthly-cars", [
+          "reports.fleet",
+          "reports.cars",
+          "reports.monthly",
+        ]),
+      },
+      {
         name: "Raport trimestrial",
         href: "/admin/reports/quarterly",
         icon: Layers,

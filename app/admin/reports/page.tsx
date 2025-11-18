@@ -69,6 +69,11 @@ const analyticsReportLinks: readonly AdminReportOverviewLink[] = [
     title: "Analitice predictive",
     href: "/admin/predictive",
   },
+  {
+    slug: "reports-monthly-car-usage",
+    title: "Utilizare flotă (lunar)",
+    href: "/admin/reports/monthly/cars",
+  },
 ];
 
 export default function AdminReportsOverviewPage() {
