@@ -25,7 +25,11 @@ import {
   RadarChart,
 } from "@/components/admin/reports/ChartPrimitives";
 import { getColor } from "@/components/admin/reports/chartSetup";
-import { formatCurrency } from "@/components/admin/reports/formatting";
+import {
+  formatCurrency,
+  formatCurrencyWithSecondary,
+  formatSecondaryCurrencyFootnote,
+} from "@/components/admin/reports/formatting";
 import { describeRelativeChange } from "@/components/admin/reports/trends";
 
 const formatPercent = (value: number, fractionDigits = 1) =>
@@ -155,6 +159,8 @@ export default function AdminWeeklyReportPage() {
       label: point.label,
       current: point.current,
       previous: point.previous,
+      current_ron: point.current_ron,
+      previous_ron: point.previous_ron,
     }));
   }, [data]);
 
@@ -327,6 +333,10 @@ export default function AdminWeeklyReportPage() {
               title="Venit total"
               value={formatCurrency(data.totals.revenue.current, data.totals.currency)}
               subtitle={`${data.period.start} – ${data.period.end}`}
+              footer={formatSecondaryCurrencyFootnote(
+                data.totals.revenue.current_ron,
+                data.totals.currency_secondary,
+              )}
               {...describeRelativeChange(
                 data.totals.revenue.current,
                 data.totals.revenue.previous,
@@ -377,9 +387,23 @@ export default function AdminWeeklyReportPage() {
                   xKey="label"
                   series={revenueChartSeries}
                   yTickFormatter={formatThousands}
-                  valueFormatter={(value, name) =>
-                    `${name}: ${formatCurrency(value, data.totals.currency)}`
-                  }
+                  valueFormatter={(value, name, payload, dataKey) => {
+                    const ronKey = dataKey === "current"
+                      ? "current_ron"
+                      : dataKey === "previous"
+                        ? "previous_ron"
+                        : undefined;
+                    const secondaryValue =
+                      ronKey && typeof payload?.[ronKey] === "number"
+                        ? (payload?.[ronKey] as number)
+                        : null;
+                    return formatCurrencyWithSecondary(
+                      value,
+                      data.totals.currency,
+                      secondaryValue,
+                      data.totals.currency_secondary,
+                    );
+                  }}
                 />
               ) : null}
             </ChartContainer>
@@ -459,7 +483,13 @@ export default function AdminWeeklyReportPage() {
                   {data.risk_indicators.late_returns_count}
                 </p>
                 <p className="mt-1 text-xs text-slate-600">
-                  Impact estimat: {formatCurrency(data.risk_indicators.late_returns_value, data.totals.currency)}
+                  Impact estimat:{' '}
+                  {formatCurrencyWithSecondary(
+                    data.risk_indicators.late_returns_value,
+                    data.totals.currency,
+                    data.risk_indicators.late_returns_value_ron,
+                    data.totals.currency_secondary,
+                  )}
                 </p>
               </div>
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
