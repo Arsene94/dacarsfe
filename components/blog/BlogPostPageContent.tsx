@@ -25,6 +25,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { getUserDisplayName } from "@/lib/users";
 import type { BlogPost } from "@/types/blog";
 import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
+import { stripTitleTags } from "@/lib/content/sanitizeHtml";
 import { cn } from "@/lib/utils";
 
 type BlogPostPageContentProps = {
@@ -217,6 +218,8 @@ const BlogPostPageContent = ({
         return `${post.title} | ${SITE_NAME}`;
     }, [post.meta_title, post.title]);
 
+    const sanitizedContent = useMemo(() => stripTitleTags(post.content), [post.content]);
+
     const { shareFacebookLabel, shareInstagramLabel, shareTikTokLabel, shareTwitterLabel } = copy;
 
     const shareButtons = useMemo<ShareButton[]>(() => {
@@ -300,10 +303,10 @@ const BlogPostPageContent = ({
                 </p>
             </header>
 
-            {post.content && (
+            {sanitizedContent && (
                 <div
                     className="prose prose-slate max-w-none text-base leading-relaxed text-gray-700 prose-a:text-berkeley"
-                    dangerouslySetInnerHTML={{ __html: post.content }}
+                    dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                 />
             )}
 
