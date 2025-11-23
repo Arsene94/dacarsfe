@@ -119,7 +119,7 @@ Calea este publică și nu necesită autentificare. Se validează strict schema 
     {
       "type": "page_view",
       "occurred_at": "2025-02-13T18:20:00+02:00",
-      "page_url": "https://dacars.ro/",
+      "page_url": "https://www.dacars.ro/",
       "country": "RO",
       "referrer_url": "https://google.com/",
       "metadata": {
@@ -135,7 +135,7 @@ Calea este publică și nu necesită autentificare. Se validează strict schema 
     {
       "type": "scroll",
       "occurred_at": "2025-02-13T18:20:05+02:00",
-      "page_url": "https://dacars.ro/",
+      "page_url": "https://www.dacars.ro/",
       "metadata": {
         "scroll_percentage": 85.5,
         "scroll_pixels": 3200

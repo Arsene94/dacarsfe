@@ -15,7 +15,7 @@ overrides).
   "data": {
     "site": {
       "title": "DaCars",
-      "url": "https://dacars.ro",
+      "url": "https://www.dacars.ro",
       "logo_path": "images/logo-308x154.webp",
       "logo_max_height": 62,
       "description": "Mașini oneste pentru români onești. Predare în aeroport în sub 5 minute, fără taxe ascunse.",
@@ -49,7 +49,7 @@ overrides).
     },
     "resolved_site": {
       "title": "DaCars",
-      "url": "https://dacars.ro",
+      "url": "https://www.dacars.ro",
       "logo_path": "images/logo-308x154.webp",
       "logo_max_height": 62,
       "description": "Mașini oneste pentru români onești. Predare în aeroport în sub 5 minute, fără taxe ascunse.",
@@ -100,7 +100,7 @@ are replaced wholesale, so send the entire array when you edit a single entry. T
 {
   "site": {
     "title": "DaCars",
-    "url": "https://dacars.ro",
+    "url": "https://www.dacars.ro",
     "logo": "storage/logo-308x154.webp",
     "logo_max_height": 72,
     "description": "Flota premium de închirieri auto la aeroportul Otopeni.",
@@ -141,7 +141,7 @@ are replaced wholesale, so send the entire array when you edit a single entry. T
   "data": {
     "site": {
       "title": "DaCars",
-      "url": "https://dacars.ro",
+      "url": "https://www.dacars.ro",
       "logo_path": "storage/logo-308x154.webp",
       "logo_max_height": 72,
       "description": "Flota premium de închirieri auto la aeroportul Otopeni.",
@@ -175,7 +175,7 @@ are replaced wholesale, so send the entire array when you edit a single entry. T
     },
     "resolved_site": {
       "title": "DaCars",
-      "url": "https://dacars.ro",
+      "url": "https://www.dacars.ro",
       "logo_path": "storage/logo-308x154.webp",
       "logo_max_height": 72,
       "description": "Flota premium de închirieri auto la aeroportul Otopeni.",
@@ -344,7 +344,7 @@ is built by the booking mail service and respects any JSON front matter embedded
         "badge_label": "Cerere #123456"
       },
       "cta_buttons": [
-        { "label": "Descoperă flota completă", "url": "https://dacars.ro/cars", "variant": "primary" },
+        { "label": "Descoperă flota completă", "url": "https://www.dacars.ro/cars", "variant": "primary" },
         { "label": "Contactează-ne rapid", "url": "tel:+40723817551", "variant": "secondary" }
       ],
       "important_steps": [
@@ -354,18 +354,18 @@ is built by the booking mail service and respects any JSON front matter embedded
       ],
       "site": {
         "title": "DaCars",
-        "url": "https://dacars.ro",
+        "url": "https://www.dacars.ro",
         "logo_path": "images/logo-308x154.webp",
-        "logo": "https://dacars.ro/images/logo-308x154.webp",
+        "logo": "https://www.dacars.ro/images/logo-308x154.webp",
         "logo_max_height": 62,
         "menu_items": [
-          { "label": "Acasă", "url": "https://dacars.ro/" },
-          { "label": "Flota auto", "url": "https://dacars.ro/cars" },
-          { "label": "Rezervă acum", "url": "https://dacars.ro/form" }
+          { "label": "Acasă", "url": "https://www.dacars.ro/" },
+          { "label": "Flota auto", "url": "https://www.dacars.ro/cars" },
+          { "label": "Rezervă acum", "url": "https://www.dacars.ro/form" }
         ],
         "footer_links": [
-          { "label": "Termeni și condiții", "url": "https://dacars.ro/terms" },
-          { "label": "Politica de confidențialitate", "url": "https://dacars.ro/privacy" }
+          { "label": "Termeni și condiții", "url": "https://www.dacars.ro/terms" },
+          { "label": "Politica de confidențialitate", "url": "https://www.dacars.ro/privacy" }
         ]
       },
       "colors": {
@@ -375,10 +375,10 @@ is built by the booking mail service and respects any JSON front matter embedded
         "eefie": "#191919"
       },
       "links": {
-        "home": "https://dacars.ro/",
-        "fleet": "https://dacars.ro/cars",
-        "offers": "https://dacars.ro/offers",
-        "checkout": "https://dacars.ro/form",
+        "home": "https://www.dacars.ro/",
+        "fleet": "https://www.dacars.ro/cars",
+        "offers": "https://www.dacars.ro/offers",
+        "checkout": "https://www.dacars.ro/form",
         "contact_phone": "tel:+40723817551",
         "support_phone": "tel:+40722123456",
         "contact_email": "mailto:contact@dacars.ro"
@@ -481,7 +481,7 @@ curl -X POST \
   -H "Authorization: Bearer <token>" \
   -F "file=@conditii-generale.pdf" \
   -F "with_deposit=1" \
-  https://dacars.ro/api/mail-templates/booking.status_reserved/attachments
+  https://www.dacars.ro/api/mail-templates/booking.status_reserved/attachments
 ```
 
 #### Example response
@@ -493,7 +493,7 @@ curl -X POST \
       "name": "conditii-generale.pdf",
       "size": 245678,
       "mime_type": "application/pdf",
-      "url": "https://dacars.ro/storage/mail-template-attachments/booking/status_reserved/f9ae1c4d/conditii-generale.pdf",
+      "url": "https://www.dacars.ro/storage/mail-template-attachments/booking/status_reserved/f9ae1c4d/conditii-generale.pdf",
       "with_deposit": true
     },
     "attachments": [
@@ -502,7 +502,7 @@ curl -X POST \
         "name": "conditii-generale.pdf",
         "size": 245678,
         "mime_type": "application/pdf",
-        "url": "https://dacars.ro/storage/mail-template-attachments/booking/status_reserved/f9ae1c4d/conditii-generale.pdf",
+        "url": "https://www.dacars.ro/storage/mail-template-attachments/booking/status_reserved/f9ae1c4d/conditii-generale.pdf",
         "with_deposit": true
       }
     ]

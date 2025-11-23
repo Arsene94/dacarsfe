@@ -518,7 +518,7 @@ const createDefaultPreviewContext = (
 
   const heroPrimaryAction = createActionMock(
     "Vezi rezervarea",
-    site?.url ? `${site.url.replace(/\/?$/, "")}/rezervari` : "https://dacars.ro/rezervari",
+    site?.url ? `${site.url.replace(/\/?$/, "")}/rezervari` : "https://www.dacars.ro/rezervari",
   );
   const heroSecondaryAction = createActionMock(
     "Contactează-ne",
@@ -526,11 +526,11 @@ const createDefaultPreviewContext = (
   );
   const heroPrimaryButton = createActionMock(
     "Confirmă sosirea",
-    site?.url ? `${site.url.replace(/\/?$/, "")}/check-in` : "https://dacars.ro/check-in",
+    site?.url ? `${site.url.replace(/\/?$/, "")}/check-in` : "https://www.dacars.ro/check-in",
   );
   const heroSecondaryButton = createActionMock(
     "Modifică rezervarea",
-    site?.url ? `${site.url.replace(/\/?$/, "")}/modifica` : "https://dacars.ro/modifica",
+    site?.url ? `${site.url.replace(/\/?$/, "")}/modifica` : "https://www.dacars.ro/modifica",
   );
 
   const heroFeatures = [
@@ -864,8 +864,8 @@ const createListEntryMock = (
     amount: overrides.amount ?? "100 €",
     icon: overrides.icon ?? "✅",
     char: overrides.char ?? (label.charAt(0) || "A"),
-    url: overrides.url ?? "https://dacars.ro",
-    href: overrides.href ?? overrides.url ?? "https://dacars.ro",
+    url: overrides.url ?? "https://www.dacars.ro",
+    href: overrides.href ?? overrides.url ?? "https://www.dacars.ro",
     badge: overrides.badge ?? "Nou",
     color: overrides.color ?? "#206442",
     ...overrides,
@@ -1324,8 +1324,8 @@ const createArrayMock = (path: string): unknown[] => {
   const key = path.split(".").pop()?.toLowerCase() ?? "";
   if (key.includes("menu") || key.includes("link")) {
     return [
-      createListEntryMock("Acasă", { url: "https://dacars.ro" }),
-      createListEntryMock("Rezervă acum", { url: "https://dacars.ro/form" }),
+      createListEntryMock("Acasă", { url: "https://www.dacars.ro" }),
+      createListEntryMock("Rezervă acum", { url: "https://www.dacars.ro/form" }),
     ];
   }
   if (key.includes("social")) {
@@ -1356,7 +1356,7 @@ const createArrayMock = (path: string): unknown[] => {
   }
   if (key.includes("action") || key.includes("button") || key.includes("cta")) {
     return [
-      createActionMock("Confirmă rezervarea", "https://dacars.ro/confirmare"),
+      createActionMock("Confirmă rezervarea", "https://www.dacars.ro/confirmare"),
       createActionMock("Solicită modificări", "mailto:contact@dacars.ro"),
     ];
   }
@@ -1424,7 +1424,7 @@ const generateMockValueForPath = (
   if (lowerKey.includes("email")) return "exemplu@dacars.ro";
   if (lowerKey.includes("phone") || lowerKey.includes("tel")) return "+40 712 345 678";
   if (lowerKey.includes("url") || lowerKey.includes("link"))
-    return "https://dacars.ro/exemplu";
+    return "https://www.dacars.ro/exemplu";
   if (lowerKey.includes("logo") || lowerKey.includes("image") || lowerKey.includes("photo"))
     return "https://via.placeholder.com/640x320.png?text=DaCars";
   if (lowerKey.includes("icon") && lowerKey.includes("char")) return "🚗";
@@ -1468,7 +1468,7 @@ const generateMockValueForPath = (
     return "DAC-0001";
   }
   if (lowerKey.includes("action") || lowerKey.includes("button") || lowerKey.includes("cta")) {
-    return createActionMock("Vezi detalii", "https://dacars.ro/detalii");
+    return createActionMock("Vezi detalii", "https://www.dacars.ro/detalii");
   }
   if (lowerKey.startsWith("is_") || lowerKey.startsWith("has") || lowerKey.includes("enabled")) {
     return true;
@@ -2615,7 +2615,7 @@ const MailBrandingPage = () => {
                     id="site-url"
                     value={brandingForm?.site.url ?? ""}
                     onChange={(event) => handleSiteFieldChange("url", event.target.value)}
-                    placeholder="https://dacars.ro"
+                    placeholder="https://www.dacars.ro"
                   />
                 </div>
                 <div>
