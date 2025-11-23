@@ -3470,6 +3470,33 @@ export class ApiClient {
         );
     }
 
+    async fetchWidgetActivityByDate(date: string, paginate = 20): Promise<WidgetActivityResponse> {
+        const normalizedDate = typeof date === 'string' ? date.trim() : '';
+        if (!normalizedDate) {
+            throw new Error('Date is required to fetch widget activity');
+        }
+
+        const safePaginate =
+            typeof paginate === 'number' && Number.isFinite(paginate)
+                ? Math.max(1, Math.floor(paginate))
+                : 20;
+
+        const searchParams = new URLSearchParams({
+            date: normalizedDate,
+            paginate: String(safePaginate),
+        });
+
+        return this.request<WidgetActivityResponse>(`/widgets/activity/date?${searchParams.toString()}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${this.token}`
+            },
+            cache: 'no-cache',
+        });
+    }
+
     async fetchAdminBookingsToday(
         params: AdminBookingsTodayParams = {},
     ): Promise<AdminBookingsTodayMetrics> {

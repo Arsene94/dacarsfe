@@ -9,6 +9,7 @@ import {
   BarChart3,
   BadgePercent,
   Calendar,
+  CalendarClock,
   CalendarDays,
   Car,
   Percent,
@@ -398,6 +399,16 @@ const menuItems: readonly AdminSidebarItem[] = [
         requiredPermissions: buildPermissionList("reports-monthly", [
           "reports.insights",
           "reports.monthly",
+        ]),
+      },
+      {
+        name: "Activitate zilnică",
+        href: "/admin/reports/activity",
+        icon: CalendarClock,
+        requiredPermissions: buildPermissionList("reports-activity", [
+          "reports.activity",
+          "reports.operations",
+          "reports.widget",
         ]),
       },
       {
