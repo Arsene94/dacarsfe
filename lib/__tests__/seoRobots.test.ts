@@ -47,6 +47,7 @@ describe("generateRobotsConfig", () => {
         expect(allow).toContain("/en");
         expect(allow).toContain("/en/blog");
         expect(allow).toContain("/*?*");
+        expect(allow).toContain("/_next/image*");
 
         const disallow = Array.isArray(mainRule?.disallow)
             ? mainRule.disallow
@@ -54,6 +55,29 @@ describe("generateRobotsConfig", () => {
 
         expect(disallow).toContain("/*?*&*");
         expect(disallow).toContain("/admin/");
+    });
+
+    it("nu blochează checkout-ul public și îl include în allow", async () => {
+        const entries: SitemapEntry[] = [
+            {
+                path: "/form",
+                lastModified: "2025-01-02T00:00:00.000Z",
+                changeFrequency: "weekly",
+                priority: 0.9,
+            },
+        ];
+
+        sitemapEntriesMock.mockResolvedValue(entries);
+
+        const config = await generateRobotsConfig();
+        const [mainRule] = Array.isArray(config.rules) ? config.rules : [config.rules];
+        const allow = Array.isArray(mainRule?.allow) ? mainRule?.allow : [mainRule?.allow].filter(Boolean) as string[];
+        const disallow = Array.isArray(mainRule?.disallow)
+            ? mainRule.disallow
+            : [mainRule?.disallow].filter(Boolean) as string[];
+
+        expect(allow).toContain("/form");
+        expect(disallow.some((entry) => entry?.includes("/form"))).toBe(false);
     });
 });
 

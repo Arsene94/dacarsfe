@@ -7,7 +7,6 @@ import { generateSitemapEntries } from "@/lib/seo/sitemap";
 const ALWAYS_DISALLOWED: string[] = [
     "/admin/",
     "/account/",
-    "/form/",
     "/cart/",
     "/checkout/",
     "/api/",
@@ -16,6 +15,8 @@ const ALWAYS_DISALLOWED: string[] = [
     "/*?*utm_*",
     "/*?*fbclid*",
 ];
+
+const ALWAYS_ALLOWED = ["/_next/image*"] as const;
 
 // Permitem o singură variabilă de interogare și blocăm scenariile cu multipli parametri
 // pentru a respecta cerința de "follow" doar pentru primul parametru.
@@ -37,7 +38,7 @@ const normalizeAllowPath = (pathSegment: string): string => {
 };
 
 const buildAllowList = (paths: string[]): string[] => {
-    const uniquePaths = new Set<string>(["/"]);
+    const uniquePaths = new Set<string>(["/", ...ALWAYS_ALLOWED]);
 
     for (const pathSegment of paths) {
         uniquePaths.add(normalizeAllowPath(pathSegment));
