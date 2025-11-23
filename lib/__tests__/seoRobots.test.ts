@@ -47,6 +47,7 @@ describe("generateRobotsConfig", () => {
         expect(allow).toContain("/en");
         expect(allow).toContain("/en/blog");
         expect(allow).toContain("/*?*");
+        expect(allow).toContain("/_next/image*");
 
         const disallow = Array.isArray(mainRule?.disallow)
             ? mainRule.disallow
