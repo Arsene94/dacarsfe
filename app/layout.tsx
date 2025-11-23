@@ -19,7 +19,9 @@ import MetaPixelHeadScripts from "../components/MetaPixelHeadScripts";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import LocaleHeadTags from "../components/LocaleHeadTags";
 import AnalyticsHydrator from "@/components/AnalyticsHydrator";
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/next";
+import HreflangHeadLinks from "@/components/HreflangHeadLinks";
+import CanonicalHeadLink from "@/components/CanonicalHeadLink";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -94,6 +96,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <MetaPixelHeadScripts/>
         <GoogleAnalytics gaId="G-R1B5YS77GK"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <CanonicalHeadLink />
         <link
             rel="preconnect"
             href="https://backend.dacars.ro"
@@ -109,6 +112,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           locale={initialLocale}
           languages={supportedLocales}
         />
+        <HreflangHeadLinks />
     </head>
     <body className="min-h-screen bg-white">
         <Script
