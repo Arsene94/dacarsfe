@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 
-export const getRequestedPathname = (): string => {
-  const headerList = headers();
+export const getRequestedPathname = async (): Promise<string> => {
+  const headerList = await headers();
   const raw =
     headerList.get("x-invoke-path") ??
     headerList.get("next-url") ??

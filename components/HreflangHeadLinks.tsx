@@ -19,8 +19,8 @@ const stripLocalePrefix = (pathname: string, locales: readonly Locale[]): string
   return pathname.startsWith("/") ? pathname : `/${pathname}`;
 };
 
-const HreflangHeadLinks = () => {
-  const pathname = getRequestedPathname();
+const HreflangHeadLinks = async () => {
+  const pathname = await getRequestedPathname();
   const basePath = stripLocalePrefix(pathname, AVAILABLE_LOCALES);
 
   const alternates = AVAILABLE_LOCALES.map((locale) => ({
