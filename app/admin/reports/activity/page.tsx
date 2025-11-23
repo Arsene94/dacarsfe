@@ -5,6 +5,7 @@ import { Calendar, Clock, Loader2, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popup } from "@/components/ui/popup";
 import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/api";
 import type { ActivityReservation, WidgetActivityResponse } from "@/types/activity";
@@ -27,11 +28,28 @@ const formatDateTime = (value: string): string => {
     });
 };
 
+const formatPrice = (value: number | string | null | undefined): string => {
+    if (value === null || value === undefined || value === "") {
+        return "—";
+    }
+
+    const numericValue = typeof value === "string" ? Number(value) : value;
+    if (Number.isNaN(numericValue)) {
+        return `${value}`;
+    }
+
+    return `${numericValue.toLocaleString("ro-RO", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })} €`;
+};
+
 const ActivityReportsPage = () => {
     const [selectedDate, setSelectedDate] = useState<string>(toDateInputValue(new Date()));
     const [activity, setActivity] = useState<WidgetActivityResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [selectedReservation, setSelectedReservation] = useState<ActivityReservation | null>(null);
 
     const fetchActivity = useCallback(async () => {
         if (!selectedDate) {
@@ -223,25 +241,34 @@ const ActivityReportsPage = () => {
                                                             <p className="text-sm font-dm-sans text-gray-500">{reservation.note}</p>
                                                         )}
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p
-                                                            className={cn(
-                                                                "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase",
-                                                                isDeparture
-                                                                    ? "bg-green-100 text-green-800"
-                                                                    : "bg-red-100 text-red-800",
-                                                            )}
+                                                    <div className="flex flex-col items-end gap-3 md:flex-row md:items-center md:gap-4">
+                                                        <div className="text-right">
+                                                            <p
+                                                                className={cn(
+                                                                    "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase",
+                                                                    isDeparture
+                                                                        ? "bg-green-100 text-green-800"
+                                                                        : "bg-red-100 text-red-800",
+                                                                )}
+                                                            >
+                                                                {isDeparture ? "Plecare" : "Sosire"}
+                                                            </p>
+                                                            <p className="text-sm font-dm-sans text-gray-700">
+                                                                {isDeparture
+                                                                    ? formatDateTime(reservation.rental_start_date)
+                                                                    : formatDateTime(reservation.rental_end_date)}
+                                                            </p>
+                                                            <p className="text-xs font-dm-sans text-gray-500">
+                                                                Interval: {isDeparture ? reservation.start_hour_group : reservation.end_hour_group}
+                                                            </p>
+                                                        </div>
+                                                        <Button
+                                                            variant="outline"
+                                                            className="font-dm-sans"
+                                                            onClick={() => setSelectedReservation(reservation)}
                                                         >
-                                                            {isDeparture ? "Plecare" : "Sosire"}
-                                                        </p>
-                                                        <p className="text-sm font-dm-sans text-gray-700">
-                                                            {isDeparture
-                                                                ? formatDateTime(reservation.rental_start_date)
-                                                                : formatDateTime(reservation.rental_end_date)}
-                                                        </p>
-                                                        <p className="text-xs font-dm-sans text-gray-500">
-                                                            Interval: {isDeparture ? reservation.start_hour_group : reservation.end_hour_group}
-                                                        </p>
+                                                            Detalii rezervare
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             );
@@ -253,6 +280,145 @@ const ActivityReportsPage = () => {
                     </div>
                 )}
             </div>
+            <Popup open={Boolean(selectedReservation)} onClose={() => setSelectedReservation(null)} className="max-w-3xl">
+                {selectedReservation && (
+                    <div className="space-y-4">
+                        <div className="flex flex-col gap-1">
+                            <p className="text-xs font-dm-sans uppercase tracking-wide text-gray-500">
+                                Rezervarea #{selectedReservation.booking_number}
+                            </p>
+                            <h2 className="text-2xl font-poppins font-semibold text-berkeley">
+                                {selectedReservation.customer_name}
+                            </h2>
+                            <p className="text-sm font-dm-sans text-gray-600">
+                                {selectedReservation.car?.name ?? "Mașină neatribuită"}
+                            </p>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-1 rounded-lg border border-gray-200 p-4">
+                                <p className="text-xs font-dm-sans uppercase tracking-wide text-gray-500">Perioadă</p>
+                                <p className="text-sm font-dm-sans text-gray-700">
+                                    De la {formatDateTime(selectedReservation.rental_start_date)}
+                                </p>
+                                <p className="text-sm font-dm-sans text-gray-700">
+                                    Până la {formatDateTime(selectedReservation.rental_end_date)}
+                                </p>
+                                <p className="text-xs font-dm-sans text-gray-500">
+                                    Interval: {selectedReservation.start_hour_group} – {selectedReservation.end_hour_group}
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="rounded-lg border border-gray-200 p-3">
+                                    <p className="text-xs font-dm-sans uppercase tracking-wide text-gray-500">Zile</p>
+                                    <p className="text-lg font-poppins font-semibold text-berkeley">{selectedReservation.days}</p>
+                                </div>
+                                <div className="rounded-lg border border-gray-200 p-3">
+                                    <p className="text-xs font-dm-sans uppercase tracking-wide text-gray-500">Preț/zi</p>
+                                    <p className="text-lg font-poppins font-semibold text-berkeley">
+                                        {formatPrice(selectedReservation.price_per_day)}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-gray-200 p-3">
+                                    <p className="text-xs font-dm-sans uppercase tracking-wide text-gray-500">Subtotal</p>
+                                    <p className="text-lg font-poppins font-semibold text-berkeley">
+                                        {formatPrice(selectedReservation.sub_total)}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-gray-200 p-3">
+                                    <p className="text-xs font-dm-sans uppercase tracking-wide text-gray-500">Total</p>
+                                    <p className="text-lg font-poppins font-semibold text-berkeley">
+                                        {formatPrice(selectedReservation.total)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2 rounded-lg border border-gray-200 p-4">
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm font-poppins font-semibold text-berkeley">Servicii opționale</p>
+                                <p className="text-sm font-dm-sans text-gray-600">
+                                    Total servicii: {formatPrice(selectedReservation.total_services)}
+                                </p>
+                            </div>
+                            {((selectedReservation.services_list && selectedReservation.services_list.length > 0) ||
+                                (selectedReservation.services && selectedReservation.services.length > 0)) && (
+                                <ul className="space-y-1 text-sm font-dm-sans text-gray-700">
+                                    {(selectedReservation.services_list ?? selectedReservation.services).map((service) => (
+                                        <li key={service.id} className="flex items-center justify-between gap-3">
+                                            <span>{service.name}</span>
+                                            <span className="text-gray-600">{formatPrice(service.price ?? null)}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                            {(!selectedReservation.services_list || selectedReservation.services_list.length === 0) &&
+                                (!selectedReservation.services || selectedReservation.services.length === 0) && (
+                                    <p className="text-sm font-dm-sans text-gray-500">Nu există servicii opționale.</p>
+                                )}
+                        </div>
+
+                        <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                            <p className="text-sm font-poppins font-semibold text-berkeley">Prelungire</p>
+                            {selectedReservation.extension ? (
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <div className="space-y-1">
+                                        <p className="text-xs font-dm-sans uppercase tracking-wide text-gray-500">Perioadă</p>
+                                        <p className="text-sm font-dm-sans text-gray-700">
+                                            De la {formatDateTime(selectedReservation.extension.from ?? "")}
+                                        </p>
+                                        <p className="text-sm font-dm-sans text-gray-700">
+                                            Până la {formatDateTime(selectedReservation.extension.to ?? "")}
+                                        </p>
+                                        <p className="text-xs font-dm-sans text-gray-500">
+                                            Zile suplimentare: {selectedReservation.extension.days ?? "—"}
+                                        </p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="rounded-lg border border-gray-200 bg-white p-3">
+                                            <p className="text-xs font-dm-sans uppercase tracking-wide text-gray-500">Preț/zi</p>
+                                            <p className="text-lg font-poppins font-semibold text-berkeley">
+                                                {formatPrice(selectedReservation.extension.price_per_day)}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 bg-white p-3">
+                                            <p className="text-xs font-dm-sans uppercase tracking-wide text-gray-500">Total</p>
+                                            <p className="text-lg font-poppins font-semibold text-berkeley">
+                                                {formatPrice(selectedReservation.extension.total)}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 bg-white p-3">
+                                            <p className="text-xs font-dm-sans uppercase tracking-wide text-gray-500">Plătit</p>
+                                            <p className="text-lg font-poppins font-semibold text-berkeley">
+                                                {selectedReservation.extension.paid ? "Da" : "Nu"}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 bg-white p-3">
+                                            <p className="text-xs font-dm-sans uppercase tracking-wide text-gray-500">
+                                                Sold rămas
+                                            </p>
+                                            <p className="text-lg font-poppins font-semibold text-berkeley">
+                                                {formatPrice(selectedReservation.extension.remaining_payment)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm font-dm-sans text-gray-600">
+                                    Nu există o prelungire pentru această rezervare.
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="flex justify-end">
+                            <Button variant="default" className="font-dm-sans" onClick={() => setSelectedReservation(null)}>
+                                Închide
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Popup>
         </div>
     );
 };
