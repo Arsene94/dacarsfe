@@ -12,8 +12,8 @@ describe("buildMetadata", () => {
             hreflangLocales: ["ro", "en"],
         });
 
-        expect(metadata.alternates?.canonical).toBe("https://dacars.ro/en/contact");
-        expect(metadata.alternates?.languages?.en).toBe("https://dacars.ro/en/contact");
-        expect(metadata.alternates?.languages?.ro).toBe("https://dacars.ro/ro/contact");
+        expect(metadata.alternates?.canonical).toBe("https://www.dacars.ro/en/contact");
+        expect(metadata.alternates?.languages?.en).toBe("https://www.dacars.ro/en/contact");
+        expect(metadata.alternates?.languages?.ro).toBe("https://www.dacars.ro/ro/contact");
     });
 });

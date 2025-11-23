@@ -1,4 +1,4 @@
-export const SITE_URL = "https://dacars.ro" as const;
+export const SITE_URL = "https://www.dacars.ro" as const;
 export const SITE_NAME = "DaCars" as const;
 export const SITE_LOCALE = "en_US" as const;
 export const SITE_TWITTER = "@example" as const;
