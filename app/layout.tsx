@@ -5,7 +5,6 @@ import PageTransition from "../components/PageTransition";
 import ScrollPositionManager from "../components/ScrollPositionManager";
 import Script from "next/script";
 import type { ReactNode } from "react";
-import { headers } from "next/headers";
 import { BookingProvider } from "@/context/BookingProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { LocaleProvider } from "@/context/LocaleContext";
@@ -81,26 +80,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     initialLocale,
   });
   const localeBootstrapScript = `(()=>{try{const c=${bootstrapPayload};const list=(values)=>Array.isArray(values)?values.map((value)=>String(value||"").toLowerCase()).filter(Boolean):[];const supported=list(c.supportedLocales);const normalize=(raw)=>{if(!raw)return"";const lowered=String(raw).trim().toLowerCase();if(!lowered)return"";if(supported.includes(lowered))return lowered;const base=lowered.split(/[-_]/)[0];return supported.includes(base)?base:"";};const apply=(locale)=>{if(!locale)return;document.documentElement.lang=locale;document.documentElement.setAttribute("data-locale",locale);};const stored=window.localStorage.getItem(c.storageKey);const cookieMatch=document.cookie.match(new RegExp("(?:^|; )"+c.cookiePattern+"=([^;]+)"));const cookie=cookieMatch?decodeURIComponent(cookieMatch[1]):"";const nav=normalize(window.navigator.language||window.navigator.userLanguage);const fallback=normalize(c.fallbackLocale)||"${FALLBACK_LOCALE}";const preferred=normalize(c.initialLocale)||normalize(stored)||normalize(cookie)||nav||fallback;apply(preferred);if(preferred&&normalize(stored)!==preferred){try{window.localStorage.setItem(c.storageKey,preferred);}catch(e){}}if(!preferred){apply(fallback);}}catch(error){document.documentElement.setAttribute("data-locale","${FALLBACK_LOCALE}");document.documentElement.lang="${FALLBACK_LOCALE}";}})();`;
-  const headerList = await headers();
-  const rawPathname =
-    headerList.get("x-dacars-pathname") ??
-    headerList.get("x-next-url") ??
-    headerList.get("next-url") ??
-    "/";
-
-  let normalizedPathname = "/";
-  if (rawPathname) {
-    try {
-      if (rawPathname.includes("://")) {
-        const url = new URL(rawPathname);
-        normalizedPathname = url.pathname || "/";
-      } else {
-        normalizedPathname = rawPathname.startsWith("/") ? rawPathname : `/${rawPathname}`;
-      }
-    } catch {
-      normalizedPathname = "/";
-    }
-  }
 
   return (
     <html
@@ -129,7 +108,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <LocaleHeadTags
           locale={initialLocale}
           languages={supportedLocales}
-          pathname={normalizedPathname}
         />
     </head>
     <body className="min-h-screen bg-white">
