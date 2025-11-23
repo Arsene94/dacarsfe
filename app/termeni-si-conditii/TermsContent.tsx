@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useLocale } from "@/context/LocaleContext";
 import type { Locale } from "@/lib/i18n/config";
+import { stripTitleTags } from "@/lib/content/sanitizeHtml";
 
 const TERMS_CONTENT_CLASSNAME =
     "terms-content space-y-6 text-justify font-dm-sans text-base leading-relaxed text-slate-700";
@@ -34,7 +35,9 @@ const TermsContent = ({ initialLocale, htmlByLocale, fallbackLocale }: TermsCont
 
     const content = htmlByLocale[resolvedLocale] ?? "";
 
-    return <div className={TERMS_CONTENT_CLASSNAME} dangerouslySetInnerHTML={{ __html: content }} />;
+    const sanitizedContent = useMemo(() => stripTitleTags(content), [content]);
+
+    return <div className={TERMS_CONTENT_CLASSNAME} dangerouslySetInnerHTML={{ __html: sanitizedContent }} />;
 };
 
 export default TermsContent;

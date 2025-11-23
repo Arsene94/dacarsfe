@@ -19,6 +19,7 @@ import {
     type NormalizedFaqCategory,
 } from "@/lib/faq/publicFaq";
 import { useLocaleHref } from "@/lib/i18n/useLocaleHref";
+import { stripTitleTags } from "@/lib/content/sanitizeHtml";
 
 type FaqPageContentProps = {
     initialLocale: Locale;
@@ -94,23 +95,32 @@ const FaqPageContent = ({ initialLocale, initialCopy, initialCategories }: FaqPa
     }, [locale]);
 
     const categoriesToRender = useMemo(() => {
-        if (categories.length > 0) {
-            return categories;
-        }
-        return [buildFallbackCategory(copy)];
+        const source = categories.length > 0 ? categories : [buildFallbackCategory(copy)];
+
+        return source.map((category) => ({
+            ...category,
+            faqs: category.faqs.map((item) => ({
+                ...item,
+                answer: stripTitleTags(item.answer),
+            })),
+        }));
     }, [categories, copy]);
 
     const faqItems = useMemo(() => {
         if (categories.length > 0) {
-            return categories.flatMap((category) =>
+            return categoriesToRender.flatMap((category) =>
                 category.faqs.map((item) => ({
                     question: item.question,
                     answer: item.answer,
                 })),
             );
         }
-        return copy.items;
-    }, [categories, copy.items]);
+
+        return copy.items.map((item) => ({
+            question: item.question,
+            answer: stripTitleTags(item.answer),
+        }));
+    }, [categories.length, categoriesToRender, copy.items]);
 
     const faqJsonLd = useMemo(
         () =>
