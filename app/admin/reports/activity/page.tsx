@@ -235,7 +235,7 @@ const ActivityReportsPage = () => {
                                                             {reservation.customer_name}
                                                         </p>
                                                         <p className="text-sm font-dm-sans text-gray-600">
-                                                            {reservation.car?.name ?? "Mașină neatribuită"}
+                                                            {reservation.car?.license_plate ?? "Mașină neatribuită"}
                                                         </p>
                                                         {reservation.note && (
                                                             <p className="text-sm font-dm-sans text-gray-500">{reservation.note}</p>
@@ -291,7 +291,7 @@ const ActivityReportsPage = () => {
                                 {selectedReservation.customer_name}
                             </h2>
                             <p className="text-sm font-dm-sans text-gray-600">
-                                {selectedReservation.car?.name ?? "Mașină neatribuită"}
+                                {selectedReservation.car?.license_plate ?? "Mașină neatribuită"}
                             </p>
                         </div>
 
