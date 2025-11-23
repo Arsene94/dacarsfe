@@ -6,6 +6,7 @@ Provides lightweight endpoints for the operations dashboard widgets. All routes 
 | Method | Description | Permission |
 | --- | --- | --- |
 | GET | `/api/widgets/activity/{period?}` | Returns upcoming pick-up/return bookings for the selected day. | `dashboard.view_widget_activity` |
+| GET | `/api/widgets/activity/date` | Same payload, but targets an explicit `date` instead of a predefined period. | `dashboard.view_widget_activity` |
 
 ### Path parameter
 `period` accepts Romanian and English aliases:
@@ -20,6 +21,10 @@ Default is `azi` (today).
 
 ### Query parameters
 - `paginate` – number of records per page (default 20, minimum 1).
+
+### Explicit date endpoint (`/api/widgets/activity/date`)
+- Accepts the same query string, with an additional required `date` parameter (`YYYY-MM-DD`).
+- Returns the same payload as the period-based route, so widgets can request arbitrary calendar days chosen by the user.
 
 ### Response
 ```json

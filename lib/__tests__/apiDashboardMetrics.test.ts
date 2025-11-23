@@ -134,6 +134,53 @@ describe('ApiClient admin dashboard metrics', () => {
     expect(result).toEqual(widgetResponse);
   });
 
+  it('fetches widget activity by date with sanitized input', async () => {
+    const client = new ApiClient(baseURL);
+    client.setToken('admin-token');
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(widgetResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await client.fetchWidgetActivityByDate(' 2025-02-16 ', 0);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [requestUrl, requestInit] = fetchMock.mock.calls[0];
+    const url = new URL(requestUrl as string);
+
+    expect(url.pathname).toBe('/widgets/activity/date');
+    expect(url.searchParams.get('date')).toBe('2025-02-16');
+    expect(url.searchParams.get('paginate')).toBe('1');
+
+    expect(requestInit).toEqual(
+      expect.objectContaining({
+        method: 'GET',
+        cache: 'no-cache',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: 'Bearer admin-token',
+          'X-API-KEY': 'kSqh88TvUXNl6TySfXaXnxbv1jeorTJt',
+        }),
+        credentials: 'omit',
+      }),
+    );
+
+    expect(result).toEqual(widgetResponse);
+  });
+
+  it('throws when the widget activity date is missing', async () => {
+    const client = new ApiClient(baseURL);
+
+    await expect(client.fetchWidgetActivityByDate('')).rejects.toThrow(
+      'Date is required to fetch widget activity',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('fetches bookings today metrics with sanitized filters', async () => {
     const client = new ApiClient(baseURL);
     client.setToken('admin-token');
