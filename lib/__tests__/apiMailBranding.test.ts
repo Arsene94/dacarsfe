@@ -32,7 +32,7 @@ describe('ApiClient admin mail branding management', () => {
       data: {
         site: {
           title: 'DaCars',
-          url: 'https://dacars.ro',
+          url: 'https://www.dacars.ro',
           logo_path: '/storage/logo.png',
           logo_max_height: 48,
           description: 'Închirieri auto premium',
@@ -55,7 +55,7 @@ describe('ApiClient admin mail branding management', () => {
         },
         resolved_site: {
           title: 'DaCars',
-          url: 'https://dacars.ro',
+          url: 'https://www.dacars.ro',
           logo_path: '/storage/logo.png',
           menu_items: [],
           footer_links: [],
@@ -101,17 +101,17 @@ describe('ApiClient admin mail branding management', () => {
     const payload: MailBrandingUpdatePayload = {
       site: {
         title: 'DaCars.ro',
-        url: 'https://dacars.ro',
+        url: 'https://www.dacars.ro',
         logo_path: '/storage/logo.png',
         description: 'Rezervă-ți mașina de azi',
         email: 'contact@dacars.ro',
         logo_max_height: 64,
         menu_items: [
-          { label: 'Flotă', url: 'https://dacars.ro/flota' },
-          { label: 'Contact', url: 'https://dacars.ro/contact' },
+          { label: 'Flotă', url: 'https://www.dacars.ro/flota' },
+          { label: 'Contact', url: 'https://www.dacars.ro/contact' },
         ],
         footer_links: [
-          { label: 'Termeni și condiții', url: 'https://dacars.ro/termeni' },
+          { label: 'Termeni și condiții', url: 'https://www.dacars.ro/termeni' },
         ],
         social_links: [{ label: 'Facebook', url: 'https://facebook.com/dacars' }],
         phone: '+40 745 000 000',
@@ -131,7 +131,7 @@ describe('ApiClient admin mail branding management', () => {
       data: {
         site: {
           title: 'DaCars.ro',
-          url: 'https://dacars.ro',
+          url: 'https://www.dacars.ro',
           logo_path: '/storage/logo.png',
           logo_max_height: 64,
           description: 'Rezervă-ți mașina de azi',
@@ -143,11 +143,11 @@ describe('ApiClient admin mail branding management', () => {
           address: null,
           availability: null,
           menu_items: [
-            { label: 'Flotă', url: 'https://dacars.ro/flota' },
-            { label: 'Contact', url: 'https://dacars.ro/contact' },
+            { label: 'Flotă', url: 'https://www.dacars.ro/flota' },
+            { label: 'Contact', url: 'https://www.dacars.ro/contact' },
           ],
           footer_links: [
-            { label: 'Termeni și condiții', url: 'https://dacars.ro/termeni' },
+            { label: 'Termeni și condiții', url: 'https://www.dacars.ro/termeni' },
           ],
           social_links: [{ label: 'Facebook', url: 'https://facebook.com/dacars' }],
         },
@@ -159,7 +159,7 @@ describe('ApiClient admin mail branding management', () => {
         },
         resolved_site: {
           title: 'DaCars.ro',
-          url: 'https://dacars.ro',
+          url: 'https://www.dacars.ro',
           logo_path: '/storage/logo.png',
           logo_max_height: 64,
           description: 'Rezervă-ți mașina de azi',
@@ -171,11 +171,11 @@ describe('ApiClient admin mail branding management', () => {
           address: null,
           availability: null,
           menu_items: [
-            { label: 'Flotă', url: 'https://dacars.ro/flota' },
-            { label: 'Contact', url: 'https://dacars.ro/contact' },
+            { label: 'Flotă', url: 'https://www.dacars.ro/flota' },
+            { label: 'Contact', url: 'https://www.dacars.ro/contact' },
           ],
           footer_links: [
-            { label: 'Termeni și condiții', url: 'https://dacars.ro/termeni' },
+            { label: 'Termeni și condiții', url: 'https://www.dacars.ro/termeni' },
           ],
           social_links: [{ label: 'Facebook', url: 'https://facebook.com/dacars' }],
         },
@@ -215,17 +215,17 @@ describe('ApiClient admin mail branding management', () => {
     expect(JSON.parse(String(options?.body))).toEqual({
       site: {
         title: 'DaCars.ro',
-        url: 'https://dacars.ro',
+        url: 'https://www.dacars.ro',
         logo_path: '/storage/logo.png',
         description: 'Rezervă-ți mașina de azi',
         email: 'contact@dacars.ro',
         logo_max_height: 64,
         menu_items: [
-          { label: 'Flotă', url: 'https://dacars.ro/flota' },
-          { label: 'Contact', url: 'https://dacars.ro/contact' },
+          { label: 'Flotă', url: 'https://www.dacars.ro/flota' },
+          { label: 'Contact', url: 'https://www.dacars.ro/contact' },
         ],
         footer_links: [
-          { label: 'Termeni și condiții', url: 'https://dacars.ro/termeni' },
+          { label: 'Termeni și condiții', url: 'https://www.dacars.ro/termeni' },
         ],
         social_links: [{ label: 'Facebook', url: 'https://facebook.com/dacars' }],
         phone: '+40 745 000 000',

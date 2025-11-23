@@ -352,7 +352,7 @@ describe('Fluxul complet al clienților DaCars', () => {
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledTimes(1);
       const target = pushMock.mock.calls[0][0] as string;
-      const url = new URL(target, 'https://dacars.ro');
+      const url = new URL(target, 'https://www.dacars.ro');
       expect(url.pathname).toBe('/cars');
       expect(url.searchParams.get('start_date')).toBe('2030-06-10T10:30');
       expect(url.searchParams.get('end_date')).toBe('2030-06-15T10:30');

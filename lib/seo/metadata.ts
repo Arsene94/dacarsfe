@@ -71,12 +71,15 @@ export const buildMetadata = ({
     locale,
 }: BuildMetadataInput): Metadata => {
     const localizedPath = resolveLocalizedPathname(path, locale);
-    const canonicalUrl = canonical(localizedPath);
-    const alternates = hreflangLinks(localizedPath, hreflangLocales ?? undefined);
-    const languages = alternates.reduce<Record<string, string>>((acc, entry) => {
-        acc[entry.hrefLang] = entry.href;
-        return acc;
-    }, {});
+    const canonicalUrl = noIndex ? undefined : canonical(localizedPath);
+    const alternateHreflangs = noIndex ? [] : hreflangLinks(localizedPath, hreflangLocales ?? undefined);
+    const languages =
+        alternateHreflangs.length > 0
+            ? alternateHreflangs.reduce<Record<string, string>>((acc, entry) => {
+                  acc[entry.hrefLang] = entry.href;
+                  return acc;
+              }, {})
+            : undefined;
     const imageUrl = resolveOgImage(ogImage);
     const computedKeywords =
         keywords && keywords.length > 0 ? [...keywords] : undefined;
@@ -87,10 +90,12 @@ export const buildMetadata = ({
         title,
         description,
         keywords: computedKeywords,
-        alternates: {
-            canonical: canonicalUrl,
-            languages,
-        },
+        alternates: canonicalUrl
+            ? {
+                  canonical: canonicalUrl,
+                  languages,
+              }
+            : undefined,
         openGraph: {
             title: ogTitle,
             description,

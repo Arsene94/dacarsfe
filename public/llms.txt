@@ -2,11 +2,11 @@ DaCars AI Crawling Guide v1.0 – 19 decembrie 2024
 ===============================================
 
 ## Surse esențiale de cunoaștere
-- https://dacars.ro/faq
-- https://dacars.ro/docs
-- https://dacars.ro/pricing
-- https://dacars.ro/despre
-- https://dacars.ro/blog
+- https://www.dacars.ro/faq
+- https://www.dacars.ro/docs
+- https://www.dacars.ro/pricing
+- https://www.dacars.ro/despre
+- https://www.dacars.ro/blog
 
 ## Ignorați
 - Orice pagină de autentificare sau înregistrare (ex: /account, /login, /signup)
