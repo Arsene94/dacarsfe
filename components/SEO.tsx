@@ -22,10 +22,10 @@ export type SEOProps = {
 const robotsValue = (noIndex: boolean): string => (noIndex ? "noindex, nofollow" : "index, follow");
 
 const SEO = ({ title, description, path, ogImage, noIndex = false, hreflangLocales }: SEOProps) => {
-    const canonicalUrl = useMemo(() => canonical(path), [path]);
+    const canonicalUrl = useMemo(() => (noIndex ? null : canonical(path)), [noIndex, path]);
     const alternates = useMemo(
-        () => hreflangLinks(path, hreflangLocales ?? undefined),
-        [hreflangLocales, path],
+        () => (noIndex ? [] : hreflangLinks(path, hreflangLocales ?? undefined)),
+        [hreflangLocales, noIndex, path],
     );
     const imageUrl = useMemo(() => resolveOgImage(ogImage), [ogImage]);
 
@@ -34,7 +34,7 @@ const SEO = ({ title, description, path, ogImage, noIndex = false, hreflangLocal
             <title>{title}</title>
             <meta name="description" content={description} />
             <meta name="robots" content={robotsValue(noIndex)} />
-            <link rel="canonical" href={canonicalUrl} />
+            {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
             {alternates.map((alternate) => (
                 <link key={alternate.hrefLang} rel="alternate" hrefLang={alternate.hrefLang} href={alternate.href} />
             ))}
@@ -43,7 +43,7 @@ const SEO = ({ title, description, path, ogImage, noIndex = false, hreflangLocal
             <meta property="og:locale" content={SITE_LOCALE} />
             <meta property="og:title" content={title} />
             <meta property="og:description" content={description} />
-            <meta property="og:url" content={canonicalUrl} />
+            {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
             <meta property="og:site_name" content={SITE_NAME} />
             <meta property="og:image" content={imageUrl} />
 
