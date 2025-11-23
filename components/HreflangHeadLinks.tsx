@@ -1,4 +1,4 @@
-import { AVAILABLE_LOCALES, type Locale } from "@/lib/i18n/config";
+import { AVAILABLE_LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { ensureLocalePath } from "@/lib/i18n/routing";
 import { getRequestedPathname } from "@/lib/seo/requestPath";
 import { canonical } from "@/lib/seo/url";
@@ -30,7 +30,13 @@ const HreflangHeadLinks = async () => {
     ),
   }));
 
-  const defaultHref = canonical(basePath);
+  const defaultHref = canonical(
+    ensureLocalePath({
+      href: basePath,
+      locale: DEFAULT_LOCALE,
+      availableLocales: AVAILABLE_LOCALES,
+    })
+  );
 
   return (
     <>
