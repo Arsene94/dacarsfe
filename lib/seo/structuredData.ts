@@ -1,6 +1,6 @@
 import type { FleetCar } from "@/types/car";
 
-const FALLBACK_SITE_URL = "https://dacars.ro";
+const FALLBACK_SITE_URL = "https://www.dacars.ro";
 
 const ensureProtocol = (url: string): string => {
     if (/^https?:\/\//i.test(url)) {

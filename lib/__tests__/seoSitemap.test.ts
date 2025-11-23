@@ -53,12 +53,12 @@ describe("buildLocalizedSitemapUrls", () => {
         const sitemap = buildLocalizedSitemapUrls(SAMPLE_ENTRIES, ["ro", "en"] as const);
 
         const urls = sitemap.map((entry) => entry.url).sort();
-        expect(urls).toContain("https://dacars.ro");
-        expect(urls).toContain("https://dacars.ro/offers");
-        expect(urls).toContain("https://dacars.ro/ro");
-        expect(urls).toContain("https://dacars.ro/ro/offers");
-        expect(urls).toContain("https://dacars.ro/en");
-        expect(urls).toContain("https://dacars.ro/en/offers");
+        expect(urls).toContain("https://www.dacars.ro");
+        expect(urls).toContain("https://www.dacars.ro/offers");
+        expect(urls).toContain("https://www.dacars.ro/ro");
+        expect(urls).toContain("https://www.dacars.ro/ro/offers");
+        expect(urls).toContain("https://www.dacars.ro/en");
+        expect(urls).toContain("https://www.dacars.ro/en/offers");
     });
 
     it("avoids duplicating URLs when the entry already includes the locale prefix", () => {
@@ -74,7 +74,7 @@ describe("buildLocalizedSitemapUrls", () => {
         const sitemap = buildLocalizedSitemapUrls(localizedEntries, AVAILABLE_LOCALES);
         const urls = sitemap.map((entry) => entry.url);
 
-        const occurrences = urls.filter((url) => url === "https://dacars.ro/ro/contact").length;
+        const occurrences = urls.filter((url) => url === "https://www.dacars.ro/ro/contact").length;
         expect(occurrences).toBe(1);
     });
 });

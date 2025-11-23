@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 
 import { AVAILABLE_LOCALES, type Locale } from "@/lib/i18n/config";
 import { resolveOpenGraphLocale } from "@/lib/seo/metadata";
-import { buildCanonicalUrl, hreflangLinks, resolveLocalizedPathname } from "@/lib/seo/url";
+import { hreflangLinks, resolveLocalizedPathname } from "@/lib/seo/url";
 import { siteMetadata } from "@/lib/seo/siteMetadata";
 
 const LANGUAGE_NAMES: Record<Locale, string> = {
@@ -87,7 +87,6 @@ const LocaleHeadTags = async ({
   const alternateLocales = dedupedLocales.filter((candidate) => candidate !== locale);
   const requestPathname = await resolveRequestPathname(pathname);
   const localizedPath = resolveLocalizedPathname(requestPathname, locale);
-  const canonicalHref = buildCanonicalUrl(localizedPath);
   const alternates = hreflangLinks(localizedPath, dedupedLocales);
   const normalizedSiteUrl = siteMetadata.siteUrl.replace(/\/+$/, "");
 
@@ -96,7 +95,6 @@ const LocaleHeadTags = async ({
       <meta name="language" content={languageName} />
       <meta httpEquiv="content-language" content={contentLanguage} />
       <meta property="og:locale" content={openGraphLocale} />
-      <link rel="canonical" href={canonicalHref} />
       {alternateLocales.map((alternate) => (
         <meta
           key={`og-alternate-${alternate}`}

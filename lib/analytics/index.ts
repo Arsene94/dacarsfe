@@ -782,7 +782,7 @@ const resolvePageDetails = (pageUrl?: string): PageDetails => {
     const trimmed = pageUrl?.trim();
     if (trimmed && trimmed.length > 0) {
         try {
-            const base = isBrowser() ? window.location.origin : "https://dacars.ro";
+            const base = isBrowser() ? window.location.origin : "https://www.dacars.ro";
             const parsed = new URL(trimmed, base);
             return {
                 url: `${parsed.origin}${parsed.pathname}`,
