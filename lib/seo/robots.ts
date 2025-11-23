@@ -7,7 +7,6 @@ import { generateSitemapEntries } from "@/lib/seo/sitemap";
 const ALWAYS_DISALLOWED: string[] = [
     "/admin/",
     "/account/",
-    "/form/",
     "/cart/",
     "/checkout/",
     "/api/",
