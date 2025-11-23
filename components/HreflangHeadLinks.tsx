@@ -1,7 +1,6 @@
-import { headers } from "next/headers";
-
 import { AVAILABLE_LOCALES, type Locale } from "@/lib/i18n/config";
 import { ensureLocalePath } from "@/lib/i18n/routing";
+import { getRequestedPathname } from "@/lib/seo/requestPath";
 import { canonical } from "@/lib/seo/url";
 
 const stripLocalePrefix = (pathname: string, locales: readonly Locale[]): string => {
@@ -18,22 +17,6 @@ const stripLocalePrefix = (pathname: string, locales: readonly Locale[]): string
   }
 
   return pathname.startsWith("/") ? pathname : `/${pathname}`;
-};
-
-const getRequestedPathname = (): string => {
-  const headerList = headers();
-  const raw =
-    headerList.get("x-invoke-path") ??
-    headerList.get("next-url") ??
-    headerList.get("x-original-url") ??
-    "/";
-
-  try {
-    const parsed = new URL(raw, "https://dacars.local");
-    return parsed.pathname || "/";
-  } catch {
-    return raw.startsWith("/") ? raw : `/${raw}`;
-  }
 };
 
 const HreflangHeadLinks = () => {
